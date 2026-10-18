@@ -35,8 +35,8 @@ ShellLaneSupport {
 
     function test_editExisting_data() {
         return [
-            { tag: "drumkit", slot: 10, mode: 0, name: "fixture_drums_a", firstKey: 36, lastKey: 36 },
-            { tag: "keysplit", slot: 8, mode: 1, name: "fixture_keys", firstKey: 0, lastKey: 47 }
+            { tag: "drumkit", slot: 10, mode: 0, name: "fixture_drums_a", firstKey: 36, lastKey: 36, sampleZone: 0 },
+            { tag: "keysplit", slot: 8, mode: 1, name: "fixture_keys", firstKey: 0, lastKey: 47, sampleZone: 1 }
         ]
     }
 
@@ -69,6 +69,9 @@ ShellLaneSupport {
         compare(editor.zoneCount(), 3)
         compare(editor.zoneStartKey(0), data.firstKey)
         compare(editor.zoneEndKey(0), data.lastKey)
+        verify(editor.sliceCount > 0, "the kit's samples populate the slice table")
+        verify(editor.zoneBadge(data.sampleZone) > 0 && editor.sliceIsCommitted(editor.sliceId(0)),
+               "the sample zone badges its untouched project sample")
         compare(editor.dirty, false)
         compare(editor.canSave, true)
         probe.capture(bootstrap.projectRoot, "_fixture_rich", data.slot)

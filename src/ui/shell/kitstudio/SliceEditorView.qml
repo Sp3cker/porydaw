@@ -45,6 +45,10 @@ Item {
                         required property int index
                         required property string name
                         required property bool active
+                        required property int committedCount
+                        readonly property string label: sourceTab.committedCount > 0
+                                                        ? qsTr("Kit samples · %1").arg(sourceTab.committedCount)
+                                                        : sourceTab.name
                         Layout.preferredHeight: 2.5 * view.unit
                         Layout.preferredWidth: tabInner.implicitWidth + view.unit
                         radius: 0.46 * view.unit
@@ -67,14 +71,16 @@ Item {
                             anchors.rightMargin: view.unit * 0.3
                             spacing: view.paneSpacing / 2
                             Label {
-                                text: sourceTab.name
+                                text: sourceTab.label
                                 font.bold: sourceTab.active
                                 color: sourceTab.active ? view.colors.windowText : view.colors.secondaryText
                                 elide: Text.ElideRight
                             }
+                            // Kit samples leave through their rows' Remove, never all at once.
                             ToolButton {
+                                visible: sourceTab.committedCount === 0
                                 text: "×"
-                                Accessible.name: qsTr("Close %1").arg(sourceTab.name)
+                                Accessible.name: qsTr("Close %1").arg(sourceTab.label)
                                 onClicked: view.workflow.closeSource(sourceTab.index)
                             }
                         }
@@ -226,6 +232,8 @@ Item {
                     readonly property string sampleName: view.editor.slicesRevision >= 0 ? view.editor.sliceName(sliceId) : ""
                     readonly property int sliceNum: view.editor.slicesRevision >= 0 ? view.editor.sliceOrdinal(sliceId) : 0
                     readonly property bool isSelected: view.editor.selectedSlice === sliceId
+                    // An untouched project sample: its name is read-only and saving reuses it.
+                    readonly property bool committed: view.editor.slicesRevision >= 0 && view.editor.sliceIsCommitted(sliceId)
                     property bool editing: false
 
                     width: slices.contentWidth
@@ -287,9 +295,11 @@ Item {
 
                                 MouseArea {
                                     anchors.fill: parent
-                                    cursorShape: Qt.IBeamCursor
+                                    cursorShape: sliceRow.committed ? Qt.ArrowCursor : Qt.IBeamCursor
                                     onClicked: {
                                         view.editor.selectSlice(sliceRow.sliceId)
+                                        if (sliceRow.committed)
+                                            return
                                         sliceRow.editing = true
                                         nameEdit.text = sliceRow.sampleName
                                         nameEdit.forceActiveFocus()
@@ -336,6 +346,13 @@ Item {
                                     }
                                 }
                             }
+                        }
+
+                        Label {
+                            objectName: "splitStudioSliceProjectTag"
+                            visible: sliceRow.committed
+                            text: qsTr("Project")
+                            color: sliceRow.isSelected ? view.colors.windowText : view.colors.secondaryText
                         }
 
                         ToolButton {

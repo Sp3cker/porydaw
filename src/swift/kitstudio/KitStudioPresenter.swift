@@ -6,19 +6,22 @@ import PorydawSampleUI
 import PorydawVoicegroup
 import QtBridge
 
+/// One file tab, or the single tab grouping every committed kit sample (`committedCount > 0`).
 @MainActor
 @QtBridgeable
 public final class KitSourceRow: QmlUncreatable {
     public let name: String
     public let active: Bool
+    public let committedCount: Int
 
-    init(source: KitSourceSession.Source, active: Bool) {
-        name = source.sample.suggestedName
+    init(name: String, active: Bool, committedCount: Int) {
+        self.name = name
         self.active = active
+        self.committedCount = committedCount
     }
 
-    func matches(source: KitSourceSession.Source, active: Bool) -> Bool {
-        name == source.sample.suggestedName && self.active == active
+    func matches(name: String, active: Bool, committedCount: Int) -> Bool {
+        self.name == name && self.active == active && self.committedCount == committedCount
     }
 }
 
@@ -98,19 +101,50 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    /// Opens committed mappings with a clean window-local history.
-    @QtIgnored public func load(zones: [KitZone], mode: KitMode, name: String) {
+    /// Opens committed mappings with a clean window-local history; each mapped project sample becomes
+    /// one read-only whole slice, numbered in key order.
+    @QtIgnored public func load(
+        zones: [KitZone], mode: KitMode, name: String,
+        samples: [String: ProcessedSample], progWaves: [String: [UInt32]]
+    ) {
         open()
+        self.samples = samples
+        self.progWaves = progWaves
+        var sliceNames: [String: String] = [:]
+        for zone in zones where sliceNames[zone.sampleName] == nil {
+            guard let sample = samples[zone.sampleName] else { continue }
+            let symbol = zone.sampleName
+            let short =
+                symbol.hasPrefix(Self.sampleSymbolPrefix)
+                ? String(symbol.dropFirst(Self.sampleSymbolPrefix.count)) : symbol
+            for candidate in [short, symbol] {
+                let source = ImportedSample(
+                    committed: sample.s8, frequency: sample.freq, looped: sample.looped,
+                    loopStart: Int(sample.loopStart), name: candidate)
+                if session.addCommittedSample(source, symbol: symbol) {
+                    sliceNames[symbol] = candidate
+                    break
+                }
+            }
+        }
+        let named = zones.map { (zone: KitZone) -> KitZone in
+            var renamed = zone
+            renamed.sampleName = sliceNames[zone.sampleName] ?? zone.sampleName
+            return renamed
+        }
         draft.load(
             KitDraft.Snapshot(
-                drumkitZones: mode == .drumkit ? zones : [],
-                keysplitZones: mode == .keysplit ? zones : []))
+                drumkitZones: mode == .drumkit ? named : [],
+                keysplitZones: mode == .keysplit ? named : []))
         activeMode = mode
+        activeSource = session.sources.first?.id
         voicegroupName = name
         voicegroupNameEdited = true
         voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
         markClean()
     }
+
+    private static let sampleSymbolPrefix = "DirectSoundWaveData_"
 
     /// Applies the workflow's suggested name unless the user already chose one.
     @QtIgnored public func applySuggestedVoicegroupName(_ name: String) {
@@ -217,8 +251,13 @@ public final class KitStudioPresenter: QmlUncreatable {
             refresh()
             return
         }
+        // A sample already on another key keeps its voice macro, root, pan and envelope.
+        let template = (draft.drumkitZones + draft.keysplitZones).first { $0.sampleName == name }
+        var zone = template ?? newZone(name: name, start: onKey, end: end)
+        zone.startKey = onKey
+        zone.endKey = end
         var next = zones
-        next.append(newZone(name: name, start: onKey, end: end))
+        next.append(zone)
         next.sort { $0.startKey < $1.startKey }
         if commitZones(next) { selectedZone = next.firstIndex { $0.startKey == onKey } ?? -1 }
         refresh()
@@ -398,8 +437,33 @@ public final class KitStudioPresenter: QmlUncreatable {
                     autoPlaceSlice(name)
                 }
             }
+            followCommittedForks()
         }
         refresh()
+    }
+
+    /// Points zones at the names of edited committed slices the session forked; runs inside a draft edit.
+    private func followCommittedForks() {
+        let renames = session.forkEditedCommittedSlices()
+        guard !renames.isEmpty else { return }
+        renameZones(
+            Dictionary(
+                uniqueKeysWithValues: renames.map { (rename: (from: String, to: String)) in
+                    (rename.from, rename.to)
+                }))
+    }
+
+    private func renameZones(_ names: [String: String]) {
+        var drumkit = draft.drumkitZones
+        var keysplit = draft.keysplitZones
+        for index in drumkit.indices {
+            if let name = names[drumkit[index].sampleName] { drumkit[index].sampleName = name }
+        }
+        for index in keysplit.indices {
+            if let name = names[keysplit[index].sampleName] { keysplit[index].sampleName = name }
+        }
+        if drumkit != draft.drumkitZones { draft.setZones(drumkit, mode: .drumkit) }
+        if keysplit != draft.keysplitZones { draft.setZones(keysplit, mode: .keysplit) }
     }
 
     @QtIgnored public func addSource(_ sample: ImportedSample, autoPlaceFirstSlice: Bool = false) {
@@ -417,15 +481,27 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
     }
 
+    /// Tab rows: the kit-samples tab first when the kit has committed samples, then each opened file.
+    private func sourceId(row: Int) -> Int? {
+        let committed = session.sources.filter { $0.committedSymbol != nil }
+        let files = session.sources.filter { $0.committedSymbol == nil }
+        let fileRow = committed.isEmpty ? row : row - 1
+        if !committed.isEmpty && row == 0 {
+            return committed.contains(where: { $0.id == activeSource }) ? activeSource : committed[0].id
+        }
+        return files.indices.contains(fileRow) ? files[fileRow].id : nil
+    }
+
     public func selectSource(row: Int) {
-        guard session.sources.indices.contains(row) else { return }
-        activeSource = session.sources[row].id
+        guard let id = sourceId(row: row) else { return }
+        activeSource = id
         refresh()
     }
 
+    /// Closes an opened file; the kit-samples tab has no close action.
     public func closeSource(row: Int) {
-        guard session.sources.indices.contains(row) else { return }
-        let id = session.sources[row].id
+        guard let id = sourceId(row: row), session.sources.first(where: { $0.id == id })?.committedSymbol == nil
+        else { return }
         changeSessionWithAutoPlace { _ = $0.removeSource(source: id) }
     }
 
@@ -481,7 +557,7 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     public func moveMarker(id: Int, toFrame: Int) {
         guard let key = markerKey(id) else { return }
-        draft.moveMarker(key, toFrame: toFrame, snap: snap)
+        draft.moveMarker(key, toFrame: toFrame, snap: snap) { followCommittedForks() }
         refresh()
     }
 
@@ -499,16 +575,7 @@ public final class KitStudioPresenter: QmlUncreatable {
             guard let updated = session.sources.first(where: { $0.id == address.source }) else { return }
             let newName = updated.slices[address.index].name
             guard oldName != newName else { return }
-            var drumkit = draft.drumkitZones
-            var keysplit = draft.keysplitZones
-            for index in drumkit.indices where drumkit[index].sampleName == oldName {
-                drumkit[index].sampleName = newName
-            }
-            for index in keysplit.indices where keysplit[index].sampleName == oldName {
-                keysplit[index].sampleName = newName
-            }
-            if drumkit != draft.drumkitZones { draft.setZones(drumkit, mode: .drumkit) }
-            if keysplit != draft.keysplitZones { draft.setZones(keysplit, mode: .keysplit) }
+            renameZones([oldName: newName])
             renamed = true
         }
         if renamed { refresh() }
@@ -618,7 +685,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         let names = Set(zones.map(\.sampleName))
         for source in session.sources {
             for (index, slice) in source.slices.enumerated() where names.contains(slice.name) {
-                rendered[slice.name] = session.renderSlice(source: source.id, slice: index)
+                rendered[slice.name] = render(source, index)
             }
         }
         guard
@@ -629,8 +696,24 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     @QtIgnored public func renderedSlice(id: Int) -> Optional<ProcessedSample> {
-        guard let address = sliceAddress(id) else { return nil }
-        return session.renderSlice(source: address.source, slice: address.index)
+        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
+        else { return nil }
+        return render(source, address.index)
+    }
+
+    /// An untouched committed slice plays the project's own audio; everything else renders.
+    private func render(_ source: KitSourceSession.Source, _ index: Int) -> ProcessedSample {
+        if let symbol = source.committedSymbol(of: source.slices[index]), let committed = samples[symbol] {
+            return committed
+        }
+        return session.renderSlice(source: source.id, slice: index)
+    }
+
+    /// Whether the slice is an untouched project sample: its name is read-only and saving reuses it.
+    public func sliceIsCommitted(id: Int) -> Bool {
+        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
+        else { return false }
+        return source.committedSymbol(of: source.slices[address.index]) != nil
     }
 
     /// Converts the audition player's rendered-grid position back to a source frame.
@@ -666,6 +749,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     private func changeSession(_ change: (KitSourceSession) -> Void) {
         draft.edit {
             change(session)
+            followCommittedForks()
         }
         refresh()
     }
@@ -712,14 +796,25 @@ public final class KitStudioPresenter: QmlUncreatable {
         selectedZoneRelease = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.release : 0
         selectedZonePanEnabled = zones.indices.contains(selectedZone) && activeMode == .drumkit
         if !session.sources.contains(where: { $0.id == activeSource }) { activeSource = session.sources.first?.id }
-        let sourceValues = session.sources.enumerated().map {
-            (entry: (offset: Int, element: KitSourceSession.Source)) -> KitSourceRow in
-            let active = entry.element.id == activeSource
-            if entry.offset < sourceRows.count, sourceRows[entry.offset].matches(source: entry.element, active: active)
+        let committedCount = session.sources.count { $0.committedSymbol != nil }
+        var rowValues: [(name: String, active: Bool, committedCount: Int)] = []
+        if committedCount > 0 {
+            let active = session.sources.contains { $0.id == activeSource && $0.committedSymbol != nil }
+            rowValues.append((name: "", active: active, committedCount: committedCount))
+        }
+        for source in session.sources where source.committedSymbol == nil {
+            rowValues.append((name: source.sample.suggestedName, active: source.id == activeSource, committedCount: 0))
+        }
+        let sourceValues = rowValues.enumerated().map {
+            (entry: (offset: Int, element: (name: String, active: Bool, committedCount: Int))) -> KitSourceRow in
+            let value = entry.element
+            if entry.offset < sourceRows.count,
+                sourceRows[entry.offset].matches(
+                    name: value.name, active: value.active, committedCount: value.committedCount)
             {
                 return sourceRows[entry.offset]
             }
-            return KitSourceRow(source: entry.element, active: active)
+            return KitSourceRow(name: value.name, active: value.active, committedCount: value.committedCount)
         }
         syncModel(sourceRows, sourceValues, matches: { (lhs: KitSourceRow, rhs: KitSourceRow) -> Bool in lhs === rhs })
         sourceRate = currentSource.flatMap { Int(exactly: $0.targetRate.rounded()) } ?? 0
@@ -735,6 +830,7 @@ public final class KitStudioPresenter: QmlUncreatable {
                 waveform.onMarkerDragged = { [weak self] (id: Int, frame: Int) in
                     self?.moveMarker(id: id, toFrame: frame)
                 }
+                waveform.fixedKinds = ["loop"]
             }
             if displayedSource != activeSource || displayedWaveform !== waveform {
                 let buffer = currentSource?.sample.buffer ?? []
@@ -745,13 +841,18 @@ public final class KitStudioPresenter: QmlUncreatable {
                 displayedWaveform = waveform
             }
             if let source = currentSource {
-                waveform.setMarkers(
-                    source.markers.map { (frame: Int) in
-                        guard let id = draft.markerIds[KitDraft.MarkerKey(source: source.id, frame: frame)] else {
-                            preconditionFailure("Published source markers must have presenter-owned ids")
-                        }
-                        return (id: id, frame: frame, kind: "slice", label: "")
-                    })
+                var markers = source.markers.map { (frame: Int) -> (id: Int, frame: Int, kind: String, label: String) in
+                    guard let id = draft.markerIds[KitDraft.MarkerKey(source: source.id, frame: frame)] else {
+                        preconditionFailure("Published source markers must have presenter-owned ids")
+                    }
+                    return (id: id, frame: frame, kind: "slice", label: "")
+                }
+                // A committed sample shows its loop; draft marker ids count up from 1, clear of these.
+                if source.committedSymbol != nil, source.sample.hasLoop {
+                    markers.append((id: Int.max - 1, frame: source.sample.loopStart, kind: "loop", label: "Loop start"))
+                    markers.append((id: Int.max, frame: source.sample.frameCount, kind: "loop", label: "Loop end"))
+                }
+                waveform.setMarkers(markers)
                 let frames = source.slices.map(\.startFrame)
                 let numbers = source.slices.map { sliceNumber(name: $0.name) }
                 waveform.setRegionBadges(frames: frames, numbers: numbers)
@@ -782,7 +883,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         for source in session.sources {
             for (index, slice) in source.slices.enumerated()
             where mapped.contains(slice.name) && seen.insert(slice.name).inserted {
-                bytes += SampleStudioReadouts.romBytes(session.renderSlice(source: source.id, slice: index))
+                bytes += SampleStudioReadouts.romBytes(render(source, index))
             }
         }
         let noun = sliceCount == 1 ? "slice" : "slices"

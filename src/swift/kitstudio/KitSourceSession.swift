@@ -17,9 +17,24 @@ public final class KitSourceSession {
     public struct Source: Equatable, Sendable {
         public let id: Int
         public let sample: ImportedSample
+        /// The project symbol of a committed sample loaded from the kit; nil for opened files.
+        public let committedSymbol: String?
         public fileprivate(set) var markers: [Int]
         public fileprivate(set) var slices: [Slice]
         public fileprivate(set) var targetRate: Double
+
+        /// The symbol a slice still plays verbatim: the untouched whole committed sample.
+        public func committedSymbol(of slice: Slice) -> String? {
+            guard let committedSymbol, isCommittedOriginal(slice), slice.startFrame == 0,
+                slice.endFrame == sample.frameCount, !slice.fadeIn, !slice.fadeOut, targetRate == sample.sampleRate
+            else { return nil }
+            return committedSymbol
+        }
+
+        /// Whether the slice carries the committed sample's read-only name.
+        public func isCommittedOriginal(_ slice: Slice) -> Bool {
+            committedSymbol != nil && slice.name == sample.suggestedName
+        }
     }
 
     /// The complete value state for draft-owned undo, including identity counters.
@@ -54,10 +69,48 @@ public final class KitSourceSession {
     public func addSource(_ sample: ImportedSample) {
         sources.append(
             Source(
-                id: nextSourceId, sample: sample, markers: [], slices: [],
+                id: nextSourceId, sample: sample, committedSymbol: nil, markers: [], slices: [],
                 targetRate: SampleRatePolicy.targetRate(gbaReady: sample.gbaReady, sourceRate: sample.sampleRate)))
         nextSourceId += 1
     }
+
+    /// Adds a project sample as one whole, fade-free slice named `sample.suggestedName` at its own rate;
+    /// false when another slice already uses that name.
+    @discardableResult
+    public func addCommittedSample(_ sample: ImportedSample, symbol: String) -> Bool {
+        let name = sample.suggestedName
+        guard !name.isEmpty, sample.frameCount > 0,
+            !sources.contains(where: { (source: Source) in source.slices.contains { $0.name == name } })
+        else { return false }
+        let slice = Slice(
+            id: nextSliceId, name: name, startFrame: 0, endFrame: sample.frameCount, fadeIn: false, fadeOut: false)
+        sources.append(
+            Source(
+                id: nextSourceId, sample: sample, committedSymbol: symbol, markers: [], slices: [slice],
+                targetRate: sample.sampleRate))
+        nextSourceId += 1
+        nextSliceId += 1
+        return true
+    }
+
+    /// Renames every edited slice still carrying its committed name, so saving writes a new sample
+    /// instead of the project's; returns the renames for zones to follow.
+    public func forkEditedCommittedSlices() -> [(from: String, to: String)] {
+        var renames: [(from: String, to: String)] = []
+        for index in sources.indices {
+            for slice in sources[index].slices.indices {
+                let value = sources[index].slices[slice]
+                guard sources[index].isCommittedOriginal(value), sources[index].committedSymbol(of: value) == nil
+                else { continue }
+                let name = mintName(for: sources[index])
+                guard !name.isEmpty else { continue }
+                sources[index].slices[slice].name = name
+                renames.append((from: value.name, to: name))
+            }
+        }
+        return renames
+    }
+
     /// Creates the initial whole-buffer slice for a fresh source.
     @discardableResult
     public func createFirstSlice(source: Int) -> Bool {
@@ -130,9 +183,11 @@ public final class KitSourceSession {
     }
 
     /// Deletes only the indexed slice; retained marker pairs are not implicitly resurrected.
+    /// A committed sample's source leaves with its last slice.
     public func removeSlice(source: Int, slice: Int) {
         guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice) else { return }
         sources[index].slices.remove(at: slice)
+        if sources[index].committedSymbol != nil, sources[index].slices.isEmpty { sources.remove(at: index) }
     }
 
     /// Changes the indexed slice's independently rendered declick overrides.
@@ -162,7 +217,10 @@ public final class KitSourceSession {
         params.cropStart = region.startFrame
         params.cropEnd = region.endFrame
         params.targetRate = source.targetRate
-        params.loopOn = false
+        // A whole committed sample keeps its loop; every other slice renders one-shot.
+        params.loopOn =
+            source.committedSymbol != nil && source.sample.hasLoop && region.startFrame == 0
+            && region.endFrame == source.sample.frameCount
         params.fadeIn = false
         params.fadeOut = false
         if source.targetRate != source.sample.sampleRate { params.exactPitchOverride = 0 }
@@ -176,8 +234,11 @@ public final class KitSourceSession {
     }
 
     /// Sanitizes and validates a rename; refusal preserves the indexed slice's original name.
+    /// A committed sample's own name is read-only.
     public func renameSlice(source: Int, slice: Int, to: String) -> Bool {
-        guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice) else { return false }
+        guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice),
+            !sources[index].isCommittedOriginal(sources[index].slices[slice])
+        else { return false }
         let name = SampleNames.sanitize(to)
         guard !name.isEmpty else { return false }
         if name == sources[index].slices[slice].name { return validateName?(name) == nil }

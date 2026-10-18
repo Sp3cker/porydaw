@@ -13,6 +13,7 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceClose(report)
     checkSourceSnapshot(report)
     checkSourceAutoPlaceAndZoneRemoval(report)
+    checkCommittedKitSamples(report)
 }
 
 private func sessionSample(
@@ -384,4 +385,71 @@ private func checkSourceAutoPlaceAndZoneRemoval(_ report: CheckReport) {
     r.expectEqual(
         expected: beforeRename, actual: p.sliceName(id: p.sliceId(row: 2)), what: "invalid rename leaves name unchanged"
     )
+}
+
+@MainActor
+private func checkCommittedKitSamples(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::committedKitSamples")
+    func committed(_ count: Int, looped: Bool) -> ProcessedSample {
+        var sample = ProcessedSample()
+        sample.s8 = (0..<count).map { (index: Int) -> Int8 in Int8(truncatingIfNeeded: index % 64 - 32) }
+        sample.freq = 13379 * 1024
+        sample.size = UInt32(count)
+        sample.looped = looped
+        sample.loopStart = looped ? 100 : 0
+        return sample
+    }
+    func zone(_ key: Int, _ symbol: String) -> KitZone {
+        KitZone(startKey: key, endKey: key, sampleName: symbol, rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
+    }
+    let p = KitStudioPresenter()
+    p.load(
+        zones: [
+            zone(36, "DirectSoundWaveData_kick"), zone(38, "DirectSoundWaveData_kick"),
+            zone(40, "DirectSoundWaveData_snare"),
+        ],
+        mode: .drumkit, name: "kit",
+        samples: [
+            "DirectSoundWaveData_kick": committed(400, looped: true),
+            "DirectSoundWaveData_snare": committed(300, looped: false),
+        ],
+        progWaves: [:])
+    r.expectEqual(
+        expected: ["kick", "kick", "snare"], actual: p.draft.drumkitZones.map(\.sampleName),
+        what: "keys reference one slice per committed sample")
+    r.expectEqual(expected: 2, actual: p.sliceCount, what: "a sample on two keys is one slice")
+    r.expectEqual(
+        expected: [1, 1, 2], actual: (0..<3).map { (row: Int) -> Int in p.zoneBadge(row: row) },
+        what: "keys badge their committed slice numbers")
+    r.expectEqual(expected: 2, actual: p.sourceRows[0].committedCount, what: "one kit tab groups the samples")
+    r.expect(!p.dirty, message: "loading the kit is not an unsaved change")
+    let kick = p.sliceId(row: 0)
+    r.expect(p.sliceIsCommitted(id: kick), message: "an untouched kit sample is committed")
+    p.renameSlice(id: kick, name: "renamed")
+    r.expectEqual(expected: "kick", actual: p.sliceName(id: kick), what: "a kit sample's name is read-only")
+
+    p.selectSource(row: 0)
+    guard let rate = SampleRatePolicy.rates.first(where: { $0 != 13379 }) else {
+        r.expect(false, message: "the rate table offers another rate")
+        return
+    }
+    p.setSourceRate(rate: rate)
+    r.expectEqual(expected: "kick_00", actual: p.sliceName(id: kick), what: "an edited kit sample forks a new name")
+    r.expectEqual(
+        expected: ["kick_00", "kick_00", "snare"], actual: p.draft.drumkitZones.map(\.sampleName),
+        what: "both keys follow the forked sample")
+    r.expect(!p.sliceIsCommitted(id: kick) && p.dirty, message: "the fork saves as new audio")
+    let forked = p.session.sources[0]
+    r.expect(
+        p.session.renderSlice(source: forked.id, slice: 0).looped,
+        message: "a fork covering the whole sample keeps its loop")
+    p.undo()
+    r.expect(
+        p.sliceName(id: kick) == "kick" && p.sliceIsCommitted(id: kick) && !p.dirty,
+        message: "undo restores the untouched kit sample")
+
+    p.removeSlice(id: p.sliceId(row: 1))
+    r.expect(
+        p.session.sources.count == 1 && p.draft.drumkitZones.map(\.sampleName) == ["kick", "kick"],
+        message: "removing a kit sample drops its source and keys only")
 }

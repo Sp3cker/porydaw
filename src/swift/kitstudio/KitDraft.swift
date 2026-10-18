@@ -59,7 +59,7 @@ public final class KitDraft {
         }
     }
 
-    func moveMarker(_ key: MarkerKey, toFrame: Int, snap: Bool) {
+    func moveMarker(_ key: MarkerKey, toFrame: Int, snap: Bool, then followUp: () -> Void) {
         guard let session,
             let oldSource = session.sources.first(where: { (source: KitSourceSession.Source) in
                 source.id == key.source
@@ -74,6 +74,7 @@ public final class KitDraft {
             {
                 markerIds[MarkerKey(source: key.source, frame: frame)] = markerIds.removeValue(forKey: key)
             }
+            followUp()
         }
     }
 

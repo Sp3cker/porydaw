@@ -124,9 +124,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 self.open()
                 self.editDestination = (loaded.name, loaded.location, loaded.tableName, loaded.childCount)
                 self.createdVoicegroups.insert(loaded.name)
-                self.state?.load(zones: loaded.zones, mode: loaded.mode, name: loaded.name)
-                self.state?.samples = loaded.samples
-                self.state?.progWaves = loaded.waves
+                self.state?.load(
+                    zones: loaded.zones, mode: loaded.mode, name: loaded.name, samples: loaded.samples,
+                    progWaves: loaded.waves)
                 self.presenterRevision += 1
             } catch {
                 guard let self, self.current(generation: generation, service: service) else { return }
@@ -394,8 +394,15 @@ public final class KitStudioWorkflow: QmlUncreatable {
         let destination = editDestination.flatMap { $0.name == name ? $0 : nil }
         var rendered: [(name: String, wav: Data)] = []
         var renderKeys: [String: SliceRenderKey] = [:]
+        var sliceSymbols: [String: String] = [:]
         for source in state.session.sources {
             for (index, slice) in source.slices.enumerated() {
+                // An untouched project sample is referenced as-is; only new or edited audio is written.
+                if let symbol = source.committedSymbol(of: slice) {
+                    sliceSymbols[slice.name] = symbol
+                    continue
+                }
+                sliceSymbols[slice.name] = "DirectSoundWaveData_" + slice.name
                 let key = SliceRenderKey(source: source.id, rate: source.targetRate, slice: slice)
                 renderKeys[slice.name] = key
                 let wav: Data
@@ -485,7 +492,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 }
                 let writtenChildCount = try Self.writeKitChildren(
                     projectRoot: root, name: name, zones: zones, mode: mode,
-                    sliceNames: Set(rendered.map(\.name)), location: destination?.location,
+                    symbols: sliceSymbols, location: destination?.location,
                     previousChildCount: destination?.childCount)
                 if destination != nil { self.editDestination?.childCount = writtenChildCount }
                 if mode == .keysplit {
@@ -528,15 +535,16 @@ public final class KitStudioWorkflow: QmlUncreatable {
         return false
     }
 
-    /// Writes new groups or the original subgroup section through the voice-line serializer.
+    /// Writes new groups or the original subgroup section through the voice-line serializer;
+    /// `symbols` maps slice names to the sample symbols their voices reference.
     private static func writeKitChildren(
-        projectRoot: String, name: String, zones: [KitZone], mode: KitMode, sliceNames: Set<String>,
+        projectRoot: String, name: String, zones: [KitZone], mode: KitMode, symbols: [String: String],
         location: VoicegroupLocation?, previousChildCount: Int?
     ) throws -> Int {
         var children = KitDraftCodec.children(from: zones, mode: mode)
         for index in children.indices {
-            if let voiceName = children[index]?.symbol, sliceNames.contains(voiceName) {
-                children[index]?.symbol = "DirectSoundWaveData_" + voiceName
+            if let voiceName = children[index]?.symbol, let symbol = symbols[voiceName] {
+                children[index]?.symbol = symbol
             }
         }
         let destination =

@@ -4,7 +4,8 @@ Choose **Tools → Split Studio…** to open Split Studio. It needs an open proj
 (no song required). There is one Split Studio window for the whole app. The
 Tools command starts an empty kit. To edit an existing drumkit or keysplit,
 right-click its voicegroup row and choose **Edit in Studio**. The window loads
-its mappings and voicegroup name; sample rows keep their **Edit Sample** action.
+its mappings, voicegroup name and samples (see [Kit samples](#kit-samples));
+sample rows keep their **Edit Sample** action.
 With a row focused, **Menu** or **Shift+F10** opens the same menu.
 The title bar shows **Split Studio**, with a `•` while there are unsaved changes.
 
@@ -25,7 +26,8 @@ a bottom footer:
   empty) to add a folder, or drag folders in from Finder; click **Open File…** to
   pick a file directly; expand **Advanced** to access **Remove Folder from List**.
 - **Centre editor**:
-  - File tabs along the top for loaded audio sources.
+  - File tabs along the top for loaded audio sources, after a **Kit samples · N**
+    tab when editing an existing kit.
   - Toolbar with zoom out and zoom in buttons (magnifier icons) and **Fit**.
   - Waveform display showing slices and draggable slice markers.
   - **Snap to zero** toggle.
@@ -107,6 +109,27 @@ not a valid symbol, duplicates another slice in the kit, or belongs to a project
 sample that this Split Studio window did not save, the text box shows a red outline
 and the rename is not applied.
 
+## Kit samples
+
+**Edit in Studio** shows every sample the kit already uses, once per sample, in
+key order. Each one is a numbered slice in the slice table with a **Project** tag,
+and its number appears on every key that plays it. All of them share the
+**Kit samples · N** tab, which has no close button. Selecting a row shows that
+sample's waveform; a looped sample shows its **Loop start** and **Loop end**,
+which cannot be dragged. Loading the kit does not count as an unsaved change.
+
+A kit sample's name is read-only, because it names the sample across the
+project. While a kit sample is untouched, saving reuses it as-is and never
+rewrites its audio. Adding a slice marker to it or changing its **Saved at**
+rate turns it into a new sample: it loses the **Project** tag, gets the next
+free `<name>_NN` name (which you can rename), and saving writes it as a new
+sample and points this kit's keys at it. The original sample and every other
+voicegroup using it stay unchanged. A new sample keeps the original's loop only
+while it still covers the whole sample.
+
+**Remove** (**✕**) on a kit sample takes it and its keys out of this kit; the
+sample stays in the project.
+
 ## Mapping keys
 
 Slices can be mapped across the 128-key keyboard (keys 0–127):
@@ -183,8 +206,8 @@ Windows/Linux to save the kit:
 - For a new name, creates `sound/voicegroups/<name>.inc` and adds its include to
   `sound/voice_groups.inc`.
 - With the original name from **Edit in Studio**, updates the original subgroup
-  section in place and preserves its keysplit table name. Existing sample audio
-  is not rewritten.
+  section in place and preserves its keysplit table name. Untouched kit samples
+  are not rewritten.
 - In Keysplit layout, writes the routing table to the project's keysplit tables.
   Renaming an edited keysplit creates a new table; its old table is preserved
   for existing references and is not automatically removed if no references remain.

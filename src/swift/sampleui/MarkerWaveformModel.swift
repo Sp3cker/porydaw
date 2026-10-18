@@ -54,6 +54,8 @@ public final class MarkerWaveformModel: QmlUncreatable {
     @QtIgnored public var onMarkerPressed: ((Int) -> Void)?
     @QtIgnored public var onMarkerDragged: ((Int, Int) -> Void)?
     @QtIgnored public var onMarkerReleased: (() -> Void)?
+    /// Marker kinds drawn for reference only; pointer hit-testing skips them.
+    @QtIgnored public var fixedKinds: Set<String> = []
     @QtIgnored public var pyramidRevision: Int { sampleRevision }
     private var sampleRevision = 0
 
@@ -179,7 +181,7 @@ public final class MarkerWaveformModel: QmlUncreatable {
         var preferredNearest = 0
         var distance = Double.infinity
         var preferredDistance = Double.infinity
-        for row in rows {
+        for row in rows where !fixedKinds.contains(row.kind) {
             let delta = abs(x - Double(xForFrame(row.frame)))
             guard delta <= tolerance else { continue }
             if delta < distance {
