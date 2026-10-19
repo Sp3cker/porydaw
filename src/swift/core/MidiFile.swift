@@ -444,7 +444,7 @@ public struct MidiFile: Equatable, Sendable {
                 endTick - previousTick, track: trackIndex,
                 event: chunk.events.count)
             body.append(contentsOf: [0xFF, 0x2F, 0x00])
-            guard body.count <= UInt32.max else {
+            guard body.count <= Int(UInt32.max) else {
                 throw MidiCodecError.invalidEvent(
                     track: trackIndex, event: chunk.events.count,
                     reason: "track data is too large")
