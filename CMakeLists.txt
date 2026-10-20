@@ -465,7 +465,8 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
     PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
-    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample
+    PorydawSampleUI PorydawKitStudio BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
     "${porydaw_qmltypes_import_path}/PorydawApp/PorydawApp.qmltypes"
@@ -582,7 +583,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw
     porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawCore
-    PorydawVoicegroup PorydawBackups PorydawSample BinaryParsing)
+    PorydawVoicegroup PorydawBackups PorydawSample PorydawSampleUI PorydawKitStudio BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)
