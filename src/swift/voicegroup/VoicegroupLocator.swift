@@ -166,6 +166,9 @@ public final class VoicegroupLocator {
                 if declares(path, symbol: base, isLabel: false) {
                     return VoicegroupLocation(filePath: path, sectionLabel: "")
                 }
+                if declares(path, symbol: label, isLabel: true) {
+                    return VoicegroupLocation(filePath: path, sectionLabel: String(decoding: label, as: UTF8.self))
+                }
             }
         }
         return nil

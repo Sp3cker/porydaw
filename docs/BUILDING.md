@@ -377,7 +377,13 @@ C loader and the Swift `BankBuilder` and asserts byte-identical banks (tones,
 names, keysplit tables, sub-banks, decoded sample bytes). Set
 `PORYDAW_PARITY_PROJECT_ROOT=<decomp project>` to sweep a real project.
 
-The same check gates performance per target on the warm (second) load:
+`uv run --no-sync dev checks --filter projectstore-locator` also covers legacy
+numeric declarations such as `voicegroup017::` in independently named files,
+with LF and CRLF input, through a real `VoicegroupStore` bank load. Directory
+fallback resolves these labels even when the file has no `voice_group` macro
+and does not qualify as a multi-bank monolithic source.
+
+The parity check gates performance per target on the warm (second) load:
 Swift malloc calls ≤ C, Swift live blocks ≤ C + 1 + sub-bank count (one Swift
 instance each), and, on optimized builds only, total load time ≤ C. Debug
 builds print times but assert only allocations. Release, warm,

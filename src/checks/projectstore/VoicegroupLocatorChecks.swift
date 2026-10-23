@@ -8,6 +8,7 @@ public func runVoicegroupLocatorSuite(_ report: CheckReport) {
             try locatorFixture(root, report)
             try locatorProbes(root, report)
             try locatorLineRules(root, report)
+            try locatorLegacyLabels(root, report)
         }
     } catch {
         report.fail(cppID, "locator fixture failed: \(error)")
@@ -177,6 +178,39 @@ private func locatorProbes(_ root: URL, _ report: CheckReport) throws {
     report.expect(
         locator.nextIncludedFile(after: "other\\fixture_rich.inc") == nil,
         cppID: cppID, message: "missing immediate successor is not skipped; basename accepts both separators")
+}
+
+private func locatorLegacyLabels(_ root: URL, _ report: CheckReport) throws {
+    let cppID = "voicegroup/VoicegroupLocatorChecks::legacyLabels"
+    let path = root.appendingPathComponent("sound/voicegroups/voicegroup017.inc")
+    for newline in ["\n", "\r\n"] {
+        let text = [
+            "\t.global voicegroup017",
+            "voicegroup017::",
+            "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 3",
+            "",
+        ].joined(separator: newline)
+        try Data(text.utf8).write(to: path)
+        let source = VoicegroupSource()
+        var error: String?
+        report.expect(
+            source.open(projectRoot: root.path, voicegroupArg: "017", error: &error),
+            cppID: cppID, message: "legacy source selection accepts numeric label: \(error ?? "")")
+        let locator = VoicegroupLocator(layout: ProjectLayout(projectRoot: root.path))
+        report.expectEqual(
+            expected: VoicegroupLocation(filePath: path.path, sectionLabel: "voicegroup017"),
+            actual: locator.locate(voicegroupArg: "017"), cppID: cppID,
+            what: "single legacy numeric label resolves independently of filename and line endings")
+        guard locator.locate(voicegroupArg: "017") != nil else { continue }
+        let store = try VoicegroupStore(projectRoot: root.path)
+        let bank = try store.loadBank(voicegroupArg: "017")
+        report.expect(
+            bank.slotViews[0].voice?.macro == .square1 && bank.slotViews[0].voice?.release == 3,
+            cppID: cppID, message: "legacy bank loads the declared square voice")
+        report.expect(
+            locator.locate(voicegroupArg: "01") == nil, cppID: cppID,
+            message: "numeric label prefixes do not resolve another bank")
+    }
 }
 
 private func locatorLineRules(_ root: URL, _ report: CheckReport) throws {
