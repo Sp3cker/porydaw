@@ -1,0 +1,4 @@
+module PorydawMp3Encode {
+    header "mp3_encode.h"
+    export *
+}

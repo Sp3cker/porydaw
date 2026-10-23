@@ -113,7 +113,7 @@ public struct KeybindingRegistry {
         .init("file.save_song", .window, "Save Song", standard: .save),
         .init("file.register_song", .window, "Register Song"),
         .init("file.close_tab", .window, "Close Tab", standard: .close),
-        .init("file.export_wav", .window, "Export WAV"),
+        .init("file.export_wav", .window, "Export Audio"),
         .init("file.quit", .window, "Quit", standard: .quit),
         .init("edit.undo", .window, "Undo", standard: .undo),
         .init("edit.redo", .window, "Redo", standard: .redo),

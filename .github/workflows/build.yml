@@ -31,12 +31,23 @@ jobs:
         run: uv run --no-sync dev format --check --base "$BASE"
 
   build-linux:
-    runs-on: [self-hosted, Linux, X64, porydaw-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 1
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.11.*"
+          cache: true
 
       - name: Cache C/C++ objects
         uses: mozilla-actions/sccache-action@v0.0.9
@@ -177,12 +188,26 @@ jobs:
   # AddressSanitizer sweep of the porydaw_checks catalog with the software Qt Quick
   # backend; windowing checks and the QML lanes are not run here.
   asan-checks:
-    runs-on: [self-hosted, Linux, X64, porydaw-ci]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 1
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lld pulseaudio libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.11.*"
+          cache: true
+
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
@@ -199,21 +224,21 @@ jobs:
       # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
-          cmake -S . -B /mnt/ci/build-asan -G Ninja -DPORYDAW_ASAN=ON
+          cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DCMAKE_LINKER_TYPE=LLD
-          -DCMAKE_Swift_NUM_THREADS=6
-          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 6"
+          -DCMAKE_Swift_NUM_THREADS=2
+          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 2"
 
       - name: Build
-        run: cmake --build /mnt/ci/build-asan -j12
+        run: cmake --build build-asan -j2
 
       - name: Run harnesses
         run: |
           checks=(uv run --no-sync dev checks:run
-            /mnt/ci/build-asan/porydaw_checks --no-windowing-checks)
+            build-asan/porydaw_checks --no-windowing-checks)
           set +e
           QT_QUICK_BACKEND=software "${checks[@]}" --filter=projectstore-parity --pool=1
           parity_status=$?

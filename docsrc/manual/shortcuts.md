@@ -101,7 +101,7 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Save Song | `Ctrl+S` | Saves the current song |
 | Close Tab | `Ctrl+W` | Closes the current song tab |
 | Quit | `Ctrl+Q` | Quits the application |
-| Import MIDI / Register Song / Export WAV | *(unbound)* | File menu actions |
+| Import MIDI / Register Song / Export Audio | *(unbound)* | File menu actions |
 
 ### Tools and Help
 

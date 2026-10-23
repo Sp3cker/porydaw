@@ -89,11 +89,39 @@ ShellLaneSupport {
         wait(0)
     }
 
+    function init() {
+        preferences.remove("lastAudioExportFormat")
+    }
+
+    function test_formatSelectionSurvivesCancelAndNewWindow() {
+        openShell("mus_route102")
+        let model = openOptions()
+        child("songExportFormat").forceActiveFocus()
+        keyClick(Qt.Key_End)
+        compare(model.formatIndex, 1, "MP3 is selected")
+        model.rejectOptions()
+        openOptions()
+        compare(model.formatIndex, 1, "canceling keeps the last format")
+        verify(model.suggestedFile.endsWith(".mp3"),
+               "the remembered format determines the suggested extension")
+        cleanup()
+        openShell("mus_route102")
+        model = openOptions()
+        compare(model.formatIndex, 1, "a new export owner restores the saved format")
+        child("songExportFormat").forceActiveFocus()
+        keyClick(Qt.Key_Home)
+        compare(model.formatIndex, 0, "WAV replaces the remembered MP3 choice")
+        model.rejectOptions()
+        openOptions()
+        compare(model.formatIndex, 0, "reopening keeps the later WAV selection")
+        verify(model.suggestedFile.endsWith(".wav"),
+               "switching back restores the WAV extension")
+    }
+
     function test_menuRow() {
         const presenter = openShell("")
         const row = child("shellAction_file.export_wav")
         verify(row !== null, "the File menu mounts Export WAV")
-        verify(row.text.indexOf("Export WAV...") === 0, "the fork export label leads the row")
         compare(presenter.action("file.export_wav").enabled, false,
                 "no song disables WAV export")
         presenter.session.openProjectAndSong(rootPath, "mus_route101")
@@ -243,6 +271,65 @@ ShellLaneSupport {
         model.rejectOptions()
     }
 
+    function test_mp3ExportUsesSelectedFormatAndExtension() {
+        const presenter = openShell("mus_route102")
+        const model = openOptions()
+        const format = child("songExportFormat")
+        verify(format !== null, "the export format control is available")
+        format.forceActiveFocus()
+        keyClick(Qt.Key_End)
+        compare(model.formatIndex, 1, "keyboard selects MP3")
+        model.setRateIndex(0)
+        model.setTailTenths(0)
+        const stem = rootPath + "/sound/mp3-export"
+        choose(stem + ".wav")
+        settleRender()
+        verify(probe.exists(stem + ".mp3"),
+               "MP3 selection writes the matching extension: " + model.failureMessage)
+        verify(!probe.exists(stem + ".wav"), "MP3 never writes under a WAV extension")
+        const originalDigest = probe.digest(stem + ".mp3")
+        presenter.activate("roll.select_all")
+        presenter.activate("roll.transpose_up")
+        openOptions()
+        model.setFormatIndex(1)
+        const failureRevision = model.failureRevision
+        choose(stem + ".wav")
+        settleRender()
+        verify(model.failureRevision > failureRevision,
+               "a renamed destination cannot bypass overwrite confirmation")
+        compare(probe.digest(stem + ".mp3"), originalDigest,
+                "the unconfirmed MP3 destination remains unchanged")
+        verify(waitForNative(function() {
+            const error = child("shellWavExportErrorDialog")
+            return error !== null && error.visible
+        }, 5000), "the destination conflict is shown")
+        child("shellWavExportErrorDialog").close()
+        openOptions()
+        compare(model.formatIndex, 1, "reopening preserves the MP3 selection")
+        child("songExportFormat").forceActiveFocus()
+        keyClick(Qt.Key_Home)
+        const wavPath = rootPath + "/sound/reopened-export.wav"
+        choose(wavPath)
+        settleRender()
+        verify(probe.inspect(wavPath),
+               "switching from remembered MP3 to WAV writes a real WAV export")
+    }
+
+    function test_mp3CancelRemovesIncompleteOutput() {
+        openShell("mus_route101")
+        const model = openOptions()
+        model.setFormatIndex(1)
+        model.setLoopCount(99)
+        const path = rootPath + "/sound/cancel.mp3"
+        choose(path)
+        verify(waitForNative(function() {
+            return model.rendering && model.progress > 0
+        }, 20000), "MP3 streams before cancellation")
+        model.cancelRender()
+        settleRender()
+        verify(!probe.exists(path), "cancellation removes the incomplete MP3")
+    }
+
     function test_exportRendersLiveSessionAndStopsPlayback() {
         const presenter = openShell("mus_route102")
         const midiPath = rootPath + "/sound/songs/midi/mus_route102.mid"
@@ -364,7 +451,6 @@ ShellLaneSupport {
             return error !== null && error.visible
         }, 5000), "write failure opens the export error dialog")
         const error = child("shellWavExportErrorDialog")
-        compare(error.title, "Export WAV", "the export error retains its title")
         verify(child("wavExportErrorText").text.indexOf("Cannot write " + path + ": ") === 0,
                "the refusal names the unwritable output")
         compare(probe.exists(path), false, "failed export leaves no file")

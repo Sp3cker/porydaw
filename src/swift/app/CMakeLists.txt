@@ -244,12 +244,15 @@ add_library(PorydawAppAudio STATIC
 porydaw_swift_module(PorydawAppAudio PorydawAppAudio)
 target_compile_options(PorydawAppAudio PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature CheckImplementationOnly>"
 )
 set_target_properties(PorydawAppAudio PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
 target_compile_options(PorydawAppAudio PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/audio/mp3_encode.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/audio>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"

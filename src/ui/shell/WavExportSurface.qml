@@ -71,10 +71,10 @@ Item {
             objectName: "shellWavExportDialog"
             transientParent: surface.windowRoot
             colors: surface.colors
-            title: qsTr("Export WAV")
+            title: qsTr("Export Audio")
             visible: false
             width: metrics.averageCharacterWidth * 47
-            height: metrics.height * 13
+            height: metrics.height * 14
             font: surface.typography.body
             onClosing: function(close) {
                 if (surface.presenter.optionsVisible) {
@@ -103,6 +103,18 @@ Item {
                         model: surface.presenter.rateLabels
                         currentIndex: surface.presenter.rateIndex
                         onActivated: function(index) { surface.presenter.setRateIndex(index) }
+                    }
+                    Label {
+                        text: qsTr("Format:")
+                        color: surface.colors.windowText
+                    }
+                    ComboBox {
+                        id: songExportFormat
+                        objectName: "songExportFormat"
+                        Layout.fillWidth: true
+                        model: surface.presenter.formatLabels
+                        currentIndex: surface.presenter.formatIndex
+                        onActivated: function(index) { surface.presenter.setFormatIndex(index) }
                     }
                     Label {
                         text: qsTr("Loop count:")
@@ -183,9 +195,10 @@ Item {
         id: shellWavExportFileDialog
         objectName: "shellWavExportFileDialog"
         parentWindow: surface.windowRoot
-        title: qsTr("Export WAV")
+        title: qsTr("Export Audio")
         fileMode: FileDialog.SaveFile
-        nameFilters: [qsTr("WAV files (*.wav)")]
+        nameFilters: surface.presenter.formatIndex === 1 ? [qsTr("MP3 files (*.mp3)")] : [qsTr("WAV files (*.wav)")]
+        defaultSuffix: surface.presenter.formatIndex === 1 ? "mp3" : "wav"
         currentFolder: surface.presenter.startFolder
         selectedFile: surface.presenter.suggestedFile
         modality: Qt.WindowModal
@@ -260,7 +273,7 @@ Item {
             objectName: "shellWavExportErrorDialog"
             transientParent: surface.windowRoot
             colors: surface.colors
-            title: qsTr("Export WAV")
+            title: qsTr("Export Audio")
             width: metrics.averageCharacterWidth * 52
             height: metrics.height * 7
             font: surface.typography.body

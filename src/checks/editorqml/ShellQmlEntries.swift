@@ -338,6 +338,7 @@ enum ShellQmlRegistry {
                     "ShellExport::test_loopOptions",
                     "ShellExport::test_tailOptions",
                     "ShellExport::test_fileDialogMemory",
+                    "ShellExport::test_formatSelectionSurvivesCancelAndNewWindow",
                 ]),
             Entry(
                 name: "shell-export-render", inputFileName: "tst_ShellExport.qml",
@@ -346,6 +347,13 @@ enum ShellQmlRegistry {
                     "ShellExport::test_exportRendersLiveSessionAndStopsPlayback",
                     "ShellExport::test_modalRenderBlocksInputAndCancels",
                     "ShellExport::test_writeFailureReportsAndLeavesNoFile",
+                ]),
+            Entry(
+                name: "shell-export-mp3", inputFileName: "tst_ShellExport.qml",
+                fixtureFiles: songs("mus_route101", "mus_route102"),
+                testFunctions: [
+                    "ShellExport::test_mp3ExportUsesSelectedFormatAndExtension",
+                    "ShellExport::test_mp3CancelRemovesIncompleteOutput",
                 ]),
             Entry(
                 name: "shell-sample-studio", inputFileName: "tst_ShellSampleStudio.qml",

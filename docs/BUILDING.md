@@ -61,13 +61,13 @@ Migration smoke on Apple Silicon, Qt 6.11.2, shared QtBridge macro cache: fresh 
 Bootstrap observation: uv 0.13.0 ARM64 archive 14,692,549 bytes in 0.778 s; managed Python 3.13.16 download 24.1 MiB; Ruff wheel 8.8 MiB. Default sync installs the project, Ninja and Ruff; the optional Qt group is absent until provisioning needs it. Cached locked offline sync completed in 0.15 s. Qt and the host compiler/SDK remain the larger environment costs; no claim that the complete environment is only the uv archive.
 
 The `Build` and `All checks` workflows run only on pushes to `fork-main`.
-Linux ASAN runs on the self-hosted Linux x64 `porydaw-ci` runner, retaining its
-`/mnt/ci/build-asan` tree with 12 build jobs, six Swift threads and check pool four.
+Linux artifact builds and ASAN checks run on GitHub-hosted `ubuntu-latest`
+runners, installing Qt 6.11 and native dependencies explicitly. ASAN uses a fresh
+`build-asan` tree with two build jobs, two Swift threads and check pool four.
 It runs Python harness tests before the native sweep, excluding windowing checks
-and QML lanes; those run in the GitHub-hosted macOS `All checks` job. The Linux
-release build also uses `porydaw-ci` and its provisioned Qt, without a hosted
-Qt installer. macOS/Windows artifact builds and the standalone Linux harness-test
-job remain GitHub-hosted.
+and QML lanes; those run in the GitHub-hosted macOS `All checks` job.
+macOS/Windows artifact builds and the standalone Linux harness-test job also
+remain GitHub-hosted.
 Startup benchmark commands remain available, but their synthetic process and
 statistics tests are excluded from the harness suite.
 

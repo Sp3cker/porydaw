@@ -19,6 +19,8 @@ public final class WavExportPresenter: QmlUncreatable {
     public var hasLoop: Bool = false
     public var rateLabels: [String] = ["32000 Hz", "44100 Hz", "48000 Hz"]
     public var rateIndex: Int = 2
+    public var formatLabels: [String] = ["WAV (lossless)", "MP3 (320 kbps)"]
+    public var formatIndex: Int = 0
     public var loopCount: Int = 2
     public var fadeTenths: Int = 50
     public var tailTenths: Int = 30
@@ -43,6 +45,8 @@ public final class WavExportPresenter: QmlUncreatable {
     public func open() {
         guard exportAvailable, let session, let document = session.workspace?.session else { return }
         rateIndex = 2
+        let savedFormat = PreferencesStore().int(key: "lastAudioExportFormat", fallback: 0)
+        formatIndex = (SongExportFormat(rawValue: savedFormat) ?? .wav).rawValue
         loopCount = 2
         fadeTenths = 50
         tailTenths = 30
@@ -56,6 +60,15 @@ public final class WavExportPresenter: QmlUncreatable {
     public func setRateIndex(index: Int) {
         rateIndex = min(2, max(0, index))
         updateDuration()
+    }
+
+    public func setFormatIndex(index: Int) {
+        formatIndex = min(1, max(0, index))
+        let store = PreferencesStore()
+        store.setInt(key: "lastAudioExportFormat", value: formatIndex)
+        store.synchronize()
+        guard active, let session, let document = session.workspace?.session else { return }
+        prepareDestination(session: session, label: document.document.source.label)
     }
 
     public func setLoopCount(count: Int) {
@@ -78,7 +91,8 @@ public final class WavExportPresenter: QmlUncreatable {
             sampleRate: WavExportOptions.sampleRates[rateIndex],
             loopCount: loopCount, fadeoutSeconds: Double(fadeTenths) / 10,
             tailSeconds: Double(tailTenths) / 10,
-            resonanceSuppression: session?.audio?.resonanceSuppression ?? false)
+            resonanceSuppression: session?.audio?.resonanceSuppression ?? false,
+            format: SongExportFormat(rawValue: formatIndex) ?? .wav)
     }
 
     private func updateDuration() {
@@ -96,7 +110,8 @@ public final class WavExportPresenter: QmlUncreatable {
                 .appendingPathComponent("sound/songs/midi", isDirectory: true)
             : URL(fileURLWithPath: preference, isDirectory: true)
         startFolder = folder.absoluteString
-        suggestedFile = folder.appendingPathComponent(label + ".wav").absoluteString
+        let suffix = (SongExportFormat(rawValue: formatIndex) ?? .wav) == .mp3 ? "mp3" : "wav"
+        suggestedFile = folder.appendingPathComponent(label + "." + suffix).absoluteString
     }
 
     public func acceptOptions() {
@@ -125,9 +140,26 @@ public final class WavExportPresenter: QmlUncreatable {
             !url.path.isEmpty, let session, let document = session.workspace?.session,
             let audio = session.audio
         else { return }
-        let path = url.path
+        let format = SongExportFormat(rawValue: formatIndex) ?? .wav
+        let expectedExtension = format == .mp3 ? "mp3" : "wav"
+        let resolvedURL =
+            url.pathExtension.lowercased() == expectedExtension
+            ? url : url.deletingPathExtension().appendingPathExtension(expectedExtension)
+        if resolvedURL.path != url.path,
+            FileManager.default.fileExists(atPath: resolvedURL.path)
+        {
+            failureMessage =
+                "“\(resolvedURL.lastPathComponent)” already exists. "
+                + "Re-run Export Audio and select that file in the save dialog "
+                + "so the overwrite confirmation applies."
+            failureRevision += 1
+            choosingFile = false
+            active = false
+            return
+        }
+        let path = resolvedURL.path
         let store = PreferencesStore()
-        store.setString(key: "lastWavExportDir", value: url.deletingLastPathComponent().path)
+        store.setString(key: "lastWavExportDir", value: resolvedURL.deletingLastPathComponent().path)
         store.synchronize()
         session.stop()
         let capture = document.wavExportCapture(

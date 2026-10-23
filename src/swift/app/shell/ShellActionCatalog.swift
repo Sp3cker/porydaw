@@ -129,7 +129,7 @@ enum ShellActionCatalog {
         "file.open_project": "Open Project...",
         "file.open_backups": "Open Backups...",
         "file.import_midi": "Import MIDI...",
-        "file.export_wav": "Export WAV...",
+        "file.export_wav": "Export Audio...",
         "tools.import_sample": "Import Sample...",
         "tools.split_studio": "Split Studio...",
         "edit.preferences": "Preferences...",

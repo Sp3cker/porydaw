@@ -172,6 +172,7 @@ if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
     message(FATAL_ERROR "The Qt main executor requires Swift 6.4 or newer on Linux and Windows")
 endif()
 include(cmake/BinaryParsing.cmake)
+include(cmake/Lame.cmake)
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/backups)
 add_subdirectory(src/swift/playback)
@@ -199,6 +200,8 @@ qt_add_library(porydaw_native_host STATIC
     src/audio/miniaudio_impl.c
     src/audio/sample_codec.h
     src/audio/sample_codec.c
+    src/audio/mp3_encode.h
+    src/audio/mp3_encode.c
 )
 qt_add_library(porydaw_app STATIC
     src/app/item_cursor.h
@@ -415,6 +418,9 @@ foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
         target_link_libraries(${native_target} PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
     endif()
 endforeach()
+# LAME is consumed only through src/audio/mp3_encode.c; keep it private to
+# the host so no Swift target inherits its headers.
+target_link_libraries(porydaw_native_host PRIVATE LameMp3)
 target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
 # Swift modules import native headers through their module maps; retain the
 # archive dependency without inheriting native compilation settings.
