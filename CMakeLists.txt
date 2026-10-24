@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 # Release runners use the newest SDK; without a floor the app would require that macOS.
 # InlineArray (core, playback, sample) sets the floor at macOS 26.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0)
-project(porydaw VERSION 1.0.3 LANGUAGES C CXX)
+project(porydaw VERSION 1.0.5 LANGUAGES C CXX)
 
 find_package(Git QUIET)
 if(Git_FOUND)
