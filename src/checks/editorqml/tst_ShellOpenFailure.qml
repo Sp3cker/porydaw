@@ -146,10 +146,14 @@ ShellLaneSupport {
         criticalSpy.clear()
         var missingPath = bootstrap.projectRoot + "/missing-native-project"
         session.openProject(missingPath)
+        compare(session.projectOpeningStage, 1, "project replacement immediately publishes reading progress")
         verify(waitForNative(function() { return session.lastSaveError.length > 0 }, 30000),
                "opening the missing project reports a failure")
-        compare(shell.shellPresenter.statusText, session.lastSaveError,
-                "the missing project explanation reaches the shell status")
+        tryCompare(session, "projectOpeningStage", 0, 5000,
+                   "failed project replacement cannot leave opening progress active")
+        tryCompare(shell.footer, "showingProgress", false, 5000,
+                   "opening progress cannot cover the failed-open explanation")
+        compare(shell.footer.showingFailure, true, "the failed-open explanation takes status priority")
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
                "the failed project open raises the production error dialog")
         var dialog = findChild(shell, "shellCriticalDialog")
@@ -193,6 +197,8 @@ ShellLaneSupport {
                 "selecting the first song keeps the second prior document ready")
 
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        compare(session.lastSaveError, "", "retrying a project open releases the old error status")
+        compare(session.projectOpeningStage, 1, "retrying immediately publishes new opening progress")
         verify(waitForNative(function() {
             return tabs.tabCount === 1 && tabs.selectedPage !== firstPage
                 && tabs.selectedPage !== null && tabs.selectedPage.title === "mus_route101"

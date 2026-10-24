@@ -160,6 +160,7 @@ extension ApplicationSession {
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
+                finishProjectOpening(generation: pending.generation)
                 songDock.songsLoading = false
                 Task { await pending.service.close() }
                 persistTabRecipe()
@@ -194,6 +195,7 @@ extension ApplicationSession {
         kitStudioWorkflow?.dispose()
         closeSampleStudio()
         isDisposed = true
+        finishProjectOpening(generation: projectOpeningGeneration)
         if case .preparing(let task) = audioReadiness { task.cancel() }
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil

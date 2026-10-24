@@ -22,6 +22,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var documentDirty = false
     @QtTracked public var songDocumentDirty = false
     @QtTracked public var projectOpen = false
+    /// Owned by the project-opening lifecycle; QML observes the current step.
+    public var projectOpeningStage: Int = 0
     @QtTracked public var songOpen = false
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
@@ -142,9 +144,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var startupRestoreTask: Task<Void, Never>?
     @QtIgnored
+    var projectOpeningGeneration: UInt64 = 0
+    @QtIgnored
     var pendingProjectSwitch: ProjectSwitchCandidate?
     @QtIgnored
-    var prefetchedProject: (path: String, read: Task<ProjectRead, Error>)?
+    var prefetchedProject: (path: String, generation: UInt64, read: Task<ProjectRead, Error>)?
     @QtIgnored
     var prefetchedSong: (service: ProjectService, load: PrefetchedSongLoad)?
     @QtIgnored

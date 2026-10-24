@@ -72,6 +72,11 @@ Hidden windows do not start that work. Explicit project opens still prepare thei
 dependencies on demand. Closing before the frame or during content creation keeps
 the saved-session recipe and waits for scene/audio ownership to settle.
 
+While a project opens, the status bar advances through reading the project,
+opening songs, and indexing instruments. The `1/3`–`3/3` labels count steps,
+not elapsed-time percentages. Progress remains active until the instrument
+catalog is installed; failed or cancelled opens release the progress status.
+
 Builds use standard Ninja through the uv/Python harness against a checkout-local Qt 6.11.
 Existing build directories configured with another generator must be removed and recreated.
 On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.

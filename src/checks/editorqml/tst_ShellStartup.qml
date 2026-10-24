@@ -190,6 +190,13 @@ ShellWindowSupport {
                 return surface !== null && surface.editorStartupReady
             }, 5000), "the selected restored song satisfies production editable readiness")
             verify(waitForPolish(shell), "the ready startup editor settles its actual input geometry")
+            verify(waitForNative(function() {
+                return shell.shellPresenter.session.projectOpeningStage === 0
+            }, 10000), "startup progress finishes after the project catalogs settle")
+            verify(shell.shellPresenter.settingsStore.voicegroups.indexOf("fixture_rich") >= 0,
+                   "the instrument catalog is usable when opening progress disappears")
+            compare(shell.footer.showingProgress, false,
+                    "the completed startup releases the status bar")
             const session = shell.shellPresenter.session
             const grid = surface.gridModel
             const sourceNotes = grid.fetchNoteSummary()

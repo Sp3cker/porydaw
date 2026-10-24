@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawNativeHost
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
@@ -9,15 +10,38 @@ import PorydawAppPresentation
 
 @MainActor
 extension ApplicationSession {
+    enum ProjectOpeningStage: Int {
+        case idle, readingProject, openingSongs, indexingInstruments
+    }
+
     /// An opened project waiting to replace the current one. Song registration
     /// and voice editor catalogs are populated after its first tab opens.
     struct ProjectSwitchCandidate {
         let path: String
+        let generation: UInt64
         let label: String?
         let restore: WorkspaceTabRecipe?
         let service: ProjectService
         let labels: [String]
         let song: PrefetchedSongLoad?
+    }
+
+    private func beginProjectOpening() -> UInt64 {
+        projectOpeningGeneration += 1
+        publishLastSaveError("")
+        projectOpeningStage = ProjectOpeningStage.readingProject.rawValue
+        return projectOpeningGeneration
+    }
+
+    private func setProjectOpeningStage(_ stage: ProjectOpeningStage, generation: UInt64) {
+        guard generation == projectOpeningGeneration, projectOpeningStage != 0, !isDisposed else { return }
+        projectOpeningStage = stage.rawValue
+    }
+
+    @QtIgnored
+    func finishProjectOpening(generation: UInt64) {
+        guard generation == projectOpeningGeneration else { return }
+        projectOpeningStage = ProjectOpeningStage.idle.rawValue
     }
 
     @QtIgnored
@@ -51,11 +75,12 @@ extension ApplicationSession {
         let path = cli.project.isEmpty ? recipe.projectPath : cli.project
         guard !path.isEmpty else { return }
         songDock.songsLoading = true
+        let generation = beginProjectOpening()
         let song = startupSongChoice(
             label: cli.song.isEmpty ? nil : cli.song,
             selected: recipe.selectedSong, ordered: recipe.orderedSongs)
         prefetchedProject = (
-            path, Task { @concurrent in try await ProjectRead.load(path: path, song: song) }
+            path, generation, Task { @concurrent in try await ProjectRead.load(path: path, song: song) }
         )
     }
 
@@ -86,6 +111,7 @@ extension ApplicationSession {
     func discardPrefetchedProject() {
         guard let prefetched = prefetchedProject else { return }
         prefetchedProject = nil
+        finishProjectOpening(generation: prefetched.generation)
         Task { @concurrent in
             guard let loaded = try? await prefetched.read.value else { return }
             await loaded.service.close()
@@ -100,11 +126,14 @@ extension ApplicationSession {
         let priorTask = activeReplacementTask
         prefetchedSong = nil
         let read: Task<ProjectRead, Error>
+        let generation: UInt64
         if let prefetched = prefetchedProject, prefetched.path == path {
             prefetchedProject = nil
             read = prefetched.read
+            generation = prefetched.generation
         } else {
             discardPrefetchedProject()
+            generation = beginProjectOpening()
             let song = startupSongChoice(
                 label: label, selected: restore?.selectedSong ?? "",
                 ordered: restore?.orderedSongs ?? [])
@@ -116,6 +145,7 @@ extension ApplicationSession {
             do {
                 loaded = try await read.value
             } catch {
+                self?.finishProjectOpening(generation: generation)
                 guard let self, !Task.isCancelled else {
                     Task { [read] in
                         if let loaded = try? await read.value { await loaded.service.close() }
@@ -132,12 +162,13 @@ extension ApplicationSession {
                 return
             }
             guard let self, !self.isDisposed, !Task.isCancelled else {
+                self?.finishProjectOpening(generation: generation)
                 await loaded.service.close()
                 return
             }
             self.publishLastSaveError("")
             let candidate = ProjectSwitchCandidate(
-                path: path, label: label, restore: restore, service: loaded.service,
+                path: path, generation: generation, label: label, restore: restore, service: loaded.service,
                 labels: loaded.labels, song: loaded.song)
             self.pendingProjectSwitch = candidate
             self.guardSplitStudioClose(
@@ -154,12 +185,18 @@ extension ApplicationSession {
     }
 
     func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+        pd_startup_trace_mark("project-switch-begin")
+        defer { pd_startup_trace_mark("project-switch-end") }
+        setProjectOpeningStage(.openingSongs, generation: candidate.generation)
         closeSampleStudio()
         isReplacingProject = true
+        pd_startup_trace_mark("project-release-begin")
         await releaseTabs()
         await catalogService?.close()
+        pd_startup_trace_mark("project-release-end")
         guard !isDisposed, !Task.isCancelled else {
             isReplacingProject = false
+            finishProjectOpening(generation: candidate.generation)
             await candidate.service.close()
             return
         }
@@ -173,6 +210,7 @@ extension ApplicationSession {
         resetVoicegroupCatalog()
         projectOpen = true
         onProjectStateChanged?()
+        pd_startup_trace_mark("project-restore-tabs-begin")
         if let recipe = candidate.restore {
             let restored = recipe.normalized(available: candidate.labels)
             isRestoringTabs = true
@@ -198,15 +236,22 @@ extension ApplicationSession {
             isReplacingProject = false
             await openTab(label: label, at: nil)
         }
+        pd_startup_trace_mark("project-restore-tabs-end")
         isReplacingProject = false
         if candidate.restore == nil { persistTabRecipe() }
-        populateProjectCatalogs(for: candidate.service)
+        populateProjectCatalogs(for: candidate.service, generation: candidate.generation)
     }
 
-    private func populateProjectCatalogs(for service: ProjectService) {
+    private func populateProjectCatalogs(for service: ProjectService, generation: UInt64) {
+        setProjectOpeningStage(.indexingInstruments, generation: generation)
         Task { [weak self] in
+            defer { self?.finishProjectOpening(generation: generation) }
+            pd_startup_trace_mark("project-catalogs-begin")
+            defer { pd_startup_trace_mark("project-catalogs-end") }
             do {
+                pd_startup_trace_mark("project-song-listings-begin")
                 let songs = try await service.songs()
+                pd_startup_trace_mark("project-song-listings-end")
                 guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
                     self.catalogService === service
                 else { return }
@@ -214,12 +259,15 @@ extension ApplicationSession {
                     self.songDock.publishSongs(songs)
                 }
                 self.songDock.songsLoading = false
+                pd_startup_trace_mark("project-instrument-catalog-begin")
                 _ = await self.refreshVoicegroupCatalog()
+                pd_startup_trace_mark("project-instrument-catalog-end")
             } catch {
                 guard let self, !self.isDisposed, self.pendingProjectSwitch == nil,
                     self.catalogService === service
                 else { return }
                 self.publishOperationFailure(message: String(describing: error))
+                pd_startup_trace_mark("project-catalogs-failed")
                 self.songDock.songsLoading = false
             }
         }
@@ -243,19 +291,28 @@ struct ProjectRead: Sendable {
     let song: PrefetchedSongLoad?
 
     static func load(path: String, song label: String?) async throws -> ProjectRead {
+        pd_startup_trace_mark("project-read-begin")
+        defer { pd_startup_trace_mark("project-read-end") }
         let service = ProjectService()
         do {
+            pd_startup_trace_mark("project-store-open-begin")
             try await service.open(root: path)
+            pd_startup_trace_mark("project-store-open-end")
+            pd_startup_trace_mark("project-song-labels-begin")
             let labels = try await service.songLabels()
+            pd_startup_trace_mark("project-song-labels-end")
             var song: PrefetchedSongLoad?
+            pd_startup_trace_mark("project-startup-song-begin")
             if let label, !label.isEmpty, labels.contains(label),
                 let loaded = try? await service.openSong(label: label),
                 let file = try? MidiFile.decode(loaded.midiBytes)
             {
                 song = PrefetchedSongLoad(label: label, loaded: loaded, file: file)
             }
+            pd_startup_trace_mark("project-startup-song-end")
             return ProjectRead(service: service, labels: labels, song: song)
         } catch {
+            pd_startup_trace_mark("project-read-failed")
             await service.close()
             throw error
         }
