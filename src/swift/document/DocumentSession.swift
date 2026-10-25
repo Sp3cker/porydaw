@@ -323,7 +323,7 @@ public final class DocumentSession {
         }
         let snapshot = try document.captureSave()
         if !forceOverwrite { try checkMidiConflict(against: snapshot) }
-        _ = try await service.save(snapshot)
+        try await service.save(snapshot)
         try requireOpen()
         document.didSave(snapshot)
         lastKnownMidiBytes = snapshot.bytes

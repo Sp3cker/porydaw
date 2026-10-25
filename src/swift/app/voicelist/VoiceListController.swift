@@ -90,7 +90,7 @@ public final class VoiceListController: QmlUncreatable {
     public var bankBusy: Bool = false
     @QtTracked public var bankLoadName = ""
     /// The dock title: the native "Voicegroup" caption with the dirty star.
-    @QtTracked public var panelTitle = "Voicegroup"
+    @QtTracked public var panelTitle = "Voicegroup:"
     /// The selector's editable text (the combo's currentText): the standing
     /// arg's display name, the user's in-progress text, or "Loading...".
     @QtTracked public var selectorText = ""

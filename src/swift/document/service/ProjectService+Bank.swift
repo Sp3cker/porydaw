@@ -176,7 +176,7 @@ extension ProjectService {
     }
 
     /// Writes song MIDI, flags and backups only; voicegroups save independently.
-    public func save(_ snapshot: SaveSnapshot) async throws -> SaveReceipt {
+    public func save(_ snapshot: SaveSnapshot) async throws {
         let store = try requireStore()
         do {
             try Task.checkCancellation()
@@ -196,17 +196,14 @@ extension ProjectService {
                     label: snapshot.destination.label, path: path)
             }
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
-            var flagsWritten = false
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)
                     .deletingLastPathComponent()
                 try await store.saveSongFlags(
                     midiDir: midiDir, label: snapshot.destination.label,
                     config: snapshot.config)
-                flagsWritten = true
             }
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
-            return SaveReceipt(flagsWritten: flagsWritten)
         } catch {
             let failure = projectFailure(error)
             guard case let .operationFailed(message) = failure else { throw failure }

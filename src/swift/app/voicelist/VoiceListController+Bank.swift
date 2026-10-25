@@ -134,10 +134,7 @@ extension VoiceListController {
         slots = newSlots ?? []
         publish(\.bankDirty, dirty)
         publish(\.bankLoadName, loadName)
-        let displayName = voicegroup?.displayName ?? loadName
-        let name = displayName.isEmpty ? "Voicegroup" : "Voicegroup: \(displayName)"
-        let title = dirty ? name + "*" : name
-        publish(\.panelTitle, title)
+        publish(\.panelTitle, dirty ? "Voicegroup*:" : "Voicegroup:")
         if wasLoading {
             let text = VoiceListSemantics.voicegroupDisplayName(currentArg)
             publish(\.selectorText, text)

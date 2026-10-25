@@ -219,8 +219,9 @@ ShellTabsSupport {
         verify(String(selectButton(a).text).slice(-1) !== "*"
                && String(selectButton(b).text).slice(-1) !== "*",
                "both song captions remain clean")
-        compare(controller.panelTitle, "Voicegroup: fixture_rich*",
-                "the named group alone shows its star")
+        var groupTitle = findChild(findChild(shell, "voicegroupPanel"), "voicegroupPanelTitle")
+        verify(groupTitle && groupTitle.visible && String(groupTitle.text).includes("*"),
+               "the group alone remains visibly marked unsaved")
         compare(session().songMidiBytes("mus_route101"), midiA)
         compare(session().songMidiBytes("mus_route102"), midiB)
         compare(summaryOf(a), beforeA)

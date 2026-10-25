@@ -314,12 +314,20 @@ private func sessionSaveConflictGate(report: CheckReport, fixtureRoot: String) {
         }
         check.expect(
             bankConflicted && session.voicegroup.value.dirty,
-            message: "the conflicted unified save writes neither the bank nor the MIDI")
-        var bankSaved = false
-        do { _ = try runBlocking { try await service.saveBank(lease: session.bankLease) }; bankSaved = true } catch {
-            check.fail("bank-only save threw: \(error)"); return
+            message: "a conflicted song save leaves the independent voicegroup dirty")
+        try runBlocking { try await session.voicegroup.save() }
+        let savedBank = VoicegroupSource()
+        var bankError: String?
+        guard
+            savedBank.open(
+                projectRoot: root, voicegroupArg: session.document.state.config.voicegroupArgument, error: &bankError)
+        else {
+            check.fail("saved voicegroup cannot reopen from disk: \(bankError ?? "unknown error")"); return
         }
-        check.expect(bankSaved, message: "bank-only voicegroup saves bypass the MIDI conflict gate")
+        check.expect(
+            !session.voicegroup.value.dirty && session.document.isDirty
+                && savedBank.voiceAt(slot: 0).map(copyVoice) == edited,
+            message: "voicegroup save persists the exact voice despite a MIDI conflict and leaves the song dirty")
         check.expect(
             bytes(at: midiPath) == bankConflictBytes,
             message: "the bank-only save leaves the conflicted MIDI bytes alone")
@@ -403,7 +411,7 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
             return
         }
 
-        let bare = try runBlocking { try await service.save(snapshot) }
+        try runBlocking { try await service.save(snapshot) }
         let bareMidi = try Data(contentsOf: URL(fileURLWithPath: midiPath))
         let bareFile = try MidiFile.decode(Array(bareMidi))
         let hasEditedNote = bareFile.chunks.contains { chunk in
@@ -429,9 +437,6 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
         report.expect(
             configLineBytes(at: cfgPath, label: "mus_session_test2") == otherLine,
             cppID: id, message: "bare save leaves the other song flags unchanged")
-        report.expect(
-            bare.flagsWritten, cppID: id,
-            message: "A064 bare save reports that song flags were written")
 
         let reopened = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test")
@@ -527,7 +532,7 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
             NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89)
         ])
         let newerMidi = Data(try session.document.captureSave().bytes)
-        _ = try runBlocking { try await service.save(snapshot) }
+        try runBlocking { try await service.save(snapshot) }
         session.document.didSave(snapshot)
         report.expect(
             session.document.isDirty && bytes(at: midiPath) == Data(snapshot.bytes)

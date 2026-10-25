@@ -272,11 +272,6 @@ public final class SongHistory {
         revision += 1
     }
 
-    internal func sealMergeBoundary() {
-        guard index > 0 else { return }
-        entries[index - 1].mergeSealed = true
-    }
-
     private func evictOverflow() {
         let count = entries.count - Self.stepLimit
         guard count > 0 else { return }

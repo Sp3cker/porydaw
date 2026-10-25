@@ -144,14 +144,6 @@ final class ServiceKitEditAction: BankHistoryAction {
     var isRedundant: Bool { before == after }
 
     func merged(with _: any BankHistoryAction) -> (any BankHistoryAction)? { nil }
-
-    func rebaseCurrent(with newer: any BankHistoryAction) {
-        guard let other = newer as? ServiceKitEditAction,
-            other.after.voicegroup == after.voicegroup,
-            other.after.slot == after.slot
-        else { return }
-        current = other.current
-    }
 }
 
 /// Scalar merge boundary: which of the twelve voice fields an edit changes.

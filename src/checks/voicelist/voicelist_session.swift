@@ -222,8 +222,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         what: "canonical observer refreshes rows when the committed edit publishes")
     list.refresh(from: session)
     report.expect(
-        list.rows[0] === originalRow && list.bankDirty
-            && list.panelTitle == "Voicegroup: test_vg*",
+        list.rows[0] === originalRow && list.bankDirty,
         cppID: bankViewID,
         message: "bank edit republishes the dirty view on the same voice row handle")
     report.expectEqual(
@@ -237,8 +236,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     list.refresh(from: session)
     report.expect(
-        list.rows[0] === originalRow && !list.bankDirty
-            && list.panelTitle == "Voicegroup: test_vg",
+        list.rows[0] === originalRow && !list.bankDirty,
         cppID: bankViewID,
         message: "bank undo republishes the clean view on the same voice row handle")
     report.expectEqual(

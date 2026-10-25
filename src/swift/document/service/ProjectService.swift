@@ -266,11 +266,6 @@ public struct AppliedBankEdit: Sendable {
     public var materialization: BlankSlotMaterialization? = nil
 }
 
-/// A song-only save receipt.
-public struct SaveReceipt: Sendable {
-    public var flagsWritten: Bool
-}
-
 /// The registration plan behind the native Register Song confirmation
 /// (RegistrationPlanResult): the resolved identity plus the registration
 /// files still missing the entry, named exactly as the list badge names

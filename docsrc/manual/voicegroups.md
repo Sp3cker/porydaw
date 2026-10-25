@@ -32,6 +32,9 @@ Voice parameters belong to the voicegroup, not to the song. Changing ADSR,
 tuning, sample selection, or voice type marks the voicegroup unsaved without
 marking the song tab unsaved. All songs using that group hear the changes.
 
+The header shows the group name in the selector without repeating it in
+the label. An asterisk beside **Voicegroup** marks unsaved group edits.
+
 The voicegroup editor has its own undo history. Undo/Redo while editing a
 voice operates on the shared group's history; Undo/Redo in the piano roll
 operates on the song. Changing the song's assigned voicegroup remains a song

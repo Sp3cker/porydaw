@@ -845,7 +845,7 @@ internal func sessionFailureStages(
                         hasConfig: true),
                     revision: revision, identity: identity)
                 do {
-                    _ = try runBlocking { try await caseService.save(snapshot) }
+                    try runBlocking { try await caseService.save(snapshot) }
                 } catch {
                     failure = error as? ProjectServiceError
                 }

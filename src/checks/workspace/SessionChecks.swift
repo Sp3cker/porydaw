@@ -415,7 +415,7 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             cppID: id + "one-step", message: "kit application dirties bank and records exactly one labeled step")
         try runBlocking { try await session.voicegroup.save() }
         report.expect(
-            !session.voicegroup.value.dirty, cppID: id + "save-seals", message: "normal song save cleans the kit bank")
+            !session.voicegroup.value.dirty, cppID: id + "save-seals", message: "voicegroup save cleans the kit bank")
         _ = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[0].voice == before.parent
