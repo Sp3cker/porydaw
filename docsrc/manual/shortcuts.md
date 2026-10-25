@@ -75,8 +75,8 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | --- | --- | --- |
 | Insert Time | `Ctrl+Shift+I` | With an active time selection, inserts a silent gap the length of the selection immediately; otherwise opens a bars/beats/fractions prompt that inserts across the whole song at the edit cursor, even while playing |
 | Delete Time (Shift Left) | *(unbound)* | Removes the active time selection's span and shifts later scoped content left; no-op without a selection. Ordinary `Delete`/`Backspace` still clear selection **contents** without shifting time |
-| Undo | `Ctrl+Z` | Undoes the last action |
-| Redo | `Ctrl+Y` / `Ctrl+Shift+Z` | Redoes the previously undone action |
+| Undo | `Ctrl+Z` | Undoes the last action in the active song or voicegroup editor; text fields retain local text undo |
+| Redo | `Ctrl+Y` / `Ctrl+Shift+Z` | Redoes the previously undone action in that same editor |
 | Find Song | `Ctrl+F` | Focuses song search; also under Edit → Find Song |
 | Preferences | `Ctrl+,` | Opens application preferences |
 | Song Settings / Engine Settings | *(unbound)* | Open the respective settings dialogs |
@@ -98,7 +98,9 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | --- | --- | --- |
 | New Song | `Ctrl+N` | Creates a new song |
 | Open Project | `Ctrl+O` | Opens an existing project |
-| Save Song | `Ctrl+S` | Saves the current song |
+| Save | `Ctrl+S` | Saves the song or voicegroup targeted by the current editing surface |
+| Save Song / Save Voicegroup | *(unbound)* | Explicitly saves the named owner |
+| Save All | `Ctrl+Shift+S` | Saves all dirty songs and voicegroups, including groups without open songs |
 | Close Tab | `Ctrl+W` | Closes the current song tab |
 | Quit | `Ctrl+Q` | Quits the application |
 | Import MIDI / Register Song / Export Audio | *(unbound)* | File menu actions |

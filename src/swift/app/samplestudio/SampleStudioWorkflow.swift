@@ -24,6 +24,12 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let errorSurface: SourceErrorSurface
     }
 
+    private struct VoiceDestination {
+        let group: VoicegroupSession
+        let slot: Int
+        let expected: BankVoice?
+    }
+
     private weak var session: ApplicationSession?
     private var presenter: SampleStudioPresenter?
     private var tools: SampleLoopTools?
@@ -35,7 +41,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var committing = false
     private var pendingTask: Task<Void, Never>?
     private var sessionGeneration = 0
-    private var destinationSlot = -1
+    private var destination: VoiceDestination?
     private var editName: String?
     private var reopenFromSource = false
     private var sf2File: Sf2File?
@@ -115,9 +121,13 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             slot < 0
                 || (slot < VoiceListController.slotCount
                     && session.voiceList.isBound && !session.voiceList.isLoading
-                    && session.voiceList.session != nil)
+                    && session.voiceList.voicegroup != nil && session.voiceList.editingEnabled)
         else { return }
-        destinationSlot = slot
+        if slot >= 0, let group = session.voiceList.voicegroup {
+            destination = VoiceDestination(group: group, slot: slot, expected: group.value.slots[slot].voice)
+        } else {
+            destination = nil
+        }
         editName = nil
         reopenFromSource = false
         invalidateSourcePreparation()
@@ -153,7 +163,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
             slot >= 0, slot < VoiceListController.slotCount,
             session.voiceList.isBound, !session.voiceList.isLoading,
-            session.voiceList.session != nil
+            session.voiceList.voicegroup != nil, session.voiceList.editingEnabled
         else { return }
         let prefix = "DirectSoundWaveData_"
         guard let symbol = session.voiceList.slots[slot].voice?.symbol,
@@ -163,7 +173,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             return
         }
         let name = String(symbol.dropFirst(prefix.count))
-        destinationSlot = -1
+        destination = nil
         let provenance = SampleProvenanceStore(preferences: session.preferences)
             .load(projectRoot: session.projectRoot, name: name)
         invalidateSourcePreparation()
@@ -263,7 +273,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let name = presenter.registeredName
         let editing = editName != nil
         let keepsProvenance = !editing || reopenFromSource
-        let destination = destinationSlot
+        let destination = destination
         let root = session.projectRoot
         let provenanceStore = SampleProvenanceStore(preferences: session.preferences)
         let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(), update: editing)
@@ -289,9 +299,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 guard !Task.isCancelled, self.sessionGeneration == generation,
                     self.session?.catalogService === service
                 else { return }
-                if !editing && destination >= 0 {
+                if !editing, let destination {
                     do {
-                        try await self.assign(name: name, slot: destination)
+                        try await self.assign(name: name, to: destination)
                         guard !Task.isCancelled, self.sessionGeneration == generation else { return }
                     } catch {
                         guard !Task.isCancelled, self.sessionGeneration == generation else { return }
@@ -336,7 +346,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         sf2File = nil
         pendingSource = nil
         committedSource = nil
-        destinationSlot = -1
+        destination = nil
         editName = nil
         reopenFromSource = false
         setEditorOpen(false)
@@ -484,15 +494,12 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             waveformSourceRevision = presenter.sourceRevision
             tools.publishWaveform(wave, sourceChanged: sourceChanged)
         }
-        let voice =
-            session.voiceList.slots.indices.contains(destinationSlot)
-            ? session.voiceList.slots[destinationSlot].voice : nil
-        let destinationAdsr: VoiceListAdsr? = voice.flatMap {
-            VoiceListSemantics.macroIsCgb($0.macro)
+        let destinationAdsr: VoiceListAdsr? = destination?.expected.flatMap { (voice: BankVoice) -> VoiceListAdsr? in
+            VoiceListSemantics.macroIsCgb(voice.macro)
                 ? nil
                 : VoiceListAdsr(
-                    attack: $0.attack, decay: $0.decay,
-                    sustain: $0.sustain, release: $0.release)
+                    attack: voice.attack, decay: voice.decay,
+                    sustain: voice.sustain, release: voice.release)
         }
         let player = SampleStudioAudition(
             presenter: presenter, lane: libraryHost.lane(),
@@ -507,15 +514,12 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         setEditorOpen(true)
     }
 
-    private func assign(name: String, slot: Int) async throws {
-        guard let session, session.voiceList.isBound, !session.voiceList.isLoading,
-            session.voiceList.session != nil,
-            session.voiceList.slots.indices.contains(slot)
-        else {
+    private func assign(name: String, to destination: VoiceDestination) async throws {
+        guard let session, session.voiceList.editingEnabled else {
             throw ProjectServiceError.operationFailed("The destination voicegroup is no longer available.")
         }
         let symbol = "DirectSoundWaveData_\(name)"
-        let current = session.voiceList.slots[slot].voice
+        let current = destination.expected
         var voice: BankVoice
         if let current,
             [
@@ -538,8 +542,11 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             voice.release = adsr.release
         }
         voice.symbol = symbol
-        try await session.voiceList.applyVoiceEdit(slot: slot, voice: voice)
-        session.voiceList.revealSlot(slot: slot)
+        _ = try await destination.group.apply(slot: destination.slot, value: voice, expected: destination.expected)
+        session.voiceList.refreshRetainedGroups()
+        if session.voiceList.voicegroup === destination.group {
+            session.voiceList.revealSlot(slot: destination.slot)
+        }
     }
 
     private func showAlert(title: String, text: String) {

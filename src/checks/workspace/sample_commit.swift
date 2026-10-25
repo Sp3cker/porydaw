@@ -52,7 +52,7 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         var assigned = original
         assigned.macro = BankVoiceMacro.directSound
         assigned.symbol = symbol
-        _ = try runBlocking { try await first.applyBankEdit(slot: 0, value: assigned, expected: original) }
+        _ = try runBlocking { try await first.voicegroup.apply(slot: 0, value: assigned, expected: original) }
         check.expect(
             first.bankSlots[0].voice == assigned && peer.bankSlots[0].voice == assigned,
             message: "new sample assignment reaches both sessions")
@@ -65,19 +65,19 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         check.expect(
             initialAudio == rendered.s8 && peerAudio == rendered.s8,
             message: "new registered sample plays rendered bytes in both sessions")
-        let historyCount = first.document.history.undoCount
-        let peerHistoryCount = peer.document.history.undoCount
+        let historyCount = first.voicegroup.history.undoCount
+        let peerHistoryCount = peer.voicegroup.history.undoCount
         guard var unsaved = peer.bankSlots[1].voice else {
             check.expect(false, message: "fixture provides adjacent editable slot")
             return
         }
         let previous = unsaved
         unsaved.release = unsaved.release == 255 ? 254 : unsaved.release + 1
-        _ = try runBlocking { try await peer.applyBankEdit(slot: 1, value: unsaved, expected: previous) }
-        let editCount = first.document.history.undoCount
-        let peerEditCount = peer.document.history.undoCount
-        let dirty = first.bankDirty
-        let peerDirty = peer.bankDirty
+        _ = try runBlocking { try await peer.voicegroup.apply(slot: 1, value: unsaved, expected: previous) }
+        let editCount = first.voicegroup.history.undoCount
+        let peerEditCount = peer.voicegroup.history.undoCount
+        let dirty = first.voicegroup.value.dirty
+        let peerDirty = peer.voicegroup.value.dirty
         rendered.s8 = (0..<64).map { Int8(31 - $0) }
         let updatedWav = SampleWavWriter.bytes(for: rendered)
         let beforeInc = try Data(contentsOf: URL(filePath: inc))
@@ -86,10 +86,10 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         check.expect(afterInc == beforeInc, message: "sample update preserves registration bytes")
         check.expect(
             first.bankSlots[1].voice == unsaved && peer.bankSlots[1].voice == unsaved
-                && first.bankDirty == dirty && peer.bankDirty == peerDirty,
+                && first.voicegroup.value.dirty == dirty && peer.voicegroup.value.dirty == peerDirty,
             message: "rebind preserves unsaved edit and dirty state")
         check.expect(
-            first.document.history.undoCount == editCount && peer.document.history.undoCount == peerEditCount,
+            first.voicegroup.history.undoCount == editCount && peer.voicegroup.history.undoCount == peerEditCount,
             message: "sample update adds no bank history command")
         let refreshed = slotZeroAudio(first)
         let peerRefreshed = slotZeroAudio(peer)
@@ -111,15 +111,15 @@ internal func sampleCommitRefreshChecks(_ report: CheckReport, fixtureRoot: Stri
         check.expect(
             first.bankLease.publicationRevision == beforeRefusal
                 && peer.bankLease.publicationRevision == peerBeforeRefusal
-                && first.document.history.undoCount == editCount
-                && peer.document.history.undoCount == peerEditCount,
+                && first.voicegroup.history.undoCount == editCount
+                && peer.voicegroup.history.undoCount == peerEditCount,
             message: "refused duplicate publishes no bank edit")
-        try runBlocking { _ = try await peer.undo() }
-        try runBlocking { _ = try await first.undo() }
+        try runBlocking { _ = try await peer.voicegroup.undo() }
+        try runBlocking { _ = try await first.voicegroup.undo() }
         check.expect(
             first.bankSlots[0].voice == original && peer.bankSlots[0].voice == original
-                && first.document.history.undoCount >= historyCount
-                && peer.document.history.undoCount >= peerHistoryCount,
+                && first.voicegroup.history.undoCount >= historyCount
+                && peer.voicegroup.history.undoCount >= peerHistoryCount,
             message: "undo assignment restores voices without undoing sample registration")
         check.expect(
             FileManager.default.fileExists(atPath: sound + "/direct_sound_samples/\(name).wav")

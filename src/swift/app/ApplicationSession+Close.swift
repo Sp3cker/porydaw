@@ -16,6 +16,7 @@ extension ApplicationSession {
         polyphony.setVisible(showing: false)
         polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
+        voiceList.releaseVoicegroup()
         audio?.unload()
         refreshDocumentState()
         // Keep the project alive until every released document and any in-flight
@@ -102,7 +103,7 @@ extension ApplicationSession {
                 return
             }
             self?.publishSaveState(inProgress: false)
-            self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
+            self?.songTabs.closeAfterSave(tabId: tabId, saved: !session.document.isDirty)
         }
     }
 
@@ -119,16 +120,16 @@ extension ApplicationSession {
             return
         }
         publishSaveState(inProgress: true, error: "")
-        let service = catalogService
-        let lease = target.lease
+        let group = target.session
         Task { [weak self] in
             var saved = true
             do {
-                guard let service else { throw ProjectServiceError.serviceClosed }
-                _ = try await service.saveBank(lease: lease)
+                try await group.save()
+                await self?.refreshVoicegroupCatalog()
+                self?.voiceList.refreshRetainedGroups()
             } catch {
                 saved = false
-                let message = String(describing: error)
+                let message = "Voicegroup \(target.title): \(error)"
                 self?.publishLastSaveError(message)
                 self?.publishOperationFailure(message: message)
             }
@@ -138,8 +139,32 @@ extension ApplicationSession {
     }
 
     @QtIgnored
-    func dirtyBanksForClose() -> [AppliedBankEdit] {
-        catalogService?.bankViews.dirtyBanks() ?? []
+    func discardBankBeforeClose(_ target: BankCloseTarget) {
+        guard !saveInProgress else {
+            songTabs.bankCloseAfterSave(saved: false)
+            return
+        }
+        publishSaveState(inProgress: true, error: "")
+        let group = target.session
+        Task { [weak self] in
+            var discarded = true
+            do {
+                try await group.discard()
+                self?.voiceList.refreshRetainedGroups()
+            } catch {
+                discarded = false
+                let message = "Voicegroup \(target.title): \(error)"
+                self?.publishOperationFailure(message: message)
+                self?.publishLastSaveError(message)
+            }
+            self?.publishSaveState(inProgress: false)
+            self?.songTabs.bankCloseAfterSave(saved: discarded)
+        }
+    }
+
+    @QtIgnored
+    func dirtyBanksForClose() -> [VoicegroupSession] {
+        catalogService?.bankViews.dirtySessions() ?? []
     }
 
     @QtIgnored
@@ -154,8 +179,10 @@ extension ApplicationSession {
     }
 
     private func finishCloseAllResolved(closed: Bool) {
-        // Song-gate cancellations own their reset; successful and orphan-failure paths finish here.
-        if songTabs.isClosingAll { songTabs.isClosingAll = false }
+        // Approved release stays in the canonical close state until new ownership is installed.
+        if !closed { songTabs.setClosingAll(false) }
+        if closed, pendingProjectSwitch != nil { isReplacingProject = true }
+        refreshDocumentState()
         songTabs.projectSwitchApprovalIndex = nil
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
@@ -195,6 +222,8 @@ extension ApplicationSession {
         kitStudioWorkflow?.dispose()
         closeSampleStudio()
         isDisposed = true
+        songTabs.cancelCloseSettlement()
+        songTabs.setClosingAll(true)
         finishProjectOpening(generation: projectOpeningGeneration)
         if case .preparing(let task) = audioReadiness { task.cancel() }
         if let pending = pendingProjectSwitch {
@@ -282,11 +311,10 @@ extension ApplicationSession {
                 self?.publishSaveState(inProgress: false)
                 return
             }
-            await self?.refreshVoicegroupCatalog()
             self?.publishSaveState(inProgress: false)
             if tabId != -1 {
                 self?.songTabs.savingCloseId = tabId
-                self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
+                self?.songTabs.closeAfterSave(tabId: tabId, saved: !session.document.isDirty)
             }
         }
     }

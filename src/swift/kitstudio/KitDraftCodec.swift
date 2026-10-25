@@ -1,4 +1,5 @@
 import PorydawAppAudio
+import PorydawDocument
 import PorydawPlayback
 import PorydawSample
 import PorydawVoicegroup
@@ -60,6 +61,43 @@ public enum KitDraftCodec {
             for key in zone.startKey...zone.endKey { bytes[key] = UInt8(ordinal) }
         }
         return KeysplitTable(name: name, startingNote: 0, maxNote: 128, table: bytes)
+    }
+
+    /// Builds the complete existing-kit edit, clearing voices beyond the new child extent.
+    public static func edit(
+        from zones: [KitZone], mode: KitMode, name: String,
+        expected: KitEditValue, symbols: [String: String]
+    ) -> KitEditValue {
+        let sourceChildren = children(from: zones, mode: mode)
+        let previousChildCount = (expected.children.lastIndex { (child: BankVoice?) -> Bool in child != nil } ?? -1) + 1
+        var bankChildren: [BankVoice?] = []
+        bankChildren.reserveCapacity(max(sourceChildren.count, previousChildCount))
+        for child in sourceChildren {
+            guard var voice = child else {
+                bankChildren.append(nil)
+                continue
+            }
+            voice.symbol = symbols[voice.symbol] ?? voice.symbol
+            bankChildren.append(copyVoice(voice))
+        }
+        bankChildren.append(
+            contentsOf: repeatElement(
+                Optional<BankVoice>.none, count: max(0, previousChildCount - sourceChildren.count)))
+        var edit = expected
+        edit.children = bankChildren
+        if mode == .keysplit {
+            let tableName = expected.tableName ?? "keysplit_" + name
+            edit.tableName = tableName
+            edit.table = table(from: zones, name: tableName).table
+            edit.parent?.macro = BankVoiceMacro.keysplit
+            edit.parent?.keysplitTable = tableName
+        } else {
+            edit.tableName = nil
+            edit.table = nil
+            edit.parent?.macro = BankVoiceMacro.keysplitAll
+            edit.parent?.keysplitTable = ""
+        }
+        return edit
     }
 
     public static func auditionTone(

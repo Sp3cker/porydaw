@@ -1,266 +1,79 @@
 import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
-import PorydawPlayback
+@testable import PorydawDocument
 
-// MARK: - Bank History Probes
-
-private enum HistoryProbeFailure: Error {
-    case hard
-}
+private enum HistoryProbeFailure: Error { case hard }
 
 @MainActor
 private final class ControlledHistoryBankAction: BankHistoryAction {
     let historyLabel = "Controlled bank edit"
-    enum Outcome {
-        case success
-        case stale
-        case hard
-    }
-
-    var undoOutcome: Outcome
-    var redoOutcome: Outcome
-    var suspendUndo = false
-    var suspendRedo = false
+    var stale = false
+    var fails = false
     private(set) var calls = 0
-    private(set) var isWaiting = false
-    private var continuation: CheckedContinuation<Void, Never>?
+    private let result: AppliedBankEdit
 
-    init(undo: Outcome = .success, redo: Outcome = .success) {
-        undoOutcome = undo
-        redoOutcome = redo
-    }
+    init(_ result: AppliedBankEdit) { self.result = result }
 
-    func apply(direction: BankHistoryDirection) async throws {
+    func apply(direction: HistoryDirection) async throws -> AppliedBankEdit {
         calls += 1
-        let shouldSuspend = direction == .undo ? suspendUndo : suspendRedo
-        if shouldSuspend {
-            isWaiting = true
-            await withCheckedContinuation { continuation = $0 }
-            isWaiting = false
-        }
-        let outcome = direction == .undo ? undoOutcome : redoOutcome
-        switch outcome {
-        case .success:
-            return
-        case .stale:
-            throw BankHistoryReplayError.staleEntry
-        case .hard:
-            throw HistoryProbeFailure.hard
-        }
+        if fails { throw HistoryProbeFailure.hard }
+        if stale { throw BankHistoryReplayError.staleEntry }
+        return result
     }
-
     func merged(with _: any BankHistoryAction) -> (any BankHistoryAction)? { nil }
-
-    func resume() {
-        continuation?.resume()
-        continuation = nil
-    }
 }
 
 @MainActor
-private final class MergingHistoryBankAction: BankHistoryAction {
-    let historyLabel = "Merged bank edit"
-    let before: Int
-    let after: Int
-
-    init(before: Int, after: Int) {
-        self.before = before
-        self.after = after
-    }
-
-    var isRedundant: Bool { before == after }
-
-    func apply(direction _: BankHistoryDirection) async throws {}
-
-    func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
-        guard let newer = newer as? MergingHistoryBankAction else { return nil }
-        return MergingHistoryBankAction(before: before, after: newer.after)
-    }
-}
-
-@MainActor
-internal func historyTransitionRegressions(_ report: CheckReport) {
+internal func historyTransitionRegressions(_ report: CheckReport, fixtureRoot: String) {
+    let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-bank-history-lifecycle")
+    let service = ProjectService()
     do {
-        let document = historyProbeDocument()
-        var config = document.state.config
-        config.priority = 1
-        document.setConfig(config)
-        let beforeBank = document.history.currentIdentity
-        let action = ControlledHistoryBankAction()
-        document.history.recordConfirmedBank(action)
-        let afterBank = document.history.currentIdentity
-        config.priority = 2
-        document.setConfig(config)
-        let afterDocument = document.history.currentIdentity
-        let count = document.history.undoCount
-        let undoSteps = try runBlocking { () async throws -> [Bool] in
-            [
-                try await document.history.undo(), try await document.history.undo(),
-                try await document.history.undo(),
-            ]
+        let session = try runBlocking {
+            try await service.open(root: root)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
         }
+        let result = session.voicegroup.value
+        let history = VoicegroupHistory()
+        let action = ControlledHistoryBankAction(result)
+        history.record(action)
+        history.markSaved()
+        _ = try runBlocking { try await history.step(.undo) }
         report.expect(
-            count == 3 && undoSteps.allSatisfy { $0 }
-                && document.history.undoIndex == 0
-                && document.state.config.priority == 0
-                && beforeBank == afterBank && afterBank != afterDocument
-                && action.calls == 1,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-            message: "document and bank undo/redo cross the shared history in order")
-        let redoSteps = try runBlocking { () async throws -> [Bool] in
-            [
-                try await document.history.redo(), try await document.history.redo(),
-                try await document.history.redo(),
-            ]
+            history.canRedo && history.baseIsSaved == false
+                && history.step(at: 0)?.isSaved == true, cppID: id,
+            message: "shared bank undo preserves its saved marker on the unapplied step")
+        _ = try runBlocking { try await history.step(.redo) }
+        report.expect(
+            history.undoIndex == 1 && action.calls == 2, cppID: id,
+            message: "shared bank redo replays the same chronological entry")
+        action.fails = true
+        let revision = history.revision
+        do {
+            _ = try runBlocking { try await history.step(.undo) }
+            report.fail(id, "hard replay failure was swallowed")
+        } catch HistoryProbeFailure.hard {
+            report.expect(
+                history.undoIndex == 1 && history.undoCount == 1 && history.revision == revision,
+                cppID: id, message: "hard replay failure preserves cursor, log and revision")
         }
+        action.fails = false
+        action.stale = true
+        _ = try runBlocking { try await history.step(.undo) }
         report.expect(
-            redoSteps.allSatisfy { $0 } && document.history.undoIndex == count
-                && document.state.config.priority == 2
-                && document.history.currentIdentity == afterDocument && action.calls == 2,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-            message: "document and bank undo/redo cross the shared history in order")
+            history.undoCount == 0 && history.undoIndex == 0, cppID: id,
+            message: "stale bank replay prunes only its own shared entry")
+        for _ in 0..<513 { history.record(ControlledHistoryBankAction(result)) }
+        report.expect(
+            history.undoCount == 512 && history.undoIndex == 512 && history.hasEvictedSteps,
+            cppID: id, message: "voicegroup history independently retains the 512-step cap")
+        _ = try runBlocking { try await history.step(.undo) }
+        history.record(ControlledHistoryBankAction(result))
+        report.expect(
+            !history.canRedo && history.undoCount == 512, cppID: id,
+            message: "new group edit truncates the redo tail without regrowing the cap")
     } catch {
-        report.fail(
-            "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-            "interleaved document and bank replay failed: \(error)")
+        report.fail(id, "independent voicegroup history regression threw: \(error)")
     }
-
-    do {
-        let result = try runBlocking { () async throws -> (Bool, Bool, Int, Int, Bool) in
-            let document = historyProbeDocument()
-            var savedConfig = document.state.config
-            savedConfig.priority = 1
-            document.setConfig(savedConfig)
-            let snapshot = try document.captureSave()
-            document.didSave(snapshot)
-            let action = ControlledHistoryBankAction()
-            action.suspendUndo = true
-            document.history.recordConfirmedBank(action)
-            let pending = Task { @MainActor in try await document.history.undo() }
-            while !action.isWaiting { await Task.yield() }
-            var rejectedConfig = document.state.config
-            rejectedConfig.priority = 2
-            document.setConfig(rejectedConfig)
-            let repeated = try await document.history.undo()
-            action.resume()
-            let completed = try await pending.value
-            var acceptedConfig = document.state.config
-            acceptedConfig.priority = 2
-            document.setConfig(acceptedConfig)
-            _ = document.history.undoDocument()
-            return (
-                completed, repeated, document.state.config.priority, action.calls,
-                document.isDirty
-            )
-        }
-        report.expect(
-            result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
-    } catch {
-        report.fail(
-            "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            "delayed bank undo scenario threw: \(error)")
-    }
-
-    do {
-        let result = try runBlocking { () async throws -> (Bool, Bool, Int, Int, Bool) in
-            let document = historyProbeDocument()
-            var config = document.state.config
-            config.priority = 2
-            document.setConfig(config)
-            let snapshot = try document.captureSave()
-            document.didSave(snapshot)
-            let action = ControlledHistoryBankAction()
-            document.history.recordConfirmedBank(action)
-            _ = try await document.history.undo()
-            action.suspendRedo = true
-            let pending = Task { @MainActor in try await document.history.redo() }
-            while !action.isWaiting { await Task.yield() }
-            var rejectedConfig = document.state.config
-            rejectedConfig.priority = 3
-            document.setConfig(rejectedConfig)
-            let repeated = try await document.history.redo()
-            action.resume()
-            let completed = try await pending.value
-            return (
-                completed, repeated, document.state.config.priority, action.calls,
-                document.isDirty
-            )
-        }
-        report.expect(
-            result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
-            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
-    } catch {
-        report.fail(
-            "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
-            "delayed bank redo scenario threw: \(error)")
-    }
-
-    let staleRedoDocument = historyProbeDocument()
-    var redoConfig = staleRedoDocument.state.config
-    redoConfig.priority = 6
-    staleRedoDocument.setConfig(redoConfig)
-    let staleRedoAction = ControlledHistoryBankAction(redo: .stale)
-    staleRedoDocument.history.recordConfirmedBank(staleRedoAction)
-    _ = try? runBlocking { try await staleRedoDocument.history.undo() }
-    let staleRedoRemoved =
-        (try? runBlocking {
-            try await staleRedoDocument.history.redo()
-        }) == true
-    report.expect(
-        staleRedoRemoved && !staleRedoDocument.history.canRedo && staleRedoDocument.state.config.priority == 6,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "stale bank redo entry is removed without mutating document state")
-
-    let staleUndoDocument = historyProbeDocument()
-    var edited = staleUndoDocument.state.config
-    edited.priority = 3
-    staleUndoDocument.setConfig(edited)
-    staleUndoDocument.history.recordConfirmedBank(
-        ControlledHistoryBankAction(undo: .stale))
-    let staleRemoved =
-        (try? runBlocking {
-            try await staleUndoDocument.history.undo()
-        }) == true
-    _ = staleUndoDocument.history.undoDocument()
-    report.expect(
-        staleRemoved && staleUndoDocument.state.config.priority == 0,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "stale bank undo entry is removed so the next undo reaches document history")
-
-    let hardDocument = historyProbeDocument()
-    var hardConfig = hardDocument.state.config
-    hardConfig.priority = 4
-    hardDocument.setConfig(hardConfig)
-    let hardAction = ControlledHistoryBankAction(undo: .hard)
-    hardDocument.history.recordConfirmedBank(hardAction)
-    _ = try? runBlocking { try await hardDocument.history.undo() }
-    _ = try? runBlocking { try await hardDocument.history.undo() }
-    report.expect(
-        hardAction.calls == 2 && hardDocument.state.config.priority == 4 && hardDocument.history.canUndo,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
-        message: "hard bank failure keeps the entry available and does not cross it")
-
-    let cancelling = historyProbeDocument()
-    var priorConfig = cancelling.state.config
-    priorConfig.priority = 5
-    cancelling.setConfig(priorConfig)
-    cancelling.history.recordConfirmedBank(MergingHistoryBankAction(before: 10, after: 20))
-    cancelling.history.recordConfirmedBank(MergingHistoryBankAction(before: 20, after: 10))
-    _ = cancelling.history.undoDocument()
-    report.expect(
-        cancelling.state.config.priority == 0,
-        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
-        message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
-}
-
-@MainActor
-private func historyProbeDocument() -> SongDocument {
-    SongDocument(
-        file: MidiFile(chunks: [
-            MidiChunk(events: [.channel(status: 0xC0, data0: 0)])
-        ]))
 }

@@ -21,10 +21,9 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
             }
             let originalRelease = savedVoice.release
             savedVoice.release = savedVoice.release == 255 ? 254 : savedVoice.release + 1
-            _ = try await session.applyBankEdit(
-                slot: 0, value: savedVoice, expected: session.bankSlots[0].voice)
+            _ = try await session.voicegroup.apply(slot: 0, value: savedVoice, expected: session.bankSlots[0].voice)
             report.expect(
-                session.bankDirty && !session.document.isDirty,
+                session.voicegroup.value.dirty && !session.document.isDirty,
                 cppID: queuedSaveID,
                 message: "queued release edit dirties only the bank before any song note")
             report.expect(
@@ -32,6 +31,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                     == UInt8(savedVoice.release),
                 cppID: queuedSaveID,
                 message: "queued release edit reaches the exact engine release byte")
+            try await session.voicegroup.save()
 
             guard
                 let staleNote = try session.document.addNotes([
@@ -86,7 +86,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 expected: true, actual: session.document.isDirty, cppID: queuedSaveID,
                 what: "stale save completion cannot clean the newer edit")
             report.expectEqual(
-                expected: false, actual: session.bankDirty, cppID: queuedSaveID,
+                expected: false, actual: session.voicegroup.value.dirty, cppID: queuedSaveID,
                 what: "queued native bank write publishes its clean receipt")
             report.expectEqual(
                 expected: savedVoice, actual: session.bankSlots[0].voice,
@@ -122,7 +122,7 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 expected: true, actual: session.document.isDirty, cppID: queuedSaveID,
                 what: "undoing past the retry save point is dirty")
             report.expectEqual(
-                expected: false, actual: session.bankDirty, cppID: queuedSaveID,
+                expected: false, actual: session.voicegroup.value.dirty, cppID: queuedSaveID,
                 what: "note undos leave the saved bank clean")
             report.expectEqual(
                 expected: savedVoice, actual: session.bankSlots[0].voice,
@@ -132,9 +132,9 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 expected: savedBankBytes, actual: bytes(at: bankPath),
                 cppID: queuedSaveID,
                 what: "note undos leave saved bank bytes intact")
-            let undidBank = try await session.undo()
+            let undidBank = try await session.voicegroup.undo()
             report.expect(
-                undidBank && session.document.isDirty && session.bankDirty
+                undidBank && session.document.isDirty && session.voicegroup.value.dirty
                     && session.bankSlots[0].voice?.release == originalRelease,
                 cppID: queuedSaveID,
                 message: "undo past the bank release edit leaves both document and bank dirty")
@@ -145,8 +145,9 @@ internal func bankQueuedSave(report: CheckReport, session: DocumentSession, proj
                 message: "bank undo restores the original engine release without writing disk")
             let restoredSnapshot = try session.document.captureSave()
             try await session.save()
+            try await session.voicegroup.save()
             report.expect(
-                !session.document.isDirty && !session.bankDirty
+                !session.document.isDirty && !session.voicegroup.value.dirty
                     && bytes(at: bankPath) == bankBytesBefore
                     && bytes(at: session.document.source.midiPath)
                         == Data(restoredSnapshot.bytes),
@@ -165,7 +166,7 @@ internal func bankCatalogOutage(
 ) {
     let retainedLease = session.bankLease
     let retainedSlots = session.bankSlots
-    let retainedDirty = session.bankDirty
+    let retainedDirty = session.voicegroup.value.dirty
     let soundPath = projectDir + "/sound"
     let hiddenSoundPath = projectDir + "/sound.swiftcore-unavailable"
     do {
@@ -199,7 +200,7 @@ internal func bankCatalogOutage(
         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
         what: "catalog outage retains the last valid bank slots")
     report.expectEqual(
-        expected: retainedDirty, actual: session.bankDirty,
+        expected: retainedDirty, actual: session.voicegroup.value.dirty,
         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
         what: "catalog outage retains bank dirty state")
 }
@@ -228,19 +229,19 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
         var editedSlots = originalSlots
         editedSlots[0].voice = edited
         _ = try runBlocking {
-            try await roundtripSession.applyBankEdit(slot: 0, value: edited, expected: original)
+            try await roundtripSession.voicegroup.apply(slot: 0, value: edited, expected: original)
         }
         report.expectEqual(
             expected: editedSlots, actual: roundtripSession.bankSlots,
             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             what: "round-trip scalar edit preserves every other bank slot")
         report.expect(
-            roundtripSession.bankDirty && !roundtripSession.document.isDirty,
+            roundtripSession.voicegroup.value.dirty && !roundtripSession.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "release and key edit dirties only the bank before round-trip Save")
         let preSaveLease = roundtripSession.bankLease
         try runBlocking {
-            try await roundtripSession.save()
+            try await roundtripSession.voicegroup.save()
         }
         let editedBytes = bytes(at: roundtripBankPath)
         report.expect(
@@ -248,7 +249,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
             message: "successful bank save publishes a refreshed native bank")
         report.expectEqual(
-            expected: false, actual: roundtripSession.bankDirty,
+            expected: false, actual: roundtripSession.voicegroup.value.dirty,
             cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
             what: "successful bank save publishes a clean record")
         report.expect(
@@ -256,7 +257,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
             message: "successful bank save changes persisted bank bytes")
         report.expect(
-            !roundtripSession.document.isDirty && !roundtripSession.bankDirty,
+            !roundtripSession.document.isDirty && !roundtripSession.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "first bank round-trip Save cleans the song and the bank together")
         let freshService = ProjectService()
@@ -272,19 +273,19 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             message: "freshly reopened bank carries the exact saved release in its view and engine")
 
         _ = try runBlocking {
-            try await roundtripSession.undo()
+            try await roundtripSession.voicegroup.undo()
         }
         report.expectEqual(
             expected: originalSlots, actual: roundtripSession.bankSlots,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             what: "undo after save restores the complete original bank")
         report.expect(
-            roundtripSession.bankDirty && !roundtripSession.document.isDirty
+            roundtripSession.voicegroup.value.dirty && !roundtripSession.document.isDirty
                 && bytes(at: roundtripBankPath) == editedBytes,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "bank-only Undo dirties its record while leaving song and persisted bytes unchanged")
         try runBlocking {
-            try await roundtripSession.save()
+            try await roundtripSession.voicegroup.save()
         }
         report.expectEqual(
             expected: originalBytes, actual: bytes(at: roundtripBankPath),
@@ -292,14 +293,14 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             what: "saving the undo restores original voicegroup bytes")
 
         _ = try runBlocking {
-            try await roundtripSession.redo()
+            try await roundtripSession.voicegroup.redo()
         }
         report.expectEqual(
             expected: editedSlots, actual: roundtripSession.bankSlots,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             what: "redo after saving the undo restores the edited bank and other slots")
         try runBlocking {
-            try await roundtripSession.save()
+            try await roundtripSession.voicegroup.save()
         }
         report.expectEqual(
             expected: editedBytes, actual: bytes(at: roundtripBankPath),
@@ -307,24 +308,24 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             what: "saving the redo reproduces edited voicegroup bytes")
 
         _ = try runBlocking {
-            try await roundtripSession.undo()
+            try await roundtripSession.voicegroup.undo()
         }
         try runBlocking {
-            try await roundtripSession.save()
+            try await roundtripSession.voicegroup.save()
         }
         report.expectEqual(
             expected: originalBytes, actual: bytes(at: roundtripBankPath),
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             what: "final undo/save restores original voicegroup bytes")
         report.expect(
-            !roundtripSession.bankDirty && !roundtripSession.document.isDirty,
+            !roundtripSession.voicegroup.value.dirty && !roundtripSession.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "restoring bank round-trip Save leaves both records clean")
 
         var failedEdit = original
         failedEdit.duty = failedEdit.duty == 3 ? 2 : 3
         _ = try runBlocking {
-            try await roundtripSession.applyBankEdit(
+            try await roundtripSession.voicegroup.apply(
                 slot: 0, value: failedEdit, expected: roundtripSession.bankSlots[0].voice)
         }
         var dirtyConfig = roundtripSession.document.state.config
@@ -342,7 +343,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
             withIntermediateDirectories: false)
         do {
             try runBlocking {
-                try await roundtripSession.save()
+                try await roundtripSession.voicegroup.save()
             }
             report.fail(
                 "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
@@ -361,7 +362,7 @@ internal func bankSaveRoundTrip(report: CheckReport, fixtureRoot: String) {
                 cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                 message: "failed bank save refuses as a typed failure naming its bank source")
             report.expectEqual(
-                expected: true, actual: roundtripSession.bankDirty,
+                expected: true, actual: roundtripSession.voicegroup.value.dirty,
                 cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                 what: "failed bank save retains the dirty bank record")
             report.expectEqual(
@@ -411,7 +412,7 @@ internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String
         }
         homeEdit.release = homeEdit.release == 255 ? 254 : homeEdit.release + 1
         _ = try runBlocking {
-            try await session.applyBankEdit(
+            try await session.voicegroup.apply(
                 slot: 0, value: homeEdit,
                 expected: session.bankSlots[0].voice)
         }
@@ -427,19 +428,20 @@ internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String
         let closed = try runBlocking { await session.close() }
         report.expect(closed, cppID: id, message: "the last session bound to the home bank detaches")
 
-        let orphaned = service.bankViews.dirtyBanks()
+        let orphaned = service.bankViews.dirtySessions()
         report.expectEqual(
-            expected: [one, home], actual: orphaned.map { BankBindingIdentity($0.lease) },
+            expected: [one, home], actual: orphaned.map(\.identity),
             cppID: id,
             what: "enumeration lists exactly the dirty cached banks by source then section")
-        guard let orphan = orphaned.first(where: { BankBindingIdentity($0.lease) == home }) else {
+        guard let orphan = orphaned.first(where: { $0.identity == home }) else {
             report.fail(id, "the detached home bank must stay cached dirty")
             return
         }
 
         let homeBefore = bytes(at: homePath)
         let indexBefore = bytes(at: indexPath)
-        let saved = try runBlocking { try await service.saveBank(lease: orphan.lease) }
+        try runBlocking { try await orphan.save() }
+        let saved = orphan.value
         report.expect(
             !saved.dirty && bytes(at: homePath) != homeBefore, cppID: id,
             message: "saveBank persists the orphaned bank and returns a clean receipt")
@@ -451,7 +453,7 @@ internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String
             what: "saving one bank leaves another dirty bank's source untouched")
         report.expectEqual(
             expected: [one],
-            actual: service.bankViews.dirtyBanks().map { BankBindingIdentity($0.lease) },
+            actual: service.bankViews.dirtySessions().map(\.identity),
             cppID: id, what: "the clean receipt publishes through the canonical cache")
 
         var newer = homeEdit
@@ -459,11 +461,20 @@ internal func orphanBankCloseAccounting(report: CheckReport, fixtureRoot: String
         _ = try runBlocking {
             try await service.bankApply(lease: saved.lease, slot: 0, value: newer, expected: homeEdit)
         }
-        service.bankViews.publish(saved)
+        service.bankViews.publish(saved, service: service)
         report.expectEqual(
             expected: [one, home],
-            actual: service.bankViews.dirtyBanks().map { BankBindingIdentity($0.lease) },
+            actual: service.bankViews.dirtySessions().map(\.identity),
             cppID: id, what: "an older clean receipt cannot clean a newer dirty edit")
+        try runBlocking { try await orphan.discard() }
+        report.expect(
+            service.bankViews.dirtySessions().map(\.identity) == [one]
+                && orphan.value.slots[0].voice == homeEdit && !orphan.value.dirty
+                && orphan.history.undoCount == 0
+                && service.bankViews.session(for: one)?.value.slots[0].voice == sectionEdit
+                && bytes(at: indexPath) == indexBefore,
+            cppID: id,
+            message: "discarding an orphan restores its saved group without dropping another group's pending edits")
     } catch {
         report.fail(id, "orphan bank close accounting failed: \(error)")
     }

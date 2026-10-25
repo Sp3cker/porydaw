@@ -24,6 +24,17 @@ ColumnLayout {
     readonly property IconSpec emptyIcon: IconSpec { glyph: ""; fit: 1 }
     property int contextSlot: -1
     spacing: 0
+    enabled: panel.controller.editingEnabled
+
+    function isSongAssignmentFocus(focusedItem: Item): bool {
+        let item = focusedItem
+        while (item && item !== panel) {
+            if (item === selector || item === newVoicegroup)
+                return true
+            item = item.parent
+        }
+        return false
+    }
 
     Menu {
         id: rowMenu
@@ -35,6 +46,16 @@ ColumnLayout {
         }
     }
 
+    ComboBox {
+        objectName: "retainedVoicegroupCombo"
+        Layout.fillWidth: true
+        visible: !panel.controller.hasSongContext && panel.controller.isBound
+        model: panel.controller.retainedGroupNames
+        currentIndex: panel.controller.retainedGroupIndex
+        Accessible.name: qsTr("Retained voicegroup")
+        onActivated: panel.controller.selectRetainedVoicegroup(currentIndex)
+    }
+
     RowLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: panel.baseFontPx * 2.17
@@ -42,8 +63,10 @@ ColumnLayout {
         Layout.rightMargin: Math.round(panel.baseFontPx * 0.33)
         spacing: Math.round(panel.baseFontPx * 0.16)
         Label {
-            text: qsTr("voicegroup_")
-            Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
+            objectName: "voicegroupPanelTitle"
+            text: panel.controller.panelTitle
+            Layout.maximumWidth: panel.width * 0.6
+            elide: Text.ElideMiddle
             color: panel.colors.primaryText
         }
         ComboBox {
@@ -94,6 +117,7 @@ ColumnLayout {
         ToolButton {
             id: newVoicegroup
             objectName: "vgNewVoicegroupButton"
+            enabled: panel.controller.selectorEnabled
             Layout.preferredWidth: panel.baseFontPx * 2.08
             Layout.preferredHeight: panel.baseFontPx * 1.83
             Layout.minimumHeight: 0

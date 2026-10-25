@@ -368,7 +368,7 @@ private func drawerVelocityContinuousPaintAxis(_ report: CheckReport) {
     directSound.symbol = "test_sample"
     do {
         _ = try runBlocking {
-            try await fixture.session.applyBankEdit(slot: 0, value: directSound, expected: originalVoice)
+            try await fixture.session.voicegroup.apply(slot: 0, value: directSound, expected: originalVoice)
         }
     } catch {
         report.fail(drawerVelocityTransactionID, "the direct-sound paint program edit failed: \(error)")

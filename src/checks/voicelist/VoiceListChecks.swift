@@ -449,9 +449,6 @@ private func voiceListLoadingOverlay(_ report: CheckReport) {
         expected: "000  fixture_loop", actual: list.rows[0].title, cppID: cppID,
         what: "leaving loading re-derives the bound rows")
     report.expectEqual(
-        expected: true, actual: list.selectorEnabled, cppID: cppID,
-        what: "leaving loading re-enables the bound selector")
-    report.expectEqual(
         expected: "test_vg", actual: list.selectorText, cppID: cppID,
         what: "leaving loading restores the standing arg's display text")
 
@@ -473,15 +470,12 @@ private func voiceListLoadingOverlay(_ report: CheckReport) {
         what: "detaching restores the standing arg's display text")
 }
 
-/// The selector publishes display-name choices, reflects the current arg
-/// without emitting, and resolves user commits back to args through the
-/// underscore rule — verbatim known args stay addressable.
+/// Projects selector choices and the standing song argument. Actual assignment
+/// commits and loading admission are exercised with a real song session.
 @MainActor
 private func voiceListSelector(_ report: CheckReport) {
     let cppID = "vgsavecheck/VoicegroupSaveTest::selectorSwitchUsesUndoableCfgEdit"
     let list = boundVoiceList()
-    var requested: [String] = []
-    list.onVoicegroupChangeRequested = { requested.append($0) }
 
     list.setVoicegroupChoices(["_test_vg", "_fixture_alt", "128"])
     report.expectEqual(
@@ -505,50 +499,6 @@ private func voiceListSelector(_ report: CheckReport) {
     report.expectEqual(
         expected: "test_vg", actual: list.selectorText, cppID: cppID,
         what: "the current arg displays without its underscore")
-    report.expectEqual(
-        expected: 0, actual: requested.count, cppID: cppID,
-        what: "reflecting the current arg never emits a request")
-
-    // A user commit to a different name emits the resolved arg.
-    list.selectorText = "fixture_alt"
-    list.commitVoicegroupSelection()
-    report.expectEqual(
-        expected: ["_fixture_alt"], actual: requested, cppID: cppID,
-        what: "committing a display name emits the underscore arg")
-
-    // The emitted arg now stands; the owner's echo-back is a no-op.
-    list.setCurrentVoicegroupArg("_fixture_alt")
-    list.selectorText = "fixture_alt"
-    list.commitVoicegroupSelection()
-    report.expectEqual(
-        expected: ["_fixture_alt"], actual: requested, cppID: cppID,
-        what: "re-committing the standing arg emits nothing")
-
-    // A verbatim known arg stays underscore-less (legacy "128"-style).
-    list.selectorText = "128"
-    list.commitVoicegroupSelection()
-    report.expectEqual(
-        expected: ["_fixture_alt", "128"], actual: requested, cppID: cppID,
-        what: "a verbatim known arg commits without an underscore")
-
-    // A raw pasted arg (leading underscore) passes through untouched.
-    list.selectorText = "_test_vg"
-    list.commitVoicegroupSelection()
-    report.expectEqual(
-        expected: ["_fixture_alt", "128", "_test_vg"], actual: requested, cppID: cppID,
-        what: "a pasted raw arg commits verbatim")
-
-    // Disabled selectors never emit: loading and detach both suppress.
-    list.setLoading(true)
-    list.selectorText = "other"
-    list.commitVoicegroupSelection()
-    list.setLoading(false)
-    list.bindBank(slots: nil)
-    list.selectorText = "other"
-    list.commitVoicegroupSelection()
-    report.expectEqual(
-        expected: ["_fixture_alt", "128", "_test_vg"], actual: requested, cppID: cppID,
-        what: "loading and detach suppress selector commits")
 }
 
 /// selectSlot bounds-checks; revealSlot selects and asks the shell to

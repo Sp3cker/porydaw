@@ -97,6 +97,16 @@ ShellLaneSupport {
                "the exposed full shell submits the requested frame before fixture input")
     }
 
+    function undoVoicegroup() {
+        app.setEditingVoicegroup(true)
+        app.requestUndo()
+    }
+
+    function redoVoicegroup() {
+        app.setEditingVoicegroup(true)
+        app.requestRedo()
+    }
+
     function initTestCase() {
         compare(panel.baseFontPx, app.baseFontPx,
                 "voicegroup pane derives its base before a song opens")
@@ -199,8 +209,19 @@ ShellLaneSupport {
         if (!fullShell)
             return
         fullShell.close()
-        if (fullShell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-            fullShell.shellPresenter.session.songTabs.confirmDiscard()
+        for (let step = 0; step < 12 && !fullShell.shellPresenter.closeReady; ++step) {
+            const session = fullShell.shellPresenter.session
+            verify(waitForNative(function() {
+                return fullShell.shellPresenter.closeReady || session.songTabs.pendingCloseId >= 0
+                    || session.songTabs.pendingCloseBankTitle.length > 0
+            }, 30000), "cleanup waits for the actual song or voicegroup close gate")
+            if (fullShell.shellPresenter.closeReady)
+                break
+            session.songTabs.confirmDiscard()
+            verify(waitForNative(function() { return !session.saveInProgress }, 15000),
+                   "cleanup waits for real voicegroup discard")
+        }
+        verify(fullShell.shellPresenter.closeReady, "cleanup resolves every retained owner before destruction")
         fullShell.destroy()
         fullShell = null
         wait(0)

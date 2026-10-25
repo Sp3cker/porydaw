@@ -9,12 +9,12 @@ import PorydawAppCommands
 @MainActor
 extension ApplicationSession {
     func gridCommandAvailableImpl(command: Int) -> Bool {
-        guard let command = EditCommand(rawValue: command) else { return false }
+        guard !songTabs.isClosingAll, let command = EditCommand(rawValue: command) else { return false }
         return commandRouter?.isAvailable(command) ?? false
     }
 
     func performGridCommandImpl(command: Int) {
-        guard let command = EditCommand(rawValue: command) else { return }
+        guard !songTabs.isClosingAll, let command = EditCommand(rawValue: command) else { return }
         performRouted(command)
     }
 
@@ -27,7 +27,7 @@ extension ApplicationSession {
     }
 
     func routeGridKeyImpl(command: Int, autoRepeat: Bool) -> Int {
-        guard let command = EditCommand(rawValue: command) else {
+        guard !songTabs.isClosingAll, let command = EditCommand(rawValue: command) else {
             return EditKeyDecision.decline.rawValue
         }
         return commandRouter?.route(command, autoRepeat: autoRepeat).rawValue
@@ -40,7 +40,7 @@ extension ApplicationSession {
     }
 
     func routeEventListCommandImpl(command: Int, autoRepeat: Bool) -> Int {
-        guard let command = EditCommand(rawValue: command), eventList.attached,
+        guard !songTabs.isClosingAll, let command = EditCommand(rawValue: command), eventList.attached,
             eventList.visible, !eventList.editing, !eventList.menuOpen,
             let workspace
         else {
@@ -65,7 +65,9 @@ extension ApplicationSession {
     }
 
     func performEventListCommandImpl(command: Int) {
-        guard let command = EditCommand(rawValue: command), eventList.attached else { return }
+        guard !songTabs.isClosingAll,
+            let command = EditCommand(rawValue: command), eventList.attached
+        else { return }
         switch command {
         case .selectAll: eventList.selectAll()
         case .delete: eventList.deleteSelected()
@@ -106,11 +108,67 @@ extension ApplicationSession {
     func publishSaveState(inProgress: Bool, error: String? = nil) {
         publish(\.saveInProgress, inProgress)
         if let error { publishLastSaveError(error) }
+        refreshDocumentState()
         onSaveStateChanged?()
+        if !inProgress, songTabs.isClosingAll { songTabs.advanceCloseAll() }
     }
 
     func requestSaveImpl() {
-        guard let session = workspace?.session, !saveInProgress else { return }
+        if editingVoicegroup { requestSaveVoicegroupImpl() } else { requestSaveSongImpl() }
+    }
+
+    func requestSaveVoicegroupImpl() {
+        guard !isDisposed, !songTabs.isClosingAll, !saveInProgress,
+            let voicegroup = voiceList.voicegroup, !voicegroup.isBusy
+        else { return }
+        publishSaveState(inProgress: true, error: "")
+        Task { [weak self] in
+            do {
+                try await voicegroup.save()
+            } catch {
+                self?.publishSaveState(
+                    inProgress: false, error: "Voicegroup \(voicegroup.displayName): \(error)")
+                return
+            }
+            await self?.refreshVoicegroupCatalog()
+            self?.voiceList.refreshRetainedGroups()
+            self?.publishSaveState(inProgress: false)
+        }
+    }
+
+    func requestSaveAllImpl() {
+        guard !isDisposed, !songTabs.isClosingAll, !saveInProgress else { return }
+        let songs = songTabs.allTabs.map(\.workspace.session).filter { (song: DocumentSession) -> Bool in
+            song.document.isDirty
+        }
+        let groups = catalogService?.bankViews.dirtySessions() ?? []
+        publishSaveState(inProgress: true, error: "")
+        Task { [weak self] in
+            var failures: [String] = []
+            var savedGroup = false
+            for song in songs {
+                do { try await song.save() } catch { failures.append("Song \(song.document.source.label): \(error)") }
+            }
+            for group in groups {
+                do {
+                    try await group.save()
+                    savedGroup = true
+                } catch {
+                    failures.append("Voicegroup \(group.displayName): \(error)")
+                }
+            }
+            if savedGroup {
+                await self?.refreshVoicegroupCatalog()
+                self?.voiceList.refreshRetainedGroups()
+            }
+            self?.publishSaveState(inProgress: false, error: failures.joined(separator: "\n"))
+        }
+    }
+
+    func requestSaveSongImpl() {
+        guard !isDisposed, !songTabs.isClosingAll,
+            let session = workspace?.session, !saveInProgress
+        else { return }
         publishSaveState(inProgress: true, error: "")
         Task { [weak self] in
             do {
@@ -124,7 +182,6 @@ extension ApplicationSession {
                 self?.publishSaveState(inProgress: false, error: String(describing: error))
                 return
             }
-            await self?.refreshVoicegroupCatalog()
             self?.publishSaveState(inProgress: false)
         }
     }

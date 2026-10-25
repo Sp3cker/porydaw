@@ -7,7 +7,66 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellVoicegroupSupport {
-    function test_zzzzzUnifiedSaveAndUndoRestorationReceipts() {
+    function test_zzzzzzzContextSensitiveStandardSaveAndAssignmentUndo() {
+        const shell = createFullShell()
+        const presenter = shell.shellPresenter
+        const session = presenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return session.songOpen }, 30000))
+        const voice = session.voiceListController()
+        tryCompare(voice, "isBound", true)
+        voice.selectSlot(4)
+        const midiPath = fileProbe.songPath(bootstrap.projectRoot, "mus_route101")
+        const cfgPath = bootstrap.projectRoot + "/sound/songs/midi/midi.cfg"
+        const midiBefore = fileProbe.fileFingerprint(midiPath)
+        const cfgBefore = fileProbe.fileFingerprint(cfgPath)
+        const settings = presenter.settingsStore
+        settings.open()
+        settings.changeMasterVolume(settings.masterVolume === 110 ? 111 : 110)
+        settings.apply()
+        verify(waitForNative(function() { return !settings.isApplying && session.documentDirty }, 15000))
+        const editor = findChild(shell, "voicegroupEditorSurface")
+        verify(!!editor, "the mounted voice editor owns the parameter controls")
+        const release = findChild(editor, "vgReleaseSpin")
+        verify(release && release.enabled, "the selected voice exposes an editable release field")
+        const scroll = findChild(shell, "voiceEditorScrollView")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForFullShellScene()
+        const original = release.value
+        release.contentItem.forceActiveFocus()
+        keyClick(original === release.to ? Qt.Key_Down : Qt.Key_Up)
+        verify(waitForNative(function() { return voice.bankDirty }, 15000))
+        tryCompare(session, "editingVoicegroup", true)
+        verify(presenter.action("edit.undo").menuLabel.indexOf("Voicegroup") >= 0)
+        verify(presenter.action("file.save").menuLabel.indexOf("Voicegroup") >= 0)
+        keySequence(StandardKey.Save)
+        verify(waitForNative(function() { return !session.saveInProgress && !voice.bankDirty }, 15000),
+               "the standard Save from the parameter surface saves the group")
+        verify(session.documentDirty, "standard group Save leaves independent song work dirty")
+        compare(fileProbe.fileFingerprint(midiPath), midiBefore)
+        compare(fileProbe.fileFingerprint(cfgPath), cfgBefore)
+
+        const selector = findChild(shell, "vgArgCombo")
+        selector.forceActiveFocus()
+        selector.editText = "fixture_alt"
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() { return voice.bankLoadName === "fixture_alt" }, 15000))
+        tryCompare(session, "editingVoicegroup", false)
+        verify(presenter.action("edit.undo").menuLabel.indexOf("Song") >= 0)
+        presenter.activate("edit.undo")
+        verify(waitForNative(function() { return voice.bankLoadName === "fixture_rich" }, 15000),
+               "assignment undo reconnects the existing canonical group")
+        voice.selectSlot(4)
+        compare(voice.editorModel().release, original === release.to ? original - 1 : original + 1,
+                "assignment undo does not rewind saved voice parameters")
+        presenter.activate("file.save_all")
+        verify(waitForNative(function() { return !session.saveInProgress && !session.documentDirty }, 15000))
+        compare(session.lastSaveError, "")
+        cleanup()
+    }
+
+    function test_zzzzzIndependentSaveAndUndoRestorationReceipts() {
         const shell = createFullShell()
         const session = shell.shellPresenter.session
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
@@ -24,6 +83,7 @@ ShellVoicegroupSupport {
         const initialMidi = fileProbe.fileFingerprint(midiPath)
         const initialCfg = fileProbe.fileFingerprint(cfgPath)
         const initialBank = fileProbe.fileFingerprint(bankPath)
+        const initialNotes = session.gridPresenter().fetchNoteSummary()
         verify(initialMidi.length > 0 && initialCfg.length > 0 && initialBank.length > 0,
                "unified save baseline MIDI, song flags and bank bytes are readable")
         const settings = shell.shellPresenter.settingsStore
@@ -66,22 +126,31 @@ ShellVoicegroupSupport {
         }, 15000), "unified Save completes: " + session.lastSaveError)
         verify(session.lastSaveError === "" && shellSaveStarts === beforeStarts + 1
                && shellSaveFinishes === beforeFinishes + 1 && !voice.bankDirty
-               && !session.documentDirty,
-               "unified Save completes one clean song-and-bank receipt")
-        verify(fileProbe.fileFingerprint(cfgPath) !== initialCfg
+               && session.documentDirty,
+               "voicegroup Save completes one receipt and leaves the song dirty")
+        verify(fileProbe.fileFingerprint(cfgPath) === initialCfg
                && fileProbe.fileFingerprint(bankPath) !== initialBank
                && fileProbe.fileFingerprint(midiPath) === initialMidi,
-               "unified Save persists song flags and bank bytes without changing MIDI")
+               "voicegroup Save writes neither MIDI nor song settings")
+        session.requestSaveSong()
+        verify(waitForNative(function() {
+            return !session.saveInProgress && !session.documentDirty
+        }, 15000), "explicit Save Song persists only the song")
+        verify(fileProbe.fileFingerprint(cfgPath) !== initialCfg,
+               "explicit Save Song writes edited song flags")
+        const savedMidi = fileProbe.fileFingerprint(midiPath)
+        session.setEditingVoicegroup(true)
         session.requestUndo()
         verify(waitForNative(function() { return voice.bankDirty }, 15000),
                "undo after Save dirties the saved bank")
+        session.setEditingVoicegroup(false)
         session.requestUndo()
         verify(waitForNative(function() {
             return session.documentDirty && draft.release === previousRelease
         }, 15000), "restoration undo dirties the saved song and restores the bank voice")
         const restoreStarts = shellSaveStarts
         const restoreFinishes = shellSaveFinishes
-        mouseClick(save)
+        session.requestSaveAll()
         verify(waitForNative(function() {
             return !session.saveInProgress && !voice.bankDirty
                    || session.lastSaveError.length > 0
@@ -92,8 +161,10 @@ ShellVoicegroupSupport {
                "undo restoration Save completes one clean receipt")
         compare(fileProbe.fileFingerprint(cfgPath), initialCfg,
                 "restoration Save writes the original song flags")
-        compare(fileProbe.fileFingerprint(midiPath), initialMidi,
-                "restoration Save preserves the original MIDI")
+        compare(session.gridPresenter().fetchNoteSummary(), initialNotes,
+                "both saves and history restoration preserve the original musical events")
+        compare(fileProbe.fileFingerprint(midiPath), savedMidi,
+                "restoration Save retains the MIDI encoding established by explicit Song Save")
         compare(fileProbe.fileFingerprint(bankPath), initialBank,
                 "restoration Save writes the original bank")
         const selector = findChild(shell, "vgArgCombo")
@@ -158,7 +229,7 @@ ShellVoicegroupSupport {
                    "mounted release spin accepts an adjacent value")
         verify(waitForNative(function() { return voice.bankDirty }, 15000),
                "adjacent release edit dirties the bank")
-        compare(session.songDocumentDirty, false, "adjacent bank edit leaves the song document clean")
+        compare(session.documentDirty, false, "adjacent bank edit leaves the song document clean")
         const undoAction = findChild(shell, "shellAction_edit.undo")
         verify(undoAction && undoAction.enabled && release.contentItem.activeFocus,
                "focused release field offers the standard window Undo action")
@@ -182,9 +253,10 @@ ShellVoicegroupSupport {
         }, 15000), "song setting application completes with a dirty document and bank")
         verify(settings.masterVolume === editedVolume && session.documentDirty && voice.bankDirty,
                "song setting retains its value and dirties the document while the bank remains dirty")
+        session.setEditingVoicegroup(false)
         session.requestUndo()
         verify(waitForNative(function() {
-            return !session.songDocumentDirty && voice.bankDirty
+            return !session.documentDirty && voice.bankDirty
         }, 15000), "undo of the song setting restores the song while the bank edit stays dirty")
         release.contentItem.forceActiveFocus()
         for (let value = adjacent; value > 0; --value)
@@ -192,13 +264,13 @@ ShellVoicegroupSupport {
         tryCompare(release, "value", 0, 15000,
                    "mounted release spin accepts the lower boundary")
         compare(voice.bankDirty, true, "zero release leaves the bank dirty")
-        compare(session.songDocumentDirty, false, "zero release leaves the song document clean")
+        compare(session.documentDirty, false, "zero release leaves the song document clean")
         for (let value = 0; value < release.to; ++value)
             keyClick(Qt.Key_Up)
         tryCompare(release, "value", 255, 15000,
                    "mounted release spin accepts the upper boundary")
         compare(voice.bankDirty, true, "255 release leaves the bank dirty")
-        compare(session.songDocumentDirty, false, "255 release leaves the song document clean")
+        compare(session.documentDirty, false, "255 release leaves the song document clean")
         compare(fileProbe.fileFingerprint(bankPath), persisted,
                 "release edits never save the bank without Save")
         cleanup()
@@ -308,7 +380,7 @@ ShellVoicegroupSupport {
             return draft.isSynth && draft.waveform === 1 && draft.symbol !== pulse
         }, 15000), "waveform edit mints a saw")
         compare(baseDuty.visible, false, "non-pulse waveforms hide duty LFO controls")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.symbol === pulse && draft.waveform === 0
         }, 15000), "undo restores saved pulse voice")
@@ -329,7 +401,7 @@ ShellVoicegroupSupport {
         compare(draft.symbol, pulse, "stale synth change cannot retarget another slot")
         compare(draft.modDepth, pulseDepth, "obsolete synth descriptor remains unchanged")
         controller.selectSlot(4)
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return draft.release === otherRelease }, 15000),
                "undo removes only the selected slot's edit")
         controller.selectSlot(0)
@@ -343,7 +415,7 @@ ShellVoicegroupSupport {
                    || app.lastSaveError.length > 0
         }, 15000), "saw save completes before restoration: " + app.lastSaveError)
         compare(app.lastSaveError, "")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.symbol === pulse && controller.bankDirty
         }, 15000), "undo of the saved saw dirties the pulse restoration")

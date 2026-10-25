@@ -366,10 +366,11 @@ ColumnLayout {
         Layout.minimumHeight: 0
         Button {
             objectName: "vgSaveButton"
-            text: qsTr("Save")
+            text: qsTr("Save Voicegroup")
             Layout.preferredHeight: editor.buttonHeight
             Layout.minimumHeight: 0
-            enabled: editor.controller.bankDirty
+            enabled: editor.controller.bankDirty && !editor.applicationSession.saveInProgress
+                && editor.controller.editingEnabled && !editor.controller.bankBusy
             onClicked: editor.controller.requestSave()
         }
     }

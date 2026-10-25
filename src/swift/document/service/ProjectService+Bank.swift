@@ -14,6 +14,7 @@ extension ProjectService {
             let bank = try await store.loadBank(voicegroupArg: voicegroupArg)
             let loaded = appliedBank(bank, token: nil)
             await publish(loaded, from: store)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             return loaded
         } catch {
             throw projectFailure(error)
@@ -81,6 +82,7 @@ extension ProjectService {
         }
         do {
             let args = try await store.voicegroupArgs()
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             guard !args.contains("_" + name) else {
                 throw ProjectServiceError.operationFailed("A voicegroup named \(name) already exists.")
             }
@@ -90,7 +92,8 @@ extension ProjectService {
                 copyFromFile: copyPath,
                 copySectionLabel: copySectionLabel)
             try VoicegroupSource.appendIncludeLine(projectRoot: projectRoot, name: name)
-            try await open(root: projectRoot)
+            try await store.refreshVoicegroupLocations()
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
         } catch {
             throw projectFailure(error)
         }
@@ -155,6 +158,7 @@ extension ProjectService {
             }
             let published = appliedBank(bank, token: nil)
             await publish(published, from: store)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             return LoadedSong(
                 label: song.label, midiPath: midiPath, constant: song.constant,
                 player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
@@ -171,16 +175,10 @@ extension ProjectService {
         }
     }
 
-    /// Ordered save: optional bank stage, then MIDI bytes, then flags. A
-    /// failed stage throws and later stages never run; nothing here marks the
-    /// document clean — the caller confirms via SongDocument.didSave.
-    public func save(_ snapshot: SaveSnapshot, bank: ProjectBankLease?) async throws -> SaveReceipt {
+    /// Writes song MIDI, flags and backups only; voicegroups save independently.
+    public func save(_ snapshot: SaveSnapshot) async throws -> SaveReceipt {
         let store = try requireStore()
         do {
-            var refreshed: AppliedBankEdit?
-            if let bank {
-                refreshed = try await saveBankStage(bank, in: store)
-            }
             try Task.checkCancellation()
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             if let bytes = try rawMidiBytes(source: snapshot.destination) {
@@ -208,7 +206,7 @@ extension ProjectService {
                 flagsWritten = true
             }
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
-            return SaveReceipt(flagsWritten: flagsWritten, bank: refreshed)
+            return SaveReceipt(flagsWritten: flagsWritten)
         } catch {
             let failure = projectFailure(error)
             guard case let .operationFailed(message) = failure else { throw failure }
@@ -221,6 +219,27 @@ extension ProjectService {
         let store = try requireStore()
         do {
             return try await saveBankStage(lease, in: store)
+        } catch {
+            let failure = projectFailure(error)
+            guard case let .operationFailed(message) = failure else { throw failure }
+            throw ProjectServiceError.operationFailed(
+                "Save voicegroup \(lease.id.sourceRelativePath) [\(lease.sectionLabel)]: \(message)")
+        }
+    }
+
+    /// Discards only the identified voicegroup after a successful disk reload.
+    public func discardBank(lease: ProjectBankLease) async throws -> AppliedBankEdit {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            let reloaded = try await store.discardVoicegroup(lease: lease)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            let result = appliedBank(reloaded, token: nil)
+            await publish(result, from: store)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            return result
         } catch {
             throw projectFailure(error)
         }
@@ -235,10 +254,12 @@ extension ProjectService {
         }
         guard let saved = try await store.saveVoicegroup(lease: bank) else {
             throw ProjectServiceError.operationFailed(
-                "Could not save voicegroup \(bank.id.sourceRelativePath) [\(bank.sectionLabel)].")
+                "The requested save was superseded by a newer voicegroup publication.")
         }
+        guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
         let savedView = appliedBank(saved, token: nil)
         await publish(savedView, from: store)
+        guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
         return savedView
     }
 
@@ -260,6 +281,7 @@ extension ProjectService {
             let result = try await store.applyVoicegroupEdit(
                 lease: lease,
                 operation: .set(SetVoicegroupSlot(slot: slot, value: converted, expected: old)))
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             let applied = try bankEditResult(result)
             if publishResult { await publish(applied, from: store) }
             return applied
@@ -281,6 +303,7 @@ extension ProjectService {
         do {
             let applied = try bankEditResult(
                 await store.revertBlankSlot(lease: lease, materializationToken: token))
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
             if publishResult { await publish(applied, from: store) }
             return applied
         } catch {

@@ -9,7 +9,7 @@ import PorydawPlayback
 //
 // The VoiceListController bound to a real DocumentSession: the published
 // bank view drives the 128 rows, applyVoiceEdit routes through
-// DocumentSession.applyBankEdit (canonical undo/history), refresh(from:)
+// VoicegroupSession.apply (canonical shared undo/history), refresh(from:)
 // re-derives rows/selector/used marks after bank and document changes, and
 // undo restores prior observable state. Mirrors the retired native oracle's
 // owner-driven flow (WorkspaceUi::rebuildVoicegroupPresentation).
@@ -183,8 +183,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     let songFileBeforeBankEdit = session.document.state.file
     let songDirtyBeforeBankEdit = session.document.isDirty
     let historyIndexBeforeBankEdit = session.document.history.undoIndex
-    // applyVoiceEdit routes through DocumentSession.applyBankEdit: the
-    // canonical service apply plus undoable history action.
+    // applyVoiceEdit records the canonical shared voicegroup history.
     let editID = "vgsavecheck/VoicegroupSaveTest::releaseEditorUsesBankUndoPipeline"
     guard let original = session.bankSlots[0].voice else {
         report.fail(editID, "fixture slot 0 has no editable voice")
@@ -201,7 +200,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     report.expectEqual(
-        expected: true, actual: session.bankDirty, cppID: editID,
+        expected: true, actual: session.voicegroup.value.dirty, cppID: editID,
         what: "a committed voice edit dirties the bank")
     report.expectEqual(
         expected: edited, actual: session.bankSlots[0].voice, cppID: editID,
@@ -211,30 +210,27 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         cppID: editID,
         message: "a bank edit leaves song content unchanged")
     report.expect(
-        session.document.isDirty == songDirtyBeforeBankEdit && session.bankDirty,
+        session.document.isDirty == songDirtyBeforeBankEdit && session.voicegroup.value.dirty,
         cppID: editID,
         message: "a bank edit preserves song dirtiness while dirtying the bank")
     report.expect(
-        session.document.history.undoIndex == historyIndexBeforeBankEdit + 1,
-        cppID: editID,
-        message: "the bank edit appends one history entry without mutating song content")
-    // Rows are explicit-refresh: the model holds the pre-edit row until the
-    // owner's change seam calls refresh (DocumentSession.onChange stays
-    // single-subscriber, owned by DocumentWorkspace).
+        session.document.history.undoIndex == historyIndexBeforeBankEdit
+            && session.voicegroup.history.undoIndex == 1,
+        cppID: editID, message: "the bank edit appends only to the independent shared history")
     report.expectEqual(
-        expected: "2 3 12 4", actual: list.rows[0].adsr, cppID: editID,
-        what: "rows hold the pre-edit state until refresh")
+        expected: "2 3 12 \(edited.release & 7)", actual: list.rows[0].adsr, cppID: editID,
+        what: "canonical observer refreshes rows when the committed edit publishes")
     list.refresh(from: session)
     report.expect(
         list.rows[0] === originalRow && list.bankDirty
-            && list.panelTitle == "Voicegroup*",
+            && list.panelTitle == "Voicegroup: test_vg*",
         cppID: bankViewID,
         message: "bank edit republishes the dirty view on the same voice row handle")
     report.expectEqual(
         expected: "2 3 12 \(edited.release & 7)", actual: list.rows[0].adsr, cppID: editID,
         what: "refresh re-derives the edited row")
     do {
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
     } catch {
         report.fail(editID, "voice edit undo threw: \(error)")
         return
@@ -242,7 +238,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     list.refresh(from: session)
     report.expect(
         list.rows[0] === originalRow && !list.bankDirty
-            && list.panelTitle == "Voicegroup",
+            && list.panelTitle == "Voicegroup: test_vg",
         cppID: bankViewID,
         message: "bank undo republishes the clean view on the same voice row handle")
     report.expectEqual(
@@ -274,7 +270,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         expected: "004  Sample", actual: list.rows[4].title, cppID: blankID,
         what: "the materialized row renders its type-named title")
     do {
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
     } catch {
         report.fail(blankID, "blank materialization undo threw: \(error)")
         return
@@ -287,7 +283,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         expected: "004  [Blank]", actual: list.rows[4].title, cppID: blankID,
         what: "the reverted row renders the blank template again")
     do {
-        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.voicegroup.redo() }
     } catch {
         report.fail(blankID, "blank materialization redo threw: \(error)")
         return
@@ -299,7 +295,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         cppID: blankID,
         message: "the blank template materializes again on redo without dirtying the song")
     do {
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
     } catch {
         report.fail(blankID, "blank redo cleanup threw: \(error)")
         return
@@ -390,6 +386,30 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         }
         list.refresh(from: session)
     }
+    let historyBeforeLoading = session.document.history.undoIndex
+    let argumentBeforeLoading = session.document.state.config.voicegroupArgument
+    list.setLoading(true)
+    list.selectorText = "other"
+    list.commitVoicegroupSelection()
+    report.expect(
+        session.document.history.undoIndex == historyBeforeLoading
+            && session.document.state.config.voicegroupArgument == argumentBeforeLoading,
+        cppID: selectorID, message: "the loading overlay refuses assignment edits to a real song")
+    list.setLoading(false)
+    list.selectorText = "_other"
+    list.commitVoicegroupSelection()
+    report.expect(
+        selectionError == nil
+            && session.document.state.config.voicegroupArgument == "_other"
+            && session.document.history.undoIndex == historyBeforeLoading + 1,
+        cppID: selectorID, message: "leaving loading admits a pasted raw group argument as one real song edit")
+    do {
+        _ = try runBlocking { try await session.undo() }
+    } catch {
+        report.fail(selectorID, "pasted-argument assignment undo threw: \(error)")
+        return
+    }
+    list.refresh(from: session)
     list.selectorText = "other"
     list.commitVoicegroupSelection()
     report.expect(
@@ -490,25 +510,23 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
         return
     }
     let originalHistory = session.document.history.currentIdentity
-    let secondUndoIndex = second.document.history.undoIndex
+    let secondUndoIndex = second.voicegroup.history.undoIndex
     list.refresh(from: session)
     list.selectSlot(slot: 0)
     let editor = list.editor
     let staleRelease = firstVoice.release == 7 ? 6 : firstVoice.release + 1
     editor.change(field: "release", value: Int(staleRelease))
-    editor.changeType(macro: Int(BankVoiceMacro.square2), symbol: "")
     list.refresh(from: second)
     let committedRelease = secondVoice.release == 7 ? 6 : secondVoice.release + 1
     var expectedVoice = secondVoice
     expectedVoice.release = committedRelease
-    editor.change(field: "release", value: Int(committedRelease))
     do {
         try runBlocking {
             let deadline = Date().addingTimeInterval(20)
             while Date() < deadline {
                 if second.bankSlots[0].voice?.release == committedRelease
-                    && second.document.history.undoIndex == secondUndoIndex + 1
-                    && !second.document.history.bankTransitionInFlight
+                    && second.voicegroup.history.undoIndex == secondUndoIndex + 1
+                    && !second.voicegroup.isBusy
                 {
                     return
                 }
@@ -522,19 +540,19 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     }
     report.expectEqual(
         expected: originalHistory, actual: session.document.history.currentIdentity, cppID: originID,
-        what: "discarded queued edits leave the original document history unchanged")
+        what: "queued group edits leave the original song history unchanged")
     report.expect(
         session.bankSlots[0].voice == expectedVoice && second.bankSlots[0].voice == expectedVoice,
         cppID: originID,
         message: "the valid peer edit publishes its full voice to both live bank views")
     report.expectEqual(
         expected: secondVoice.macro, actual: second.bankSlots[0].voice?.macro, cppID: originID,
-        what: "queued type edit cannot retarget the other tab's slot")
+        what: "same-group tab rebind preserves the edit's original voice type")
     report.expectEqual(
         expected: committedRelease, actual: second.bankSlots[0].voice?.release, cppID: originID,
-        what: "same-origin edit commits after discarded earlier requests")
+        what: "queued edit remains attached to its canonical group across song-tab rebind")
     do {
-        let undone = try runBlocking { try await second.undo() }
+        let undone = try runBlocking { try await second.voicegroup.undo() }
         report.expect(
             undone, cppID: originID,
             message: "same-origin queued edit is undoable after history publication")

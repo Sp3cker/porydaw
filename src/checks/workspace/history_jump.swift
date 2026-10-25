@@ -53,35 +53,35 @@ private func historyJumpDocumentSteps(_ report: CheckReport, fixtureRoot: String
         check.expect(
             unchanged == tail && document.revision == revision, message: "jumping to the current index replays nothing")
 
-        guard let token = history.beginBankTransition() else {
+        guard let token = history.beginBindingTransition() else {
             check.fail("fixture could not hold the history transition")
             return
         }
         let refused = try runBlocking { try await session.jump(toIndex: 0) }
-        history.endBankTransition(token)
+        history.endBindingTransition(token)
         check.expect(
             refused == tail && document.state == states[4],
             message: "a pending transition refuses the jump without changing state")
 
-        var heldTransition: BankTransitionToken?
+        var heldTransition: BindingTransitionToken?
         session.onChange = { change in
             if change.domains.contains(.history), history.undoIndex == 2, heldTransition == nil {
-                heldTransition = history.beginBankTransition()
+                heldTransition = history.beginBindingTransition()
             }
         }
         let stopped = try runBlocking { try await session.jump(toIndex: 0) }
         session.onChange = nil
-        if let heldTransition { history.endBankTransition(heldTransition) }
+        if let heldTransition { history.endBindingTransition(heldTransition) }
         check.expect(
             heldTransition != nil && stopped == 2 && history.undoIndex == 2 && document.state == states[2],
             message: "a refused later step stops at the last fully committed document state")
         _ = try runBlocking { try await session.jump(toIndex: 0) }
-        guard let forwardToken = history.beginBankTransition() else {
+        guard let forwardToken = history.beginBindingTransition() else {
             check.fail("fixture could not hold the forward transition")
             return
         }
         let refusedForward = try runBlocking { try await session.jump(toIndex: tail) }
-        history.endBankTransition(forwardToken)
+        history.endBindingTransition(forwardToken)
         check.expect(
             refusedForward == 0 && document.state == states[0],
             message: "a pending transition also refuses forward jumps")
@@ -116,7 +116,7 @@ private func historyJumpBankBinding(_ report: CheckReport, fixtureRoot: String) 
         }
         var edited = original
         edited.release = original.release == 255 ? 254 : original.release + 1
-        _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: edited, expected: original) }
+        _ = try runBlocking { try await session.voicegroup.apply(slot: 0, value: edited, expected: original) }
         try runBlocking { try await session.selectVoicegroup("_fixture_alt") }
         let alternate = document.state
         var config = document.state.config
@@ -131,22 +131,23 @@ private func historyJumpBankBinding(_ report: CheckReport, fixtureRoot: String) 
         let steppedHome = document.state
         let steppedSlots = session.bankSlots
         let steppedLease = session.bankLease
-        let steppedDirty = session.bankDirty
+        let steppedDirty = session.voicegroup.value.dirty
         _ = try runBlocking { try await session.jump(toIndex: tailIndex) }
-        let reachedHome = try runBlocking { try await session.jump(toIndex: 1) }
+        let reachedHome = try runBlocking { try await session.jump(toIndex: 0) }
         check.expect(
-            reachedHome == 1 && document.state == steppedHome && session.bankSlots == steppedSlots
+            reachedHome == 0 && document.state == steppedHome && session.bankSlots == steppedSlots
                 && session.bankLease.id.sourceRelativePath == steppedLease.id.sourceRelativePath
-                && session.bankLease.sectionLabel == steppedLease.sectionLabel && session.bankDirty == steppedDirty
+                && session.bankLease.sectionLabel == steppedLease.sectionLabel
+                && session.voicegroup.value.dirty == steppedDirty
                 && session.bankSlots[0].voice == edited,
             message: "jump across -G matches repeated undo and reloads the unsaved home bank")
         let reachedBase = try runBlocking { try await session.jump(toIndex: 0) }
         check.expect(
-            reachedBase == 0 && document.state == home && session.bankSlots == homeSlots
+            reachedBase == 0 && document.state == home
                 && session.bankLease.id.sourceRelativePath == homeLease.id.sourceRelativePath
                 && session.bankLease.sectionLabel == homeLease.sectionLabel
-                && session.bankLease[0].release == UInt8(original.release) && !session.bankDirty,
-            message: "jump through the bank edit drains its replay result and restores the clean bank")
+                && session.bankSlots[0].voice == edited && session.voicegroup.value.dirty,
+            message: "song jump to base preserves the independently edited home voicegroup")
         _ = try runBlocking {
             _ = try await session.redo()
             return try await session.redo()
@@ -154,12 +155,12 @@ private func historyJumpBankBinding(_ report: CheckReport, fixtureRoot: String) 
         let steppedAlternateSlots = session.bankSlots
         let steppedAlternateLease = session.bankLease
         _ = try runBlocking { try await session.jump(toIndex: 0) }
-        let reachedAlternate = try runBlocking { try await session.jump(toIndex: 2) }
+        let reachedAlternate = try runBlocking { try await session.jump(toIndex: 1) }
         check.expect(
-            reachedAlternate == 2 && document.state == alternate && session.bankSlots == steppedAlternateSlots
+            reachedAlternate == 1 && document.state == alternate && session.bankSlots == steppedAlternateSlots
                 && session.bankLease.id.sourceRelativePath == steppedAlternateLease.id.sourceRelativePath
                 && session.bankLease.sectionLabel == steppedAlternateLease.sectionLabel
-                && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2 && !session.bankDirty,
+                && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2 && !session.voicegroup.value.dirty,
             message: "forward jump across -G matches repeated redo and loads the alternate bank")
         let reachedTail = try runBlocking { try await session.jump(toIndex: tailIndex) }
         check.expect(
@@ -180,12 +181,17 @@ private final class HistoryJumpBankAction: BankHistoryAction {
     var staleRedo = false
     var failRedo = false
     private(set) var redoCalls = 0
+    private let result: AppliedBankEdit
 
-    func apply(direction: BankHistoryDirection) async throws {
-        guard direction == .redo else { return }
-        redoCalls += 1
-        if staleRedo { throw BankHistoryReplayError.staleEntry }
-        if failRedo { throw HistoryJumpReplayFailure.hard }
+    init(_ result: AppliedBankEdit) { self.result = result }
+
+    func apply(direction: HistoryDirection) async throws -> AppliedBankEdit {
+        if direction == .redo {
+            redoCalls += 1
+            if staleRedo { throw BankHistoryReplayError.staleEntry }
+            if failRedo { throw HistoryJumpReplayFailure.hard }
+        }
+        return result
     }
 
     func merged(with _: any BankHistoryAction) -> (any BankHistoryAction)? { nil }
@@ -201,44 +207,39 @@ private func historyJumpStaleAndFailedReplay(_ report: CheckReport, fixtureRoot:
             try await service.open(root: root)
             return try await DocumentSession.open(service: service, label: "mus_session_test")
         }
-        let document = session.document
-        var config = document.state.config
-        config.priority = config.priority == 1 ? 2 : 1
-        document.setConfig(config)
-        let first = document.state
-        let stale = HistoryJumpBankAction()
-        document.history.recordConfirmedBank(stale)
-        config.priority = 3
-        document.setConfig(config)
-        let targeted = document.state
-        config.priority = 4
-        document.setConfig(config)
-        _ = try runBlocking { try await session.jump(toIndex: 0) }
+        let group = session.voicegroup
+        let history = group.history
+        let first = HistoryJumpBankAction(group.value)
+        let stale = HistoryJumpBankAction(group.value)
+        let targeted = HistoryJumpBankAction(group.value)
+        history.record(first)
+        history.record(stale)
+        history.record(targeted)
+        history.record(HistoryJumpBankAction(group.value))
+        _ = try runBlocking { try await group.jump(toIndex: 0) }
         stale.staleRedo = true
-        let reached = try runBlocking { try await session.jump(toIndex: 3) }
+        let reached = try runBlocking { try await group.jump(toIndex: 3) }
         check.expect(
-            reached == 2 && document.history.undoIndex == 2 && document.history.undoCount == 3
-                && document.state == targeted && document.history.canRedo && stale.redoCalls == 1,
-            message: "a stale forward entry shifts the clicked step down once without applying the following step")
-
-        _ = try runBlocking { try await session.jump(toIndex: 1) }
-        let failed = HistoryJumpBankAction()
+            reached == 2 && history.undoIndex == 2 && history.undoCount == 3
+                && history.canRedo && stale.redoCalls == 1,
+            message: "a stale forward entry shifts the clicked group step without applying the following step")
+        _ = try runBlocking { try await group.jump(toIndex: 1) }
+        let failed = HistoryJumpBankAction(group.value)
         failed.failRedo = true
-        document.history.recordConfirmedBank(failed)
-        config.priority = 5
-        document.setConfig(config)
-        _ = try runBlocking { try await session.jump(toIndex: 0) }
-        let countBefore = document.history.undoCount
+        history.record(failed)
+        history.record(HistoryJumpBankAction(group.value))
+        _ = try runBlocking { try await group.jump(toIndex: 0) }
+        let countBefore = history.undoCount
         var propagated = false
         do {
-            _ = try runBlocking { try await session.jump(toIndex: countBefore) }
+            _ = try runBlocking { try await group.jump(toIndex: countBefore) }
         } catch HistoryJumpReplayFailure.hard {
             propagated = true
         }
         check.expect(
-            propagated && document.history.undoIndex == 1 && document.history.undoCount == countBefore
-                && document.state == first && !document.history.bankTransitionInFlight && failed.redoCalls == 1,
-            message: "non-stale replay errors propagate with earlier steps committed and the failing entry intact")
+            propagated && history.undoIndex == 1 && history.undoCount == countBefore
+                && !group.isBusy && failed.redoCalls == 1,
+            message: "hard replay errors preserve earlier group steps and the failing entry")
     } catch {
         check.fail("stale or failed jump scenario threw: \(error)")
     }

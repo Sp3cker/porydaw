@@ -658,14 +658,7 @@ public func runBankLeasesSuite(_ report: CheckReport) {
         let restored = try runBlocking {
             try await service.bankRevert(lease: materialized.lease, token: spentToken)
         }
-        let document = SongDocument(
-            file: try MidiFile.decode(first.midiBytes), config: first.config,
-            source: first.source, trackBudget: first.trackBudget)
-        let snapshot = try document.captureSave()
-        let receipt = try runBlocking { try await service.save(snapshot, bank: restored.lease) }
-        guard let saved = receipt.bank else {
-            throw BankLeasesCheckError.failed("service save returned no refreshed bank")
-        }
+        let saved = try runBlocking { try await service.saveBank(lease: restored.lease) }
         let sourceAfter = try Data(contentsOf: source)
         try bankRequire(
             !saved.dirty && !saved.lease.sharesBank(with: restored.lease)

@@ -20,6 +20,7 @@ public func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerControls(report)
         try checkControllerTailMatrix(report)
         try checkControllerSettingsAndBank(report)
+        try checkControllerOrphanVoicegroupPreview(report)
         try checkControllerPreviewIsolation(report)
         try checkControllerPitchBendAudio(report)
         try checkMetronomeBeatGrid(report)
@@ -308,6 +309,69 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
             cppID: "swiftcore/AudioController::bankRebind",
             message: "future sequenced note uses the replacement square timbre after chase/prime")
         audio.unload()
+    }
+}
+
+private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throws {
+    for cgb in [false, true] {
+        let family = cgb ? "Cgb" : "Pcm"
+        let id = "swiftcore/AudioController::orphanVoicegroup\(family)Preview"
+        let rig = try AudioControllerCheckFixture(cgb: !cgb, silent: true)
+        let replacement = try AudioControllerCheckFixture(cgb: cgb, silent: true)
+        let audio = rig.renderer
+        withExtendedLifetime(replacement) {
+            audio.audition.previewVoice(program: 7, key: 67, velocity: 127)
+            let previous = rig.render(rig.rate)
+            audio.unload()
+            let unloaded = rig.render(rig.rate)
+            report.expect(
+                audioControllerCheckPeak(previous.suffix(4096)) > 0.01
+                    && audioControllerCheckPeak(unloaded.suffix(4096)) <= 1 / 32768
+                    && !audio.songLoaded && audio.timeline == nil
+                    && audio.transport == .stopped && audio.playheadSamples == 0,
+                cppID: id, message: "unloading a sounding renderer removes its song and previous program preview")
+
+            // Restore only the bank: no timeline bind or sequencer start is allowed.
+            audio.updateVoicegroup(replacement.voices)
+            audio.audition.previewVoice(program: 7, key: 67, velocity: 127)
+            replacement.renderer.audition.previewVoice(program: 7, key: 67, velocity: 127)
+            let restored = rig.render(rig.rate)
+            let reference = replacement.render(replacement.rate)
+            let restoredTail = restored.suffix(4096)
+            let matchesReplacement = zip(restoredTail, reference.suffix(4096)).allSatisfy {
+                (pair: (Float, Float)) -> Bool in abs(pair.0 - pair.1) <= 1 / 32768
+            }
+            let differsFromPrevious = zip(restoredTail, previous.suffix(4096)).contains {
+                (pair: (Float, Float)) -> Bool in abs(pair.0 - pair.1) > 1 / 32768
+            }
+            report.expect(
+                audioControllerCheckPeak(restoredTail) > 0.01
+                    && audioControllerCheckPeak(reference.suffix(4096)) > 0.01
+                    && matchesReplacement && differsFromPrevious,
+                cppID: id,
+                message: "no-song program audition renders the replacement \(family) timbre, not the unloaded bank")
+            let sounding = audio.polySnapshot()
+            report.expect(
+                !audio.songLoaded && audio.timeline == nil
+                    && audio.transport == .stopped && audio.playheadSamples == 0
+                    && audio.activePcmChannels == 0 && audio.activeCgbChannels == 0
+                    && sounding.pcm.allSatisfy { !$0.on } && sounding.cgb.allSatisfy { !$0.on },
+                cppID: id,
+                message: "audible program preview leaves the unloaded sequence stopped with no main-engine held voices")
+
+            audio.audition.previewVoice(program: 7, key: 67, velocity: 0)
+            let released = rig.render(rig.rate * 2)
+            let settled = audio.polySnapshot()
+            report.expect(
+                audioControllerCheckPeak(released.suffix(4096)) <= 1 / 32768
+                    && settled.pcm.allSatisfy { !$0.on } && settled.cgb.allSatisfy { !$0.on }
+                    && audio.transport == .stopped && audio.playheadSamples == 0 && !audio.songLoaded,
+                cppID: id,
+                message:
+                    "program release drains preview output to silence without leaving a held song voice or advancing the sequence"
+            )
+            audio.unload()
+        }
     }
 }
 

@@ -304,7 +304,7 @@ FocusScope {
                             height: root.closeExtent
                             padding: 2
                             focusPolicy: Qt.NoFocus
-                            enabled: selectButton.session !== null && !selectButton.session.bankTransitionPending
+                            enabled: selectButton.session !== null && !selectButton.session.bindingTransitionPending
                             contentItem: Item {
                                 AppIcon {
                                     anchors.centerIn: parent
@@ -384,6 +384,7 @@ FocusScope {
     Item {
         id: pageStack
         objectName: "songTabPages"
+        enabled: !root.controller.isClosingAll
         anchors.top: strip.bottom
         anchors.left: parent.left
         anchors.right: parent.right

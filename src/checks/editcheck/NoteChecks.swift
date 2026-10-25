@@ -26,7 +26,6 @@ public func runNoteEditsSuite(_ report: CheckReport) {
 public func runDocumentHistorySuite(_ report: CheckReport) {
     gestureAndIdentityHistory(report)
     saveIdentity(report)
-    confirmedBankOrdering(report)
     historyMergeContracts(report)
     documentHistoryContracts(report)
 }

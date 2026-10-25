@@ -266,10 +266,9 @@ public struct AppliedBankEdit: Sendable {
     public var materialization: BlankSlotMaterialization? = nil
 }
 
-/// An ordered save receipt. The bank stage, when run, refreshes the lease.
+/// A song-only save receipt.
 public struct SaveReceipt: Sendable {
     public var flagsWritten: Bool
-    public var bank: AppliedBankEdit?
 }
 
 /// The registration plan behind the native Register Song confirmation
@@ -357,7 +356,7 @@ public actor ProjectService {
     }
     internal func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
         guard !closed, store === source else { return }
-        await bankViews.publish(value)
+        await bankViews.publish(value, service: self)
     }
 
     private func withStore<Value: Sendable>(
@@ -369,7 +368,9 @@ public actor ProjectService {
             throw ProjectServiceError.serviceClosed
         }
         do {
-            return try await operation(self, store)
+            let result = try await operation(self, store)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            return result
         } catch {
             throw projectFailure(error)
         }
@@ -496,7 +497,8 @@ public func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice
         sustain: Int(voice.sustain), release: Int(voice.release))
 }
 
-private func copyVoice(_ voice: PorydawVoicegroup.VgVoice) -> BankVoice {
+/// Copies every persisted macro argument into the editor's value representation.
+public func copyVoice(_ voice: PorydawVoicegroup.VgVoice) -> BankVoice {
     let macro = voice.macro.rawValue
     let key = Int32(voice.key)
     let pan = Int32(voice.pan)

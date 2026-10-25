@@ -99,6 +99,13 @@ public final class VoicegroupStore {
         }
     }
 
+    /// Refreshes discovery after resource creation, preserving every live bank.
+    public func refreshLocations() {
+        layout = ProjectLayout(projectRoot: projectRoot)
+        locator = VoicegroupLocator(layout: layout)
+        textCache.removeAll()
+    }
+
     /// Refreshes maps and rebuilds loaded banks from their current, possibly dirty sources.
     /// - Throws: `VoicegroupStoreError` when the refreshed asset maps cannot be parsed.
     public func rebind() throws -> [LoadedBankView] {
@@ -409,14 +416,14 @@ public final class VoicegroupStore {
     /// - Returns: The clean publication, or nil if the source write fails.
     /// - Throws: `VoicegroupStoreError` for an unloaded bank or a failed reload.
     public func saveVoicegroup(id: VoicegroupId) throws -> LoadedBankView? {
-        // A failed stale reload must not hide the error from the actual write attempt.
-        guard (try? refreshIfStale(id: id)) != false, var record = records[id] else {
+        guard try refreshIfStale(id: id), var record = records[id] else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
         }
         if record.kitKeys.isEmpty {
+            let source = try detachedSource(record.source)
             let saved: Bool
             do {
-                saved = try record.source.save()
+                saved = try source.save()
             } catch let conflict as VoicegroupSourceConflict {
                 throw VoicegroupStoreError.operationFailed(
                     "Cannot write \(record.source.filePath): \(conflict.message)")
@@ -425,11 +432,12 @@ public final class VoicegroupStore {
             }
             // Nil is reserved for an edit superseding the save snapshot.
             guard saved else { return nil }
-            record.current = try buildBank(source: record.source)
+            record.current = try buildBank(source: source)
             guard let time = modificationTime(record.source.filePath) else {
                 throw VoicegroupStoreError.operationFailed("Cannot read \(record.source.filePath)")
             }
             record.sourceFileTime = time
+            record.source = source
         } else {
             try saveKit(record: &record)
         }
@@ -441,6 +449,38 @@ public final class VoicegroupStore {
                 id: id, filePath: record.source.filePath, sourceFileTime: record.sourceFileTime)
         }
         return record.published
+    }
+
+    /// Reloads one bank transactionally, retaining other groups' kit dependencies.
+    /// A failed source read or bank build leaves the live publication untouched.
+    public func discardVoicegroup(id: VoicegroupId) throws -> LoadedBankView {
+        guard let record = records[id] else {
+            throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
+        }
+        let source = try record.source.diskSnapshot()
+        let staging = stagingWithoutKeys(of: id)
+        let priorTables = keysplits
+        keysplits = try KeysplitTables.parse(files: layout.ensuringDeepScan().keysplitTableFiles)
+        var committed = false
+        textCache.removeAll()
+        defer {
+            textCache.removeAll()
+            if !committed { keysplits = priorTables }
+        }
+        let bank = try buildBank(source: source, staging: staging)
+        guard let time = modificationTime(source.filePath) else {
+            throw VoicegroupStoreError.operationFailed("Cannot read \(source.filePath)")
+        }
+        let view = Self.publish(id: id, source: source, bank: bank)
+        records[id] = BankRecord(
+            id: id, source: source, current: bank,
+            sourceFileTime: time, published: view)
+        kitStaging = staging
+        for (arg, memo) in memos where memo.id == id {
+            memos[arg] = BankMemo(id: id, filePath: source.filePath, sourceFileTime: time)
+        }
+        committed = true
+        return view
     }
 
     private func republish(_ record: inout BankRecord, bank: Bank) {

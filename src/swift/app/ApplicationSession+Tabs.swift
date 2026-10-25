@@ -60,8 +60,7 @@ extension ApplicationSession {
         startOpen(label: label, at: nil, replacing: pending)
     }
 
-    /// Hidden tabs also refresh the window's global bank Undo/Redo gate;
-    /// only the selected tab refreshes transport and voicegroup views.
+    /// Song publications refresh their own tab and selected transport.
     func tabStateChanged(for session: DocumentSession) {
         songTabs.refreshDirty()
         refreshDocumentState()
@@ -74,7 +73,7 @@ extension ApplicationSession {
         if let session = selectedDocument {
             voiceList.refresh(from: session)
         } else {
-            voiceList.bindBank(slots: nil)
+            voiceList.detachSong()
         }
     }
 
@@ -118,6 +117,7 @@ extension ApplicationSession {
     }
 
     func openSongImpl(label: String) {
+        guard !songTabs.isClosingAll else { return }
         if let live = songTabs.tab(label: label) {
             guard live.tabId == songTabs.selectedId else {
                 songTabs.selectTab(tabId: live.tabId)
@@ -131,6 +131,7 @@ extension ApplicationSession {
 
     @QtIgnored
     func openSongFromDock(label: String, newTab: Bool) {
+        guard !songTabs.isClosingAll else { return }
         if let live = songTabs.tab(label: label) {
             if live.tabId == songTabs.selectedId, !newTab {
                 songTabs.requestReload(tabId: live.tabId)

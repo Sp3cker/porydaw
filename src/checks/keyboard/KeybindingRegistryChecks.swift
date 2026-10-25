@@ -144,6 +144,22 @@ public func runKeybindingRegistryChecks(
         deliveryScopes,
         "A048 Select All delivers its platform standard stroke")
 
+    let saveRouting = "KeymapCheckTest::independentSaveRouting"
+    onAssertion(
+        registry.scope("file.save") == .window
+            && registry.matches(QtKeyCode.s.rawValue, platformCommand, "file.save"),
+        saveRouting, "Standard Save uses the existing window dispatcher")
+    onAssertion(
+        !registry.matches(QtKeyCode.s.rawValue, platformCommand, "file.save_song")
+            && !registry.matches(QtKeyCode.s.rawValue, platformCommand, "file.save_voicegroup"),
+        saveRouting, "Explicit owner saves do not compete with context-sensitive Standard Save")
+    onAssertion(
+        registry.matches(
+            QtKeyCode.s.rawValue, platformCommand | QtKeyboardModifier.shift.rawValue, "file.save_all")
+            && !registry.matches(
+                QtKeyCode.s.rawValue, platformCommand | QtKeyboardModifier.shift.rawValue, "file.save"),
+        saveRouting, "Save All has its own noncompeting chord")
+
     let defaultMatching = "KeymapCheckTest::defaultMatching"
     let rows: [(name: String, id: String, key: Int, modifiers: Int, expected: Bool)] = [
         ("semitone-up", "roll.transpose_up", QtKeyCode.up.rawValue, QtKeyboardModifier.none.rawValue, true),

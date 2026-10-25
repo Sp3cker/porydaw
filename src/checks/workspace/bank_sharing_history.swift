@@ -9,6 +9,7 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
     let id = "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions"
     let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-shared-bank-history")
     let service = ProjectService()
+    bankSessionDoesNotRetainService(report: report, root: root)
     do {
         try runBlocking { try await service.open(root: root) }
         let first = try runBlocking {
@@ -17,112 +18,146 @@ internal func bankSharedHistoryAndLifecycle(report: CheckReport, fixtureRoot: St
         let peer = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test2")
         }
-        guard let firstOriginal = first.bankSlots.first?.voice,
-            let secondOriginal = first.bankSlots.dropFirst().first?.voice
-        else {
+        let group = first.voicegroup
+        let history = group.history
+        let firstRevision = first.document.revision
+        let peerRevision = peer.document.revision
+        let firstBytes = bytes(at: first.document.source.midiPath)
+        let peerBytes = bytes(at: peer.document.source.midiPath)
+        guard let original = first.bankSlots[0].voice, let second = first.bankSlots[1].voice else {
             report.fail(id, "two editable fixture slots are required")
             return
         }
-        var firstEdit = firstOriginal
-        firstEdit.release = firstEdit.release == 255 ? 254 : firstEdit.release + 1
-        var peerEdit = secondOriginal
+        let bankPath = root + "/" + group.value.lease.id.sourceRelativePath
+        let bankBytes = bytes(at: bankPath)
+        var edit = original
+        edit.attack = edit.attack == 255 ? 254 : edit.attack + 1
+        var peerEdit = second
         peerEdit.release = peerEdit.release == 255 ? 254 : peerEdit.release + 1
-        let firstBankPath = root + "/" + first.bankLease.id.sourceRelativePath
-        let originalBytes = bytes(at: firstBankPath)
-        _ = try runBlocking {
-            try await first.applyBankEdit(slot: 0, value: firstEdit, expected: firstOriginal)
+        try runBlocking {
+            _ = try await first.voicegroup.apply(slot: 0, value: edit, expected: original)
+            _ = try await peer.voicegroup.apply(slot: 1, value: peerEdit, expected: second)
         }
-        _ = try runBlocking {
-            try await peer.applyBankEdit(slot: 1, value: peerEdit, expected: secondOriginal)
+        report.expect(
+            first.voicegroup === peer.voicegroup && history.undoCount == 2
+                && first.bankSlots[0].voice == edit && peer.bankSlots[1].voice == peerEdit
+                && first.document.revision == firstRevision && peer.document.revision == peerRevision
+                && first.document.history.undoCount == 0 && peer.document.history.undoCount == 0
+                && !first.document.isDirty && !peer.document.isDirty && group.value.dirty
+                && bytes(at: first.document.source.midiPath) == firstBytes
+                && bytes(at: peer.document.source.midiPath) == peerBytes,
+            cppID: id,
+            message: "two songs share chronological group edits without song history, revisions or MIDI writes")
+        _ = try runBlocking { try await first.voicegroup.undo() }
+        report.expect(
+            first.bankSlots[0].voice == edit && first.bankSlots[1].voice == second,
+            cppID: id, message: "undo from the first song reverses the peer's latest edit")
+        _ = try runBlocking { try await peer.voicegroup.undo() }
+        report.expect(
+            !group.value.dirty && first.bankSlots[0].voice == original,
+            cppID: id, message: "undo from either view reaches the shared clean baseline")
+        _ = try runBlocking { try await group.redo() }
+        try runBlocking { try await group.save() }
+        report.expect(
+            !group.value.dirty && history.step(at: 0)?.isSaved == true
+                && bytes(at: bankPath) != bankBytes
+                && bytes(at: first.document.source.midiPath) == firstBytes,
+            cppID: id, message: "group save persists only its resource and projects the saved step")
+        _ = try peer.document.addNotes([NewNote(track: 0, tick: 240, pitch: 76, duration: 24, velocity: 91)])
+        _ = try runBlocking { try await group.undo() }
+        report.expect(
+            peer.document.isDirty && group.value.dirty,
+            cppID: id, message: "group undo does not cross independent song-note history")
+        _ = try runBlocking { try await peer.undo() }
+        report.expect(
+            !peer.document.isDirty && group.value.dirty,
+            cppID: id, message: "song undo does not change the group's cursor or dirtiness")
+        try runBlocking { try await group.discard() }
+        report.expect(
+            first.bankSlots[0].voice == edit && peer.bankSlots[0].voice == edit
+                && !group.value.dirty && history.undoCount == 0 && history.baseIsSaved,
+            cppID: id, message: "discard restores persisted voices for every consumer and resets shared history")
+        try runBlocking {
+            _ = await first.close()
+            _ = await peer.close()
         }
-        report.expectEqual(
-            expected: peerEdit, actual: first.bankSlots[1].voice, cppID: id,
-            what: "disjoint peer edit reaches the first session")
-        report.expectEqual(
-            expected: firstEdit, actual: peer.bankSlots[0].voice, cppID: id,
-            what: "first edit reaches the live peer")
-        try runBlocking { _ = try await first.undo() }
-        report.expectEqual(
-            expected: firstOriginal, actual: peer.bankSlots[0].voice, cppID: id,
-            what: "first undo reverts only its own slot")
-        report.expectEqual(
-            expected: peerEdit, actual: first.bankSlots[1].voice, cppID: id,
-            what: "first undo retains the peer's disjoint edit")
-        try runBlocking { _ = try await first.redo() }
-        try runBlocking { _ = try await peer.undo() }
-        report.expectEqual(
-            expected: firstEdit, actual: peer.bankSlots[0].voice, cppID: id,
-            what: "peer undo preserves the other session's edit")
-        report.expectEqual(
-            expected: secondOriginal, actual: first.bankSlots[1].voice, cppID: id,
-            what: "peer undo restores only its own slot")
+        var observations = 0
+        let observer = group.addObserver { observations += 1 }
+        defer { group.removeObserver(observer) }
+        _ = try runBlocking { try await group.apply(slot: 1, value: peerEdit, expected: second) }
+        report.expect(
+            service.bankViews.session(for: group.identity) === group
+                && service.bankViews.dirtySessions().count == 1 && observations >= 2,
+            cppID: id, message: "last-song close retains an observable, editable dirty canonical group")
+        let retainedValue = group.value
+        let retainedCount = history.undoCount
+        let hidden = bankPath + ".discard-failure"
+        try FileManager.default.moveItem(atPath: bankPath, toPath: hidden)
+        do {
+            do {
+                try runBlocking { try await group.discard() }
+                report.fail(id, "discard must report an unavailable source")
+            } catch {
+                report.expect(
+                    group.value.lease === retainedValue.lease && group.value.dirty
+                        && history.undoCount == retainedCount && !group.isBusy,
+                    cppID: id, message: "failed discard preserves the live dirty publication and shared log")
+            }
+            try FileManager.default.moveItem(atPath: hidden, toPath: bankPath)
+        } catch {
+            try FileManager.default.moveItem(atPath: hidden, toPath: bankPath)
+            throw error
+        }
+        try runBlocking { try await group.save() }
+        report.expect(
+            service.bankViews.dirtySessions().isEmpty && !group.value.dirty,
+            cppID: id, message: "a group with no song consumer saves independently")
+        try runBlocking { await service.close() }
+        do {
+            _ = try runBlocking { try await group.apply(slot: 0, value: original, expected: edit) }
+            report.fail(id, "a retained session accepted an edit after project release")
+        } catch {
+            report.expect(
+                (error as? ProjectServiceError) == .serviceClosed
+                    && service.bankViews.sessions().isEmpty,
+                cppID: id, message: "project release removes the registry and rejects edits through retained sessions")
+        }
+    } catch {
+        report.fail(id, "shared bank ownership/lifecycle check failed: \(error)")
+    }
+}
 
-        guard
-            let added = try peer.document.addNotes([
-                NewNote(track: 0, tick: 240, pitch: 76, duration: 24, velocity: 91)
-            ]).first
-        else {
-            report.fail(id, "could not create peer document edit")
+@MainActor
+private func bankSessionDoesNotRetainService(report: CheckReport, root: String) {
+    let id = "swiftcore/VoicegroupSession::serviceLifetime"
+    weak var releasedService: ProjectService?
+    var retained: VoicegroupSession?
+    do {
+        let service = ProjectService()
+        releasedService = service
+        do {
+            let loaded = try runBlocking {
+                try await service.open(root: root)
+                return try await service.loadBank(voicegroupArg: "_test_vg")
+            }
+            guard let group = service.bankViews.session(for: BankBindingIdentity(loaded.lease)),
+                var voice = group.value.slots[0].voice
+            else {
+                report.fail(id, "fixture group did not publish")
+                return
+            }
+            let original = voice
+            voice.attack += 1
+            _ = try runBlocking { try await group.apply(slot: 0, value: voice, expected: original) }
+            retained = group
+        } catch {
+            report.fail(id, "service lifetime fixture failed: \(error)")
             return
         }
-        report.expect(
-            added.isAssigned && peer.document.isDirty && !first.document.isDirty,
-            cppID: id, message: "peer song dirtiness remains document-local")
-        var stale = firstEdit
-        stale.pan = stale.pan == 127 ? 126 : stale.pan + 1
-        _ = try runBlocking {
-            try await peer.applyBankEdit(slot: 0, value: stale, expected: firstEdit)
-        }
-        var newer = stale
-        newer.release = newer.release == 255 ? 254 : newer.release + 1
-        _ = try runBlocking {
-            try await first.applyBankEdit(slot: 0, value: newer, expected: stale)
-        }
-        let staleCount = peer.document.history.undoCount
-        let staleIndex = peer.document.history.undoIndex
-        let songBeforeStale = peer.document.state.file
-        try runBlocking { _ = try await peer.undo() }
-        report.expectEqual(
-            expected: newer, actual: peer.bankSlots[0].voice, cppID: id,
-            what: "same-slot stale peer undo cannot replace the newer edit")
-        report.expect(
-            peer.document.history.canUndo && peer.document.isDirty,
-            cppID: id, message: "stale bank command prunes without dropping document history")
-        report.expect(
-            peer.document.history.undoCount == staleCount - 1
-                && peer.document.history.undoIndex == staleIndex - 1
-                && peer.document.state.file == songBeforeStale
-                && peer.bankSlots[0].voice == newer,
-            cppID: id,
-            message: "stale conflicts prune exactly one command preserving identities")
-        try runBlocking { try await first.save() }
-        report.expect(
-            !first.bankDirty && !peer.bankDirty && !first.document.isDirty
-                && peer.document.isDirty,
-            cppID: id, message: "saving one bank cleans both views but not peer song edits")
-        report.expect(
-            bytes(at: firstBankPath) != originalBytes,
-            cppID: id, message: "bank save persists the shared edits")
-
-        var notifications = 0
-        peer.onChange = { change in
-            if change.domains.contains(.bank) { notifications += 1 }
-        }
-        let peerClosed = try runBlocking { await peer.close() }
-        report.expect(
-            peerClosed, cppID: id,
-            message: "peer closes after its independent history remains available")
-        var afterClose = newer
-        afterClose.pan = afterClose.pan == 127 ? 126 : afterClose.pan + 1
-        _ = try runBlocking {
-            try await first.applyBankEdit(slot: 0, value: afterClose, expected: newer)
-        }
-        report.expectEqual(
-            expected: 0, actual: notifications, cppID: id,
-            what: "closed peer receives no old-binding bank notification")
-    } catch {
-        report.fail(id, "shared bank history/lifecycle check failed: \(error)")
     }
+    report.expect(
+        releasedService == nil && retained?.history.undoCount == 1,
+        cppID: id, message: "a retained dirty session and its replay actions do not retain the project service")
 }
 
 @MainActor
@@ -145,7 +180,7 @@ internal func bankSharedFailedSaveAndStaleReceipt(report: CheckReport, fixtureRo
         var edited = original
         edited.release = edited.release == 255 ? 254 : edited.release + 1
         _ = try runBlocking {
-            try await first.applyBankEdit(slot: 0, value: edited, expected: original)
+            try await first.voicegroup.apply(slot: 0, value: edited, expected: original)
         }
         first.document.setLoop(end: false, tick: 96)
         report.expect(
@@ -170,8 +205,8 @@ internal func bankSharedFailedSaveAndStaleReceipt(report: CheckReport, fixtureRo
             report.fail(id, "MIDI destination directory must refuse the post-bank save stage")
         } catch {
             report.expect(
-                !first.bankDirty && !peer.bankDirty,
-                cppID: id, message: "completed bank stage cleans both peers despite MIDI failure")
+                first.voicegroup.value.dirty && peer.voicegroup.value.dirty,
+                cppID: id, message: "failed song save cannot save or clean either bank view")
             report.expectEqual(
                 expected: edited, actual: peer.bankSlots.first?.voice, cppID: id,
                 what: "peer receives the saved bank voice despite MIDI failure")
@@ -179,22 +214,23 @@ internal func bankSharedFailedSaveAndStaleReceipt(report: CheckReport, fixtureRo
                 first.document.isDirty && !peer.document.isDirty,
                 cppID: id, message: "failed later stage does not clean the song")
         }
+        try runBlocking { try await first.voicegroup.save() }
 
         let olderSavedView = AppliedBankEdit(
             lease: first.bankLease, slots: first.bankSlots,
-            dirty: first.bankDirty, loadName: first.bankLoadName,
+            dirty: first.voicegroup.value.dirty, loadName: first.bankLoadName,
             materializationToken: nil)
         var newer = edited
         newer.pan = newer.pan == 127 ? 126 : newer.pan + 1
         _ = try runBlocking {
-            try await peer.applyBankEdit(slot: 0, value: newer, expected: edited)
+            try await peer.voicegroup.apply(slot: 0, value: newer, expected: edited)
         }
-        service.bankViews.publish(olderSavedView)
+        service.bankViews.publish(olderSavedView, service: service)
         report.expectEqual(
             expected: newer, actual: first.bankSlots.first?.voice, cppID: id,
             what: "older completed bank-save view cannot replace the peer's later edit")
         report.expect(
-            first.bankDirty && peer.bankDirty, cppID: id,
+            first.voicegroup.value.dirty && peer.voicegroup.value.dirty, cppID: id,
             message: "older clean receipt cannot clean a newer unsaved bank edit")
     } catch {
         report.fail(id, "bank-stage failure or stale save receipt check failed: \(error)")
@@ -214,7 +250,7 @@ internal func bankReleaseBoundsAndSharedBank(
         var adjacent = adjacentOriginal
         adjacent.release = adjacent.release == 255 ? 254 : adjacent.release + 1
         _ = try runBlocking {
-            try await session.applyBankEdit(
+            try await session.voicegroup.apply(
                 slot: 0, value: adjacent,
                 expected: adjacentOriginal)
         }
@@ -223,7 +259,7 @@ internal func bankReleaseBoundsAndSharedBank(
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
             what: "adjacent release edit reaches the production bank view")
         report.expectEqual(
-            expected: true, actual: session.bankDirty,
+            expected: true, actual: session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
             what: "adjacent release edit dirties the bank")
         report.expectEqual(
@@ -234,7 +270,7 @@ internal func bankReleaseBoundsAndSharedBank(
         var lower = session.bankSlots[0].voice!
         lower.release = 0
         _ = try runBlocking {
-            try await session.applyBankEdit(
+            try await session.voicegroup.apply(
                 slot: 0, value: lower,
                 expected: session.bankSlots[0].voice)
         }
@@ -243,7 +279,7 @@ internal func bankReleaseBoundsAndSharedBank(
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
             what: "lower release bound reaches the production bank view")
         report.expectEqual(
-            expected: true, actual: session.bankDirty,
+            expected: true, actual: session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
             what: "lower-bound bank edit dirties the bank")
         report.expectEqual(
@@ -254,14 +290,14 @@ internal func bankReleaseBoundsAndSharedBank(
         var upper = lower
         upper.release = 255
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: upper, expected: lower)
+            try await session.voicegroup.apply(slot: 0, value: upper, expected: lower)
         }
         report.expectEqual(
             expected: Int32(255), actual: session.bankSlots[0].voice?.release,
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
             what: "upper release bound reaches the production bank view")
         report.expectEqual(
-            expected: true, actual: session.bankDirty,
+            expected: true, actual: session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
             what: "upper-bound bank edit dirties the bank")
         report.expectEqual(
@@ -318,12 +354,10 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
         secondVoice.pan += 2
         let result = try runBlocking { () async throws -> (AppliedBankEdit, ProjectServiceError?) in
             let first = Task.immediate { @MainActor in
-                try await coordinatorSession.applyBankEdit(
-                    slot: 0, value: firstVoice, expected: original)
+                try await coordinatorSession.voicegroup.apply(slot: 0, value: firstVoice, expected: original)
             }
             let second = Task.immediate { @MainActor in
-                try await coordinatorSession.applyBankEdit(
-                    slot: 0, value: secondVoice, expected: original)
+                try await coordinatorSession.voicegroup.apply(slot: 0, value: secondVoice, expected: original)
             }
             let applied = try await first.value
             do {
@@ -334,7 +368,7 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
             }
         }
         report.expectEqual(
-            expected: ProjectServiceError.operationFailed("A bank transition is already in progress."),
+            expected: ProjectServiceError.operationFailed("A voicegroup operation is already in progress."),
             actual: result.1,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "session gate refuses a second transition while the first is pending")
@@ -347,19 +381,19 @@ internal func bankCoordinatorGate(report: CheckReport, fixtureRoot: String) {
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "coordinator adopts the applied transition lease")
         report.expect(
-            coordinatorSession.document.history.undoIndex == 1
-                && coordinatorSession.document.history.undoCount == 1,
+            coordinatorSession.voicegroup.history.undoIndex == 1
+                && coordinatorSession.voicegroup.history.undoCount == 1,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "the session gate routes transitions and prunes stale conflicts")
-        try runBlocking { _ = try await coordinatorSession.undo() }
+        try runBlocking { _ = try await coordinatorSession.voicegroup.undo() }
         report.expect(
-            coordinatorSession.document.history.undoIndex == 0
+            coordinatorSession.voicegroup.history.undoIndex == 0
                 && coordinatorSession.bankSlots[0].voice == original,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "the session gate routes transitions and prunes stale conflicts")
-        try runBlocking { _ = try await coordinatorSession.redo() }
+        try runBlocking { _ = try await coordinatorSession.voicegroup.redo() }
         report.expect(
-            coordinatorSession.document.history.undoIndex == 1
+            coordinatorSession.voicegroup.history.undoIndex == 1
                 && coordinatorSession.bankSlots[0].voice == firstVoice,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "the session gate routes transitions and prunes stale conflicts")

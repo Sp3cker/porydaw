@@ -183,15 +183,15 @@ ShellVoicegroupSupport {
             return draft.macro === 3 && controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
         compare(type.currentValue, 3)
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.macro === 0 && !controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
-        app.requestRedo()
+        redoVoicegroup()
         verify(waitForNative(function() {
             return draft.macro === 3 && controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return !controller.bankDirty }, 15000),
                "blank materialization undo settles the bank")
         for (const slot of [0, 4, 6, 7, 8, 13]) {
@@ -253,6 +253,7 @@ ShellVoicegroupSupport {
                "the status line names the created file and song: " + shellPresenter.statusText)
         // The choices model updates after the bind; the editable combo must still show it.
         tryCompare(findChild(panel, "vgArgCombo"), "editText", "vgsave_created")
+        app.setEditingVoicegroup(false)
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"

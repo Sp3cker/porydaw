@@ -7,8 +7,8 @@ public final class ShellActionState {
     public var enabled: Bool
     public var checked: Bool
     public let checkable: Bool
-    public let label: String
-    public let menuLabel: String
+    public var label: String
+    public var menuLabel: String
     public let shortcut: String
 
     init(

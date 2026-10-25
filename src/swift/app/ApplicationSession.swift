@@ -20,13 +20,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveConflictDetail = ""
     @QtTracked public var saveConflictNewSongLabel = ""
     @QtTracked public var documentDirty = false
-    @QtTracked public var songDocumentDirty = false
     @QtTracked public var projectOpen = false
     /// Owned by the project-opening lifecycle; QML observes the current step.
     public var projectOpeningStage: Int = 0
     @QtTracked public var songOpen = false
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
+    /// The current editing surface's command owner, not a remembered focus item.
+    public var editingVoicegroup: Bool = false
+    public var editingTargetLabel: String = "Song"
     @QtTracked public var headerVoicePickerOpen = false
 
     @QtTracked public var timeSigPromptOpen = false
@@ -193,14 +195,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             appFontLineSpacing: 0)
         connectPolyphonyJump()
         undoHistory.context = { [weak self] in
-            guard let self else { return (session: nil, bankTransitionInFlight: false) }
-            return (
-                session: workspace?.session,
-                bankTransitionInFlight: songTabs.tabs.contains {
-                    $0.workspace.session.document.history.bankTransitionInFlight
-                }
-            )
+            guard let self, !isDisposed, !songTabs.isClosingAll else {
+                return (song: nil, voicegroup: nil)
+            }
+            return editingVoicegroup
+                ? (song: nil, voicegroup: voiceList.voicegroup)
+                : (song: workspace?.session, voicegroup: nil)
         }
+        voiceList.onVoicegroupStateChanged = { [weak self] in self?.refreshDocumentState() }
         undoHistory.onEvent = { [weak self] event in
             guard let self else { return }
             switch event {
@@ -357,7 +359,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             throw OrphanScanFailure(reason: "Split Studio: cannot scan while a project edit is in progress.")
         }
         let groups = assets.groups
-        let observed = songTabs.allTabs.map { (song: $0.workspace.session, lease: $0.workspace.session.bankLease) }
+        let observed = service.bankViews.sessions().map { (group: $0, lease: $0.value.lease) }
         let locator = VoicegroupLocator(layout: ProjectLayout(projectRoot: root).ensuringDeepScan())
         var overlay: [String: [VgVoice?]] = [:]
         var visited: Set<String> = []
@@ -380,9 +382,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         }
         guard projectRoot == root, catalogService === service, kitStudioWorkflow?.saving != true,
             splitStudioCreatedAssets[root] == assets,
+            service.bankViews.sessions().count == observed.count,
             observed.allSatisfy({
-                !$0.song.isClosed && $0.song.bankLease.publicationOwner == $0.lease.publicationOwner
-                    && $0.song.bankLease.publicationRevision == $0.lease.publicationRevision
+                !$0.group.isBusy && $0.group.value.lease.publicationOwner == $0.lease.publicationOwner
+                    && $0.group.value.lease.publicationRevision == $0.lease.publicationRevision
             })
         else { throw OrphanScanFailure(reason: "Split Studio: the project changed during the orphan scan.") }
         let used = try SampleUsageScanner.referenced(
@@ -622,6 +625,25 @@ public final class ApplicationSession: QmlInstantiableStatus {
         requestSaveImpl()
     }
 
+
+    public func setEditingVoicegroup(enabled: Bool) {
+        let target = voiceList.voicegroup != nil && (enabled || songTabs.tabCount == 0)
+        guard editingVoicegroup != target else { return }
+        editingVoicegroup = target
+        refreshDocumentState()
+    }
+
+    public func requestSaveSong() {
+        requestSaveSongImpl()
+    }
+
+    public func requestSaveVoicegroup() {
+        requestSaveVoicegroupImpl()
+    }
+
+    public func requestSaveAll() {
+        requestSaveAllImpl()
+    }
     /// The save-conflict prompt's QML surface. The prompt answers live beside
     /// requestSave: the dialog asks, these answer, Impls do the work.
     public func acceptSaveConflictLabelEdit(previous: String, proposed: String) -> String {
@@ -685,26 +707,31 @@ public final class ApplicationSession: QmlInstantiableStatus {
         refreshDocumentState()
     }
 
-    /// Follows the selected tab's document, but gates Undo/Redo while any
-    /// tab has a pending bank transition.
+    /// Publishes the current owner's history and independent song dirty state.
     func refreshDocumentState() {
         let hasSongs = songTabs.tabCount > 0
         let songOpenChanged = songOpen != hasSongs
         defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
+        publish(\.editingVoicegroup, voiceList.voicegroup != nil && (editingVoicegroup || !hasSongs))
+        let label: String
+        if editingVoicegroup, let group = voiceList.voicegroup {
+            label = "Voicegroup: \(group.displayName)"
+        } else if let page = songTabs.selectedPage {
+            label = "Song: \(page.title)"
+        } else {
+            label = "Song"
+        }
+        publish(\.editingTargetLabel, label)
         songDock.syncSelection()
         let historyAvailability = undoHistory.refresh(visible: undoHistoryVisible)
         publish(\.canUndo, historyAvailability.canUndo)
         publish(\.canRedo, historyAvailability.canRedo)
         guard let session = workspace?.session else {
             publish(\.documentDirty, false)
-            publish(\.songDocumentDirty, false)
             return
         }
-        let songDirty = session.document.isDirty
-        publish(\.songDocumentDirty, songDirty)
-        let dirty = songDirty || session.bankDirty
-        publish(\.documentDirty, dirty)
+        publish(\.documentDirty, session.document.isDirty)
     }
 
 }

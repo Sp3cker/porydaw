@@ -94,7 +94,7 @@ internal struct DocumentChangeSet: Sendable {
             && fileMetadata == nil && tempo == nil && config == nil
     }
 
-    func apply(to state: inout SongState, direction: BankHistoryDirection) {
+    func apply(to state: inout SongState, direction: HistoryDirection) {
         if direction == .undo { applyChunkEnds(to: &state, direction: direction) }
         if direction == .redo { applyChunks(to: &state, direction: direction) }
         applyEvents(to: &state, direction: direction)
@@ -114,7 +114,7 @@ internal struct DocumentChangeSet: Sendable {
 
     private func applyChunkEnds(
         to state: inout SongState,
-        direction: BankHistoryDirection
+        direction: HistoryDirection
     ) {
         for change in chunkEnds {
             state.file.chunks[change.chunk].endTick =
@@ -124,7 +124,7 @@ internal struct DocumentChangeSet: Sendable {
 
     private func applyTempo(
         _ change: TempoChange, to tempo: inout [TempoPoint],
-        direction: BankHistoryDirection
+        direction: HistoryDirection
     ) {
         switch direction {
         case .redo:
@@ -144,7 +144,7 @@ internal struct DocumentChangeSet: Sendable {
         }
     }
 
-    private func applyChunks(to state: inout SongState, direction: BankHistoryDirection) {
+    private func applyChunks(to state: inout SongState, direction: HistoryDirection) {
         switch direction {
         case .redo:
             for change in chunkRemovals.sorted(by: { $0.offset > $1.offset }) {
@@ -171,7 +171,7 @@ internal struct DocumentChangeSet: Sendable {
         }
     }
 
-    private func applyEvents(to state: inout SongState, direction: BankHistoryDirection) {
+    private func applyEvents(to state: inout SongState, direction: HistoryDirection) {
         switch direction {
         case .redo:
             for change in events { applyEvent(change, to: &state) }

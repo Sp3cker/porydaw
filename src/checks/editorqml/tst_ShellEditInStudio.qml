@@ -121,6 +121,117 @@ ShellLaneSupport {
         compare(probe.verified, true)
     }
 
+    function test_failedCapturedKitSaveMarksRetainedOwner() {
+        closeAllSteps = 12
+        closeAllBankGates = true
+        const session = shell.shellPresenter.session
+        const voice = session.voiceListController()
+        const studio = session.kitStudio()
+        const voicegroupDirectory = bootstrap.projectRoot + "/sound/voicegroups"
+        const bank = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const children = bootstrap.projectRoot + "/sound/voicegroups/fixture_drums_a.inc"
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/mus_route101.mid"
+        const bankBefore = disk.fingerprint(bank)
+        const childrenBefore = disk.fingerprint(children)
+        const midiBefore = disk.fingerprint(midi)
+        verify(bankBefore.length > 0 && childrenBefore.length > 0 && midiBefore.length > 0)
+        voice.requestEditKit(10)
+        try {
+            verify(waitForNative(function() {
+                const window = child("splitStudioWindow")
+                return window && window.visible && window.editor
+                    && window.editor.voicegroupName === "fixture_drums_a"
+            }, 10000), "the existing kit opens against its original canonical voicegroup")
+            const editor = studio.presenter()
+            // Rebind in the background while the independent studio retains its original destination.
+            voice.selectorText = "fixture_alt"
+            voice.commitVoicegroupSelection()
+            session.setEditingVoicegroup(false)
+            verify(waitForNative(function() {
+                return voice.bankLoadName === "fixture_alt" && !voice.isLoading
+                    && session.documentDirty && session.canUndo
+            }, 15000), "the song now displays a different canonical voicegroup")
+            const tabs = session.songTabs
+            const id = tabs.selectedId
+            tabs.requestClose(id)
+            verify(waitForNative(function() { return tabs.pendingCloseId === id }, 5000))
+            tabs.confirmDiscard()
+            verify(waitForNative(function() {
+                return tabs.tabCount === 0 && !voice.hasSongContext
+                    && voice.bankLoadName === "fixture_alt" && !voice.bankDirty
+            }, 10000), "the clean alternate remains displayed without any song")
+            let picker = null
+            verify(waitForNative(function() {
+                const panel = child("voicegroupPanel")
+                picker = panel ? findChild(panel, "retainedVoicegroupCombo") : null
+                return picker && picker.visible && picker.count === 2
+                    && voice.retainedGroupNames.length === 2
+            }, 5000), "the mounted no-song panel exposes both retained canonical groups")
+            verify(voice.retainedGroupNames.indexOf("fixture_rich") >= 0)
+            editor.selectZone(0)
+            const changedRootKey = editor.selectedZoneRootKey === 67 ? 68 : 67
+            editor.setZoneRootKey(changedRootKey)
+            verify(editor.dirty && editor.selectedZoneRootKey === changedRootKey)
+            verify(disk.setWritable(voicegroupDirectory, false), "kit sources remain readable but cannot be replaced")
+            const save = child("splitStudioSave")
+            verify(save && save.enabled)
+            mouseClick(save, save.width / 2, save.height / 2)
+            const errorObserved = waitForNative(function() {
+                return !studio.saving && studio.alertText.length > 0
+            }, 15000)
+            verify(errorObserved, "Save result: saving=" + studio.saving
+                   + "; windowOpen=" + studio.windowOpen + "; draftDirty=" + editor.dirty
+                   + "; alertText=" + studio.alertText
+                   + "; bankBefore=" + bankBefore + "; bankAfter=" + disk.fingerprint(bank)
+                   + "; childrenBefore=" + childrenBefore + "; childrenAfter=" + disk.fingerprint(children))
+            verify(editor.dirty && editor.selectedZoneRootKey === changedRootKey,
+                   "the failed persistence retains the exact editable studio draft")
+            compare(disk.fingerprint(bank), bankBefore)
+            compare(disk.fingerprint(children), childrenBefore)
+            compare(disk.fingerprint(midi), midiBefore)
+            compare(voice.bankLoadName, "fixture_alt")
+            compare(voice.bankDirty, false)
+            const alert = child("splitStudioAlert")
+            verify(!!alert)
+            tryCompare(alert, "visible", true)
+            alert.close()
+            tryCompare(alert, "visible", false)
+            const originalIndex = voice.retainedGroupNames.findIndex(function(name) {
+                return name === "fixture_rich" || name === "fixture_rich*"
+            })
+            verify(originalIndex >= 0)
+            mouseClick(picker, picker.width / 2, picker.height / 2)
+            tryCompare(picker.popup, "opened", true)
+            picker.popup.contentItem.positionViewAtIndex(originalIndex, ListView.Contain)
+            verify(waitForNative(function() {
+                return picker.popup.contentItem.itemAtIndex(originalIndex) !== null
+            }, 5000))
+            const originalEntry = picker.popup.contentItem.itemAtIndex(originalIndex)
+            const labelBeforeSelection = originalEntry.text
+            mouseClick(originalEntry, originalEntry.width / 2, originalEntry.height / 2)
+            verify(waitForNative(function() {
+                return voice.bankLoadName === "fixture_rich" && voice.bankDirty
+                    && !voice.bankBusy && session.canUndo && !session.canRedo
+            }, 5000), "the captured original owner contains the successfully applied unsaved kit and undo step")
+            verify(editor.dirty && editor.selectedZoneRootKey === changedRootKey,
+                   "binding the original owner preserves the edited studio draft")
+            compare(disk.fingerprint(bank), bankBefore)
+            compare(disk.fingerprint(children), childrenBefore)
+            compare(labelBeforeSelection, "fixture_rich*",
+                    "the visible original owner was marked dirty before selecting it could refresh the list")
+        } finally {
+            verify(disk.setWritable(voicegroupDirectory, true), "restore voicegroup directory permissions before close/discard")
+            const alert = child("splitStudioAlert")
+            if (alert && alert.visible)
+                alert.close()
+            studio.closeRequested()
+            verify(waitForNative(function() { return studio.promptOpen || !studio.windowOpen }, 5000))
+            if (studio.promptOpen)
+                studio.answerPrompt(1)
+            verify(waitForNative(function() { return !studio.windowOpen }, 5000))
+        }
+    }
+
     function test_keyboardContextMenu_data() {
         return [
             { tag: "menu", key: Qt.Key_Menu, modifiers: Qt.NoModifier },

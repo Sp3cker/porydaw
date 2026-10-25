@@ -18,6 +18,8 @@ ShellLaneSupport {
     Component { id: shellComponent; ShellWindow { width: 1100; height: 720; visible: true } }
     readonly property string rootPath: bootstrap.projectRoot
     laneBootstrap: bootstrap
+    closeAllSteps: 12
+    closeAllBankGates: true
 
     function start() {
         verify(bootstrap.resetPreferences(), "fresh preferences")
@@ -43,10 +45,7 @@ ShellLaneSupport {
         if (editor && editor.visible) editor.close()
         const zones = child("sf2ZonePickerDialog")
         if (zones && zones.visible) zones.close()
-        shell.close()
-        shell.destroy()
-        shell = null
-        wait(0)
+        closeShell()
     }
     function selectSource(path) {
         verify(waitForNative(function() {
@@ -63,6 +62,156 @@ ShellLaneSupport {
         compare(picker.selectedFile.toString(), "file://" + path, "requested source selected")
         picker.accept()
     }
+    function beginVoiceImport(app, name) {
+        const panel = findChild(shell, "voicegroupPanel")
+        verify(!!panel, "Object exists")
+        const editor = findChild(panel, "voicegroupEditorSurface")
+        verify(!!editor, "Object exists")
+        const scroll = findChild(panel, "voiceEditorScrollView")
+        verify(!!scroll, "Object exists")
+        scroll.contentY = 0
+        const add = findChild(editor, "vgNewSampleButton")
+        verify(!!add, "Object exists")
+        verify(waitForNative(function() {
+            return add.visible && add.enabled && add.width > 0 && add.height > 0
+        }, 5000))
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) },
+                                               add.Window.window, 5000))
+        mouseClick(add)
+        selectSource(rootPath + "/samplesources/hires_tone.wav")
+        verify(waitForNative(function() {
+            return app.sampleStudio().editorOpen && app.sampleStudio().editor().hasSource
+        }, 15000))
+        app.sampleStudio().editor().setSampleName(name)
+        tryCompare(child("sampleStudioCommit"), "enabled", true, 5000)
+    }
+
+    function selectSongVoicegroup(app, name) {
+        const panel = findChild(shell, "voicegroupPanel")
+        verify(!!panel, "Object exists")
+        const selector = findChild(panel, "vgArgCombo")
+        verify(!!selector, "Object exists")
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        selector.forceActiveFocus()
+        selector.editText = name
+        selector.contentItem.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() {
+            const controller = app.voiceListController()
+            return !controller.isLoading && controller.bankLoadName === name
+        }, 15000))
+    }
+
+    function test_voiceImportKeepsCapturedGroupAndSlot() {
+        const app = start()
+        const controller = app.voiceListController()
+        selectSongVoicegroup(app, "fixture_alt")
+        controller.selectSlot(0)
+        const alternateFirst = String(controller.editorModel().symbol)
+        controller.selectSlot(1)
+        const alternateSecond = String(controller.editorModel().symbol)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich" && !controller.isLoading
+                && !app.documentDirty
+        }, 15000))
+        controller.selectSlot(1)
+        const originalSecond = String(controller.editorModel().symbol)
+        controller.selectSlot(0)
+        beginVoiceImport(app, "captured_voice")
+
+        // A production background assignment may settle while the modal editor owns input.
+        controller.selectorText = "fixture_alt"
+        controller.commitVoicegroupSelection()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_alt" && !controller.isLoading
+        }, 15000))
+        controller.selectSlot(1)
+        mouseClick(child("sampleStudioCommit"))
+        verify(waitForNative(function() { return !app.sampleStudio().editorOpen }, 30000))
+        compare(app.sampleStudio().alertText, "")
+        compare(controller.bankLoadName, "fixture_alt")
+        verify(!controller.bankDirty && !controller.bankBusy)
+        controller.selectSlot(0)
+        compare(controller.editorModel().symbol, alternateFirst)
+        controller.selectSlot(1)
+        compare(controller.editorModel().symbol, alternateSecond)
+
+        selectSongVoicegroup(app, "fixture_rich")
+        controller.selectSlot(0)
+        tryCompare(controller.editorModel(), "symbol", "DirectSoundWaveData_captured_voice", 15000)
+        verify(controller.bankDirty && !controller.bankBusy)
+        controller.selectSlot(1)
+        compare(controller.editorModel().symbol, originalSecond)
+        verify(disk.exists(rootPath + "/sound/direct_sound_samples/captured_voice.wav"))
+    }
+
+    function test_voiceImportPreservesAdmissionConflictBaseline() {
+        const app = start()
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const draft = controller.editorModel()
+        const originalSymbol = String(draft.symbol)
+        const originalRelease = draft.release
+        const changedRelease = originalRelease === 255 ? 254 : originalRelease + 1
+        const bankBefore = disk.fingerprint(rootPath + "/sound/voicegroups/fixture_rich.inc")
+        verify(bankBefore.length > 0)
+        beginVoiceImport(app, "conflicted_voice")
+
+        // This competing canonical edit is a background operation, not input through a modal.
+        draft.change("release", changedRelease)
+        verify(waitForNative(function() {
+            return !controller.bankBusy && controller.bankDirty && draft.release === changedRelease
+        }, 15000))
+        mouseClick(child("sampleStudioCommit"))
+        verify(waitForNative(function() { return !app.sampleStudio().editorOpen }, 30000))
+        verify(app.sampleStudio().alertText.length > 0)
+        compare(draft.symbol, originalSymbol)
+        compare(draft.release, changedRelease)
+        verify(controller.bankDirty && !controller.bankBusy)
+        verify(disk.exists(rootPath + "/sound/direct_sound_samples/conflicted_voice.wav"))
+        compare(disk.fingerprint(rootPath + "/sound/voicegroups/fixture_rich.inc"), bankBefore)
+    }
+
+    function test_noSongSampleImportAssignsRetainedGroup() {
+        const app = start()
+        const controller = app.voiceListController()
+        controller.selectSlot(0)
+        const original = String(controller.editorModel().symbol)
+        const bankBefore = disk.fingerprint(rootPath + "/sound/voicegroups/fixture_rich.inc")
+        const midiPath = rootPath + "/sound/songs/midi/mus_route101.mid"
+        const configPath = rootPath + "/sound/songs/midi/midi.cfg"
+        const midiBefore = disk.fingerprint(midiPath)
+        const configBefore = disk.fingerprint(configPath)
+        verify(bankBefore.length > 0 && midiBefore.length > 0 && configBefore.length > 0)
+        const close = findChild(tabsRoot(), "songTabClose_" + app.songTabs.selectedId)
+        verify(!!close, "Object exists")
+        mouseClick(close)
+        verify(waitForNative(function() {
+            return app.songTabs.tabCount === 0 && !controller.hasSongContext
+                && controller.isBound && controller.editorModel().editable
+        }, 5000))
+        beginVoiceImport(app, "retained_voice")
+        mouseClick(child("sampleStudioCommit"))
+        verify(waitForNative(function() { return !app.sampleStudio().editorOpen }, 30000))
+        compare(app.sampleStudio().alertText, "")
+        tryCompare(controller.editorModel(), "symbol", "DirectSoundWaveData_retained_voice", 15000)
+        verify(controller.bankDirty && !controller.bankBusy && !app.documentDirty)
+        verify(disk.exists(rootPath + "/sound/direct_sound_samples/retained_voice.wav"))
+        compare(disk.fingerprint(rootPath + "/sound/voicegroups/fixture_rich.inc"), bankBefore)
+        compare(disk.fingerprint(midiPath), midiBefore)
+        compare(disk.fingerprint(configPath), configBefore)
+        const registration = disk.fingerprint(rootPath + "/sound/direct_sound_data.inc")
+        app.setEditingVoicegroup(true)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.editorModel().symbol === original
+                && !controller.bankBusy && !controller.bankDirty
+        }, 15000))
+        compare(disk.fingerprint(rootPath + "/sound/direct_sound_data.inc"), registration)
+    }
+
     function test_voiceImportEditAndUndo() {
         const app = start()
         const controller = app.voiceListController()
@@ -99,6 +248,7 @@ ShellLaneSupport {
         verify(disk.exists(wav), "registration writes WAV")
         verify(!disk.exists(rootPath + "/.porydaw"), "import keeps provenance out of the project")
         const incBytes = disk.fingerprint(inc)
+        app.setEditingVoicegroup(true)
         app.requestUndo()
         verify(waitForNative(function() { return controller.editorModel().symbol === original }, 15000),
                "one undo restores previous voice")

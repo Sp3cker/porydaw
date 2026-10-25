@@ -280,7 +280,7 @@ ShellLaneSupport {
                 "A068 unset reverb displays Default (50)")
         mouseClick(child("settingsOK"))
         presenter.activate("file.save_song")
-        verify(waitForNative(function() { return !presenter.session.songDocumentDirty }, 30000),
+        verify(waitForNative(function() { return !presenter.session.documentDirty }, 30000),
                "song save settles")
         verify(probe.midiCfgFlags(rootPath, "mus_route101").indexOf("-R") < 0,
                "A068 saved config keeps reverb unset: "
@@ -307,7 +307,7 @@ ShellLaneSupport {
         keyClick(Qt.Key_5)
         keyClick(Qt.Key_Return)
         mouseClick(child("settingsOK"))
-        verify(waitForNative(function() { return session.songDocumentDirty }, 5000),
+        verify(waitForNative(function() { return session.documentDirty }, 5000),
                "priority edit dirties original tab")
         permissionPath = rootPath + "/include/constants/songs.h"
         const saveErrorBefore = session.lastSaveError
@@ -332,7 +332,7 @@ ShellLaneSupport {
                + session.lastSaveError + "; row="
                + (songRow("mus_partial_import") ? songRow("mus_partial_import").song.text : "missing")
                + "; dialog=" + warning.informativeText)
-        verify(session.songDocumentDirty &&
+        verify(session.documentDirty &&
                probe.fingerprint(rootPath + "/sound/songs/midi/mus_route101.mid") === originalMidi &&
                probe.midiCfgFlags(rootPath, "mus_route101") === originalCfg,
                "dirty original tab and its disk bytes remain untouched")

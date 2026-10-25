@@ -30,13 +30,13 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
             expected: original, actual: peer.bankSlots.first?.voice,
             cppID: id, what: "both live sessions start with the same voice")
         report.expectEqual(
-            expected: false, actual: peer.bankDirty,
+            expected: false, actual: peer.voicegroup.value.dirty,
             cppID: id, what: "peer starts with a clean bank")
 
         var edited = original
         edited.release = original.release == 255 ? 254 : original.release + 1
         _ = try runBlocking {
-            try await first.applyBankEdit(slot: 0, value: edited, expected: original)
+            try await first.voicegroup.apply(slot: 0, value: edited, expected: original)
         }
         report.expectEqual(
             expected: edited, actual: first.bankSlots.first?.voice,
@@ -45,10 +45,10 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
             expected: edited, actual: peer.bankSlots.first?.voice,
             cppID: id, what: "already-open peer sees the edited voice without reopening")
         report.expectEqual(
-            expected: true, actual: peer.bankDirty,
+            expected: true, actual: peer.voicegroup.value.dirty,
             cppID: id, what: "already-open peer sees the dirty bank")
         report.expect(
-            !peer.document.isDirty && peer.bankDirty, cppID: id,
+            !peer.document.isDirty && peer.voicegroup.value.dirty, cppID: id,
             message: "shared bank edit marks observer bank dirty without dirtying its song")
         let late = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test2")
@@ -57,7 +57,7 @@ internal func twoOpenSessionsShareBankEdit(report: CheckReport, fixtureRoot: Str
             expected: edited, actual: late.bankSlots.first?.voice,
             cppID: id, what: "late subscriber catches up to the latest bank view")
         report.expectEqual(
-            expected: true, actual: late.bankDirty,
+            expected: true, actual: late.voicegroup.value.dirty,
             cppID: id, what: "late subscriber catches up to dirty state")
     } catch {
         report.fail(id, "two-live-session bank edit failed: \(error)")
@@ -133,7 +133,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         }
         homeEdit.release = homeEdit.release == 255 ? 254 : homeEdit.release + 1
         _ = try runBlocking {
-            try await peer.applyBankEdit(slot: 0, value: homeEdit, expected: peer.bankSlots[0].voice)
+            try await peer.voicegroup.apply(slot: 0, value: homeEdit, expected: peer.bankSlots[0].voice)
         }
         report.expectEqual(
             expected: alternate, actual: first.bankSlots.first?.voice,
@@ -158,7 +158,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
         var otherEdit = otherOriginal
         otherEdit.release = otherEdit.release == 255 ? 254 : otherEdit.release + 1
         _ = try runBlocking {
-            try await other.applyBankEdit(slot: 0, value: otherEdit, expected: otherOriginal)
+            try await other.voicegroup.apply(slot: 0, value: otherEdit, expected: otherOriginal)
         }
         report.expectEqual(
             expected: homeEdit, actual: peer.bankSlots.first?.voice, cppID: id,
@@ -169,13 +169,13 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
 
         let oldView = AppliedBankEdit(
             lease: peer.bankLease, slots: peer.bankSlots,
-            dirty: peer.bankDirty, loadName: peer.bankLoadName,
+            dirty: peer.voicegroup.value.dirty, loadName: peer.bankLoadName,
             materializationToken: nil)
         try runBlocking { try await service.open(root: otherRoot) }
         let replacement = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test")
         }
-        service.bankViews.publish(oldView)
+        service.bankViews.publish(oldView, service: service)
         report.expectEqual(
             expected: otherOriginal, actual: replacement.bankSlots.first?.voice,
             cppID: id, what: "replaced-store receipt cannot overwrite current project")
@@ -204,7 +204,7 @@ internal func bankBindingIdentityIsolation(report: CheckReport, fixtureRoot: Str
             expected: false, actual: storedReplacement.dirty, cppID: id,
             what: "refused old-store edit does not dirty the replacement source")
         try runBlocking { await service.close() }
-        service.bankViews.publish(oldView)
+        service.bankViews.publish(oldView, service: service)
         report.expectEqual(
             expected: otherOriginal, actual: replacement.bankSlots.first?.voice,
             cppID: id, what: "closed service cannot publish a prior project's bank")
@@ -302,7 +302,7 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
     }
     do {
         _ = try runBlocking {
-            try await background.applyBankEdit(slot: 0, value: noise, expected: original)
+            try await background.voicegroup.apply(slot: 0, value: noise, expected: original)
         }
         report.expectEqual(
             expected: noise, actual: first.bankSlots.first?.voice, cppID: id,
@@ -419,7 +419,7 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         report.fail(id, "mounted voicegroup type edit did not commit on tab A")
         return
     }
-    guard peer.bankSlots.first?.voice?.macro == BankVoiceMacro.noise && peer.bankDirty else {
+    guard peer.bankSlots.first?.voice?.macro == BankVoiceMacro.noise && peer.voicegroup.value.dirty else {
         report.fail(id, "tab B did not adopt the mounted editor's dirty Noise voice")
         return
     }
@@ -462,6 +462,8 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
             && nativeBefore != UInt8(nextRelease),
         cppID: releaseID,
         message: "release edits and undo reach the audio-bound voicegroup bytes")
+    let songHistoryIndex = peer.document.history.undoIndex
+    app.setEditingVoicegroup(enabled: true)
     app.requestUndo()
     guard
         until(
@@ -478,4 +480,7 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
             && first.bankLease[0].release == nativeBefore,
         cppID: releaseID,
         message: "release edits and undo reach the audio-bound voicegroup bytes")
+    report.expect(
+        peer.document.history.undoIndex == songHistoryIndex,
+        cppID: releaseID, message: "voicegroup-context standard Undo leaves the song history cursor unchanged")
 }

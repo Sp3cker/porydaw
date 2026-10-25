@@ -151,6 +151,22 @@ ThemedWindow {
         function onCloseCancelled(): void { shell.closeCancelled() }
     }
 
+    onActiveFocusItemChanged: {
+        let item = root.activeFocusItem
+        while (item) {
+            const groupPanel = item as VoicegroupPanel
+            if (groupPanel) {
+                shell.session.setEditingVoicegroup(!groupPanel.isSongAssignmentFocus(root.activeFocusItem))
+                return
+            }
+            const songPage = item as SongTab
+            if (songPage) {
+                shell.session.setEditingVoicegroup(false)
+                return
+            }
+            item = item.parent
+        }
+    }
     onActiveChanged: {
         if (!active)
             shell.session.cancelGridInput(3)

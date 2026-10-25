@@ -56,6 +56,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
             "missing --swiftcore fixture root")
         return
     }
+    sharedBusyExportCaptureIsImmutable(report, fixtureRoot: fixtureRoot)
     runSongListModelChecks(report)
     runSongListServiceChecks(report, fixtureRoot: fixtureRoot)
     runVoiceListChecks(report)
@@ -130,14 +131,17 @@ public func runProjectSessionSuite(_ report: CheckReport) {
 
 @MainActor
 public func runBankHistorySuite(_ report: CheckReport) {
-    historyTransitionRegressions(report)
     guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
         report.fail(
             "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             "missing --swiftcore fixture root")
         return
     }
+    historyTransitionRegressions(report, fixtureRoot: fixtureRoot)
+    bankCloseCancelAfterAdmissionChecks(report, fixtureRoot: fixtureRoot)
     bankUndoPublicationChecks(report, fixtureRoot: fixtureRoot)
+    bankCanonicalPublicationChecks(report, fixtureRoot: fixtureRoot)
+    orphanBankReplayDelaysProjectClose(report, fixtureRoot: fixtureRoot)
     runVoicegroupCreationChecks(report, fixtureRoot: fixtureRoot)
     twoOpenSessionsShareBankEdit(report: report, fixtureRoot: fixtureRoot)
     bankSharedHistoryAndLifecycle(report: report, fixtureRoot: fixtureRoot)
@@ -209,10 +213,10 @@ public func runBankHistorySuite(_ report: CheckReport) {
     do {
         bankPublications.removeAll(keepingCapacity: true)
         let result = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: editedVoice, expected: originalVoice)
+            try await session.voicegroup.apply(slot: 0, value: editedVoice, expected: originalVoice)
         }
         report.expectEqual(
-            expected: true, actual: session.bankDirty,
+            expected: true, actual: session.voicegroup.value.dirty,
             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
             what: "bank edit dirties bank")
         report.expectEqual(
@@ -230,14 +234,14 @@ public func runBankHistorySuite(_ report: CheckReport) {
         let completedBankPublications = bankPublications.filter { $0.domains.contains(.bank) }
         report.expect(
             completedBankPublications.count == 1
-                && completedBankPublications[0].domains == [.bank, .dirty, .history],
+                && completedBankPublications[0].domains == [.bank],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank edit publishes bank, dirty, and history exactly once")
+            message: "bank edit publishes only the bank domain exactly once")
 
         // Undo scalar edit
         bankPublications.removeAll(keepingCapacity: true)
         _ = try runBlocking {
-            try await session.undo()
+            try await session.voicegroup.undo()
         }
         report.expectEqual(
             expected: originalSlots, actual: session.bankSlots,
@@ -245,14 +249,14 @@ public func runBankHistorySuite(_ report: CheckReport) {
             what: "undo restores the complete original bank view")
         report.expect(
             bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
+                && bankPublications[0].domains == [.bank],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank undo publishes bank, dirty, and history exactly once")
+            message: "bank undo publishes only the bank domain exactly once")
 
         // Redo scalar edit
         bankPublications.removeAll(keepingCapacity: true)
         _ = try runBlocking {
-            try await session.redo()
+            try await session.voicegroup.redo()
         }
         report.expectEqual(
             expected: scalarEditedSlots, actual: session.bankSlots,
@@ -260,9 +264,9 @@ public func runBankHistorySuite(_ report: CheckReport) {
             what: "redo restores the scalar edit without changing other slots")
         report.expect(
             bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
+                && bankPublications[0].domains == [.bank],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "bank redo publishes bank, dirty, and history exactly once")
+            message: "bank redo publishes only the bank domain exactly once")
     } catch {
         report.fail(
             "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
@@ -290,20 +294,21 @@ public func runBankHistorySuite(_ report: CheckReport) {
         bankPublications.removeAll(keepingCapacity: true)
         try runBlocking {
             try await session.save()
+            try await session.voicegroup.save()
         }
         report.expectEqual(
             expected: false, actual: session.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
             what: "unified save marks the song clean")
         report.expectEqual(
-            expected: false, actual: session.bankDirty,
+            expected: false, actual: session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
             what: "unified save marks the bank clean")
         report.expect(
-            bankPublications.count == 1
-                && bankPublications[0].domains == [.bank, .dirty, .history],
+            bankPublications.filter { $0.domains == [.bank] }.count == 1
+                && bankPublications.contains { $0.domains == [.dirty, .history] },
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
-            message: "unified bank save publishes bank, dirty, and history exactly once")
+            message: "song and bank saves publish their independent state domains")
         report.expect(
             bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
@@ -399,25 +404,26 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         after.children[1] = square
         after.tableName = nil
         after.table = nil
-        _ = try runBlocking { try await session.applyKitEdit(after, expected: before) }
+        _ = try runBlocking { try await session.voicegroup.applyKit(after, expected: before) }
         let stagedKit = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 0) }
         report.expectEqual(
             expected: after, actual: stagedKit,
             cppID: id + "readKit", what: "service reader round-trips staged parent and all raw children")
         report.expect(
-            session.bankDirty && session.document.history.undoCount == 1
-                && session.document.history.step(at: 0)?.label == "Kit history_kit",
+            session.voicegroup.value.dirty && session.voicegroup.history.undoCount == 1
+                && session.voicegroup.history.step(at: 0)?.label == "Kit history_kit",
             cppID: id + "one-step", message: "kit application dirties bank and records exactly one labeled step")
-        try runBlocking { try await session.save() }
-        report.expect(!session.bankDirty, cppID: id + "save-seals", message: "normal song save cleans the kit bank")
-        _ = try runBlocking { try await session.undo() }
+        try runBlocking { try await session.voicegroup.save() }
+        report.expect(
+            !session.voicegroup.value.dirty, cppID: id + "save-seals", message: "normal song save cleans the kit bank")
+        _ = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[0].voice == before.parent
                 && session.bankLease.subvoiceMacros(at: 0)?[0] == BankVoiceMacro.square2
                 && session.bankLease.subvoiceMacros(at: 0)?[127] == BankVoiceMacro.noise
-                && session.bankDirty,
+                && session.voicegroup.value.dirty,
             cppID: id + "undo-whole-kit", message: "one undo adopts prior parent, children and table routing")
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         let savedChildren = VoicegroupSource()
         var error: String?
         guard
@@ -445,7 +451,7 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
                         macro: .noise, key: 63, period: 1, attack: 2, decay: 2, sustain: 10, release: 3)
                 && savedTable?.table == before.table,
             cppID: id + "disk-undo", message: "normal save persists the undo's prior parent, children and table")
-        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.voicegroup.redo() }
         report.expect(
             session.bankSlots[0].voice == after.parent
                 && session.bankLease.subvoiceMacros(at: 0)?[0] == BankVoiceMacro.noise
@@ -454,18 +460,18 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
         var second = before
         second.children[0] = blank
         second.table = Array(repeating: 0, count: 128)
-        _ = try runBlocking { try await session.applyKitEdit(second, expected: after) }
+        _ = try runBlocking { try await session.voicegroup.applyKit(second, expected: after) }
         report.expect(
-            session.document.history.undoCount == 2,
+            session.voicegroup.history.undoCount == 2,
             cppID: id + "no-kit-merge", message: "a second kit save records a distinct entry")
-        let count = session.document.history.undoCount
-        let index = session.document.history.undoIndex
+        let count = session.voicegroup.history.undoCount
+        let index = session.voicegroup.history.undoIndex
         do {
-            _ = try runBlocking { try await session.applyKitEdit(after, expected: after) }
+            _ = try runBlocking { try await session.voicegroup.applyKit(after, expected: after) }
             report.fail(id + "conflict", "stale expected parent was accepted")
         } catch {
             report.expect(
-                session.document.history.undoCount == count && session.document.history.undoIndex == index,
+                session.voicegroup.history.undoCount == count && session.voicegroup.history.undoIndex == index,
                 cppID: id + "conflict", message: "conflict throws without recording a new entry")
         }
         let outsider = BankVoice(macro: BankVoiceMacro.square1, key: 75, sustain: 15)
@@ -473,12 +479,12 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             try await service.bankApply(
                 lease: session.bankLease, slot: 0, value: outsider, expected: second.parent)
         }
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[0].voice == after.parent
                 && session.bankLease.subvoiceMacros(at: 0)?[0] == BankVoiceMacro.noise,
             cppID: id + "authoritative-replay", message: "kit undo overwrites an intervening song-side scalar edit")
-        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.voicegroup.redo() }
         guard let priorScalar = session.bankSlots[1].voice else {
             report.fail(id + "fixture", "prior scalar slot is missing")
             return
@@ -488,25 +494,25 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             children: [], tableName: nil, table: nil)
         var newKit = after
         newKit.slot = 1
-        _ = try runBlocking { try await session.applyKitEdit(newKit, expected: parentOnly) }
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.applyKit(newKit, expected: parentOnly) }
+        _ = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[1].voice == priorScalar,
             cppID: id + "new-kit-undo-parent", message: "undo of a new kit restores the prior scalar slot")
-        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.voicegroup.redo() }
         report.expect(
             session.bankSlots[1].voice == newKit.parent,
             cppID: id + "new-kit-redo", message: "redo of a new kit restores its full parent")
         let emptyBefore = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         var emptyKit = second
         emptyKit.slot = 127
-        let creation = try runBlocking { try await session.applyKitEdit(emptyKit, expected: emptyBefore) }
+        let creation = try runBlocking { try await session.voicegroup.applyKit(emptyKit, expected: emptyBefore) }
         let readCreated = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         report.expect(
             emptyBefore.parent == nil && emptyBefore.subgroupSymbol.isEmpty && emptyBefore.children.isEmpty
                 && emptyBefore.tableName == nil && emptyBefore.table == nil
                 && emptyBefore.voicegroup == "_test_vg" && creation.materialization != nil
-                && session.bankSlots[127].voice == emptyKit.parent && session.bankDirty,
+                && session.bankSlots[127].voice == emptyKit.parent && session.voicegroup.value.dirty,
             cppID: id + "undefined-slot-undo", message: "session creates a genuine undefined kit as an in-memory edit")
         report.expectEqual(
             expected: emptyKit, actual: readCreated,
@@ -515,19 +521,19 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             try await service.bankApply(
                 lease: session.bankLease, slot: 127, value: outsider, expected: emptyKit.parent)
         }
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
         let readUndone = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         report.expect(
             session.bankSlots[127].kind == BankSlotKind.none && session.bankSlots[127].voice == nil
                 && readUndone == emptyBefore,
             cppID: id + "undefined-slot-undo",
             message: "authoritative undo restores undefined, not a silent placeholder")
-        _ = try runBlocking { try await session.redo() }
+        _ = try runBlocking { try await session.voicegroup.redo() }
         let readRedone = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 127) }
         report.expectEqual(
             expected: emptyKit, actual: readRedone,
             cppID: id + "undefined-slot-undo", what: "redo re-materializes the entire staged keysplit")
-        _ = try runBlocking { try await session.undo() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[127].kind == BankSlotKind.none,
             cppID: id + "undefined-slot-undo", message: "second undo uses redo's refreshed materialization")
@@ -536,6 +542,19 @@ private func kitHistoryChecks(_ report: CheckReport, fixtureRoot: String) {
             readScalar.parent == session.bankSlots[2].voice && readScalar.subgroupSymbol.isEmpty
                 && readScalar.children.isEmpty && readScalar.tableName == nil && readScalar.table == nil,
             cppID: id + "readKit", message: "non-kit slots read as parent-only values")
+        let parentBeforeDiscard = bytes(at: parentPath)
+        let childrenBeforeDiscard = bytes(at: childPath)
+        let tableBeforeDiscard = bytes(at: tablePath)
+        try runBlocking { try await session.voicegroup.discard() }
+        let discardedKit = try runBlocking { try await service.readKit(lease: session.bankLease, slot: 0) }
+        report.expect(
+            discardedKit == before && session.bankSlots[1].voice == priorScalar
+                && session.bankSlots[127].kind == BankSlotKind.none && !session.voicegroup.value.dirty
+                && session.voicegroup.history.undoCount == 0
+                && bytes(at: parentPath) == parentBeforeDiscard
+                && bytes(at: childPath) == childrenBeforeDiscard && bytes(at: tablePath) == tableBeforeDiscard,
+            cppID: id + "discard-whole-kit",
+            message: "group discard restores persisted parent, children and routing without writing resource files")
     } catch {
         report.fail(id + "fixture", "kit history checks threw: \(error)")
     }

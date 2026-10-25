@@ -191,6 +191,8 @@ extension ApplicationSession {
         closeSampleStudio()
         isReplacingProject = true
         pd_startup_trace_mark("project-release-begin")
+        voiceList.releaseVoicegroup()
+        setEditingVoicegroup(enabled: false)
         await releaseTabs()
         await catalogService?.close()
         pd_startup_trace_mark("project-release-end")
@@ -207,6 +209,7 @@ extension ApplicationSession {
         projectRoot = candidate.path
         songDock.install(service: candidate.service, songs: [])
         voiceList.projectService = candidate.service
+        songTabs.setClosingAll(false)
         resetVoicegroupCatalog()
         projectOpen = true
         onProjectStateChanged?()

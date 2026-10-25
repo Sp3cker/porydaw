@@ -67,7 +67,9 @@ TestCase {
                     break
                 }
                 shell.shellPresenter.session.songTabs.confirmDiscard()
-                wait(50)
+                verify(waitForNative(function() {
+                    return !shell.shellPresenter.session.saveInProgress
+                }, 15000), "the close answer settles before advancing to another gate")
             }
             verify(shell.shellPresenter.closeReady, closeReadyMessage)
             return

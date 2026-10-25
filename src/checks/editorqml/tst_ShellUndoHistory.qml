@@ -8,7 +8,7 @@ ShellMenusSupport {
 
     function child(name) {
         const item = findChild(shell, name)
-        verify(!!item, "Object exists")
+        verify(!!item, "Object exists: " + name)
         return item
     }
 
@@ -140,7 +140,7 @@ ShellMenusSupport {
         waitForPosition(presenter, 3)
         tryCompare(session, "canUndo", false)
         tryCompare(session, "canRedo", true)
-        tryCompare(session, "songDocumentDirty", false)
+        tryCompare(session, "documentDirty", false)
         compare(documentNotes(grid), fixture.original)
         tryCompare(pane, "highlightedRow", 3)
         compare(base.step.isCurrent, true)
@@ -212,5 +212,63 @@ ShellMenusSupport {
         keyClick(Qt.Key_Space)
         verify(waitForNative(function() { return !playhead.playing }, 5000))
         compare(presenter.undoHistoryVisible, true)
+    }
+
+    function test_voicegroupHistoryOwnsRowsSavedMarkerAndJump() {
+        const presenter = openHistory()
+        const session = presenter.session
+        const voice = session.voiceListController()
+        verify(waitForNative(function() { return voice.isBound && !voice.isLoading }, 15000),
+               "the song's voicegroup is ready before selecting its parameter surface")
+        voice.selectSlot(4)
+        const editor = child("voicegroupEditorSurface")
+        const draft = voice.editorModel()
+        const original = draft.release
+        const changed = original === 7 ? 6 : original + 1
+        const release = findChild(editor, "vgReleaseSpin")
+        verify(release && release.enabled, "the selected voice exposes an editable release field")
+        const scroll = child("voiceEditorScrollView")
+        scroll.contentY = Math.max(0, scroll.contentHeight - scroll.height)
+        waitForRendering(release)
+        release.forceActiveFocus()
+        keyClick(original === 7 ? Qt.Key_Down : Qt.Key_Up)
+        verify(waitForNative(function() {
+            return draft.release === changed && voice.bankDirty && session.editingVoicegroup
+        }, 15000), "the mounted parameter surface owns group commands")
+        waitForCount(2)
+        verify(historyRow(1).step.isSaved && !session.documentDirty,
+               "the shared group base is saved while the song remains clean")
+        presenter.activate("file.save_voicegroup")
+        verify(waitForNative(function() { return !session.saveInProgress && !voice.bankDirty }, 15000))
+        tryCompare(historyRow(0).step, "isSaved", true)
+        const base = historyRow(1)
+        mouseClick(base, base.width / 2, base.height / 2)
+        waitForPosition(presenter, 1)
+        verify(draft.release === original && voice.bankDirty && !session.documentDirty,
+               "history jump rewinds only the group and retains its saved marker")
+        child("undoHistoryList").forceActiveFocus()
+        keySequence(StandardKey.Redo)
+        waitForPosition(presenter, 0)
+        verify(draft.release === changed && !voice.bankDirty,
+               "redo from history returns the group to its save point")
+        keySequence(StandardKey.Undo)
+        waitForPosition(presenter, 1)
+        verify(draft.release === original && voice.bankDirty && !session.documentDirty,
+               "standard Undo from history rewinds only the voicegroup")
+        keySequence(StandardKey.Redo)
+        waitForPosition(presenter, 0)
+        verify(draft.release === changed && !voice.bankDirty,
+               "standard Redo restores the saved voicegroup without editing the song")
+        const selector = child("vgArgCombo")
+        selector.forceActiveFocus()
+        tryCompare(selector, "activeFocus", true)
+        tryCompare(session, "editingVoicegroup", false)
+        selector.contentItem.forceActiveFocus()
+        tryCompare(selector.contentItem, "activeFocus", true)
+        tryCompare(session, "editingVoicegroup", false)
+        waitForCount(1)
+        verify(historyRow(0).step.isBase && historyRow(0).step.isSaved,
+               "the assignment surface selects the independent untouched song history")
+        compare(session.canUndo, false, "the untouched song has no undo despite the group's independent history")
     }
 }

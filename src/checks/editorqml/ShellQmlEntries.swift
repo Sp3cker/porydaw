@@ -234,7 +234,9 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
             Entry(
                 name: "shell-tabs-bank-lifetime", inputFileName: "tst_ShellTabsBankLifetime.qml",
-                fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
+                fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym") + [
+                    "sound/voicegroups/fixture_alt.inc"
+                ]),
             Entry(
                 name: "shell-tabs-reload", inputFileName: "tst_ShellTabsReload.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
@@ -378,6 +380,7 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101") + [
                     "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
                     "samplesources/tone.flac", "samplesources/zones.sf2",
+                    "sound/voicegroups/fixture_alt.inc",
                 ]),
             Entry(
                 name: "shell-sample-studio-refusal",
@@ -391,7 +394,9 @@ enum ShellQmlRegistry {
                 ]),
             Entry(
                 name: "shell-edit-in-studio", inputFileName: "tst_ShellEditInStudio.qml",
-                fixtureFiles: songs("mus_route101") + ["sound/voice_groups.inc"]),
+                fixtureFiles: songs("mus_route101") + [
+                    "sound/voice_groups.inc", "sound/voicegroups/fixture_alt.inc",
+                ]),
             Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),

@@ -378,12 +378,12 @@ ShellLaneSupport {
                "an unsaved transpose changes the output bytes")
         compare(probe.digest(midiPath), midiDigest,
                 "rendering unsaved edits leaves the staged MIDI bytes untouched")
-        compare(presenter.session.songDocumentDirty, true,
+        compare(presenter.session.documentDirty, true,
                 "export does not save the edited song")
         compare(presenter.action("edit.undo").enabled, true,
                 "export leaves the transpose in document history")
         presenter.activate("edit.undo")
-        verify(waitForNative(function() { return !presenter.session.songDocumentDirty }, 5000),
+        verify(waitForNative(function() { return !presenter.session.documentDirty }, 5000),
                "Undo asynchronously restores the pre-transpose document")
     }
 

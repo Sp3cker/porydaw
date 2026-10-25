@@ -1,3 +1,4 @@
+import Foundation
 import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
@@ -24,15 +25,11 @@ public final class SongTabSession {
     public let title: String
     /// This tab's document-bound grid.
     @QtTracked public var grid: PianoGrid
-    /// Whether this tab's song has unsaved changes. Document edits and bank
-    /// (voicegroup) edits alike count: both are work the close gate must not
-    /// discard without an answer.
+    /// Whether this song has unsaved MIDI, settings or assignment edits.
     public var dirty: Bool
-    /// Whether this tab owns an in-flight bank transition. While set, the
-    /// strip refuses this tab's close and the session refuses its next bank
-    /// action; other tabs are unaffected. Refreshed with `dirty` on every
-    /// session publication, so the flag tracks the history's live answer.
-    public var bankTransitionPending: Bool = false
+    /// An assignment load/replay is pending, so this song cannot close until
+    /// its binding settles. Other songs and voicegroup histories are independent.
+    public var bindingTransitionPending: Bool = false
     /// Whether this tab's song is presented. A tab exists only while its
     /// document is open, so a live tab's own answer is always true. The member
     /// exists because the surface reads one session object: the drawer pages'
@@ -72,24 +69,18 @@ public final class SongTabSession {
         self.app = app
         timeSigHost = app
         grid = workspace.grid
-        dirty = SongTabSession.isDirty(workspace.session)
-    }
-
-    /// Document and bank edits alike are unsaved work.
-    @QtIgnored
-    static func isDirty(_ session: DocumentSession) -> Bool {
-        session.document.isDirty || session.bankDirty
+        dirty = workspace.session.document.isDirty
     }
 
     /// Republishes this tab's own dirty state, for the strip caption and for the
-    /// close gate, alongside its pending bank-transition flag, for the
+    /// close gate, alongside its pending binding-transition flag, for the
     /// origin-scoped close gate. Both track the session's live answers.
     @QtIgnored
     func refreshDirty() {
-        let value = SongTabSession.isDirty(workspace.session)
+        let value = workspace.session.document.isDirty
         if dirty != value { dirty = value }
-        let pending = workspace.session.document.history.bankTransitionInFlight
-        if bankTransitionPending != pending { bankTransitionPending = pending }
+        let pending = workspace.session.document.history.bindingTransitionInFlight
+        if bindingTransitionPending != pending { bindingTransitionPending = pending }
     }
 
     // MARK: - Editor surface: this tab's document
@@ -135,15 +126,15 @@ public final class SongTabSession {
     }
 }
 
+@MainActor
 internal struct BankCloseTarget {
-    let identity: BankBindingIdentity
-    let lease: ProjectBankLease
+    let session: VoicegroupSession
+    var identity: BankBindingIdentity { session.identity }
     let title: String
 
-    init(_ bank: AppliedBankEdit) {
-        identity = BankBindingIdentity(bank.lease)
-        lease = bank.lease
-        title = bank.loadName.isEmpty ? bank.lease.sectionLabel : bank.loadName
+    init(_ session: VoicegroupSession) {
+        self.session = session
+        title = session.displayName
     }
 }
 
@@ -154,23 +145,14 @@ internal struct BankCloseTarget {
 internal struct PendingReload {
     let tabId: Int
     let documentRevision: UInt64
-    let bankSlots: [BankSlotView]
-    let bankDirty: Bool
-    let bankLoadName: String
 
     init(_ tab: SongTabSession) {
         tabId = tab.tabId
         documentRevision = tab.workspace.session.document.revision
-        bankSlots = tab.workspace.session.bankSlots
-        bankDirty = tab.workspace.session.bankDirty
-        bankLoadName = tab.workspace.session.bankLoadName
     }
 
     func matches(_ tab: SongTabSession) -> Bool {
         tab.workspace.session.document.revision == documentRevision
-            && tab.workspace.session.bankSlots == bankSlots
-            && tab.workspace.session.bankDirty == bankDirty
-            && tab.workspace.session.bankLoadName == bankLoadName
     }
 }
 
@@ -224,20 +206,19 @@ public final class SongTabsController {
     /// application reports back, so a second Save press starts no second write.
     @QtIgnored
     var savingCloseId = -1
-    /// Whether a close-all walk still has tabs or dirty banks to ask about.
+    /// The close walk, including approved teardown until a replacement project is installed.
+    public var isClosingAll: Bool = false
+    /// The coalesced close step, retained until execution or lifecycle cancellation.
     @QtIgnored
-    var isClosingAll = false
-    /// Whether the walk's next step is already scheduled for the next turn.
-    @QtIgnored
-    var advancePending = false
+    var closeSettlementTask: Task<Void, Never>?
     @QtIgnored
     var pendingCloseBank: BankCloseTarget?
     @QtIgnored
     var savingCloseBank: BankBindingIdentity?
     @QtIgnored
-    var answeredCloseBanks: Set<BankBindingIdentity> = []
-    @QtIgnored
     var projectSwitchApprovalIndex: Int?
+    @QtIgnored
+    var closeWaitObservers: [(group: VoicegroupSession, token: UUID)] = []
 
     @QtIgnored
     var reloadsInFlight: Set<Int> = []
@@ -293,20 +274,16 @@ public final class SongTabsController {
         for tab in tabs { tab.refreshDirty() }
     }
 
-    /// The tab owning the in-flight bank transition, or -1 while none is
-    /// pending. A pending transition gates close and bank actions on its
-    /// origin tab only; every other tab follows document dirt alone.
-    public var pendingBankTabId: Int {
-        tabs.first { $0.bankTransitionPending }?.tabId ?? -1
+    /// The song owning an in-flight assignment transition, or -1 while none is pending.
+    public var pendingBindingTabId: Int {
+        tabs.first { $0.bindingTransitionPending }?.tabId ?? -1
     }
 
-    /// Whether a tab's close affordance is enabled. A pending bank transition
-    /// refuses close on its origin tab; any other tab stays enabled whatever
-    /// its own bank dirt. Unsaved document dirt still raises the ordinary
-    /// close gate in `requestClose`.
+    /// A pending assignment transition refuses close only on its origin song.
+    /// Unsaved song edits still raise the ordinary close gate in `requestClose`.
     public func closeEnabled(tabId: Int) -> Bool {
         guard let tab = tabs.first(where: { $0.tabId == tabId }) else { return false }
-        return !tab.bankTransitionPending
+        return !tab.bindingTransitionPending
     }
 
     @QtIgnored
@@ -344,7 +321,7 @@ public final class SongTabsController {
     /// Selects a tab from the strip. Selecting the selected tab is not a change:
     /// the shared engine stays with the workspace that already holds it.
     public func selectTab(tabId: Int) {
-        guard tabId != selectedId, tabIndex(of: tabId) != nil else { return }
+        guard !isClosingAll, tabId != selectedId, tabIndex(of: tabId) != nil else { return }
         select(tabId: tabId)
     }
 
@@ -383,11 +360,11 @@ public final class SongTabsController {
     /// at all — its row is gone before it is retired. The third C++ refusal, a
     /// tab that is still loading, has no counterpart: a tab is installed only
     /// after its document loaded, so nothing saveable is ever missing. A tab
-    /// owning an in-flight bank transition is refused while it stays pending:
+    /// owning an in-flight binding transition is refused while it stays pending:
     /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
         guard !isClosingAll, pendingCloseId == -1, pendingCloseBank == nil,
-            let tab = tab(id: tabId), savingCloseId != tabId, !tab.bankTransitionPending
+            let tab = tab(id: tabId), savingCloseId != tabId, !tab.bindingTransitionPending
         else { return }
         app?.guardSplitStudioClose(
             tab: tab,
@@ -406,10 +383,9 @@ public final class SongTabsController {
 
     public func confirmDiscard() {
         if let bank = pendingCloseBank {
-            guard savingCloseBank != bank.identity else { return }
-            answeredCloseBanks.insert(bank.identity)
-            clearPendingCloseBank()
-            advanceCloseAll()
+            guard savingCloseBank == nil else { return }
+            savingCloseBank = bank.identity
+            app?.discardBankBeforeClose(bank)
             return
         }
         guard let tabId = takePendingClose() else { return }
@@ -441,10 +417,9 @@ public final class SongTabsController {
     /// The gate's Cancel answer: the tab stays open and a bank stays dirty. A
     /// close-all walk stops and the application reports the refusal to the host.
     public func cancelClose() {
-        if let bank = pendingCloseBank {
-            guard savingCloseBank != bank.identity else { return }
+        if pendingCloseBank != nil {
             clearPendingCloseBank()
-            isClosingAll = false
+            setClosingAll(false)
             projectSwitchApprovalIndex = nil
             app?.closeAllResolved(closed: false)
             return
@@ -454,7 +429,7 @@ public final class SongTabsController {
         if reloadId != -1 { reloadId = -1 }
         replacementLabel = nil
         if isClosingAll {
-            isClosingAll = false
+            setClosingAll(false)
             projectSwitchApprovalIndex = nil
             app?.closeAllResolved(closed: false)
         }

@@ -98,8 +98,11 @@ public final class ImportWizardProbe: QmlInstantiableStatus {
 
     public func setWritable(path: String, writable: Bool) -> Bool {
         do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+            let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
+            let permissions = (writable ? 0o644 : 0o444) | (isDirectory ? 0o111 : 0)
             try FileManager.default.setAttributes(
-                [.posixPermissions: writable ? 0o644 : 0o444], ofItemAtPath: path)
+                [.posixPermissions: permissions], ofItemAtPath: path)
             return true
         } catch { return false }
     }
