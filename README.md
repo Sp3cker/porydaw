@@ -210,6 +210,7 @@ Font Awesome outlines copied from their style's face plus custom artwork compile
 The Quick Controls style `PorydawStyle` (`src/ui/style/`) is Fusion with its image-backed
 indicators (combo and spin arrows, check marks, submenu arrows) drawn as the same glyphs
 and its progress bar without an image mask, so startup loads no Qt image plugins.
+The voicegroup creation button uses `Icons.plus`, extracted from Font Awesome Pro Regular.
 
 To add or change an icon, edit `resources/icons/manifest.json` and regenerate the font
 and the `Icons` singleton (requires fontTools):

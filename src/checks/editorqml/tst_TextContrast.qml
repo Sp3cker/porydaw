@@ -380,6 +380,27 @@ ShellLaneSupport {
         }
     }
 
+    function auditNoteAutomation(context) {
+        const presenter = shell.shellPresenter
+        const tabs = presenter.session.songTabs
+        const page = findChild(shell.sceneLoader.item, "songTab_" + tabs.selectedId)
+        const surface = findChild(page, "swiftRollOverlay")
+        const roll = findChild(surface, "swiftRollInput")
+        roll.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(roll, "activeFocus", true)
+        presenter.activate("roll.select_all")
+        presenter.activate("roll.pitch_bend")
+        tryVerify(function() { return findChild(surface, "pitchBendPopup") !== null },
+                  5000, "note automation opens for its contrast audit")
+        const popup = findChild(surface, "pitchBendPopup")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "all three graph lanes submit before contrast capture")
+        record(context + " note automation", Audit.audit(popup, grab))
+        const editor = popup.bridge
+        editor.cancelAndClose()
+        tryCompare(editor, "isOpen", false)
+    }
+
     function auditUndoHistory(context) {
         const presenter = shell.shellPresenter
         const history = presenter.session.undoHistory
@@ -508,6 +529,7 @@ ShellLaneSupport {
         session.voiceListController().selectSlot(0)
         auditPopups(mode + " song", auditWindow(mode + " song"))
         auditClippedKeyboardLabel(mode)
+        auditNoteAutomation(mode)
 
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() {

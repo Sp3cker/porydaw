@@ -47,7 +47,7 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Transpose Down (Octave) | `Shift+Down` | Transposes selection down by 1 octave |
 | Nudge Left | `Left` | Nudges active time selection left by grid step |
 | Nudge Right | `Right` | Nudges active time selection right by grid step |
-| Edit Note Pitch Bend | `G` | Opens the pitch-bend editor for the selected note |
+| Edit Note Pitch Bend | `G` | Opens the selected note's pitch-bend, modulation, and LFO-speed editor; press again to close |
 | Mute Selected Tracks | `M` | Toggles mute on selected track(s) |
 | Solo Selected Tracks | `S` | Toggles solo on selected track(s) |
 | Toggle Pencil Mode | `B` | Toggles automation pencil drawing on the automation page |

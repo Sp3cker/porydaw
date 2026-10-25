@@ -193,7 +193,8 @@ ShellLaneSupport {
                "the roll input and plot mount for the G route")
         if (pinNearTop) {
             const initialPlotHeight = plot.height
-            shell.height += 12 * grid.baseFontPx
+            const targetPlotHeight = view.pitchBendPresenter.popupHeight + 12 * grid.baseFontPx
+            shell.height += Math.max(12 * grid.baseFontPx, targetPlotHeight - initialPlotHeight)
             tryVerify(function() { return plot.height > initialPlotHeight },
                       5000, "the tall shell expands the roll before anchor selection")
         }

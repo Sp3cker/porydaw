@@ -20,6 +20,7 @@
       "disclosureOpen": "caret-down"
     },
     "regular": {
+      "plus": "plus",
       "zoomIn": "search-plus",
       "zoomOut": "search-minus",
       "undo": "undo",
@@ -81,6 +82,7 @@
     "addFolder": "E020",
     "dropFiles": "E021",
     "redo": "E022",
-    "undo": "E023"
+    "undo": "E023",
+    "plus": "E024"
   }
 }

@@ -91,6 +91,26 @@ ColumnLayout {
             ToolTip.text: qsTr("The song's voicegroup (-G). Changing it is undoable.")
             ToolTip.visible: hovered
         }
+        ToolButton {
+            id: newVoicegroup
+            objectName: "vgNewVoicegroupButton"
+            Layout.preferredWidth: panel.baseFontPx * 2.08
+            Layout.preferredHeight: panel.baseFontPx * 1.83
+            Layout.minimumHeight: 0
+            contentItem: Item {
+                AppIcon {
+                    anchors.centerIn: parent
+                    width: Math.round(panel.baseFontPx)
+                    height: width
+                    icon: Icons.plus
+                    color: newVoicegroup.palette.buttonText
+                }
+            }
+            Accessible.name: qsTr("New voicegroup")
+            ToolTip.text: qsTr("New voicegroup")
+            ToolTip.visible: hovered
+            onClicked: panel.controller.requestNewVoicegroup()
+        }
     }
 
     Rectangle {

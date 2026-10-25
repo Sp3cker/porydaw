@@ -50,5 +50,7 @@ automation); changing instrument mid-song. -->
 
 ## Creating and registering voicegroups
 
-<!-- TODO: When you need a new voicegroup vs. editing an existing one;
-how New Song / MIDI Import can create one; where the files land. -->
+Click **+** beside the voicegroup name in the dock to create a voicegroup.
+Enter a name, choose a copy of the current bank or an empty template, then
+click **Create**. The new group is written under `sound/voicegroups/` and
+assigned to the current song.

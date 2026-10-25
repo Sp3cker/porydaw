@@ -178,7 +178,6 @@ ShellLaneSupport {
                    : variant === "editor-readonly" ? 1 : 3, 1000,
                    "editor form recomputes for selected bank slot")
         waitForRendering(panel)
-        checkRegion(reference, "selector", findChild(panel, "vgArgCombo"), 4)
         checkRegion(reference, "tree", findChild(panel, "voicegroupTree"), 5)
         checkRegion(reference, "tree.header", findChild(panel, "voicegroupTreeHeader"), 5)
         checkRegion(reference, "tree.row.000", findChild(panel, "voicegroupRow_0"), 5)

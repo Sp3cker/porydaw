@@ -365,14 +365,6 @@ ColumnLayout {
         Layout.preferredHeight: editor.buttonHeight
         Layout.minimumHeight: 0
         Button {
-            objectName: "vgNewVoicegroupButton"
-            text: qsTr("New...")
-            Layout.preferredHeight: editor.buttonHeight
-            Layout.minimumHeight: 0
-            focusPolicy: Qt.NoFocus
-            onClicked: editor.controller.requestNewVoicegroup()
-        }
-        Button {
             objectName: "vgSaveButton"
             text: qsTr("Save")
             Layout.preferredHeight: editor.buttonHeight

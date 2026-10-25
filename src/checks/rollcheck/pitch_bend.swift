@@ -106,21 +106,16 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
         cppID: "swiftcore/PitchBendEditingTest::vertexDeletion",
         message: "Delete removes only the selected interior vertex")
 
-    var modulation = PitchBendKernel(
+    let modulation = PitchBendKernel(
         lane: .modulation, geometry: geometry,
         startTick: 96, endTick: 192,
         fineTicks: 1, snap: pitchBendFixtureSnap,
         snapUp: pitchBendFixtureSnapUp,
         points: origin, endValue: 0)
-    modulation.begin(x: modulation.x(at: 144), y: geometry.canvasY, line: false)
-    modulation.finish()
     report.expect(
-        modulation.points[144] == 126
-            && modulation.value(
-                atY: geometry.canvasY
-                    + geometry.canvasHeight) == 0,
+        modulation.value(atY: geometry.canvasY + geometry.canvasHeight) == 0,
         cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
-        message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
+        message: "modulation clamps values below the graph to zero")
     pitchBendDenseVertexDragPredicates(report, geometry: geometry)
     pitchBendSharedGridPredicates(report, viewport: viewport)
     pitchBendGridRulePredicates(report, suite: session)

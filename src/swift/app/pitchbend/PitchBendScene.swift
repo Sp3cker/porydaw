@@ -128,7 +128,11 @@ public final class PitchBendLane {
         self.kernel = kernel
         self.palette = palette
         identityColor = PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(track)]
-        laneTitle = kernel.lane == .pitch ? "Pitch bend (BEND)" : "Mod wheel (CC1)"
+        switch kernel.lane {
+        case .pitch: laneTitle = "Pitch bend (BEND)"
+        case .modulation: laneTitle = "Mod wheel (CC1)"
+        case .lfoSpeed: laneTitle = "LFO speed (CC21)"
+        }
         bipolar = kernel.lane == .pitch
         rebuild()
     }
@@ -271,7 +275,7 @@ public final class PitchBendLane {
                 ring: palette.editCursor, ringWidth: g.hairline
             ))
         syncRetained(vertices, vertexValues, make: PitchBendVertex.init, update: { $0.update($1) })
-        if k.lane == .modulation {
+        if k.lane != .pitch {
             liveValueText = String(k.liveValue)
             upperValueText = "127"
             lowerValueText = "0"

@@ -206,6 +206,12 @@ ShellVoicegroupSupport {
         statusSpy.clear()
         const button = findChild(panel, "vgNewVoicegroupButton")
         verify(button !== null, "the mounted dock exposes its New voicegroup button")
+        const selector = findChild(panel, "vgArgCombo")
+        const besideName = button.mapToItem(selector, 0, button.height / 2)
+        verify(besideName.x >= selector.width && besideName.y >= 0
+               && besideName.y <= selector.height
+               && button.x + button.width <= panel.width,
+               "voicegroup creation remains visible beside the name input")
         mouseClick(button, button.width / 2, button.height / 2)
         verify(waitForNative(function() { return controller.newVoicegroupPrompt }, 5000),
                "the mounted New button opens the name prompt")

@@ -23,6 +23,7 @@ QtObject {
     readonly property IconSpec noise: IconSpec { glyph: "\ue009"; fit: 0.8000 }
     readonly property IconSpec pause: IconSpec { glyph: "\ue00a"; fit: 1.0000 }
     readonly property IconSpec play: IconSpec { glyph: "\ue00b"; fit: 1.0000 }
+    readonly property IconSpec plus: IconSpec { glyph: "\ue024"; fit: 1.0000 }
     readonly property IconSpec redo: IconSpec { glyph: "\ue022"; fit: 1.0000 }
     readonly property IconSpec resonance: IconSpec { glyph: "\ue00c"; fit: 1.0000 }
     readonly property IconSpec sample: IconSpec { glyph: "\ue00d"; fit: 0.8000 }
