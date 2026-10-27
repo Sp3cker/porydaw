@@ -42,7 +42,11 @@ jobs:
               const run = runs.get(artifact.workflow_run.id);
               if (run.status !== 'completed' || run.conclusion !== 'success') continue;
               const previous = newest.get(run.workflow_id);
-              if (!previous || run.id > previous.id) newest.set(run.workflow_id, run);
+              // A rebuilt older run has a lower ID but newly uploaded artifacts.
+              if (!previous || artifact.created_at > previous.createdAt ||
+                  (artifact.created_at === previous.createdAt && run.id > previous.id)) {
+                newest.set(run.workflow_id, { id: run.id, createdAt: artifact.created_at });
+              }
             }
             let deleted = 0;
             let freed = 0;
