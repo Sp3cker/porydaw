@@ -1,0 +1,68 @@
+name: Artifact retention
+
+on:
+  workflow_run:
+    workflows: [Build, All checks, Release]
+    types: [completed]
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: artifact-retention
+      cancel-in-progress: false
+    steps:
+      # No checkout or triggering-run payload is executed with this write token.
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const repo = context.repo;
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              ...repo, per_page: 100,
+            });
+            const runs = new Map();
+            for (const artifact of artifacts) {
+              const id = artifact.workflow_run.id;
+              if (!runs.has(id)) {
+                const { data } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: id });
+                runs.set(id, data);
+              }
+            }
+            // A successful run without uploads must not evict the last usable build.
+            const newest = new Map();
+            for (const artifact of artifacts) {
+              if (artifact.expired) continue;
+              const run = runs.get(artifact.workflow_run.id);
+              if (run.status !== 'completed' || run.conclusion !== 'success') continue;
+              const previous = newest.get(run.workflow_id);
+              if (!previous || run.id > previous.id) newest.set(run.workflow_id, run);
+            }
+            let deleted = 0;
+            let freed = 0;
+            for (const artifact of artifacts) {
+              const run = runs.get(artifact.workflow_run.id);
+              if (run.status !== 'completed') continue;
+              if (!artifact.expired && newest.get(run.workflow_id)?.id === run.id) continue;
+              try {
+                await github.rest.actions.deleteArtifact({ ...repo, artifact_id: artifact.id });
+              } catch (error) {
+                // Expiration or an operator can remove a listed artifact first.
+                if (error.status !== 404) throw error;
+                continue;
+              }
+              deleted++;
+              freed += artifact.size_in_bytes;
+              core.info(`Deleted artifact ${artifact.id} from run ${run.id}`);
+            }
+            await core.summary
+              .addHeading('Artifact retention')
+              .addRaw('Kept the newest successful artifact-bearing run per workflow and all unfinished runs.\n')
+              .addRaw(`Deleted ${deleted} artifacts (${(freed / 1048576).toFixed(1)} MiB).\n`)
+              .write();

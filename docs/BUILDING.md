@@ -201,6 +201,11 @@ in the `SendNonSendable` SIL pass — access such structs through the pointer
 `.github/workflows/build.yml` and `release.yml` call `cmake` directly (sccache,
 `cmake --install`); that is the only permitted direct caller.
 
+Actions uploads expire after one day. Artifact retention runs hourly, manually, and
+after Build, All checks, or Release completes; it keeps unfinished runs and the
+newest successful run with unexpired artifacts per workflow, deleting older or
+failed completed-run artifacts. GitHub Releases and workflow logs are unaffected.
+
 ## Shared QtBridge macro plugin (`~/.cache/porydaw`)
 
 QtBridge's `@QtBridgeable` macros run in a host plugin (`QtBridgeMacros`) compiled from

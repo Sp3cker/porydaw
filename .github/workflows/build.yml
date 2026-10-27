@@ -66,6 +66,7 @@ jobs:
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-linux
           path: build/porydaw
   build-native:
@@ -157,6 +158,7 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-macos
           path: build/porydaw.dmg
 
@@ -182,6 +184,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-windows
           path: porydaw-windows
 

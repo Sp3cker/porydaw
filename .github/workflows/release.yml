@@ -141,6 +141,7 @@ jobs:
         if: ${{ inputs.dry_run }}
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-linux
           path: porydaw-linux.zip
 
@@ -232,6 +233,7 @@ jobs:
         if: ${{ inputs.dry_run }}
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: ${{ env.BUILD_NAME }}
           path: ${{ env.BUILD_NAME }}.zip
 
@@ -316,5 +318,6 @@ jobs:
         if: ${{ inputs.dry_run }}
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-windows
           path: porydaw-windows.zip
