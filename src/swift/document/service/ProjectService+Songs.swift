@@ -36,7 +36,8 @@ extension ProjectService {
                         player: song.player, midiPath: song.midPath ?? "",
                         trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
                         hasMid: song.hasMid, hasCfg: song.hasCfg,
-                        registered: song.registered, registrationGaps: gaps))
+                        registered: song.registered, registrationGaps: gaps,
+                        modifiedAt: song.modifiedAt))
             }
             return result
         } catch { throw projectFailure(error) }
@@ -44,7 +45,9 @@ extension ProjectService {
 
     public func songLabels() async throws -> [String] {
         let store = try requireStore()
-        do { return try await store.songs().filter(\.hasMid).map(\.label) } catch { throw projectFailure(error) }
+        do { return try await store.snapshot().songs.filter(\.hasMid).map(\.label) } catch {
+            throw projectFailure(error)
+        }
     }
 
     /// Registers a new song carrying the caller's in-app MIDI snapshot: the
@@ -70,7 +73,7 @@ extension ProjectService {
                 // A missing destination is the only state in which creation may write.
             }
             let source = try await store.songMeta(label: snapshot.destination.label)
-            guard try await store.songs().allSatisfy({ $0.label != label }) else {
+            guard try await store.snapshot().songs.allSatisfy({ $0.label != label }) else {
                 throw ProjectServiceError.operationFailed("A song named \(label) already exists.")
             }
             try await store.writeFile(destination.path, data: Data(snapshot.bytes))

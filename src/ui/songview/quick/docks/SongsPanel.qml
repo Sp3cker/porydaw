@@ -103,13 +103,13 @@ FocusScope {
             ComboBox {
                 id: sort
                 objectName: "songListSort"
-                Layout.preferredWidth: root.baseFontPx * 7.25
+                Layout.preferredWidth: root.baseFontPx * 10
                 Layout.preferredHeight: search.height
-                readonly property list<string> choices: [qsTr("ID order"), qsTr("A–Z")]
+                readonly property list<string> choices: [qsTr("ID order"), qsTr("A–Z"), qsTr("Last modified")]
                 model: choices
                 currentIndex: root.songs.sortIndex
                 onActivated: index => root.songs.selectSort(index)
-                ToolTip.text: qsTr("Sort by song ID or alphabetically")
+                ToolTip.text: qsTr("Sort by song ID, alphabetically, or by MIDI last modified (newest first)")
                 ToolTip.visible: hovered
                 Connections {
                     target: root.songs

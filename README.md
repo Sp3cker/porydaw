@@ -14,6 +14,17 @@ View the [Changelog][changelog] to see what's new.
 
 <img src="docsrc/img/introduction-porydaw-screen.png" width="600" alt="Porydaw main window">
 
+## Song list sorting
+
+The Songs dock supports **ID order**, **A–Z**, and **Last modified**.
+Last modified is the default: it puts the newest MIDI files first and refreshes
+after saving a song. An explicitly chosen sort is remembered alongside the song filters.
+
+Dates come from each `.mid` file's filesystem modification time, not when the
+song was opened or played. Shared `midi.cfg` or `songs.mk` changes do not affect
+this order; Git checkouts and external tools can change file timestamps.
+Songs with unavailable dates appear last; equal dates use song ID order.
+
 ## MIDI backups
 
 Porydaw snapshots changed, unsaved MIDI every 60 seconds, including songs in

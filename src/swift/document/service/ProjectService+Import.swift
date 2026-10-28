@@ -81,7 +81,7 @@ extension ProjectService {
             {
                 // Only a missing destination permits a new write.
             }
-            guard try await store.songs().allSatisfy({ $0.label != label }) else {
+            guard try await store.snapshot().songs.allSatisfy({ $0.label != label }) else {
                 throw ProjectServiceError.operationFailed("A song named \(label) already exists.")
             }
             if request.createVoicegroup {

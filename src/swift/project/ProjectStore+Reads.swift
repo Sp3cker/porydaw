@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 
 /// A song's candidate voicegroup address, without resolving or loading a bank.
 public struct BankDescriptor: Sendable, Equatable {
@@ -27,11 +28,22 @@ public enum ProjectStoreReadError: Error, Equatable, Sendable, LocalizedError {
 }
 
 extension ProjectStore {
-    /// Returns the catalog's ordered song values without loading project files.
-    /// - Returns: All registered and discovered songs in snapshot order.
+    /// Returns ordered song values with current MIDI filesystem modification dates.
+    /// - Returns: All registered and discovered songs in snapshot order; unavailable dates are nil.
     /// - Throws: `ProjectStoreReadError.notOpen` if the project has not been opened.
     public func songs() async throws -> [ProjectSong] {
-        try readSnapshot().songs
+        var songs = try readSnapshot().songs
+        let midiDir = URL(filePath: projectRoot, directoryHint: .isDirectory)
+            .appending(path: "sound/songs/midi", directoryHint: .isDirectory)
+        let midiDirectory = ProjectDirectoryCache(directory: midiDir)
+        for index in songs.indices {
+            guard let path = songs[index].midPath else {
+                songs[index].modifiedAt = nil
+                continue
+            }
+            songs[index].modifiedAt = midiDirectory.modifiedAt(for: URL(filePath: path).lastPathComponent)
+        }
+        return songs
     }
 
     public func snapshot() throws -> ProjectSnapshot {

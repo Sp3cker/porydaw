@@ -223,16 +223,18 @@ public struct ProjectDirectoryCache {
     public struct File {
         public let url: URL
         public let filename: String
+        public let modifiedAt: Date?
     }
 
     private static let resourceKeys: Set<URLResourceKey> = [
-        .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey,
+        .isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .contentModificationDateKey,
     ]
     private static let prefetchedKeys = Array(resourceKeys)
 
     public let files: [File]
     private let directory: URL
     private let existingNames: [String: String]
+    private let fileIndices: [String: Int]
 
     public init(directory: URL) {
         self.directory = directory
@@ -242,12 +244,16 @@ public struct ProjectDirectoryCache {
                 options: [.skipsHiddenFiles])) ?? []
         var files: [File] = []
         var existingNames: [String: String] = [:]
+        var fileIndices: [String: Int] = [:]
+        fileIndices.reserveCapacity(entries.count)
         existingNames.reserveCapacity(entries.count)
         for url in entries {
             let filename = String(decoding: url.lastPathComponent.utf8, as: UTF8.self)
             let values = try? url.resourceValues(forKeys: Self.resourceKeys)
             if values?.isRegularFile == true {
-                files.append(File(url: url, filename: filename))
+                fileIndices[filename] = files.count
+                files.append(
+                    File(url: url, filename: filename, modifiedAt: values?.contentModificationDate))
             }
             if values?.isSymbolicLink == false,
                 values?.isRegularFile == true || values?.isDirectory == true
@@ -257,6 +263,20 @@ public struct ProjectDirectoryCache {
         }
         self.files = files
         self.existingNames = existingNames
+        self.fileIndices = fileIndices
+    }
+
+    /// Returns a regular file's modification date from this directory enumeration.
+    /// - Parameter filename: The byte-exact file name, including its extension.
+    /// - Returns: The cached date, or nil when the exact file or its date is unavailable.
+    public func modifiedAt(for filename: String) -> Date? {
+        guard let index = fileIndices[filename] else { return nil }
+        let file = files[index]
+        if file.filename.utf8.elementsEqual(filename.utf8) {
+            return file.modifiedAt
+        }
+        // Canonically equivalent Swift keys can name different filesystem entries.
+        return files.first { $0.filename.utf8.elementsEqual(filename.utf8) }?.modifiedAt
     }
 
     public func exists(_ filename: String) -> Bool {

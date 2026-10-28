@@ -18,14 +18,14 @@ import PorydawPlayback
 private func songListing(
     _ id: Int, _ label: String, constant: String = "",
     registered: Bool = true, gaps: [String] = [],
-    playable: Bool = true
+    playable: Bool = true, modifiedAt: Date? = nil
 ) -> SongListing {
     SongListing(
         id: id, label: label,
         constant: constant.isEmpty ? label.uppercased() : constant,
         player: "MUSIC_PLAYER_BGM", midiPath: "/p/sound/songs/midi/\(label).mid",
         trackBudget: 16, hasMid: playable, hasCfg: true,
-        registered: registered, registrationGaps: gaps)
+        registered: registered, registrationGaps: gaps, modifiedAt: modifiedAt)
 }
 
 @MainActor
@@ -251,6 +251,61 @@ private func songListSort(_ report: CheckReport) {
         what: "ID order restores snapshot order")
 }
 
+@MainActor
+private func songListModifiedSort(_ report: CheckReport) {
+    let id = "swiftcore/SongList::modifiedSort"
+    let older = Date(timeIntervalSince1970: 100)
+    let newer = Date(timeIntervalSince1970: 200)
+    let refreshed = Date(timeIntervalSince1970: 300)
+    let presenter = SongListPresenter()
+    let listings = [
+        songListing(5, "mus_missing_b"),
+        songListing(4, "mus_tie_b", modifiedAt: newer),
+        songListing(2, "mus_older", modifiedAt: older),
+        songListing(1, "mus_tie_a", modifiedAt: newer),
+        songListing(3, "mus_missing_a"),
+        songListing(6, "se_newest", modifiedAt: refreshed),
+    ]
+    presenter.setSongs(listings)
+    presenter.setCurrentSong(songId: 2)
+    report.expectEqual(
+        expected: ["se_newest", "mus_tie_a", "mus_tie_b", "mus_older", "mus_missing_a", "mus_missing_b"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "default last modified sorts newest first, ties by ID, and missing dates last by ID")
+    report.expectEqual(
+        expected: 2, actual: presenter.selectedSongId, cppID: id,
+        what: "default last modified keeps the loaded song selected")
+    selectCategory(presenter, "mus_")
+    presenter.updateSearch(text: "mus")
+    var updated = listings
+    updated[2] = songListing(2, "mus_older", modifiedAt: refreshed)
+    presenter.setSongs(updated)
+    report.expectEqual(
+        expected: ["mus_older", "mus_tie_a", "mus_tie_b", "mus_missing_a", "mus_missing_b"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "refreshed listing dates reorder within the preserved filters")
+    report.expectEqual(
+        expected: true,
+        actual: presenter.sortIndex == 2 && presenter.searchText == "mus"
+            && presenter.categoryPrefix() == "mus_" && presenter.currentSongId == 2
+            && presenter.selectedSongId == -1,
+        cppID: id, what: "refresh preserves sort, category, search and current song without selecting mid-search")
+    presenter.updateSearch(text: "")
+    report.expectEqual(
+        expected: 2, actual: presenter.selectedSongId, cppID: id,
+        what: "clearing search restores the loaded song selection after a date refresh")
+    presenter.selectSort(index: 0)
+    report.expectEqual(
+        expected: ["mus_missing_b", "mus_tie_b", "mus_older", "mus_tie_a", "mus_missing_a"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "ID order still restores filtered snapshot order after last modified")
+    presenter.selectSort(index: 1)
+    report.expectEqual(
+        expected: ["mus_missing_a", "mus_missing_b", "mus_older", "mus_tie_a", "mus_tie_b"],
+        actual: rowLabels(presenter), cppID: id,
+        what: "alphabetical ordering remains independent of modification dates")
+}
+
 // MARK: - Current song, selection and activation
 
 @MainActor
@@ -388,6 +443,7 @@ private func songListRestoreFilters(_ report: CheckReport) {
 
     // Out-of-range sort indexes are ignored.
     let sorted = SongListPresenter()
+    sorted.selectSort(index: 0)
     sorted.restoreFilters(search: "", sort: 7, category: "")
     report.expectEqual(
         expected: 0, actual: sorted.sortIndex, cppID: id,
@@ -404,8 +460,20 @@ private func songListPreferenceRestore(_ report: CheckReport) {
         store.remove(key: "songFilterCategory")
         store.synchronize()
     }
+    store.remove(key: "songFilterText")
+    store.remove(key: "songFilterSort")
+    store.remove(key: "songFilterCategory")
+    let fresh = SongListPresenter()
+    fresh.restoreFromPreferences()
+    fresh.setSongs([
+        songListing(0, "mus_older", modifiedAt: Date(timeIntervalSince1970: 100)),
+        songListing(1, "mus_newer", modifiedAt: Date(timeIntervalSince1970: 200)),
+    ])
+    report.expectEqual(
+        expected: ["mus_newer", "mus_older"], actual: rowLabels(fresh), cppID: id,
+        what: "without a stored sort preference, songs start newest first")
     store.setString(key: "songFilterText", value: "route")
-    store.setInt(key: "songFilterSort", value: 1)
+    store.setInt(key: "songFilterSort", value: 2)
     store.setString(key: "songFilterCategory", value: "mus_")
     store.synchronize()
     let presenter = SongListPresenter()
@@ -413,7 +481,7 @@ private func songListPreferenceRestore(_ report: CheckReport) {
     presenter.setSongs(songListFixture())
     report.expectEqual(
         expected: true,
-        actual: presenter.searchText == "route" && presenter.sortIndex == 1
+        actual: presenter.searchText == "route" && presenter.sortIndex == 2
             && presenter.categoryPrefix() == "mus_"
             && rowLabels(presenter) == ["mus_route101", "mus_route102"],
         cppID: id, what: "stored song filters restore into the songs presenter")
@@ -448,6 +516,7 @@ public func runSongListModelChecks(_ report: CheckReport) {
     songListCategories(report)
     songListSearch(report)
     songListSort(report)
+    songListModifiedSort(report)
     songListSelectionAndActivation(report)
     songListRestoreFilters(report)
     songListPreferenceRestore(report)

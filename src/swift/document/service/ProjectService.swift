@@ -186,11 +186,13 @@ public struct SongListing: Equatable, Sendable {
     /// Registration files still missing the entry (e.g. "songs.h"); empty
     /// when the registration is complete.
     public var registrationGaps: [String]
+    /// The MIDI file's filesystem modification date; nil when unavailable.
+    public var modifiedAt: Date?
 
     public init(
         id: Int, label: String, constant: String, player: String,
         midiPath: String, trackBudget: Int, hasMid: Bool, hasCfg: Bool,
-        registered: Bool, registrationGaps: [String]
+        registered: Bool, registrationGaps: [String], modifiedAt: Date? = nil
     ) {
         self.id = id
         self.label = label
@@ -202,6 +204,7 @@ public struct SongListing: Equatable, Sendable {
         self.hasCfg = hasCfg
         self.registered = registered
         self.registrationGaps = registrationGaps
+        self.modifiedAt = modifiedAt
     }
 
     /// SongInfo::isPlayable: the .mid exists. Every listed song is playable.

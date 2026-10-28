@@ -26,6 +26,7 @@ public struct ProjectSong: Sendable, Equatable {
     public var hasCfg: Bool
     public var registered: Bool
     public var cfg: SongConfig
+    public var modifiedAt: Date? = nil
 
     public var isPlayable: Bool { hasMid }
 }
@@ -52,7 +53,7 @@ public struct SongCatalog: Sendable {
     private static let equivDirective = Array(".equiv".utf8)
     private static let playerDirective = Array("music_player".utf8)
 
-    /// Reads the song table and attaches constants, MIDI files, supplied flags, and player limits.
+    /// Reads the song table and attaches constants, MIDI paths and dates, flags, and player limits.
     /// - Parameters:
     ///   - root: Root directory of the decomp project.
     ///   - cfgMap: Previously parsed midi.cfg or songs.mk configurations, keyed by song label.
@@ -80,7 +81,8 @@ public struct SongCatalog: Sendable {
                 ProjectSong(
                     id: songs.count, label: label, constant: "",
                     player: AsmLine.text(fields.player), midPath: hasMid ? midFile.path : nil,
-                    hasMid: hasMid, hasCfg: false, registered: true, cfg: SongConfig()))
+                    hasMid: hasMid, hasCfg: false, registered: true, cfg: SongConfig(),
+                    modifiedAt: hasMid ? midiDirectory.modifiedAt(for: filename) : nil))
         }
         guard !songs.isEmpty else { throw SongCatalogError.noSongs(table.path) }
 
@@ -115,7 +117,7 @@ public struct SongCatalog: Sendable {
                     id: songs.count, label: label,
                     constant: constantForLabel(label), player: "MUSIC_PLAYER_BGM",
                     midPath: candidate.file.url.path, hasMid: true, hasCfg: false,
-                    registered: false, cfg: SongConfig()))
+                    registered: false, cfg: SongConfig(), modifiedAt: candidate.file.modifiedAt))
         }
         for index in songs.indices {
             if let cfg = cfgMap[songs[index].label] {

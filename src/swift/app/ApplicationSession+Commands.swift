@@ -109,23 +109,42 @@ extension ApplicationSession {
         onSaveStateChanged?()
     }
 
+    func refreshSongsAfterSave(service: ProjectService?) async throws {
+        guard !isDisposed, let service, catalogService === service else { return }
+        let songs = try await service.songs()
+        guard !isDisposed, catalogService === service else { return }
+        songDock.publishSongs(songs)
+    }
+
     func requestSaveImpl() {
         guard let session = workspace?.session, !saveInProgress else { return }
         publishSaveState(inProgress: true, error: "")
+        let service = catalogService
         Task { [weak self] in
             do {
                 try await session.save()
             } catch is SaveConflictError {
                 // Nothing was written; the prompt takes the answer.
-                self?.publishSaveState(inProgress: false)
-                self?.presentSaveConflict(session: session, closeTabId: nil)
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishSaveState(inProgress: false)
+                self.presentSaveConflict(session: session, closeTabId: nil)
                 return
             } catch {
-                self?.publishSaveState(inProgress: false, error: String(describing: error))
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishSaveState(inProgress: false, error: String(describing: error))
                 return
             }
-            await self?.refreshVoicegroupCatalog()
-            self?.publishSaveState(inProgress: false)
+            do {
+                try await self?.refreshSongsAfterSave(service: service)
+            } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishOperationFailure(
+                    message: "Song saved, but the song list could not refresh: \(error)")
+            }
+            guard let self, !self.isDisposed, self.catalogService === service else { return }
+            await self.refreshVoicegroupCatalog()
+            guard !self.isDisposed, self.catalogService === service else { return }
+            self.publishSaveState(inProgress: false)
         }
     }
 }

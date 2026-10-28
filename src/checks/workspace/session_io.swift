@@ -139,11 +139,13 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
         cppID: id, what: "failed replacement preserves the prior root and complete persisted selection")
     app.songTabs.selectTab(tabId: firstID)
     let listings = app.songDockController().songListPresenter().songListings
+    let midiAttributes = try? FileManager.default.attributesOfItem(
+        atPath: projectDir + "/sound/songs/midi/mus_session_test.mid")
     let expectedFirstListing = SongListing(
         id: 0, label: "mus_session_test", constant: "", player: "MUSIC_PLAYER_BGM",
         midiPath: projectDir + "/sound/songs/midi/mus_session_test.mid",
         trackBudget: 16, hasMid: true, hasCfg: true, registered: true,
-        registrationGaps: ["songs.h"])
+        registrationGaps: ["songs.h"], modifiedAt: midiAttributes?[.modificationDate] as? Date)
     let retainedListing =
         listings.map(\.label) == [
             "mus_session_test", "mus_session_test2", "mus_vgid_absolute",

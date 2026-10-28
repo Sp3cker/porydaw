@@ -58,9 +58,10 @@ public final class SongListCategory {
 /// preserving search/sort/category; categories are the labels' shared
 /// prefixes with at least two songs (biggest first), singletons pooling into
 /// Other; the search is per-word substring over label+constant with a
-/// single-word fuzzy-subsequence fallback; ordering is snapshot (ID) order or
-/// case-insensitive alphabetical with an ID tie-break; the loaded song stays
-/// selected across rebuilds except mid-search; and Enter activates the
+/// single-word fuzzy-subsequence fallback; ordering is snapshot (ID) order,
+/// case-insensitive alphabetical, or newest MIDI modification first with an ID
+/// tie-break; the loaded song stays selected across rebuilds except mid-search;
+/// and Enter activates the
 /// selection or the first visible row. Context actions report through the
 /// on* closures with the native song ID.
 @MainActor
@@ -77,8 +78,8 @@ public final class SongListPresenter {
     @QtTracked public var countText = ""
     /// QML reads filter state; mutations must use the methods below to rebuild.
     @QtTracked public var searchText = ""
-    /// 0 = ID order, 1 = A–Z.
-    @QtTracked public var sortIndex = 0
+    /// 0 = ID order, 1 = A–Z, 2 = Last modified (newest first, missing dates last).
+    @QtTracked public var sortIndex = 2
     @QtTracked public var categoryIndex = 0
     /// The list's current row: the loaded song while the search is empty,
     /// cleared otherwise. -1 when nothing is selected.
@@ -179,7 +180,7 @@ public final class SongListPresenter {
         category categoryPrefix: String
     ) {
         pendingCategory = categoryPrefix
-        if sortIndex >= 0 && sortIndex < 2 {
+        if sortIndex >= 0 && sortIndex < 3 {
             self.sortIndex = sortIndex
         }
         searchText = search
@@ -190,7 +191,7 @@ public final class SongListPresenter {
         let store = PreferencesStore()
         restoreFilters(
             search: store.string(key: "songFilterText", fallback: ""),
-            sort: store.int(key: "songFilterSort", fallback: 0),
+            sort: store.int(key: "songFilterSort", fallback: 2),
             category: store.string(key: "songFilterCategory", fallback: ""))
     }
 
@@ -368,6 +369,19 @@ public final class SongListPresenter {
             shown.sort { a, b in
                 let order = a.label.caseInsensitiveCompare(b.label)
                 return order != .orderedSame ? order == .orderedAscending : a.id < b.id
+            }
+        } else if sortIndex == 2 {
+            shown.sort { a, b in
+                switch (a.modifiedAt, b.modifiedAt) {
+                case let (dateA?, dateB?) where dateA != dateB:
+                    return dateA > dateB
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                default:
+                    return a.id < b.id
+                }
             }
         }
         visible = shown

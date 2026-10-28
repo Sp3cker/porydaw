@@ -34,6 +34,11 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
     // song-table indices so a complete row and a partial row coexist.
     // The mid-less filler at index 9 keeps the partial at index 10.
     let songsDir = projectDir + "/sound/songs/midi"
+    let registeredDate = Date(timeIntervalSince1970: 1_700_000_000)
+    let strayDate = Date(timeIntervalSince1970: 1_700_000_100)
+    let partialDate = Date(timeIntervalSince1970: 1_700_000_200)
+    let changedStrayDate = Date(timeIntervalSince1970: 1_700_000_300)
+    let configDate = Date(timeIntervalSince1970: 1_800_000_000)
     guard let midiBytes = try? makeMidiFixture().encoded() else {
         report.fail(id, "fixture MIDI failed to encode")
         return
@@ -60,6 +65,15 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
         let vg = try String(contentsOfFile: vgPath, encoding: .utf8)
         try (vg + "\n    cry missing_cry_sample\n")
             .write(toFile: vgPath, atomically: true, encoding: .utf8)
+        for (label, date) in [
+            ("mus_session_test", registeredDate), ("mus_stray_test", strayDate),
+            ("mus_partial_test", partialDate),
+        ] {
+            try FileManager.default.setAttributes(
+                [.modificationDate: date], ofItemAtPath: songsDir + "/" + label + ".mid")
+        }
+        try FileManager.default.setAttributes(
+            [.modificationDate: configDate], ofItemAtPath: songsDir + "/midi.cfg")
     } catch {
         report.fail(id, "failed to stage stray/partial songs: \(error)")
         return
@@ -156,6 +170,15 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
         report.expect(
             stray.midiPath.hasSuffix("sound/songs/midi/mus_stray_test.mid"),
             cppID: id, message: "stray carries its .mid path")
+        report.expectEqual(
+            expected: registeredDate, actual: registered.modifiedAt, cppID: id,
+            what: "registered listing carries its MIDI mtime, not shared config mtime")
+        report.expectEqual(
+            expected: strayDate, actual: stray.modifiedAt, cppID: id,
+            what: "stray listing carries its MIDI mtime")
+        report.expectEqual(
+            expected: partialDate, actual: partial.modifiedAt, cppID: id,
+            what: "partial listing carries its MIDI mtime")
 
         // Ordering: table songs precede discovered strays.
         report.expect(
@@ -229,7 +252,19 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
             try await service.songRegistrationPlan(label: "mus_session_test2")
         }
         let store = ProjectStore(projectRoot: URL(fileURLWithPath: projectDir, isDirectory: true))
-        try runBlocking { _ = try await store.open() }
+        let catalogSnapshot = try runBlocking { try await store.open() }
+        report.expectEqual(
+            expected: registeredDate,
+            actual: catalogSnapshot.songs.first { $0.label == "mus_session_test" }?.modifiedAt,
+            cppID: id, what: "catalog enumeration captures registered MIDI mtime")
+        report.expectEqual(
+            expected: strayDate,
+            actual: catalogSnapshot.songs.first { $0.label == "mus_stray_test" }?.modifiedAt,
+            cppID: id, what: "catalog enumeration captures stray MIDI mtime")
+        report.expectEqual(
+            expected: nil,
+            actual: catalogSnapshot.songs.first { $0.label == "mus_filler_test" }?.modifiedAt,
+            cppID: id, what: "catalog row without MIDI has no modification date")
         let firstStorePlan = try runBlocking {
             try await store.registrationPlan(
                 label: "mus_session_test",
@@ -364,6 +399,41 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
         report.expectEqual(
             expected: nil, actual: opened.bankSlots[5].tone, cppID: id,
             what: "blank slots publish no tone")
+
+        try FileManager.default.setAttributes(
+            [.modificationDate: configDate.addingTimeInterval(100)],
+            ofItemAtPath: songsDir + "/midi.cfg")
+        let afterConfigChange = try runBlocking { try await service.songs() }
+        report.expectEqual(
+            expected: listings, actual: afterConfigChange, cppID: id,
+            what: "shared config mtime changes do not alter any song listing date")
+
+        let savedDocument = SongDocument(
+            file: try MidiFile.decode(opened.midiBytes), config: opened.config,
+            source: opened.source, trackBudget: opened.trackBudget)
+        let savedSnapshot = try savedDocument.captureSave()
+        _ = try runBlocking { try await service.save(savedSnapshot, bank: nil) }
+        let savedAttributes = try FileManager.default.attributesOfItem(atPath: opened.midiPath)
+        let savedDate = savedAttributes[.modificationDate] as? Date
+        report.expect(
+            savedDate != nil && savedDate != registeredDate, cppID: id,
+            message: "successful service MIDI save advances the seeded filesystem mtime")
+        try Data(midiBytes).write(to: URL(fileURLWithPath: stray.midiPath))
+        try FileManager.default.setAttributes(
+            [.modificationDate: changedStrayDate], ofItemAtPath: stray.midiPath)
+        let refreshedListings = try runBlocking { try await service.songs() }
+        report.expectEqual(
+            expected: savedDate,
+            actual: refreshedListings.first { $0.id == registered.id }?.modifiedAt,
+            cppID: id, what: "repeated listing publishes current mtime after successful service save")
+        report.expectEqual(
+            expected: changedStrayDate,
+            actual: refreshedListings.first { $0.id == stray.id }?.modifiedAt,
+            cppID: id, what: "repeated listing refreshes externally rewritten stray MIDI mtime")
+        report.expectEqual(
+            expected: partialDate,
+            actual: refreshedListings.first { $0.id == partial.id }?.modifiedAt,
+            cppID: id, what: "refresh leaves untouched MIDI dates unchanged")
 
         // The register/delete transaction (proof B012/B013): plan, confirm,
         // execute, refresh — the stray registers, lists, then deletes.

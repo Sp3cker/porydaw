@@ -55,26 +55,37 @@ extension ApplicationSession {
         // the host is gone releases nothing late.
         let tabId = tab.tabId
         let session = tab.workspace.session
+        let service = catalogService
         Task { [weak self] in
             do {
                 try await session.save()
             } catch is SaveConflictError {
                 // The gate stays up (saved: false keeps the question) while the
                 // conflict prompt takes the Save answer: overwrite, fork or abort.
-                self?.publishSaveState(inProgress: false)
-                self?.songTabs.closeAfterSave(tabId: tabId, saved: false)
-                self?.presentSaveConflict(session: session, closeTabId: tabId)
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishSaveState(inProgress: false)
+                self.songTabs.closeAfterSave(tabId: tabId, saved: false)
+                self.presentSaveConflict(session: session, closeTabId: tabId)
                 return
             } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
                 let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.publishSaveState(inProgress: false)
-                self?.songTabs.closeAfterSave(tabId: tabId, saved: false)
+                self.publishLastSaveError(message)
+                self.publishOperationFailure(message: message)
+                self.publishSaveState(inProgress: false)
+                self.songTabs.closeAfterSave(tabId: tabId, saved: false)
                 return
             }
-            self?.publishSaveState(inProgress: false)
-            self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
+            do {
+                try await self?.refreshSongsAfterSave(service: service)
+            } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishOperationFailure(
+                    message: "Song saved, but the song list could not refresh: \(error)")
+            }
+            guard let self, !self.isDisposed, self.catalogService === service else { return }
+            self.publishSaveState(inProgress: false)
+            self.songTabs.closeAfterSave(tabId: tabId, saved: true)
         }
     }
 
@@ -222,21 +233,32 @@ extension ApplicationSession {
         let tabId = pendingSaveConflictTabId
         clearSaveConflict()
         publishSaveState(inProgress: true, error: "")
+        let service = catalogService
         Task { [weak self] in
             do {
                 try await session.save(forceOverwrite: true)
             } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
                 let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.publishSaveState(inProgress: false)
+                self.publishLastSaveError(message)
+                self.publishOperationFailure(message: message)
+                self.publishSaveState(inProgress: false)
                 return
             }
-            await self?.refreshVoicegroupCatalog()
-            self?.publishSaveState(inProgress: false)
+            do {
+                try await self?.refreshSongsAfterSave(service: service)
+            } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
+                self.publishOperationFailure(
+                    message: "Song saved, but the song list could not refresh: \(error)")
+            }
+            guard let self, !self.isDisposed, self.catalogService === service else { return }
+            await self.refreshVoicegroupCatalog()
+            guard !self.isDisposed, self.catalogService === service else { return }
+            self.publishSaveState(inProgress: false)
             if tabId != -1 {
-                self?.songTabs.savingCloseId = tabId
-                self?.songTabs.closeAfterSave(tabId: tabId, saved: true)
+                self.songTabs.savingCloseId = tabId
+                self.songTabs.closeAfterSave(tabId: tabId, saved: true)
             }
         }
     }
@@ -263,16 +285,8 @@ extension ApplicationSession {
             do {
                 let snapshot = try session.document.captureSave()
                 try await service.forkSongAs(label: label, snapshot: snapshot)
-                guard let self, self.catalogService === service else {
-                    self?.publishSaveState(inProgress: false)
-                    return
-                }
-                let songs = try await service.songs()
-                guard self.catalogService === service else {
-                    self.publishSaveState(inProgress: false)
-                    return
-                }
-                self.songDock.publishSongs(songs)
+                try await self?.refreshSongsAfterSave(service: service)
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
                 self.openSongFromDock(label: label, newTab: true)
                 self.publishSaveState(inProgress: false)
                 if tabId != -1 {
@@ -280,10 +294,11 @@ extension ApplicationSession {
                     self.songTabs.closeAfterSave(tabId: tabId, saved: true)
                 }
             } catch {
+                guard let self, !self.isDisposed, self.catalogService === service else { return }
                 let message = String(describing: error)
-                self?.publishLastSaveError(message)
-                self?.publishOperationFailure(message: message)
-                self?.publishSaveState(inProgress: false)
+                self.publishLastSaveError(message)
+                self.publishOperationFailure(message: message)
+                self.publishSaveState(inProgress: false)
             }
         }
     }

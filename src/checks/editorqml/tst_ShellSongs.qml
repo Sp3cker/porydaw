@@ -385,14 +385,13 @@ ShellLaneSupport {
         compare(findChild(shell, "songListSearch").height,
                 Math.ceil(session.baseFontPx * (1.5 + 1 / 3)),
                 "song search height follows the captured base")
-        compare(findChild(shell, "songListSort").width, session.baseFontPx * 7.25,
-                "song sort width follows the captured base")
         session.openProject(bootstrap.projectRoot)
         verify(waitForNative(function() { return session.projectOpen || session.lastSaveError.length > 0 }, 30000),
                "fixture project opens: " + session.lastSaveError)
         verify(session.projectOpen, "opening the project mounts its song feed")
         verify(waitForNative(function() { return presenter().rowCount === 10 }, 5000),
                "the live list contains eight registered songs, a partial and a stray")
+        presenter().selectSort(0)
         const dock = findChild(shell, "swiftDockColumn")
         verify(dock !== null && panel() !== null, "Songs is the first pane of the vertical dock")
         compare(dock.width, 280, "restored dock column starts at its default width")
@@ -418,8 +417,16 @@ ShellLaneSupport {
         compare(baseline.environment.fontPx, actualFontPx, "widget font profile matches the dock")
         compare(baseline.image.dpr, actualDpr, "widget DPR profile matches the mounted pane")
         compareRegion(baseline, "songListSearch", findChild(shell, "songListSearch"), 3)
-        compareRegion(baseline, "songListCategory", findChild(shell, "songListCategory"), 3)
-        compareRegion(baseline, "songListSort", findChild(shell, "songListSort"), 3)
+        const categoryControl = findChild(shell, "songListCategory")
+        const sortControl = findChild(shell, "songListSort")
+        const categoryPosition = categoryControl.mapToItem(panel(), 0, 0)
+        const sortPosition = sortControl.mapToItem(panel(), 0, 0)
+        verify(categoryControl.width > 0 && sortControl.width > 0,
+               "both filter choices retain visible space")
+        verify(categoryPosition.x >= 0
+               && categoryPosition.x + categoryControl.width <= sortPosition.x
+               && sortPosition.x + sortControl.width <= panel().width,
+               "category and sort choices fit the pane without overlap or overflow")
         compareRegion(baseline, "songList", list(), 3)
         compareRegion(baseline, "songListCount", findChild(shell, "songListCount"), 3)
         const firstId = presenter().songId(0)
@@ -495,6 +502,15 @@ ShellLaneSupport {
         mouseClick(sort.popup.contentItem.itemAtIndex(1))
         tryCompare(presenter(), "sortIndex", 1, 3000)
         verify(presenter().songId(0) !== firstId, "alphabetical sort changes the first visible song")
+        mouseClick(sort)
+        const modifiedChoice = sort.popup.contentItem.itemAtIndex(2)
+        verify(modifiedChoice !== null, "the mounted sort combo exposes Last modified")
+        compare(modifiedChoice.text, qsTr("Last modified"))
+        mouseClick(modifiedChoice)
+        tryCompare(presenter(), "sortIndex", 2, 3000)
+        compare(sort.currentIndex, 2, "the mounted combo selects Last modified")
+        verify(sort.contentItem.contentWidth <= sort.contentItem.width,
+               "Last modified remains readable without clipping in the mounted combo")
         mouseClick(sort)
         mouseClick(sort.popup.contentItem.itemAtIndex(0))
         compare(presenter().songId(0), firstId, "ID order restores the snapshot order")
@@ -816,6 +832,52 @@ ShellLaneSupport {
 
     function waitConflictPrompt() {
         verify(waitForNative(function() { const dialog = conflictDialog(); return dialog !== null && dialog.visible }, 5000), "the externally changed save raises the conflict prompt")
+    }
+
+    function test_lastModifiedSortRefreshesAfterSave() {
+        const session = openConflictShell("mus_route101")
+        verify(waitForNative(function() { return presenter().rowCount === 8 }, 5000),
+               "the isolated project publishes all playable songs")
+        const sort = findChild(shell, "songListSort")
+        compare(sort.currentIndex, 2, "a fresh shell defaults to Last modified")
+        mouseClick(sort)
+        const choice = sort.popup.contentItem.itemAtIndex(2)
+        verify(choice !== null, "Last modified is offered by the production combo")
+        compare(choice.text, qsTr("Last modified"))
+        mouseClick(choice)
+        tryCompare(presenter(), "sortIndex", 2, 3000)
+        const label = presenter().songLabel(0) === "mus_route101" ? "mus_petalburg" : "mus_route101"
+        let songId = -1
+        for (let index = 0; index < presenter().rowCount; ++index) {
+            if (presenter().songLabel(index) === label)
+                songId = presenter().songId(index)
+        }
+        verify(songId >= 0 && presenter().songId(0) !== songId,
+               "the real save candidate starts below the newest song")
+        const candidate = row(songId)
+        mouseDoubleClickSequence(candidate, candidate.width / 2, candidate.height / 2, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return session.songTabs.selectedPage && session.songTabs.selectedPage.title === label
+                && session.songTabs.selectedPage.isReady
+        }, 30000), "the selected save candidate opens in the editor")
+        tryCompare(presenter(), "selectedSongId", songId, 5000)
+        const selectedTab = session.songTabs.selectedId
+        const midi = bootstrap.projectRoot + "/sound/songs/midi/" + label + ".mid"
+        const originalBytes = fileProbe.fileFingerprint(midi)
+        dirtyConflictSong(shell, session)
+        session.requestSave()
+        verify(waitForNative(function() {
+            return !session.saveInProgress && !session.documentDirty
+        }, 30000), "the production save completes")
+        compare(session.lastSaveError, "")
+        verify(fileProbe.fileFingerprint(midi) !== originalBytes, "the save writes the edited MIDI")
+        verify(waitForNative(function() { return presenter().songId(0) === songId }, 5000),
+               "the saved MIDI moves to the top without reopening the project")
+        compare(presenter().selectedSongId, songId, "refresh preserves the song selection")
+        compare(presenter().currentSongId, songId, "refresh preserves the loaded song")
+        compare(session.songTabs.selectedId, selectedTab, "refresh preserves the active editor tab")
+        compare(sort.currentIndex, 2, "refresh preserves Last modified on the mounted combo")
+        cleanup()
     }
 
     function test_saveConflictCleanSaveWritesWithoutPrompting() {
