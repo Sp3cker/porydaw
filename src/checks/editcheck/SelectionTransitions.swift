@@ -2,6 +2,7 @@ import PorydawApp
 import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 func clipboardUnifiedTimeSelectionChecks(

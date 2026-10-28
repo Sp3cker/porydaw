@@ -2,6 +2,7 @@ import PorydawApp
 import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
+import SwiftCoreCheckLogic
 
 @MainActor
 func windowTierKeyboardOutcomes(

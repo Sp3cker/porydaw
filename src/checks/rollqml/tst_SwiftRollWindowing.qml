@@ -115,9 +115,7 @@ RollLaneSupport {
     // ---- the cases ------------------------------------------------------------
 
     // The portable half of the C++ replacementBackgroundBeforeFirstFrame
-    // oracle: the scene's background item carries the session palette's roll
-    // background and the first presented frame paints it — no stale erase can
-    // flash. The Win32 WM_ERASEBKGND half stays NATIVE.
+    // oracle: the background item carries the window surface the C++ roll showed through.
     function test_windowClearColorBeforeFirstFrame() {
         var surface = testCase.surface()
         verify(surface, "the production surface is mounted")
@@ -128,19 +126,19 @@ RollLaneSupport {
                && background.height >= surface.height - 1,
                "the roll background covers the surface")
         compare(background.color.toString(),
-                session.palette.rollBackground.toString(),
-                "the background item carries the session palette's roll background")
+                session.palette.windowBackground.toString(),
+                "the background item carries the session palette's window background")
         var image = grabImage(surface)
         verify(image.width > 0 && image.height > 0,
                "the window framebuffer holds the rendered surface")
         var found = false
         for (var y = 0; y < image.height && !found; ++y)
             for (var x = 0; x < image.width; ++x)
-                if (testCase.pixelNear(image, x, y, session.palette.rollBackground, 24)) {
+                if (testCase.pixelNear(image, x, y, session.palette.windowBackground, 24)) {
                     found = true
                     break
                 }
-        verify(found, "the first presented frame paints the roll background")
+        verify(found, "the first presented frame paints the window background")
     }
 
     // C++ headerSelectionAndVoicePicker: delegate geometry, pointer input,

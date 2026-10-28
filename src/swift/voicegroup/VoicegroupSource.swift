@@ -43,6 +43,13 @@ public final class VoicegroupSource {
     public internal(set) var pristineSource: [UInt8] = []
     public internal(set) var dirty = false
 
+    enum OpenMode {
+        case projectArgument
+        case exactLocation
+    }
+
+    private(set) var openMode: OpenMode = .exactLocation
+
     public init() {}
 
     /// Locates the declaration and parses its source. Empty `voicegroupArg` means `_dummy`.
@@ -54,6 +61,7 @@ public final class VoicegroupSource {
     public func open(projectRoot: String, voicegroupArg: String, error: inout String?) -> Bool {
         self.projectRoot = projectRoot
         self.voicegroupArg = voicegroupArg.isEmpty ? "_dummy" : voicegroupArg
+        openMode = .projectArgument
         filePath = ""
         loadName = ""
         sectionLabel = ""
@@ -98,6 +106,9 @@ public final class VoicegroupSource {
 
     /// Opens an exact loader location without changing editor section-boundary semantics.
     public func open(location: VoicegroupLocation, error: inout String?) -> Bool {
+        projectRoot = ""
+        voicegroupArg = ""
+        openMode = .exactLocation
         filePath = location.filePath
         sectionLabel = location.sectionLabel
         loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
@@ -106,10 +117,11 @@ public final class VoicegroupSource {
 
     func open(
         location: VoicegroupLocation, bytes: [UInt8], projectRoot: String,
-        voicegroupArg: String, error: inout String?
+        voicegroupArg: String, openMode: OpenMode, error: inout String?
     ) -> Bool {
         self.projectRoot = projectRoot
         self.voicegroupArg = voicegroupArg
+        self.openMode = openMode
         filePath = location.filePath
         sectionLabel = location.sectionLabel
         loadName = sectionLabel.isEmpty ? ProjectFileStore.completeBaseName(filePath) : sectionLabel
@@ -224,7 +236,7 @@ public final class VoicegroupSource {
                 text.count == header.count || isSpace(text[text.startIndex + header.count])
             {
                 let name = text.dropFirst(header.count).drop(while: isSpace)
-                    .prefix { !isSpace($0) && $0 != 44 }
+                    .prefix { (byte: UInt8) -> Bool in !isSpace(byte) && byte != UInt8(44) }
                 if !name.isEmpty {
                     found.append(.init(symbol: "voicegroup_" + String(decoding: name, as: UTF8.self), isLabel: false))
                 }
@@ -236,6 +248,60 @@ public final class VoicegroupSource {
             }
         }
         return found
+    }
+
+    /// Canonical declaration labels, using the source grammar's macro and label rules.
+    public static func declarationLabels(in content: [UInt8]) -> [String] {
+        canonicalDeclarations(in: splitLines(content).lines).labels
+    }
+
+    /// A label followed by its voice_group header denotes one section, not two roots.
+    private static func canonicalDeclarations(in lines: [[UInt8]]) -> (labels: [String], atLine: [Int: String]) {
+        var labels: [String] = []
+        var atLine: [Int: String] = [:]
+        var pendingLabel: String?
+        for (index, raw) in lines.enumerated() {
+            let text = raw[contentBounds(raw)]
+            if text.starts(with: headerPrefix.dropLast()) || hasSectionLabelSeparator(text),
+                let declaration = declarations(in: raw).first
+            {
+                if !declaration.isLabel, let label = pendingLabel {
+                    atLine[index] = label
+                } else {
+                    labels.append(declaration.symbol)
+                    atLine[index] = declaration.symbol
+                }
+                pendingLabel = declaration.isLabel ? declaration.symbol : nil
+            } else if pendingLabel != nil,
+                VoiceMacroSpec.all.contains(where: { text.starts(with: $0.prefix) })
+                    || text.starts(with: cryPrefix) || text.starts(with: cryReversePrefix)
+            {
+                pendingLabel = nil
+            }
+        }
+        return (labels, atLine)
+    }
+
+    /// Parses kit voice lines with their canonical enclosing declaration symbols.
+    public static func kitReferences(in text: [UInt8]) -> [(sectionLabel: String, voice: VgVoice)] {
+        var result: [(sectionLabel: String, voice: VgVoice)] = []
+        var sectionLabel: String?
+        let specs = [VoiceMacroSpec.forMacro(.keysplitAll), VoiceMacroSpec.forMacro(.keysplit)]
+        let lines = splitLines(text).lines
+        let canonical = canonicalDeclarations(in: lines)
+        for (index, raw) in lines.enumerated() {
+            let content = raw[contentBounds(raw)]
+            if let label = canonical.atLine[index] {
+                sectionLabel = label
+                continue
+            }
+            guard let sectionLabel else { continue }
+            guard let spec = specs.first(where: { content.starts(with: $0.prefix) }),
+                let voice = try? decode(spec, arguments: content.dropFirst(spec.prefix.count))
+            else { continue }
+            result.append((sectionLabel: sectionLabel, voice: voice))
+        }
+        return result
     }
 
     func parse(_ content: [UInt8], error: inout String?) -> Bool {
@@ -290,13 +356,21 @@ public final class VoicegroupSource {
         return true
     }
 
-    /// Opens the current on-disk snapshot of this source's voicegroup argument.
+    /// Opens the current on-disk snapshot using this source's original open mode.
     /// - Returns: A clean source parsed from the bytes currently on disk.
     /// - Throws: `VoicegroupSourceConflict` when the declaration is missing, invalid, or unreadable.
     func diskSnapshot() throws -> VoicegroupSource {
         let disk = VoicegroupSource()
         var error: String?
-        guard disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error) else {
+        let opened: Bool
+        switch openMode {
+        case .exactLocation:
+            opened = disk.open(
+                location: VoicegroupLocation(filePath: filePath, sectionLabel: sectionLabel), error: &error)
+        case .projectArgument:
+            opened = disk.open(projectRoot: projectRoot, voicegroupArg: voicegroupArg, error: &error)
+        }
+        guard opened else {
             throw VoicegroupSourceConflict(message: error ?? "Cannot read \(filePath)")
         }
         return disk
@@ -308,7 +382,9 @@ public final class VoicegroupSource {
 
     private func parsedSource(_ content: [UInt8]) -> ParsedSource? {
         guard sectionLabel.utf8.count < 256,
-            !sectionLabel.utf8.contains(where: { Self.isSpace($0) || $0 == 58 || $0 == 44 })
+            !sectionLabel.utf8.contains(where: { (byte: UInt8) -> Bool in
+                Self.isSpace(byte) || byte == UInt8(58) || byte == UInt8(44)
+            })
         else { return nil }
         let split = Self.splitLines(content)
         var parsed = ParsedSource(
@@ -395,7 +471,7 @@ public final class VoicegroupSource {
 
     private enum ArgumentError: Error { case overlongSymbol }
 
-    private static func decode(_ spec: VoiceMacroSpec, arguments: ArraySlice<UInt8>) throws -> VgVoice? {
+    static func decode(_ spec: VoiceMacroSpec, arguments: ArraySlice<UInt8>) throws -> VgVoice? {
         var rest = arguments
         var voice = VgVoice(macro: spec.macro)
         if spec.category == .keysplitAll {
@@ -445,12 +521,12 @@ public final class VoicegroupSource {
         var index = 0
         while index < bytes.count && isSpace(bytes[index]) { index += 1 }
         guard index < bytes.count else { return nil }
-        let negative = bytes[index] == 45
-        if negative || bytes[index] == 43 { index += 1 }
+        let negative: Bool = bytes[index] == UInt8(45)
+        if negative || bytes[index] == UInt8(43) { index += 1 }
         var radix = 10
-        if index < bytes.count && bytes[index] == 48 {
+        if index < bytes.count && bytes[index] == UInt8(48) {
             radix = 8
-            if index + 2 < bytes.count && (bytes[index + 1] == 120 || bytes[index + 1] == 88),
+            if index + 2 < bytes.count && (bytes[index + 1] == UInt8(120) || bytes[index + 1] == UInt8(88)),
                 let digit = digitValue(bytes[index + 2]), digit < 16
             {
                 radix = 16
@@ -481,8 +557,8 @@ public final class VoicegroupSource {
         let source = rest
         let bytes = source.span
         var index = 0
-        while index < bytes.count && (bytes[index] == 32 || bytes[index] == 9) { index += 1 }
-        guard index < bytes.count && bytes[index] == 44 else { return false }
+        while index < bytes.count && (bytes[index] == UInt8(32) || bytes[index] == UInt8(9)) { index += 1 }
+        guard index < bytes.count && bytes[index] == UInt8(44) else { return false }
         rest = source[(source.startIndex + index + 1)...]
         return true
     }
@@ -524,8 +600,9 @@ public final class VoicegroupSource {
         var end = bytes.count
         var index = 0
         while index < end {
-            if bytes[index] == 64 || bytes[index] == 0
-                || (bytes[index] == 47 && index + 1 < end && bytes[index + 1] == 47)
+            let byte: UInt8 = bytes[index]
+            if byte == UInt8(64) || byte == UInt8(0)
+                || (byte == UInt8(47) && index + 1 < end && bytes[index + 1] == UInt8(47))
             {
                 end = index
                 break
@@ -568,7 +645,8 @@ public final class VoicegroupSource {
 
     static func hasSectionLabelSeparator(_ bytes: ArraySlice<UInt8>) -> Bool {
         guard bytes.count >= 2 else { return false }
-        for index in bytes.startIndex..<(bytes.endIndex - 1) where bytes[index] == 58 && bytes[index + 1] == 58 {
+        for index in bytes.startIndex..<(bytes.endIndex - 1)
+        where bytes[index] == UInt8(58) && bytes[index + 1] == UInt8(58) {
             return index > bytes.startIndex
         }
         return false

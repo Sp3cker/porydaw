@@ -1,24 +1,8 @@
 import Foundation
 import PorydawCore
+import PorydawVoicegroup
 
 // MARK: - Confirmed bank history action
-
-/// Inbox sharing one session's latest confirmed bank view across merged action
-/// generations. History crosses entries opaquely, so the action publishes the
-/// post-apply view here and the session drains it after undo/redo.
-@MainActor
-final class BankResultInbox {
-    private(set) var pending: AppliedBankEdit?
-
-    func deliver(_ result: AppliedBankEdit) {
-        pending = result
-    }
-
-    func drain() -> AppliedBankEdit? {
-        defer { pending = nil }
-        return pending
-    }
-}
 
 /// The actual BankHistoryAction replay/merge behavior: blank-slot
 /// materialization with single-shot revert tokens, scalar set replay in both
@@ -27,20 +11,18 @@ final class BankResultInbox {
 @MainActor
 final class ServiceBankAction: BankHistoryAction {
     let historyLabel: String
-    private let service: ProjectService
+    private weak var service: ProjectService?
     private let slot: Int
     /// The pre-edit voice; nil when the slot was blank.
     private let before: BankVoice?
     private let after: BankVoice
     private var token: UInt64?
     private let materializedBlank: Bool
-    private let inbox: BankResultInbox
     private(set) var current: AppliedBankEdit
 
     init(
         service: ProjectService, slot: Int, before: BankVoice?, after: BankVoice,
-        token: UInt64?, materializedBlank: Bool, current: AppliedBankEdit,
-        inbox: BankResultInbox
+        token: UInt64?, materializedBlank: Bool, current: AppliedBankEdit
     ) {
         self.service = service
         self.slot = slot
@@ -50,10 +32,10 @@ final class ServiceBankAction: BankHistoryAction {
         self.token = token
         self.materializedBlank = materializedBlank
         self.current = current
-        self.inbox = inbox
     }
 
-    func apply(direction: BankHistoryDirection) async throws {
+    func apply(direction: HistoryDirection) async throws -> AppliedBankEdit {
+        guard let service else { throw ProjectServiceError.serviceClosed }
         do {
             let result: AppliedBankEdit
             switch direction {
@@ -88,7 +70,7 @@ final class ServiceBankAction: BankHistoryAction {
                 }
             }
             current = result
-            inbox.deliver(result)
+            return result
         } catch let error as ProjectServiceError {
             guard error == .bankConflict else { throw error }
             throw BankHistoryReplayError.staleEntry
@@ -110,10 +92,11 @@ final class ServiceBankAction: BankHistoryAction {
             middle == after,
             bankChangedFieldMask(oldest, after) == bankChangedFieldMask(middle, other.after)
         else { return nil }
+        guard let service else { return nil }
         return ServiceBankAction(
             service: service, slot: slot, before: oldest,
             after: other.after, token: nil, materializedBlank: false,
-            current: other.current, inbox: inbox)
+            current: other.current)
     }
 
     func rebaseCurrent(with newer: any BankHistoryAction) {
@@ -123,6 +106,44 @@ final class ServiceBankAction: BankHistoryAction {
         else { return }
         current = other.current
     }
+}
+
+/// Whole-kit replay is authoritative and never participates in bank edit merging.
+@MainActor
+final class ServiceKitEditAction: BankHistoryAction {
+    let historyLabel: String
+    private weak var service: ProjectService?
+    private let before: KitEditValue
+    private let after: KitEditValue
+    private var materialization: BlankSlotMaterialization?
+    private(set) var current: AppliedBankEdit
+
+    init(
+        service: ProjectService, before: KitEditValue, after: KitEditValue,
+        current: AppliedBankEdit
+    ) {
+        self.service = service
+        self.before = before
+        self.after = after
+        self.current = current
+        materialization = current.materialization
+        historyLabel = "Kit \(after.subgroupSymbol)"
+    }
+
+    func apply(direction: HistoryDirection) async throws -> AppliedBankEdit {
+        guard let service else { throw ProjectServiceError.serviceClosed }
+        let result = try await service.applyKitEdit(
+            lease: current.lease, input: direction == .undo ? before : after,
+            expected: nil, publishResult: false,
+            materialization: direction == .undo && before.parent == nil ? materialization : nil)
+        if direction == .redo { materialization = result.materialization }
+        current = result
+        return result
+    }
+
+    var isRedundant: Bool { before == after }
+
+    func merged(with _: any BankHistoryAction) -> (any BankHistoryAction)? { nil }
 }
 
 /// Scalar merge boundary: which of the twelve voice fields an edit changes.

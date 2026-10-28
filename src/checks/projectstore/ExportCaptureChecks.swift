@@ -86,7 +86,7 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
     var edited = original
     edited.release = original.release == 1 ? 255 : 1
     let bankEdit = try runBlocking {
-        try await session.applyBankEdit(slot: slot, value: edited, expected: original)
+        try await session.voicegroup.apply(slot: slot, value: edited, expected: original)
     }
     report.expect(
         bankEdit.lease === session.bankLease && bankEdit.dirty,
@@ -101,7 +101,7 @@ private func captureJourney(_ label: String, report: CheckReport) throws {
         message: "an export capture renders the mounted bank's unsaved edit")
     let bankAfter = try Data(contentsOf: URL(filePath: bankPath))
     report.expect(
-        session.bankDirty && bankAfter == bankBefore,
+        session.voicegroup.value.dirty && bankAfter == bankBefore,
         cppID: id, message: "exporting leaves the bank edit unsaved")
 
     let closeOutcome = try runBlocking { await session.close() }

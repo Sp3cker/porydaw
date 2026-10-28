@@ -17,7 +17,7 @@ public struct WavExportCapture: Sendable {
 
 extension DocumentSession {
     public func wavExportCapture(settings: AudioSettings, options: WavExportOptions) -> WavExportCapture {
-        precondition(!bankPersistenceInFlight && !document.history.bankTransitionInFlight)
+        precondition(!document.history.bindingTransitionInFlight)
         return WavExportCapture(
             state: document.state, lease: bankLease, settings: settings,
             options: options, label: document.source.label)

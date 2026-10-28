@@ -63,41 +63,8 @@ public final class VoiceListArgChoice {
     }
 }
 
-@MainActor
-struct VoiceListEditOrigin {
-    let session: DocumentSession
-    let sourcePath: String
-    let sectionLabel: String
-}
-
-/// Swift presenter for the voicegroup dock's list contract, mirroring
-/// VoicegroupBrowser's observable behavior over DocumentSession's published
-/// bank view (bankSlots/bankDirty/bankLoadName) instead of the native
-/// LoadedBankView pointer. The 128 rows are stable object handles: binding,
-/// loading, and edits rewrite them in place; the list is never rebuilt.
-///
-/// QML surface: `rows`/`argChoices` models, the tracked selector and
-/// loading/selection state, and the invocable user actions (selectSlot,
-/// revealSlot, commitVoicegroupSelection, pressVoice/releaseVoice,
-/// requestSampleAudition, stopSampleAudition, requestNewVoicegroup,
-/// requestNewSample, requestEditSample, slotIsMarkedUsed). revealSlot bumps
-/// revealRequest with revealSlotId naming the row, the same reveal-counter
-/// pattern SongListPresenter uses.
-///
-/// Ownership mirrors the native widget: the controller never mutates the
-/// bank itself. User intents surface through the on* callbacks
-/// (auditionVoice, voicegroupChangeRequested, voiceEditRequested,
-/// newVoicegroupRequested, new/editSampleRequested, sampleAudition*), and
-/// applyVoiceEdit routes a committed edit through
-/// DocumentSession.applyBankEdit so undo/history stay canonical. The edit
-/// path requires an explicit session binding: bindSession (or refresh,
-/// which binds first) — the granular bindBank/setUsedVoices seam alone is
-/// intentionally not edit-capable.
-///
-/// Refresh is explicit: DocumentSession.onChange is single-subscriber and
-/// owned by DocumentWorkspace, so the owner calls refresh(from:) (bank +
-/// selector + used marks) or the granular bindBank/setUsedVoices/
-/// setCurrentVoicegroupArg/voiceChanged when its own change seam fires.
+/// Stable voice rows and parameter editor for a retained canonical voicegroup.
+/// The optional song context owns only assignment and used-program marks.
 @MainActor
 @QtBridgeable
 public final class VoiceListController: QmlUncreatable {
@@ -120,9 +87,10 @@ public final class VoiceListController: QmlUncreatable {
     /// Whether a bank view is bound (setSource(nullptr) detaches).
     @QtTracked public var isBound = false
     @QtTracked public var bankDirty = false
+    public var bankBusy: Bool = false
     @QtTracked public var bankLoadName = ""
     /// The dock title: the native "Voicegroup" caption with the dirty star.
-    @QtTracked public var panelTitle = "Voicegroup"
+    @QtTracked public var panelTitle = "Voicegroup:"
     /// The selector's editable text (the combo's currentText): the standing
     /// arg's display name, the user's in-progress text, or "Loading...".
     @QtTracked public var selectorText = ""
@@ -147,8 +115,8 @@ public final class VoiceListController: QmlUncreatable {
     /// it as an undoable cfg edit and reflects it back via
     /// setCurrentVoicegroupArg.
     @QtIgnored public var onVoicegroupChangeRequested: ((_ arg: String) -> Void)?
-    /// The user edited the selected voice; the owner applies it (as a song
-    /// undo command) and reflects it back via voiceChanged / a bank rebind.
+    /// The user edited the selected voice; its voicegroup owns the undo step
+    /// and publishes the resulting row through the canonical binding.
     /// `structural` means scalar pokes are not enough (type or symbol
     /// changed) and the bank needs a reload to audition.
     @QtIgnored public var onVoiceEditRequested: ((_ slot: Int, _ voice: BankVoice, _ structural: Bool) -> Void)?
@@ -160,6 +128,7 @@ public final class VoiceListController: QmlUncreatable {
     @QtIgnored public var onNewSampleRequested: ((_ slot: Int) -> Void)?
     /// "Edit…" beside the same picker: reopen this voice's committed sample.
     @QtIgnored public var onEditSampleRequested: ((_ slot: Int) -> Void)?
+    @QtIgnored public var onEditKitRequested: ((_ slot: Int) -> Void)?
     /// The sample picker's browse audition: play the symbol's committed data
     /// through the selected voice's envelope.
     @QtIgnored public var onSampleAuditionRequested:
@@ -226,6 +195,35 @@ public final class VoiceListController: QmlUncreatable {
     @QtTracked public var pickerInfoRevision = 0
     @QtIgnored public var onPickerSampleInfoRequested: (() -> Void)?
     @QtIgnored public var adsrDefaults = VoiceListAdsrDefaults()
+    @QtIgnored var voicegroup: VoicegroupSession?
+    @QtIgnored var voicegroupObserver: UUID?
+    @QtIgnored var projectedVoicegroupValueRevision: UInt64?
+    @QtIgnored var onVoicegroupStateChanged: (() -> Void)?
+    /// Updated by the canonical song-tab close transition.
+    public var editingEnabled: Bool = true
+    public var hasSongContext: Bool = false
+    public var retainedGroupNames: [String] = []
+    public var retainedGroupIndex: Int = -1
+
+    @QtIgnored
+    func refreshRetainedGroups() {
+        let groups = projectService?.bankViews.sessions() ?? []
+        publish(
+            \.retainedGroupNames,
+            groups.map { (group: VoicegroupSession) -> String in
+                group.value.dirty ? group.displayName + "*" : group.displayName
+            })
+        publish(
+            \.retainedGroupIndex,
+            groups.firstIndex { (group: VoicegroupSession) -> Bool in group === voicegroup } ?? -1)
+    }
+
+    public func selectRetainedVoicegroup(index: Int) {
+        guard editingEnabled, session == nil, let projectService else { return }
+        let groups = projectService.bankViews.sessions()
+        guard groups.indices.contains(index) else { return }
+        bindVoicegroup(groups[index])
+    }
     @QtIgnored public var waveSymbols: [String] = [] {
         didSet { if waveSymbols != oldValue { refreshSamplePickerRows() } }
     }
@@ -397,7 +395,7 @@ public final class VoiceListController: QmlUncreatable {
     }
 
     /// Emits the edit intent for a slot: the owner applies it through the
-    /// song undo stack and reflects it back. `structural` mirrors
+    /// voicegroup undo stack and reflects it back. `structural` mirrors
     /// materializesBlank || vgVoiceStructuralChange; the native
     /// synth-to-synth scalar downgrade needs the synth catalog and is not
     /// reproduced here (see the uncovered-dependency report). No-ops for
@@ -420,11 +418,11 @@ public final class VoiceListController: QmlUncreatable {
     @discardableResult
     @QtIgnored
     public func applyVoiceEdit(slot: Int, voice: BankVoice) async throws -> AppliedBankEdit {
-        guard let session else {
-            throw ProjectServiceError.operationFailed("No document session is bound.")
+        guard editingEnabled, let voicegroup else {
+            throw ProjectServiceError.operationFailed("No editable voicegroup is bound.")
         }
         let expected = slots.indices.contains(slot) ? slots[slot].voice : nil
-        return try await session.applyBankEdit(slot: slot, value: voice, expected: expected)
+        return try await voicegroup.apply(slot: slot, value: voice, expected: expected)
     }
 
     @QtIgnored
@@ -434,10 +432,10 @@ public final class VoiceListController: QmlUncreatable {
 
     @QtIgnored
     public func mintSynth(_ descriptor: VgSynthDesc) async throws -> String {
-        guard let session else {
-            throw ProjectServiceError.operationFailed("No document session is bound.")
+        guard editingEnabled, voicegroup != nil, let projectService else {
+            throw ProjectServiceError.operationFailed("No editable voicegroup is bound.")
         }
-        return try await session.mintSynth(descriptor)
+        return try await projectService.mintSynth(descriptor)
     }
 
     public func requestNewVoicegroup() {
@@ -549,6 +547,18 @@ public final class VoiceListController: QmlUncreatable {
 
     public func requestEditSample(slot: Int) {
         onEditSampleRequested?(slot)
+    }
+
+    /// Whether a current slot contains an editable drumkit or keysplit.
+    public func slotIsKit(slot: Int) -> Bool {
+        guard slots.indices.contains(slot), let voice = slots[slot].voice else { return false }
+        return VoiceListSemantics.isKitMacro(voice.macro)
+    }
+
+    /// Requests Split Studio only for an existing drumkit or keysplit slot.
+    public func requestEditKit(slot: Int) {
+        guard slotIsKit(slot: slot) else { return }
+        onEditKitRequested?(slot)
     }
 
 }

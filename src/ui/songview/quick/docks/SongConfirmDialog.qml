@@ -20,6 +20,11 @@ Dialog {
     width: Math.min(parent.width - 2 * dialog.baseFontPx, 30 * dialog.baseFontPx)
     title: dialog.controller.confirmation === "register" ? qsTr("Register Song") : qsTr("Delete Song")
     standardButtons: Dialog.Ok | Dialog.Cancel
+    // Every app dialog uses one button order: Cancel just left of the rightmost commit.
+    footer: DialogButtonBox {
+        visible: count > 0
+        buttonLayout: DialogButtonBox.MacLayout
+    }
     onAccepted: dialog.controller.acceptConfirmation(alsoVoicegroup.checked)
     onClosed: {
         if (dialog.controller.confirmation !== "")

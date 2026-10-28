@@ -53,7 +53,7 @@ enum ShellQmlLane {
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
         }
-        // run_checks always forwards Qt options (-maxwarnings); an entry's own
+        // The Python check runner always forwards Qt options (-maxwarnings); an entry's own
         // selectors apply unless the caller named test functions itself.
         if !payload.contains(where: { $0.contains("::") }) {
             payload += entry.testFunctions
@@ -86,11 +86,13 @@ enum ShellQmlLane {
         BridgeValueTypeProbe.registerQmlElement()
         ImportWizardProbe.registerQmlElement()
         SampleStudioVoiceProbe.registerQmlElement()
+        KitStudioEditProbe.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
-        var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
-        defer { argv.forEach { free($0) } }
+        let ownedArguments: [UnsafeMutablePointer<Int8>?] = arguments.map { (argument: String) in strdup(argument) }
+        var argv = ownedArguments
+        defer { ownedArguments.forEach { free($0) } }
         let status = app.runQtQuickTests(Int32(arguments.count), &argv)
         if status == 0, entry.name == "shell-note-visuals",
             ProcessInfo.processInfo.environment["PORYDAW_NOTE_VISUAL_DPR2"] == nil
@@ -121,14 +123,10 @@ enum ShellQmlLane {
             }
             let capture = URL(fileURLWithPath: scratch)
                 .appendingPathComponent("notevisuals-dpr2-small-font.png")
-            let artifact = FileManager.default.temporaryDirectory
-                .appendingPathComponent("porydaw-notevisuals-\(UUID().uuidString).png")
-            do {
-                try FileManager.default.copyItem(at: capture, to: artifact)
-            } catch {
-                return fail("note visuals dpr2: missing frame: \(error)")
+            guard FileManager.default.fileExists(atPath: capture.path) else {
+                return fail("note visuals dpr2: missing frame")
             }
-            print("note visuals dpr2 artifact: \(artifact.path)")
+            print("note visuals dpr2 artifact: \(capture.path)")
             return 0
         }
         if status == 0, entry.name == "shell-drawer-parity",
@@ -463,11 +461,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
         return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
     }
 
-    public func transportCapturePath(fontPx: Int) -> String {
-        URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent("transport-font\(fontPx).png").path
-    }
-
     public func settingsReferenceJson(profile: String, page: String) -> String {
         guard ["macos-dpr1-font12", "macos-dpr2-font16"].contains(profile),
             ["engine", "song"].contains(page)
@@ -476,10 +469,6 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             .deletingLastPathComponent()
             .appendingPathComponent("fixtures/visual/\(profile)/settings/\(page)-vanilla.json")
         return (try? String(contentsOf: path, encoding: .utf8)) ?? ""
-    }
-    public func settingsCapturePath(page: String, fontPx: Int) -> String {
-        URL(fileURLWithPath: projectRoot, isDirectory: true)
-            .appendingPathComponent("settings-\(page)-font\(fontPx).png").path
     }
 
     public func settingsSavedFlags() -> String {

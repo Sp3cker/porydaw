@@ -13,6 +13,22 @@ extension ProjectStore {
         return adoptBankLease(view: try store.loadBank(voicegroupArg: voicegroupArg))
     }
 
+    /// Refreshes resource discovery without replacing loaded banks or their edits.
+    public func refreshVoicegroupLocations() throws {
+        guard let store = voicegroupStore else {
+            throw VoicegroupStoreError.operationFailed("Project is not open.")
+        }
+        store.refreshLocations()
+    }
+
+    /// Restores one loaded bank from disk without losing other groups' staged edits.
+    public func discardVoicegroup(lease: ProjectBankLease) async throws -> ProjectBankLease {
+        guard lease.publicationOwner == publicationOwner, let store = voicegroupStore else {
+            throw VoicegroupStoreError.operationFailed("Project is not open.")
+        }
+        return adoptBankLease(view: try store.discardVoicegroup(id: lease.id))
+    }
+
     /// Pins the published bank through ARC; edits adopt leases through the same path.
     func adoptBankLease(view: LoadedBankView) -> ProjectBankLease {
         publicationRevision += 1

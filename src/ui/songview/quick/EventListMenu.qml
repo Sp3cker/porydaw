@@ -20,15 +20,7 @@ Loader {
                 focus: true
                 property string typeAhead: ""
                 function matchingRow(prefix: string): int {
-                    const count = menuPanel.rowCount
-                    for (let offset = 1; offset <= count; ++offset) {
-                        const index = (menuPanel.highlightedRow + offset + count) % count
-                        const row = menuLoader.controller.menuItem(index)
-                        if (row && row.enabled && !row.separator
-                            && row.text.toLowerCase().startsWith(prefix.toLowerCase()))
-                            return index
-                    }
-                    return -1
+                    return menuLoader.controller.matchingMenuRow(prefix, menuPanel.highlightedRow)
                 }
                 Keys.onPressed: (event) => {
                     if (event.key === Qt.Key_Escape) {
@@ -41,7 +33,7 @@ Loader {
                                     ? menuPanel.highlightedRow : (direction > 0 ? -1 : 0)
                             for (let offset = 1; offset <= count; ++offset) {
                                 const row = (start + direction * offset + count * 2) % count
-                                const item = menuLoader.controller.menuItem(row)
+                                const item = menuLoader.controller.menuItem(row) as MenuRow
                                 if (item && item.enabled && !item.separator) {
                                     menuLoader.page.hoverRow(menuPanel, row)
                                     break

@@ -130,7 +130,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         return displayLists[list]
     }
     public var pickerRows: QListModel<VoicePickerRowHandle> = QListModel()
-    public var menuRows: QListModel<VoiceMenuRowHandle> = QListModel()
+    public var menuRows: QListModel<MenuRow> = QListModel()
 
     // MARK: Diagnostics
 

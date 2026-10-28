@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 // Shared menu frame; hosts own hover, activation and modal input.
 import QtQuick
 import Porydaw.Ui
+import PorydawApp
 import QtQuick.Templates as T
 
 Item {
@@ -31,6 +32,7 @@ Item {
     property int highlightedRow: -1
     property int pressedRow: -1
     property string rowObjectNamePrefix: ""
+    property list<string> actionObjectNames: []
     final readonly property int rowCount: list.count
 
     objectName: rootLevel ? "quickMenuPanelRoot" : "quickMenuPanelSubmenu"
@@ -91,6 +93,7 @@ Item {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
 
             anchors.fill: parent
             anchors.margins: frame.border.width
@@ -103,17 +106,21 @@ Item {
             delegate: Item {
                 id: row
                 required property int index
-                required property var model
-                // Array-backed Swift ruler rows arrive as modelData; the
-                // existing typed QAbstractItemModel exposes its roles directly.
-                readonly property var itemData: model.modelData ?? model
-                objectName: panel.rowObjectNamePrefix.length > 0
-                            ? panel.rowObjectNamePrefix + (itemData.actionId ?? itemData.itemId) : ""
-                readonly property bool separator: itemData.separator ?? false
-                readonly property bool available: itemData.enabled ?? true
-
-                // Item.enabled owns accessibility as well as pointer input.
-                enabled: row.active
+                required property int actionId
+                required property string text
+                required property bool separator
+                required property bool checkable
+                required property bool checked
+                required property bool hasSubmenu
+                required property string shortcutText
+                required enabled
+                required property MenuRow display
+                readonly property MenuRow itemData: display
+                objectName: panel.rowObjectNamePrefix.length === 0 ? ""
+                            : panel.actionObjectNames.length > 0
+                              ? panel.rowObjectNamePrefix + panel.actionObjectNames[row.actionId]
+                              : panel.rowObjectNamePrefix + row.actionId
+                readonly property bool available: row.enabled
                 width: list.width
                 height: row.separator ? panel.separatorHeight : panel.rowHeight
 
@@ -149,8 +156,7 @@ Item {
                 Item {
                     id: tick
 
-                    visible: (row.itemData.checkable ?? false) && (row.itemData.checked ?? false)
-                             && !row.separator
+                    visible: row.checkable && row.checked && !row.separator
                     x: panel.checkX
                     y: (row.height - width) / 2
                     width: panel.checkWidth
@@ -184,7 +190,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: row.rowTextColor
                     font: panel.menuFont
-                    text: row.itemData.text
+                    text: row.text
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
@@ -201,7 +207,7 @@ Item {
                     // hold contrast on hover/pressed fills.
                     color: row.rowTextColor
                     font: panel.menuFont
-                    text: row.itemData.shortcutText ?? ""
+                    text: row.shortcutText
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                 }
@@ -210,7 +216,7 @@ Item {
                 Item {
                     id: arrow
 
-                    visible: (row.itemData.hasSubmenu ?? false) && !row.separator
+                    visible: row.hasSubmenu && !row.separator
                     x: panel.arrowRight - width
                     y: (row.height - height) / 2
                     width: panel.arrowWidth
@@ -257,7 +263,7 @@ Item {
                 }
 
                 Accessible.role: row.separator ? Accessible.Separator : Accessible.MenuItem
-                Accessible.name: row.itemData.text
+                Accessible.name: row.text
                 Accessible.onPressAction: {
                     if (row.active)
                         panel.host.activateRow(panel, row.index)

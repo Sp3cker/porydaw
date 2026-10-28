@@ -25,6 +25,20 @@
 - Right-click an insertion ghost between nodes to enter the value to insert
   at that position.
 
+### Note pitch bend, modulation, and LFO speed
+
+Select a note and press **G** to open its pitch-bend, modulation, and LFO-speed
+graphs. Press **G** again, or **Escape**, to close.
+The draggable **LFO speed** input edits the note-start value without removing
+interior curve points. Dragging the graph's note-start point updates that input.
+LFO speed ranges from 0 to 127; its Reset restores 22 while preserving the
+note-off value. Graph and input edits support Undo and Redo.
+Clicking an existing node selects it without changing its tick or value.
+Dragging vertically changes its value without snapping its time to the grid.
+Dragging an interior node horizontally snaps its time; hold **Alt** for fine snapping.
+If the destination tick already has a node, the dragged node keeps its original
+tick rather than overwriting that node or jumping to a distant empty tick.
+
 ## The value axis and zooming
 
 Pinned reference curves draw behind the active curve in half-opacity automation

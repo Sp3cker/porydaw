@@ -10,6 +10,7 @@ public final class TypographyFonts {
     public var tableMono: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var caption: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
     public var captionBold: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
+    public var captionMinimum: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 9)
     public var noteName: QmlFont = QmlFont(family: gridBodyFamily, pixelSize: 13)
 
     public init(typography: Typography = Typography(baseFontPx: 13)) {
@@ -28,6 +29,7 @@ public final class TypographyFonts {
         publish(\.tableMono, typography.tableMono.qmlFont)
         publish(\.caption, typography.caption.qmlFont)
         publish(\.captionBold, typography.captionBold.qmlFont)
+        publish(\.captionMinimum, typography.captionMinimum.qmlFont)
         publish(\.noteName, typography.noteName.qmlFont)
     }
 }

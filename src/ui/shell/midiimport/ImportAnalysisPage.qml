@@ -15,6 +15,7 @@ Flickable {
     required property int baseFontPx
     contentHeight: body.implicitHeight + layoutSpaces.three * 2
     clip: true
+    acceptedButtons: Qt.NoButton
     property bool controllersExpanded: false
     function focusFirst(): void { player.forceActiveFocus() }
     onVisibleChanged: { if (visible) page.focusFirst() }
@@ -83,13 +84,13 @@ Flickable {
                 delegate: RowLayout {
                     id: controllerRow
                     required property string controller
+                    required property string functionName
                     required property string events
                     required property string inGame
                     required property bool needsAttention
-                    required property var model
                     Layout.fillWidth: true
                     Label { text: controllerRow.controller; color: page.colors.windowText }
-                    Label { text: controllerRow.model.function; Layout.fillWidth: true; color: page.colors.windowText }
+                    Label { text: controllerRow.functionName; Layout.fillWidth: true; color: page.colors.windowText }
                     Label { text: controllerRow.events; color: page.colors.windowText }
                     Label { text: controllerRow.inGame; color: controllerRow.needsAttention ? page.colors.warningText : page.colors.windowText }
                 }

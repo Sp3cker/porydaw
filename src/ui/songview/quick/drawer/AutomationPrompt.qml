@@ -134,16 +134,6 @@ PromptOverlay {
             visible: root.confirming
             spacing: root.promptAppearance.spacing
             PromptButton {
-                id: accept
-                objectName: "automationPromptAccept"
-                appearance: root.promptAppearance
-                text: root.confirming ? qsTr("Delete") : qsTr("OK")
-                minimumWidth: cancel.labelWidth + 2 * root.promptAppearance.buttonPadding
-                KeyNavigation.tab: cancel
-                KeyNavigation.backtab: cancel
-                onActivated: root.acceptDraft()
-            }
-            PromptButton {
                 id: cancel
                 objectName: "automationPromptCancel"
                 appearance: root.promptAppearance
@@ -152,6 +142,16 @@ PromptOverlay {
                 KeyNavigation.tab: accept
                 KeyNavigation.backtab: accept
                 onActivated: root.cancelDraft()
+            }
+            PromptButton {
+                id: accept
+                objectName: "automationPromptAccept"
+                appearance: root.promptAppearance
+                text: root.confirming ? qsTr("Delete") : qsTr("OK")
+                minimumWidth: cancel.labelWidth + 2 * root.promptAppearance.buttonPadding
+                KeyNavigation.tab: cancel
+                KeyNavigation.backtab: cancel
+                onActivated: root.acceptDraft()
             }
         }
     }

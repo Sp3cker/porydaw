@@ -93,7 +93,11 @@ public final class NewSongController: QmlUncreatable {
         return label
     }
 
-    public func editConstant(text: String) { change { $0.editConstant(text) } }
+    public func editConstant(text: String) -> String {
+        guard state != nil else { return "" }
+        change { _ = $0.editConstant(text) }
+        return constant
+    }
     public func changeVoicegroupText(value: String) { change { $0.voicegroupText = value } }
     public func changeVolume(value: Int) { change { $0.volume = value } }
     public func changeReverb(value: Int) { change { $0.reverb = value } }

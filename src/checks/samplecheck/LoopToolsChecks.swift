@@ -1,6 +1,8 @@
 import Foundation
 import PorydawApp
 import PorydawSample
+import SwiftCoreCheckSupport
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runLoopToolsChecks(_ report: CheckReport) {
@@ -11,7 +13,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
         return
     }
     pipeline.expect(prepared.frameCount == 64 && prepared.hasLoop, message: "A022 prepared loop-toggle source imports")
-    let shortPresenter = SampleStudioPresenter(source: prepared, validateName: validator)
+    let shortPresenter = SampleStudioPresenter(document: SampleDocument(source: prepared), validateName: validator)
     let shortTools = SampleLoopTools(presenter: shortPresenter)
     shortTools.setLoopEnabled(on: false)
     pipeline.expect(
@@ -26,8 +28,13 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     adoption.expect(
         highResolution.frameCount == 12_000 && highResolution.hasLoop,
         message: "A049 hi-res pitch source imports")
-    let pitchPresenter = SampleStudioPresenter(source: highResolution, validateName: validator)
+    let pitchPresenter = SampleStudioPresenter(
+        document: SampleDocument(source: highResolution), validateName: validator)
     let pitchTools = SampleLoopTools(presenter: pitchPresenter)
+    do { try runBlocking { await pitchTools.waitForPitchAnalysis() } } catch {
+        adoption.expect(false, message: "pitch analysis did not settle: \(error)")
+        return
+    }
     adoption.expect(
         pitchTools.pitchApplyVisible && pitchTools.pitchApplyText == "Use detected pitch (A3)",
         message: "A051 mismatch offers detected-pitch hint")
@@ -50,10 +57,15 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     upperFractionSource.buffer = (0..<12_000).map { frame in
         Float(0.5 * sin(2 * .pi * 230 * Double(frame) / 44_100))
     }
-    let upperFractionPresenter = SampleStudioPresenter(source: upperFractionSource, validateName: validator)
+    let upperFractionPresenter = SampleStudioPresenter(
+        document: SampleDocument(source: upperFractionSource), validateName: validator)
     let upperFractionTools = SampleLoopTools(presenter: upperFractionPresenter)
     let upperFraction = report.scoped(cppID: "swiftcore/SampleLoopTools::positiveCents")
     upperFractionTools.applyDetectedPitch()
+    do { try runBlocking { await upperFractionTools.waitForPitchAnalysis() } } catch {
+        upperFraction.expect(false, message: "positive-cents analysis did not settle: \(error)")
+        return
+    }
     upperFraction.expect(
         upperFractionPresenter.baseKey == 57
             && upperFractionPresenter.fineTuneCents > 50
@@ -64,7 +76,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     populate.expect(
         highResolution.frameCount == 12_000 && highResolution.hasLoop,
         message: "A056 hi-res loop source imports")
-    let presenter = SampleStudioPresenter(source: highResolution, validateName: validator)
+    let presenter = SampleStudioPresenter(document: SampleDocument(source: highResolution), validateName: validator)
     let tools = SampleLoopTools(presenter: presenter)
     populate.expect(
         presenter.params.loopOn && tools.loopBodyVisible,
@@ -84,6 +96,10 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
         presenter.params.loopStart == presenter.params.loopEnd,
         message: "resetting markers produces a loop-free selection")
     tools.setLoopEnabled(on: true)
+    do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
+        populate.expect(false, message: "loop population analysis did not settle: \(error)")
+        return
+    }
     populate.expect(
         presenter.params.loopOn && presenter.params.loopStart < presenter.params.loopEnd,
         message: "A061 re-enabling seeds a loop")
@@ -97,17 +113,15 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
             && (!seam.nccValid || seam.ncc >= 0.95),
         message: "A064 auto-populated loop is clean")
     populate.expect(
-        tools.seamBadgeVisible && tools.seamBadgeSeverity == 0 && tools.seamBadgeText == "seam: clean",
+        tools.seamBadgeVisible && tools.seamBadgeSeverity == 0 && tools.seamBadgeText == "Clean",
         message: "A065 clean loop displays clean badge")
-    populate.expect(
-        tools.suggestStatus.hasPrefix("loop 1 of ") && tools.canTryAnother,
-        message: "A066 first suggested loop is available")
+    populate.expect(tools.canTryAnother, message: "A066 first suggested loop is available")
     let lateSearch = report.scoped(cppID: "swiftcore/SampleLoopTools::lateLoopEnd")
     var lateSource = highResolution
     lateSource.buffer = (0..<16_000).map { frame in
         frame < 12_000 ? 0 : Float(0.5 * sin(2 * .pi * 220.5 * Double(frame) / 44_100))
     }
-    let latePresenter = SampleStudioPresenter(source: lateSource, validateName: validator)
+    let latePresenter = SampleStudioPresenter(document: SampleDocument(source: lateSource), validateName: validator)
     let lateTools = SampleLoopTools(presenter: latePresenter)
     lateTools.setLoopEnabled(on: false)
     var lateParams = latePresenter.params
@@ -115,6 +129,10 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     lateParams.loopEnd = 0
     latePresenter.commitParams(lateParams, mergeKey: -1)
     lateTools.setLoopEnabled(on: true)
+    do { try runBlocking { await lateTools.waitForPitchAnalysis() } } catch {
+        lateSearch.expect(false, message: "late-loop analysis did not settle: \(error)")
+        return
+    }
     lateSearch.expect(
         latePresenter.params.loopOn && latePresenter.params.loopEnd > 12_000
             && latePresenter.processed.looped,
@@ -136,7 +154,8 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     refine.expect(
         highResolution.frameCount == 12_000 && highResolution.hasLoop,
         message: "A073 hi-res refine source imports")
-    let refinePresenter = SampleStudioPresenter(source: highResolution, validateName: validator)
+    let refinePresenter = SampleStudioPresenter(
+        document: SampleDocument(source: highResolution), validateName: validator)
     let refineTools = SampleLoopTools(presenter: refinePresenter)
     var misaligned = refinePresenter.params
     misaligned.loopStart = 2000
@@ -147,6 +166,10 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
         message: "A075 misaligned markers are committed")
     let before = refinePresenter.processed.seam
     refineTools.refineLoop()
+    do { try runBlocking { await refineTools.waitForPitchAnalysis() } } catch {
+        refine.expect(false, message: "loop refinement analysis did not settle: \(error)")
+        return
+    }
     let after = refinePresenter.processed.seam
     refine.expect(
         !before.nccValid || (after.nccValid && after.ncc >= before.ncc - 0.02),

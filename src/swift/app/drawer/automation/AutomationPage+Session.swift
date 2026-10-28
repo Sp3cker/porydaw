@@ -25,7 +25,7 @@ extension AutomationPage {
     @QtIgnored public var tapTempoSession: AutomationTapTempoSession { tapSession }
     @QtIgnored public var publishedTabs: [AutomationTabHandle] { tabSnapshots }
     @QtIgnored public var publishedNodes: [AutomationNodeHandle] { nodeSnapshots }
-    @QtIgnored public var publishedMenuRows: [AutomationMenuRowHandle] { menuRowSnapshots }
+    @QtIgnored public var publishedMenuRows: [MenuRow] { menuRowSnapshots }
 
     /// The first catalog index whose parameter satisfies `predicate`, so a lane
     /// reads the same selector order the page publishes.

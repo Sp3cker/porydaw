@@ -12,7 +12,9 @@ add_library(PorydawDocument STATIC
     DocumentSession.swift
     DocumentSession+Internals.swift
     DocumentSession+Selection.swift
-    SharedBankState.swift
+    ProjectBankViews.swift
+    VoicegroupSession.swift
+    VoicegroupHistory.swift
     ServiceBankHistory.swift
     service/ProjectService.swift
     service/ProjectService+Bank.swift

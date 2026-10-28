@@ -135,7 +135,7 @@ Item {
                         property bool rightSweepActive: false
 
                         Component.onCompleted:
-                            rollBandContent.root.gridModel.dragDistance = Qt.styleHints.startDragDistance
+                            rollBandContent.root.gridModel.dragDistance = Application.styleHints.startDragDistance
 
                         ItemCursor {
                             id: rollCursor
@@ -219,7 +219,7 @@ Item {
                         }
                         MoveCoalescer {
                             id: rollMoves
-                            dispatch: rollMoves.dispatchMove
+                            onDispatch: (x, y, buttons, modifiers) => rollMoves.dispatchMove(x, y, buttons, modifiers)
                             function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                                 if (buttons & Qt.MiddleButton)
                                     rollBandContent.root.gridModel.updatePan(x, y)
@@ -299,6 +299,6 @@ Item {
         root: rollBandContent.root
         rollStack: rollStack
         rollBandContent: rollBandContent
-        gridMenuLoader: rollBandContent.root.menus.gridMenuLoader
+        gridMenuLoader: rollBandContent.root.gridMenuLoader
     }
 }

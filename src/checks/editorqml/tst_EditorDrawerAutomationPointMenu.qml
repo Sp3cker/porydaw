@@ -34,7 +34,7 @@ EditorDrawerTestSupport {
             return child && PageSupport.isEffectivelyVisible(testCase, child)
         }, 1000, "hover reveals the hierarchical range choices")
         var full = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 17)
-        compare(full.model.checked, true, "Volume initially uses the full range")
+        compare(full.itemData.checked, true, "Volume initially uses the full range")
         var range64 = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 16)
         verify(range64.width > 0 && range64.height > 0
                && PageSupport.isEffectivelyVisible(testCase, range64),
@@ -48,13 +48,13 @@ EditorDrawerTestSupport {
         mouseMove(range, range.width / 2, range.height / 2)
         tryVerify(function() {
             var child = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 16)
-            return child && PageSupport.isEffectivelyVisible(testCase, child) && child.model.checked
+            return child && PageSupport.isEffectivelyVisible(testCase, child) && child.itemData.checked
         }, 1000, "reopening remembers the selected 64 range")
         var checked = 0
         for (var action = 13; action <= 17; ++action) {
             var child = AutomationMenuSupport.menuRowByAction(testCase, childPanel, action)
             verify(child, "every historical range choice is drawn")
-            if (child.model.checked) ++checked
+            if (child.itemData.checked) ++checked
         }
         compare(checked, 1, "exactly one range is checked")
         keyClick(Qt.Key_Escape)
@@ -80,7 +80,7 @@ EditorDrawerTestSupport {
         mouseMove(range, range.width / 2, range.height / 2)
         tryVerify(function() {
             var child = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 17)
-            return child && child.model.checked
+            return child && child.itemData.checked
         }, 1000, "keyboard selection restored the full range")
         keyClick(Qt.Key_Escape)
         keyClick(Qt.Key_Escape)
@@ -274,13 +274,13 @@ EditorDrawerTestSupport {
                "the synthetic node's right-press draws a visible point menu panel")
         var rows = AutomationMenuSupport.automationMenuRowItems(testCase)
         compare(rows.length, 2, "the point menu renders its two typed rows")
-        compare(rows[0].model.text, "Set Value",
+        compare(rows[0].itemData.text, "Set Value",
                 "the rendered first row is the published Set Value row")
-        compare(rows[0].model.enabled, true, "the rendered Set Value row is enabled")
+        compare(rows[0].itemData.enabled, true, "the rendered Set Value row is enabled")
         compare(rows[0].enabled, true, "the drawn Set Value row exposes enabled state")
-        compare(rows[1].model.text, "Delete",
+        compare(rows[1].itemData.text, "Delete",
                 "the rendered second row is the published Delete row")
-        compare(rows[1].model.enabled, false, "the rendered Delete row is disabled")
+        compare(rows[1].itemData.enabled, false, "the rendered Delete row is disabled")
         compare(rows[1].enabled, false, "the drawn Delete row exposes disabled state")
         compare(rows[1].Accessible.role, Accessible.MenuItem,
                 "the drawn disabled Delete row is a menu item to accessibility")

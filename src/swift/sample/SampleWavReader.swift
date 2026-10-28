@@ -2,7 +2,9 @@ import BinaryParsing
 import Foundation
 
 enum SampleWavReader {
-    static func decode(_ bytes: RawSpan, leftChannelOnly: Bool) throws(SampleImportFailure) -> ImportedSample {
+    static func decode(
+        _ bytes: RawSpan, leftChannelOnly: Bool, onFrames: SampleImport.FrameObserver
+    ) throws(SampleImportFailure) -> ImportedSample {
         func number(_ offset: Int, _ count: Int) -> UInt32 {
             // Call sites bound each fixed-width field within a validated chunk.
             var input = ParserSpan(bytes.extracting(offset..<(offset + count)))
@@ -96,7 +98,7 @@ enum SampleWavReader {
             sampleRate: declaredRate, sourceKind: .wav, sourceChannels: channels,
             sourceBits: bits, sourceFloat: tag == 3, gbaReady: tag == 1 && bits == 8 && channels == 1)
         let integerFullScale = pow(2, Double(bits - 1))
-        let clamped = SampleImport.downmix(
+        let clamped = try SampleImport.downmix(
             frames, channels: channels, leftOnly: leftChannelOnly,
             read: { index in
                 let at = dataStart + index * (bits / 8)
@@ -119,7 +121,7 @@ enum SampleWavReader {
                 if value > 1 { return (1, true) }
                 if value < -1 { return (-1, true) }
                 return (value, false)
-            }, into: &sample)
+            }, into: &sample, onFrames: onFrames)
         if clamped > 0 { sample.warnings.insert("\(clamped) float samples beyond ±1.0 were clamped.", at: 0) }
         if loop && loopType != 0 {
             sample.warnings.insert("the smpl loop is not a forward loop — ignored.", at: clamped > 0 ? 1 : 0)

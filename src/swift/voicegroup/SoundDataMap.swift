@@ -1,12 +1,6 @@
 import BinaryParsing
 import Foundation
 
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
-
 public enum SoundDataEntry: Equatable, Sendable {
     case sample(relativePath: String)
     case synth([UInt8])

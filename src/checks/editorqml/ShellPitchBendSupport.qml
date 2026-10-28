@@ -16,7 +16,6 @@ ShellLaneSupport {
     readonly property var settings: bootstrap.preferences
     property string noteProbe: ""
     property alias bootstrap: bootstrapObject
-    property alias frameProbe: frameProbeObject
     property alias clipboardProbeComponent: clipboardProbeObject
     property alias shellComponent: shellObject
     ShellQmlBootstrap { id: bootstrapObject }
@@ -131,12 +130,6 @@ ShellLaneSupport {
         verify(waitForPolish(opened.popup))
         const frame = grabImage(shell.contentItem)
         verify(frame !== null, "the popup is available for pixel readback")
-        let saved = false
-        opened.popup.grabToImage(function(result) {
-            saved = result.saveToFile("file://" + frameProbe.artifactPath(
-                bootstrap.projectRoot, "pitch-bend", label))
-        })
-        tryVerify(function() { return saved }, 5000, "the painted pitch frame is saved")
         return frame
     }
 
@@ -200,7 +193,8 @@ ShellLaneSupport {
                "the roll input and plot mount for the G route")
         if (pinNearTop) {
             const initialPlotHeight = plot.height
-            shell.height += 12 * grid.baseFontPx
+            const targetPlotHeight = view.pitchBendPresenter.popupHeight + 12 * grid.baseFontPx
+            shell.height += Math.max(12 * grid.baseFontPx, targetPlotHeight - initialPlotHeight)
             tryVerify(function() { return plot.height > initialPlotHeight },
                       5000, "the tall shell expands the roll before anchor selection")
         }

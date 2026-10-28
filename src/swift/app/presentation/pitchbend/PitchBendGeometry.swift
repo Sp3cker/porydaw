@@ -43,10 +43,10 @@ public struct PitchBendGeometry {
         canvasX = fontPx(b, 26.0 / 7.0)
         canvasY = titleHeight + fontPx(b, 1.5)
         canvasWidth = fontPx(b, 20.0)
-        canvasHeight = fontPx(b, 8.0)
+        canvasHeight = fontPx(b, 16.0 / 3.0)
         graphHeight = canvasY + canvasHeight + axisLabelHeight + space
         popupWidth = canvasX + canvasWidth + outerInset
-        popupHeight = headerHeight + 2 * graphHeight
+        popupHeight = headerHeight + 3 * graphHeight
         zeroDetent = fontPxF(b, 4.0 / 7.0)
         nodeHitRadius = fontPxF(b, 4.0 / 7.0)
         nodePaintRadius = fontPxF(b, 3.0 / 14.0)

@@ -57,6 +57,7 @@ ColumnLayout {
     component VoiceTypeChoice: QtObject {
         required property string name
         required property int macro
+        required property IconSpec icon
     }
 
     Label {
@@ -86,24 +87,50 @@ ColumnLayout {
             Layout.minimumHeight: 0
             Layout.preferredHeight: editor.baseFontPx * 1.85
             readonly property list<VoiceTypeChoice> choices: [
-                VoiceTypeChoice { name: qsTr("Sample"); macro: 0 },
-                VoiceTypeChoice { name: qsTr("Sample (no resample)"); macro: 1 },
-                VoiceTypeChoice { name: qsTr("Sample (alt)"); macro: 2 },
-                VoiceTypeChoice { name: qsTr("Drumkit"); macro: 12 },
-                VoiceTypeChoice { name: qsTr("Square 1"); macro: 3 },
-                VoiceTypeChoice { name: qsTr("Square 2"); macro: 5 },
-                VoiceTypeChoice { name: qsTr("Wave"); macro: 7 },
-                VoiceTypeChoice { name: qsTr("Noise"); macro: 9 },
-                VoiceTypeChoice { name: qsTr("Synth (Golden Sun)"); macro: -1 }
+                VoiceTypeChoice { name: qsTr("Sample"); macro: 0; icon: Icons.sample },
+                VoiceTypeChoice { name: qsTr("Sample (no resample)"); macro: 1; icon: Icons.sample },
+                VoiceTypeChoice { name: qsTr("Sample (alt)"); macro: 2; icon: Icons.sample },
+                VoiceTypeChoice { name: qsTr("Drumkit"); macro: 12; icon: Icons.drumkit },
+                VoiceTypeChoice { name: qsTr("Square 1"); macro: 3; icon: Icons.square1 },
+                VoiceTypeChoice { name: qsTr("Square 2"); macro: 5; icon: Icons.square2 },
+                VoiceTypeChoice { name: qsTr("Wave"); macro: 7; icon: Icons.wave },
+                VoiceTypeChoice { name: qsTr("Noise"); macro: 9; icon: Icons.noise },
+                VoiceTypeChoice { name: qsTr("Synth (Golden Sun)"); macro: -1; icon: Icons.sample }
             ]
             model: editor.controller.canMintSynths || editor.controller.synthChoices.length > 0
                    || editor.draft.isSynth ? typePicker.choices : typePicker.choices.slice(0, 8)
             textRole: "name"
             valueRole: "macro"
-            currentIndex: indexOfValue(editor.draft.isSynth ? -1
-                                                              : editor.draft.macro === 11 ? 0
-                                                                                          : editor.draft.macro)
+            // Alternate hardware macros use the same displayed type as their base macro.
+            currentValue: editor.draft.isSynth ? -1
+                          : editor.draft.macro === 11 ? 0
+                          : editor.draft.macro >= 3 && editor.draft.macro <= 10
+                            ? editor.draft.macro - (editor.draft.macro % 2 === 0 ? 1 : 0)
+                            : editor.draft.macro
             onActivated: index => editor.draft.changeType(valueAt(index), editor.draft.symbol)
+            // Each type row leads with the glyph the voice list shows for that type.
+            delegate: MenuItem {
+                id: typeItem
+                required property VoiceTypeChoice modelData
+                required property int index
+                readonly property real iconSize: Math.round(editor.baseFontPx * 1.25)
+                width: ListView.view.width
+                leftPadding: padding + iconSize + spacing
+                text: modelData.name
+                font.weight: typePicker.currentIndex === index ? Font.DemiBold : Font.Normal
+                highlighted: typePicker.highlightedIndex === index
+                hoverEnabled: typePicker.hoverEnabled
+                AppIcon {
+                    objectName: "vgTypeIcon"
+                    x: typeItem.padding
+                    y: typeItem.topPadding + (typeItem.availableHeight - height) / 2
+                    width: typeItem.iconSize
+                    height: width
+                    icon: typeItem.modelData.icon
+                    color: typeItem.highlighted || typeItem.down ? typeItem.palette.highlightedText
+                                                                 : typeItem.palette.text
+                }
+            }
         }
     }
 
@@ -147,11 +174,10 @@ ColumnLayout {
             visible: editor.draft.macro === 12
             Layout.fillWidth: true
             Layout.preferredHeight: editor.baseFontPx * 1.5
-            editable: true
             model: editor.controller.drumkitSymbols
-            editText: editor.draft.symbol
+            currentIndex: editor.controller.drumkitSymbols.indexOf(editor.draft.symbol)
+            displayText: editor.draft.symbol
             onActivated: editor.draft.changeType(editor.draft.macro, currentText)
-            onAccepted: editor.draft.changeType(editor.draft.macro, editText)
         }
         ToolButton {
             objectName: "vgNewSampleButton"
@@ -339,19 +365,12 @@ ColumnLayout {
         Layout.preferredHeight: editor.buttonHeight
         Layout.minimumHeight: 0
         Button {
-            objectName: "vgNewVoicegroupButton"
-            text: qsTr("New...")
-            Layout.preferredHeight: editor.buttonHeight
-            Layout.minimumHeight: 0
-            focusPolicy: Qt.NoFocus
-            onClicked: editor.controller.requestNewVoicegroup()
-        }
-        Button {
             objectName: "vgSaveButton"
-            text: qsTr("Save")
+            text: qsTr("Save Voicegroup")
             Layout.preferredHeight: editor.buttonHeight
             Layout.minimumHeight: 0
-            enabled: editor.controller.bankDirty
+            enabled: editor.controller.bankDirty && !editor.applicationSession.saveInProgress
+                && editor.controller.editingEnabled && !editor.controller.bankBusy
             onClicked: editor.controller.requestSave()
         }
     }

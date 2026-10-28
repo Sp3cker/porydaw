@@ -31,7 +31,7 @@ DrawerLanePage {
             return
         page.pageModel.configureBody(page.plotWidth, page.height, page.plotOrigin,
                                      page.Screen.devicePixelRatio, page.baseFontPx,
-                                     Qt.styleHints.startDragDistance)
+                                     Application.styleHints.startDragDistance)
     }
     function geometryChanged(): void {
         if (plot.input.pressed && page.pageModel && page.pageModel.interactionActive)

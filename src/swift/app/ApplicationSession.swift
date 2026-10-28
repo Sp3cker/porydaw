@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawVoicegroup
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
@@ -19,11 +20,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveConflictDetail = ""
     @QtTracked public var saveConflictNewSongLabel = ""
     @QtTracked public var documentDirty = false
-    @QtTracked public var songDocumentDirty = false
     @QtTracked public var projectOpen = false
+    /// Owned by the project-opening lifecycle; QML observes the current step.
+    public var projectOpeningStage: Int = 0
     @QtTracked public var songOpen = false
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
+    /// The current editing surface's command owner, not a remembered focus item.
+    public var editingVoicegroup: Bool = false
+    public var editingTargetLabel: String = "Song"
     @QtTracked public var headerVoicePickerOpen = false
 
     @QtTracked public var timeSigPromptOpen = false
@@ -98,6 +103,22 @@ public final class ApplicationSession: QmlInstantiableStatus {
     let transportBar: TransportBarPresenter
     @QtIgnored let wavExport = WavExportPresenter()
     @QtIgnored var sampleStudioWorkflow: SampleStudioWorkflow?
+    @QtIgnored var kitStudioWorkflow: KitStudioWorkflow?
+    private struct SplitStudioCreatedAssets: Equatable {
+        var samples: Set<String> = []
+        var groups: Set<String> = []
+    }
+    private var splitStudioCreatedAssets: [String: SplitStudioCreatedAssets] = [:]
+    // Only created samples can become orphan candidates; created subgroups alone cannot.
+    @QtIgnored
+    var hasSplitStudioCreatedSamples: Bool {
+        !(splitStudioCreatedAssets[projectRoot]?.samples.isEmpty ?? true)
+    }
+
+    private struct OrphanScanFailure: LocalizedError {
+        let reason: String
+        var errorDescription: String? { reason }
+    }
     @QtIgnored
     let voiceList = VoiceListController()
     @QtIgnored
@@ -125,9 +146,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var startupRestoreTask: Task<Void, Never>?
     @QtIgnored
+    var projectOpeningGeneration: UInt64 = 0
+    @QtIgnored
     var pendingProjectSwitch: ProjectSwitchCandidate?
     @QtIgnored
-    var prefetchedProject: (path: String, read: Task<ProjectRead, Error>)?
+    var prefetchedProject: (path: String, generation: UInt64, read: Task<ProjectRead, Error>)?
     @QtIgnored
     var prefetchedSong: (service: ProjectService, load: PrefetchedSongLoad)?
     @QtIgnored
@@ -172,14 +195,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
             appFontLineSpacing: 0)
         connectPolyphonyJump()
         undoHistory.context = { [weak self] in
-            guard let self else { return (session: nil, bankTransitionInFlight: false) }
-            return (
-                session: workspace?.session,
-                bankTransitionInFlight: songTabs.tabs.contains {
-                    $0.workspace.session.document.history.bankTransitionInFlight
-                }
-            )
+            guard let self, !isDisposed, !songTabs.isClosingAll else {
+                return (song: nil, voicegroup: nil)
+            }
+            return editingVoicegroup
+                ? (song: nil, voicegroup: voiceList.voicegroup)
+                : (song: workspace?.session, voicegroup: nil)
         }
+        voiceList.onVoicegroupStateChanged = { [weak self] in self?.refreshDocumentState() }
         undoHistory.onEvent = { [weak self] event in
             guard let self else { return }
             switch event {
@@ -307,6 +330,89 @@ public final class ApplicationSession: QmlInstantiableStatus {
         let workflow = SampleStudioWorkflow(session: self)
         sampleStudioWorkflow = workflow
         return workflow
+    }
+
+    /// The one app-wide modeless Split Studio workflow.
+    public func kitStudio() -> KitStudioWorkflow {
+        if let kitStudioWorkflow { return kitStudioWorkflow }
+        let workflow = KitStudioWorkflow(session: self)
+        kitStudioWorkflow = workflow
+        return workflow
+    }
+
+    /// Records only assets created by Split Studio in this application session.
+    public func recordCreatedSample(name: String) {
+        splitStudioCreatedAssets[projectRoot, default: SplitStudioCreatedAssets()].samples.insert(name)
+    }
+
+    @QtIgnored
+    func recordCreatedSubgroup(symbol: String) {
+        splitStudioCreatedAssets[projectRoot, default: SplitStudioCreatedAssets()].groups.insert(symbol)
+    }
+
+    /// Returns session-created samples with no current voicegroup references.
+    @QtIgnored func orphanSplitStudioSamples() async throws -> [String] {
+        let root = projectRoot
+        guard let assets = splitStudioCreatedAssets[root], !assets.samples.isEmpty else { return [] }
+        let created = assets.samples
+        guard let service = catalogService, kitStudioWorkflow?.saving != true else {
+            throw OrphanScanFailure(reason: "Split Studio: cannot scan while a project edit is in progress.")
+        }
+        let groups = assets.groups
+        let observed = service.bankViews.sessions().map { (group: $0, lease: $0.value.lease) }
+        let locator = VoicegroupLocator(layout: ProjectLayout(projectRoot: root).ensuringDeepScan())
+        var overlay: [String: [VgVoice?]] = [:]
+        var visited: Set<String> = []
+        for entry in observed {
+            let lease = entry.lease
+            let section = try KitUsageScanner.canonicalSection(
+                projectRoot: root, sourceRelativePath: lease.id.sourceRelativePath, sectionLabel: lease.sectionLabel)
+            overlay[section] = lease.slotViews.map(\.voice)
+            try await KitLeaseReader.visitKits(lease: lease, service: service, excluding: &visited) {
+                (kit: KitEditValue) in
+                guard !kit.subgroupSymbol.isEmpty else { return }
+                guard let location = locator.locateSubgroup(symbol: Array(kit.subgroupSymbol.utf8)[...]),
+                    location.filePath.hasPrefix(root + "/")
+                else { throw OrphanScanFailure(reason: "Split Studio: cannot resolve subgroup \(kit.subgroupSymbol).") }
+                let childSection = try KitUsageScanner.canonicalSection(
+                    projectRoot: root, sourceRelativePath: String(location.filePath.dropFirst(root.count + 1)),
+                    sectionLabel: location.sectionLabel)
+                overlay[childSection] = try kit.children.map { try $0.map(projectVoice) }
+            }
+        }
+        guard projectRoot == root, catalogService === service, kitStudioWorkflow?.saving != true,
+            splitStudioCreatedAssets[root] == assets,
+            service.bankViews.sessions().count == observed.count,
+            observed.allSatisfy({
+                !$0.group.isBusy && $0.group.value.lease.publicationOwner == $0.lease.publicationOwner
+                    && $0.group.value.lease.publicationRevision == $0.lease.publicationRevision
+            })
+        else { throw OrphanScanFailure(reason: "Split Studio: the project changed during the orphan scan.") }
+        let used = try SampleUsageScanner.referenced(
+            projectRoot: root, candidates: created, overlay: overlay, createdSubgroups: groups)
+        return created.subtracting(used).sorted()
+    }
+
+    /// Rechecks references before deleting checked session-created orphan assets.
+    @QtIgnored public func deleteOrphanSamples(_ names: [String]) async throws {
+        let root = projectRoot
+        let eligible = Set(try await orphanSplitStudioSamples())
+        let owned = splitStudioCreatedAssets[root]?.samples ?? []
+        let skipped = Set(names).intersection(owned).subtracting(eligible).sorted()
+        if !skipped.isEmpty {
+            let message = "Kept samples that gained a reference: " + skipped.joined(separator: ", ") + "."
+            kitStudioWorkflow?.orphanCleanupStatus = message
+            publishStatusMessage(message: message)
+        }
+        for name in names where eligible.contains(name) {
+            let removed = try SampleRegistrar.deleteRegistration(projectRoot: root, name: name)
+            if !removed {
+                // A failed batch can leave an owned WAV before its registration is written.
+                let path = root + "/sound/direct_sound_samples/" + name + ".wav"
+                if ProjectFileStore.exists(path) { try ProjectFileStore.remove(path) }
+            }
+            splitStudioCreatedAssets[root]?.samples.remove(name)
+        }
     }
 
     public func closeSampleStudio() {
@@ -519,6 +625,25 @@ public final class ApplicationSession: QmlInstantiableStatus {
         requestSaveImpl()
     }
 
+
+    public func setEditingVoicegroup(enabled: Bool) {
+        let target = voiceList.voicegroup != nil && (enabled || songTabs.tabCount == 0)
+        guard editingVoicegroup != target else { return }
+        editingVoicegroup = target
+        refreshDocumentState()
+    }
+
+    public func requestSaveSong() {
+        requestSaveSongImpl()
+    }
+
+    public func requestSaveVoicegroup() {
+        requestSaveVoicegroupImpl()
+    }
+
+    public func requestSaveAll() {
+        requestSaveAllImpl()
+    }
     /// The save-conflict prompt's QML surface. The prompt answers live beside
     /// requestSave: the dialog asks, these answer, Impls do the work.
     public func acceptSaveConflictLabelEdit(previous: String, proposed: String) -> String {
@@ -582,26 +707,31 @@ public final class ApplicationSession: QmlInstantiableStatus {
         refreshDocumentState()
     }
 
-    /// Follows the selected tab's document, but gates Undo/Redo while any
-    /// tab has a pending bank transition.
+    /// Publishes the current owner's history and independent song dirty state.
     func refreshDocumentState() {
         let hasSongs = songTabs.tabCount > 0
         let songOpenChanged = songOpen != hasSongs
         defer { onDocumentStateChanged?(songOpenChanged) }
         publish(\.songOpen, hasSongs)
+        publish(\.editingVoicegroup, voiceList.voicegroup != nil && (editingVoicegroup || !hasSongs))
+        let label: String
+        if editingVoicegroup, let group = voiceList.voicegroup {
+            label = "Voicegroup: \(group.displayName)"
+        } else if let page = songTabs.selectedPage {
+            label = "Song: \(page.title)"
+        } else {
+            label = "Song"
+        }
+        publish(\.editingTargetLabel, label)
         songDock.syncSelection()
         let historyAvailability = undoHistory.refresh(visible: undoHistoryVisible)
         publish(\.canUndo, historyAvailability.canUndo)
         publish(\.canRedo, historyAvailability.canRedo)
         guard let session = workspace?.session else {
             publish(\.documentDirty, false)
-            publish(\.songDocumentDirty, false)
             return
         }
-        let songDirty = session.document.isDirty
-        publish(\.songDocumentDirty, songDirty)
-        let dirty = songDirty || session.bankDirty
-        publish(\.documentDirty, dirty)
+        publish(\.documentDirty, session.document.isDirty)
     }
 
 }

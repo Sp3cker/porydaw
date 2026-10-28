@@ -40,7 +40,7 @@ struct AutomationMenuState {
     let target: AutomationMenuTarget
     let anchorX: Double
     let anchorY: Double
-    var rows: [AutomationMenuRowHandle]
+    var rows: [MenuRow]
 }
 
 enum AutomationMenuTarget: Equatable {
@@ -150,7 +150,7 @@ extension AutomationPage {
     func menuRows(
         for target: AutomationMenuTarget,
         facts: AutomationFrozenFacts
-    ) -> [AutomationMenuRowHandle] {
+    ) -> [MenuRow] {
         switch target {
         case let .point(tick, _):
             // Delete only ever writes what the document holds: the projected
@@ -158,26 +158,26 @@ extension AutomationPage {
             // disabled; Set Value stays enabled and promotes it.
             let written = !facts.snapshot.occurrences(at: tick).isEmpty
             return [
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.setValue.rawValue,
                     text: "Set Value", enabled: true),
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.deleteNode.rawValue,
                     text: "Delete", enabled: written),
             ]
         case .lane:
             var rows = [
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.copyLane.rawValue,
                     text: facts.parameter.isTempo ? "Copy" : "Copy CC lane",
                     enabled: facts.snapshot.eventCount > 0),
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.pasteLane.rawValue,
                     text: facts.parameter.isTempo
                         ? "Paste" : "Paste CC lane (replace)",
                     enabled: laneClipPoints(facts.parameter) != nil),
-                AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(
+                MenuRow(actionId: -1, enabled: false, separator: true),
+                MenuRow(
                     actionId: AutomationMenuAction.clearLane.rawValue,
                     text: facts.parameter.isTempo
                         ? "Clear Tempo"
@@ -186,12 +186,12 @@ extension AutomationPage {
             ]
             if !facts.parameter.isTempo {
                 rows.append(
-                    AutomationMenuRowHandle(
+                    MenuRow(
                         actionId: AutomationMenuAction.deleteLaneEvents.rawValue,
                         text: "Delete automation events", enabled: facts.snapshot.eventCount > 0))
             }
             if facts.metadata.zoomable {
-                let row = AutomationMenuRowHandle(
+                let row = MenuRow(
                     actionId: AutomationMenuAction.valueRange.rawValue,
                     text: "Value range", enabled: true)
                 row.hasSubmenu = true
@@ -201,20 +201,20 @@ extension AutomationPage {
         case .range:
             let covered = resolvedSelectionScope() != nil
             return [
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.rangeCopy.rawValue,
                     text: "Copy", enabled: covered),
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.rangeCut.rawValue,
                     text: "Cut", enabled: covered),
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.rangePaste.rawValue,
                     text: "Paste", enabled: selectionCommandAvailable(command: .paste)),
-                AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(
+                MenuRow(actionId: -1, enabled: false, separator: true),
+                MenuRow(
                     actionId: AutomationMenuAction.rangeDelete.rawValue,
                     text: "Delete", enabled: covered),
-                AutomationMenuRowHandle(
+                MenuRow(
                     actionId: AutomationMenuAction.rangeClear.rawValue,
                     text: "Clear Selection", enabled: true),
             ]
@@ -432,7 +432,7 @@ extension AutomationPage {
 
     func consumeCapturedMenuAction(actionId: Int) -> Bool {
         guard let session, let live = menu else { return false }
-        let childRows: [AutomationMenuRowHandle]
+        let childRows: [MenuRow]
         if case .lane = live.target { childRows = rangeMenuRows(facts: live.facts) } else { childRows = [] }
         guard let row = (live.rows + childRows).first(where: { $0.actionId == actionId }) else {
             return false
@@ -493,7 +493,7 @@ extension AutomationPage {
         return true
     }
 
-    func rangeMenuRows(facts: AutomationFrozenFacts) -> [AutomationMenuRowHandle] {
+    func rangeMenuRows(facts: AutomationFrozenFacts) -> [MenuRow] {
         guard facts.metadata.zoomable else { return [] }
         let selected =
             laneRanges[facts.parameter]
@@ -502,8 +502,8 @@ extension AutomationPage {
             (.rangeAuto, 0, "Auto (fit to data)"), (.range16, 16, "0–16"),
             (.range32, 32, "0–32"), (.range64, 64, "0–64"), (.range127, 127, "0–127 (full)"),
         ]
-        return entries.map { action, value, text in
-            let row = AutomationMenuRowHandle(actionId: action.rawValue, text: text, enabled: true)
+        return entries.map { (action: AutomationMenuAction, value: Int, text: String) -> MenuRow in
+            let row = MenuRow(actionId: action.rawValue, text: text, enabled: true)
             row.checkable = true
             row.checked = selected == value
             return row

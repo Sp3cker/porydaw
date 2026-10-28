@@ -18,7 +18,10 @@ enum ShellActionCatalog {
         Action("file.new_song"),
         Action("file.import_midi"),
         Action("songs.find"),
+        Action("file.save"),
         Action("file.save_song"),
+        Action("file.save_voicegroup"),
+        Action("file.save_all"),
         Action("file.register_song"),
         Action("file.close_tab"),
         Action("file.export_wav"),
@@ -71,6 +74,7 @@ enum ShellActionCatalog {
         Action("transport.loop"),
         Action("transport.follow_playhead"),
         Action("transport.resonance"),
+        Action("transport.metronome"),
         Action("view.event_list"),
         Action("view.automation_drawer"),
         Action("view.velocity_drawer"),
@@ -79,6 +83,7 @@ enum ShellActionCatalog {
         Action("view.undo_history"),
         Action("view.note_names"),
         Action("tools.import_sample"),
+        Action("tools.split_studio"),
         Action("help.about"),
     ]
     static let byId = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0) })
@@ -118,7 +123,7 @@ enum ShellActionCatalog {
     static let viewIds =
         allActionIds.filter { $0.hasPrefix("view.") }
         + ["transport.follow_playhead"]
-    static let toolsIds = ["tools.import_sample"]
+    static let toolsIds = ["tools.import_sample", "tools.split_studio"]
     static let contextHeadIds = ["edit.set_velocity"]
     static let contextBodyIds = [
         "roll.copy", "roll.cut", "roll.duplicate_time", "roll.split", "roll.join", "roll.delete",
@@ -127,8 +132,9 @@ enum ShellActionCatalog {
         "file.open_project": "Open Project...",
         "file.open_backups": "Open Backups...",
         "file.import_midi": "Import MIDI...",
-        "file.export_wav": "Export WAV...",
+        "file.export_wav": "Export Audio...",
         "tools.import_sample": "Import Sample...",
+        "tools.split_studio": "Split Studio...",
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
         "edit.engine_settings": "Engine Settings...",

@@ -3,6 +3,7 @@
 #include "core_check.h"
 #include "native_check.h"
 
+#include <QByteArray>
 #include <QDebug>
 #include <QFile>
 #include <QtTest/QTest>
@@ -141,6 +142,11 @@ void SwiftCoreTest::bankOwnership()
 void SwiftCoreTest::voicegroupLocator()
 {
     pdc_suite_run(PDC_SUITE_VOICE_LOCATOR, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::kitDraft()
+{
+    pdc_suite_run(PDC_SUITE_KIT_DRAFT, reportSwiftCheck, this);
 }
 
 void SwiftCoreTest::noteEdits()

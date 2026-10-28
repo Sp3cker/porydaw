@@ -2,7 +2,7 @@ import Foundation
 
 /// Note-span curve editor. The document never sees a draft until the gesture ends.
 public struct PitchBendKernel {
-    public enum Lane { case pitch, modulation }
+    public enum Lane { case pitch, modulation, lfoSpeed }
     public struct Point: Equatable {
         public var tick: Int
         public var value: Int
@@ -19,6 +19,9 @@ public struct PitchBendKernel {
     private struct VertexDrag {
         var original: [Int: Int]
         var originalTick: Int
+        var originalValue: Int
+        var pressX: Double
+        var pressY: Double
     }
     private enum Gesture { case stroke(Stroke), vertex(VertexDrag) }
 
@@ -59,7 +62,7 @@ public struct PitchBendKernel {
             lane == .pitch ? 8191 : 127)
         self.points[endTick] = self.endValue
         keyboardTick = startTick
-        liveValue = points[startTick] ?? 0
+        liveValue = points[startTick] ?? Self.defaultValue(for: lane)
     }
 
     public var hasGesture: Bool { gesture != nil }
@@ -69,6 +72,11 @@ public struct PitchBendKernel {
     }
     public var minimumValue: Int { lane == .pitch ? -8192 : 0 }
     public var maximumValue: Int { lane == .pitch ? 8191 : 127 }
+
+    /// Note-start value when the lane carries no point: the engine default
+    /// (TimeDefaults.controllerDefault(for: 0x15) == 22) for LFO speed, silence otherwise.
+    public static func defaultValue(for lane: Lane) -> Int { lane == .lfoSpeed ? 22 : 0 }
+    public var defaultValue: Int { Self.defaultValue(for: lane) }
     public var orderedPoints: [Point] {
         points.keys.sorted().compactMap { tick in
             points[tick].map { Point(tick: tick, value: $0) }
@@ -86,11 +94,11 @@ public struct PitchBendKernel {
     }
 
     public mutating func reset() {
-        points = [startTick: 0, endTick: endValue]
+        points = [startTick: defaultValue, endTick: endValue]
         selectedTick = nil
         gesture = nil
         keyboardTick = startTick
-        liveValue = 0
+        liveValue = defaultValue
     }
 
     /// Re-reads the snap lattice after the editing grid changed under the open note.
@@ -134,8 +142,9 @@ public struct PitchBendKernel {
 
     public func y(at value: Int) -> Double {
         let bottom = geometry.canvasY + geometry.canvasHeight - 1
-        if lane == .modulation {
-            return bottom - (Double(min(127, max(0, value))) * geometry.canvasHeight / 127).rounded()
+        if lane != .pitch {
+            let span = geometry.canvasHeight - (lane == .lfoSpeed ? 1 : 0)
+            return bottom - (Double(min(127, max(0, value))) * span / 127).rounded()
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
         if value >= 0 {
@@ -147,8 +156,9 @@ public struct PitchBendKernel {
     public func value(atY y: Double) -> Int {
         let bottom = geometry.canvasY + geometry.canvasHeight - 1
         let clamped = min(bottom, max(geometry.canvasY, y.rounded()))
-        if lane == .modulation {
-            return min(127, max(0, Int(((bottom - clamped) * 127 / max(1, geometry.canvasHeight)).rounded())))
+        if lane != .pitch {
+            let span = geometry.canvasHeight - (lane == .lfoSpeed ? 1 : 0)
+            return min(127, max(0, Int(((bottom - clamped) * 127 / max(1, span)).rounded())))
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
         if abs(clamped - center) <= geometry.zeroDetent { return 0 }
@@ -161,8 +171,8 @@ public struct PitchBendKernel {
     }
 
     public func value(at tick: Int) -> Int {
-        guard let previous = points.keys.filter({ $0 <= tick }).max() else { return 0 }
-        return points[previous] ?? 0
+        guard let previous = points.keys.filter({ $0 <= tick }).max() else { return defaultValue }
+        return points[previous] ?? defaultValue
     }
 
     public func hitTest(x: Double, y: Double) -> Point? {
@@ -218,7 +228,10 @@ public struct PitchBendKernel {
     public mutating func begin(x: Double, y: Double, line: Bool) {
         if let hit = hitTest(x: x, y: y) {
             selectedTick = hit.tick
-            gesture = .vertex(VertexDrag(original: points, originalTick: hit.tick))
+            gesture = .vertex(
+                VertexDrag(
+                    original: points, originalTick: hit.tick, originalValue: hit.value,
+                    pressX: x, pressY: y))
             keyboardTick = hit.tick
             liveValue = hit.value
             return
@@ -249,22 +262,28 @@ public struct PitchBendKernel {
             liveValue = point.value
         case .vertex(let drag):
             points = drag.original
+            let dx = x - drag.pressX
+            let dy = y - drag.pressY
+            let originalValue = drag.originalValue
             let endpoint = drag.originalTick == startTick || drag.originalTick == endTick
             var tick =
-                endpoint
+                endpoint || abs(dx) <= geometry.scrubThreshold
                 ? drag.originalTick
                 : min(
                     endTick - 1,
                     max(
                         startTick + 1,
-                        tick(atX: x, fine: fine)))
+                        self.tick(atX: self.x(at: drag.originalTick) + dx, fine: fine)))
             if tick != drag.originalTick && points[tick] != nil {
-                let delta = tick > drag.originalTick ? 1 : -1
-                while tick > startTick && tick < endTick && points[tick] != nil { tick += delta }
-                if tick <= startTick || tick >= endTick { tick = drag.originalTick }
+                tick = drag.originalTick
             }
             if tick != drag.originalTick { points.removeValue(forKey: drag.originalTick) }
-            let value = drag.originalTick == endTick ? endValue : value(atY: y)
+            let value =
+                drag.originalTick == endTick
+                ? endValue
+                : abs(dy) <= geometry.scrubThreshold
+                    ? originalValue
+                    : value(atY: self.y(at: originalValue) + dy)
             points[tick] = value
             points[endTick] = endValue
             selectedTick = tick

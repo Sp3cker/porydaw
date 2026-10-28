@@ -146,10 +146,14 @@ ShellLaneSupport {
         criticalSpy.clear()
         var missingPath = bootstrap.projectRoot + "/missing-native-project"
         session.openProject(missingPath)
+        compare(session.projectOpeningStage, 1, "project replacement immediately publishes reading progress")
         verify(waitForNative(function() { return session.lastSaveError.length > 0 }, 30000),
                "opening the missing project reports a failure")
-        compare(shell.shellPresenter.statusText, session.lastSaveError,
-                "the missing project explanation reaches the shell status")
+        tryCompare(session, "projectOpeningStage", 0, 5000,
+                   "failed project replacement cannot leave opening progress active")
+        tryCompare(shell.footer, "showingProgress", false, 5000,
+                   "opening progress cannot cover the failed-open explanation")
+        compare(shell.footer.showingFailure, true, "the failed-open explanation takes status priority")
         verify(waitForNative(function() { return criticalSpy.count === 1 }, 5000),
                "the failed project open raises the production error dialog")
         var dialog = findChild(shell, "shellCriticalDialog")
@@ -193,6 +197,8 @@ ShellLaneSupport {
                 "selecting the first song keeps the second prior document ready")
 
         session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        compare(session.lastSaveError, "", "retrying a project open releases the old error status")
+        compare(session.projectOpeningStage, 1, "retrying immediately publishes new opening progress")
         verify(waitForNative(function() {
             return tabs.tabCount === 1 && tabs.selectedPage !== firstPage
                 && tabs.selectedPage !== null && tabs.selectedPage.title === "mus_route101"
@@ -202,6 +208,9 @@ ShellLaneSupport {
         verify(selector !== null, "the reopened project's voicegroup selector is mounted")
         verify(waitForNative(function() { return selector.count === 5 }, 5000),
                "the reopened project's five staged fixture voicegroups reach the selector")
+        tryCompare(selector, "editText", "fixture_rich", 3000,
+                   "the selector still shows the song's voicegroup after the catalog resets its choices")
+        compare(selector.currentIndex, 4, "the popup marks the active voicegroup")
         verify(session.projectOpen && session.songOpen
                && selector.textAt(0) === "fixture_bass"
                && selector.textAt(1) === "fixture_drums_a"

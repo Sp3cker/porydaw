@@ -26,7 +26,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() {
             return controller.bankDirty && draft.release !== initial
         }, 15000), "ADSR commit publishes dirty bank and refreshed editor")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return draft.release === initial }, 15000),
                "undo restores original ADSR")
     }
@@ -51,7 +51,7 @@ ShellVoicegroupSupport {
         }, 15000), "a release spin edit commits through the bank pipeline: "
                    + "before=" + before + " control=" + release.value
                    + " draft=" + draft.release + " dirty=" + controller.bankDirty)
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.release === before && !controller.bankDirty
         }, 15000), "undo restores release after a focused spin edit")
@@ -75,7 +75,7 @@ ShellVoicegroupSupport {
         controller.selectSlot(4)
         compare(editor.release, firstRelease, "queued old-slot edit never lands after selection")
         controller.selectSlot(0)
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return editor.release === secondRelease }, 15000),
                "undo restores the selected slot after queued stale edit")
     }
@@ -111,7 +111,7 @@ ShellVoicegroupSupport {
         compare(app.saveInProgress, false,
                 "a completed mounted save lowers the in-progress receipt")
         verify(!controller.bankDirty && !app.documentDirty && !save.enabled,
-               "a unified save cleans the dock")
+               "a voicegroup-only save cleans the dock without changing the song")
         compare(saveFinishes, finishesBefore + 1,
                 "successful mounted Save completes exactly one receipt")
         verify(fileProbe.fileFingerprint(bankPath) !== beforeBytes,

@@ -44,7 +44,7 @@ struct RollPlotBuilder {
     private static let glowKnee = 18.0
     private static let fontNoteName: UInt32 = 6
     private static let fontNoteValue: UInt32 = 7
-    private static let velocityTexts: [String] = (0..<128).map { String($0) }
+    private static let velocityTexts: [String] = (0..<128).map { (velocity: Int) -> String in String(velocity) }
 
     mutating func build(
         _ input: GridSceneInput,
@@ -361,7 +361,7 @@ struct RollPlotBuilder {
                             text: text)
                         usedValueFont = true
                     }
-                    for (p, r) in zip(painted, paintedRecords) where p.flags & 1 == 0 {
+                    for (p, r) in zip(painted, paintedRecords) where p.flags & UInt8(1) == UInt8(0) {
                         addValue(box: p, text: Self.velocityTexts[r.velocity], id: p.id, argb: r.ink)
                     }
                     if let preview = previewBox {
@@ -378,7 +378,7 @@ struct RollPlotBuilder {
                     <= floor(keyHeight - pixel - 2 * metrics.spaceHalf)
             {
                 let pixelSize = input.fonts[.noteName]?.pixelSize ?? 0
-                for (p, r) in zip(painted, paintedRecords) where p.flags & 1 == 0 {
+                for (p, r) in zip(painted, paintedRecords) where p.flags & UInt8(1) == UInt8(0) {
                     let natural = typography.noteNameAdvance(pitch: p.pitch)
                     if !(p.w >= metrics.spaceHalf + natural + metrics.spaceTwo) {
                         continue

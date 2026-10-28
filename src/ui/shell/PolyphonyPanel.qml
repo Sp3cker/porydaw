@@ -34,6 +34,7 @@ Item {
 
     Flickable {
         id: scroll
+        acceptedButtons: Qt.NoButton
         objectName: "polyphonyScroll"
         anchors.fill: parent
         contentWidth: width
@@ -301,6 +302,7 @@ Item {
                 ToolTip.visible: logHover.hovered
                 ListView {
                     id: list
+                    acceptedButtons: Qt.NoButton
                     objectName: "polyphonyEventRows"
                     anchors.fill: parent
                     anchors.margins: 1

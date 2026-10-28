@@ -97,6 +97,16 @@ ShellLaneSupport {
                "the exposed full shell submits the requested frame before fixture input")
     }
 
+    function undoVoicegroup() {
+        app.setEditingVoicegroup(true)
+        app.requestUndo()
+    }
+
+    function redoVoicegroup() {
+        app.setEditingVoicegroup(true)
+        app.requestRedo()
+    }
+
     function initTestCase() {
         compare(panel.baseFontPx, app.baseFontPx,
                 "voicegroup pane derives its base before a song opens")
@@ -178,7 +188,6 @@ ShellLaneSupport {
                    : variant === "editor-readonly" ? 1 : 3, 1000,
                    "editor form recomputes for selected bank slot")
         waitForRendering(panel)
-        checkRegion(reference, "selector", findChild(panel, "vgArgCombo"), 4)
         checkRegion(reference, "tree", findChild(panel, "voicegroupTree"), 5)
         checkRegion(reference, "tree.header", findChild(panel, "voicegroupTreeHeader"), 5)
         checkRegion(reference, "tree.row.000", findChild(panel, "voicegroupRow_0"), 5)
@@ -194,22 +203,25 @@ ShellLaneSupport {
                             findChild(panel, "vgSamplePickerButton"), 5)
             }
         }
-        let saved = false
-        const destination = bootstrap.projectRoot + "/voicegroupbrowser-"
-                            + (variant.length ? variant : "vanilla") + ".png"
-        verify(panel.grabToImage(function(image) {
-            saved = image.saveToFile(destination)
-        }), "rendered the production VoicegroupPanel")
-        tryVerify(function() { return saved }, 5000,
-                  "saved " + variant + " voicegroup reference PNG at " + destination)
     }
 
     function cleanup() {
         if (!fullShell)
             return
         fullShell.close()
-        if (fullShell.shellPresenter.session.songTabs.pendingCloseId >= 0)
-            fullShell.shellPresenter.session.songTabs.confirmDiscard()
+        for (let step = 0; step < 12 && !fullShell.shellPresenter.closeReady; ++step) {
+            const session = fullShell.shellPresenter.session
+            verify(waitForNative(function() {
+                return fullShell.shellPresenter.closeReady || session.songTabs.pendingCloseId >= 0
+                    || session.songTabs.pendingCloseBankTitle.length > 0
+            }, 30000), "cleanup waits for the actual song or voicegroup close gate")
+            if (fullShell.shellPresenter.closeReady)
+                break
+            session.songTabs.confirmDiscard()
+            verify(waitForNative(function() { return !session.saveInProgress }, 15000),
+                   "cleanup waits for real voicegroup discard")
+        }
+        verify(fullShell.shellPresenter.closeReady, "cleanup resolves every retained owner before destruction")
         fullShell.destroy()
         fullShell = null
         wait(0)

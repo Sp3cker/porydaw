@@ -11,6 +11,8 @@ ShellGridInputSupport {
 
     function physicalShellImage(item) {
         var capture = null
+        // Offscreen grabImage returns logical pixels at half the DPR2 size, leaving ring samples out of bounds.
+        // Keep grabToImage, saveToFile and the reader for the native selection and transposed-note pixels.
         verify(item.grabToImage(function(result) { capture = result }),
                "the mounted selection accepts a physical framebuffer capture")
         tryVerify(function() { return capture !== null }, 3000)

@@ -327,11 +327,13 @@ private func bucketParitySum(_ report: CheckReport) {
                 zeroDuration, cppID: bucketSumID,
                 message: entry.name + ": an unterminated note projects zero duration")
         }
+        let noteEvents: Int = notes.count + terminated
+        let laneEvents: Int = laneSeven + laneTen + document.lanePoints(track: 0, lane: .voice).count
+        let otherEvents: Int = stripFromEvents + timeline.tempoMap.count
+        let bucketEvents: Int = noteEvents + laneEvents + otherEvents
         report.expectEqual(
             expected: timeline.events.count,
-            actual: notes.count + terminated + laneSeven + laneTen
-                + document.lanePoints(track: 0, lane: .voice).count
-                + stripFromEvents + timeline.tempoMap.count,
+            actual: bucketEvents,
             cppID: bucketSumID,
             what: entry.name + ": every timeline event lands in exactly one song-view bucket")
     }
@@ -585,12 +587,26 @@ private func finerSelectionKeepsCoarserLines(_ report: CheckReport) {
                         let name =
                             "\(meter.numerator)/\(1 << meter.denomPow2) \(feel) "
                             + "dpr \(dpr) zoom \(zoom) \(coarser.name) -> \(selection)"
+                        var keepsCoarserWeights = true
+                        for (tick, weight) in coarser.lines {
+                            if lines[tick] != weight {
+                                keepsCoarserWeights = false
+                                break
+                            }
+                        }
                         report.expect(
-                            coarser.lines.allSatisfy { lines[$0.key] == $0.value },
+                            keepsCoarserWeights,
                             cppID: finerAddsLinesID,
                             message: "\(name): every coarser line still paints at its weight")
+                        var paintedLinesSnap = true
+                        for tick in lines.keys {
+                            if grid.snapTick(Double(tick), camera: camera) != tick {
+                                paintedLinesSnap = false
+                                break
+                            }
+                        }
                         report.expect(
-                            lines.keys.allSatisfy { grid.snapTick(Double($0), camera: camera) == $0 },
+                            paintedLinesSnap,
                             cppID: finerAddsLinesID, message: "\(name): every painted line snaps")
                         coarser = ("\(selection)", lines)
                     }
@@ -656,10 +672,15 @@ private func fixedGridLinesMatchSnap(_ report: CheckReport) {
         report.expect(
             offGrid == demoted, cppID: snapLinesID,
             message: "\(name): beats off the snap lattice are demoted")
+        var emphasizedLinesSnap = true
+        for tick in subdivisions + snapped {
+            if grid.snapTick(Double(tick), camera: camera) != tick {
+                emphasizedLinesSnap = false
+                break
+            }
+        }
         report.expect(
-            (subdivisions + snapped).allSatisfy {
-                grid.snapTick(Double($0), camera: camera) == $0
-            }, cppID: snapLinesID, message: "\(name): every emphasized line is a snap point")
+            emphasizedLinesSnap, cppID: snapLinesID, message: "\(name): every emphasized line is a snap point")
     }
     grid.setState(.musical(4), feel: .triplet)
     report.expectEqual(

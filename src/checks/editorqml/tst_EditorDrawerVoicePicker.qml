@@ -52,12 +52,12 @@ EditorDrawerTestSupport {
         keyClick(Qt.Key_Up)
         tryVerify(function() { return model.pickerIndex === index }, 1000,
                   "the up arrow returned to the captured row")
-        var forward = [accept, cancel, search, list]
+        var forward = [cancel, accept, search, list]
         for (var f = 0; f < forward.length; ++f) {
             keyClick(Qt.Key_Tab)
             compare(forward[f].activeFocus, true, "Tab follows the picker cycle at " + f)
         }
-        var backward = [search, cancel, accept, list]
+        var backward = [search, accept, cancel, list]
         for (var b = 0; b < backward.length; ++b) {
             keyClick(Qt.Key_Backtab, Qt.ShiftModifier)
             compare(backward[b].activeFocus, true, "Backtab reverses the picker cycle at " + b)
@@ -269,11 +269,25 @@ EditorDrawerTestSupport {
 
         var withoutModal = grabImage(drawer)
         verify(withoutModal && withoutModal.width > 0, "the drawer composited again")
-        var bodyFill = PixelSupport.nearestPixel(testCase, withoutModal, probeRegion, cardChannels)
-        verify(bodyFill.distance > cardFill.distance + 6,
-               "the overlap region belongs to the section body once the modal is gone ("
-               + cardFill.pixel.join("/") + " d=" + cardFill.distance + " -> "
-               + bodyFill.pixel.join("/") + " d=" + bodyFill.distance + ")")
+        // The card fill matches the plot surface, so its outline proves the stacking.
+        var outline = PixelSupport.channelsOf(testCase, card.appearance.outline)
+        var cleared = 0
+        for (var x = Math.max(0, Math.floor(left * scale));
+             x <= Math.min(withModal.width - 1, Math.ceil(right * scale)); ++x) {
+            for (var y = Math.max(0, Math.floor(top * scale));
+                 y <= Math.min(withModal.height - 1, Math.ceil(bottom * scale)); ++y) {
+                var shown = [withModal.red(x, y), withModal.green(x, y), withModal.blue(x, y)]
+                var after = [withoutModal.red(x, y), withoutModal.green(x, y), withoutModal.blue(x, y)]
+                var onOutline = Math.max(Math.abs(shown[0] - outline[0]), Math.abs(shown[1] - outline[1]),
+                                         Math.abs(shown[2] - outline[2])) <= 6
+                var changed = Math.max(Math.abs(shown[0] - after[0]), Math.abs(shown[1] - after[1]),
+                                       Math.abs(shown[2] - after[2])) > 6
+                if (onOutline && changed)
+                    ++cleared
+            }
+        }
+        verify(cleared > 0,
+               "the card's outline composited over the section body and clears once the modal is gone")
     }
 
     function test_productionVoiceChangesSpacePriority() {

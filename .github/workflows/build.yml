@@ -3,8 +3,6 @@ name: Build
 on:
   push:
     branches: [fork-main]
-  pull_request:
-  workflow_dispatch:
 
 concurrency:
   group: build-${{ github.workflow }}-${{ github.ref }}
@@ -17,19 +15,20 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      # Full history: changed lines are measured from the merge-base with the base.
+      # Full history: changed lines are measured from the previous fork-main push.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: denoland/setup-deno@v2
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
+          version: "0.13.0"
+      - run: uv sync --locked
 
       # swift-format ships with the runner image's Swift toolchain.
       - name: Check formatting
         env:
-          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before || 'HEAD' }}
-        run: deno task format --check --base "$BASE"
+          BASE: ${{ github.event.before }}
+        run: uv run --no-sync dev format --check --base "$BASE"
 
   build-linux:
     runs-on: ubuntu-latest
@@ -39,14 +38,19 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Cache C/C++ objects
-        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: "6.11.*"
           cache: true
+
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Configure
         run: >-
@@ -62,6 +66,7 @@ jobs:
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-linux
           path: build/porydaw
   build-native:
@@ -88,15 +93,18 @@ jobs:
           aqtsource: ${{ runner.os == 'Windows' && 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7' || '' }}
           arch: ${{ runner.os == 'Windows' && 'win64_msvc2022_64' || '' }}
 
-      - name: Set up Deno
+      - name: Set up uv
         if: runner.os == 'Windows'
-        uses: denoland/setup-deno@v2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
-          deno-version: v2.x
+          version: "0.13.0"
+      - name: Provision harness
+        if: runner.os == 'Windows'
+        run: uv sync --locked --no-dev
 
       - name: Patch Qt for Swift's Clang importer
         if: runner.os == 'Windows'
-        run: deno run --allow-read --allow-write tools/qt_version_number_patch.ts "$env:QT_ROOT_DIR"
+        run: uv run --no-sync dev qt:patch "$env:QT_ROOT_DIR"
 
       - name: Set up MSVC environment
         if: runner.os == 'Windows'
@@ -150,6 +158,7 @@ jobs:
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-macos
           path: build/porydaw.dmg
 
@@ -160,20 +169,22 @@ jobs:
           cmake --install build --prefix porydaw-windows
           if (Test-Path RELEASE-README.txt) { Copy-Item RELEASE-README.txt porydaw-windows/README.txt }
 
-      # Proves the staged folder is self-contained: no Qt or Swift on PATH.
+      # Proves the staged folder is self-contained: the first QML frame with no Qt or Swift on PATH.
       - name: Launch staged porydaw.exe
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $dev = (Resolve-Path .venv\Scripts\dev.exe).Path
           $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
           Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
-          $p = Start-Process -FilePath porydaw-windows\porydaw.exe -ArgumentList --version -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "porydaw.exe --version exited $($p.ExitCode)" }
+          & $dev bench:startup --runs 1 --timeout-ms 60000 --binary porydaw-windows\porydaw.exe
+          if ($LASTEXITCODE -ne 0) { throw "porydaw.exe did not reach its first frame" }
 
       - name: Upload Windows artifact
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: porydaw-windows
           path: porydaw-windows
 
@@ -187,8 +198,10 @@ jobs:
           submodules: recursive
           fetch-depth: 1
 
-      - name: Cache C/C++ objects
-        uses: mozilla-actions/sccache-action@v0.0.9
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lld pulseaudio libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -196,38 +209,45 @@ jobs:
           version: "6.11.*"
           cache: true
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+      - name: Cache C/C++ objects
+        uses: mozilla-actions/sccache-action@v0.0.9
 
-      - name: Install PulseAudio
-        run: >-
-          sudo apt-get update
-          && sudo apt-get install -y --no-install-recommends
-          pulseaudio pulseaudio-utils
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+      - run: uv sync --locked
+      - name: Python harness tests
+        run: uv run --no-sync dev tools:check
 
       - name: Start a dummy audio server
         run: |
           pulseaudio -D --exit-idle-time=-1 || true
           pactl load-module module-null-sink sink_name=ci || true
+      # Cap Swift driver fan-out and backend threads independently of Ninja jobs.
+      # LLD avoids GNU ld's >16 GB peak when linking the ASAN check binary.
       - name: Configure
         run: >-
           cmake -S . -B build-asan -G Ninja -DPORYDAW_ASAN=ON
           -DCMAKE_BUILD_TYPE=RelWithDebInfo
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DCMAKE_LINKER_TYPE=LLD
+          -DCMAKE_Swift_NUM_THREADS=2
+          -DCMAKE_Swift_FLAGS_RELWITHDEBINFO="-O -g -num-threads 2"
 
       - name: Build
-        run: cmake --build build-asan -j"$(nproc)"
+        run: cmake --build build-asan -j2
 
       - name: Run harnesses
-        run: >-
-          QT_QUICK_BACKEND=software
-          deno run --allow-read --allow-write --allow-run
-          --allow-env=ASAN_OPTIONS,DISPLAY,PORYDAW_SAMPLE_CORPUS,PORYDAW_CHECK_HOST
-          tools/run_checks.ts build-asan/porydaw_checks
-          --no-windowing-checks --pool=1
+        run: |
+          checks=(uv run --no-sync dev checks:run
+            build-asan/porydaw_checks --no-windowing-checks)
+          set +e
+          QT_QUICK_BACKEND=software "${checks[@]}" --filter=projectstore-parity --pool=1
+          parity_status=$?
+          QT_QUICK_BACKEND=software "${checks[@]}" --exclude=projectstore-parity --pool=4
+          remaining_status=$?
+          (( parity_status == 0 && remaining_status == 0 ))
 
       - name: sccache stats
         run: sccache --show-stats || true

@@ -26,6 +26,13 @@ Item {
             songName.cursorPosition = Math.min(cursor, accepted.length)
         }
     }
+    function acceptConstant(accepted: string): void {
+        if (accepted !== songConstant.text) {
+            const cursor = songConstant.cursorPosition
+            songConstant.text = accepted
+            songConstant.cursorPosition = Math.min(cursor, accepted.length)
+        }
+    }
     onVisibleChanged: { if (visible) songName.forceActiveFocus() }
     GridLayout {
         anchors.fill: parent
@@ -55,7 +62,7 @@ Item {
             wrapMode: Text.WordWrap
         }
         Label { Layout.row: 2; Layout.column: 0; text: qsTr("Constant:"); color: page.colors.windowText }
-        TextField { objectName: "importSongConstant"; Layout.row: 2; Layout.column: 1; Layout.fillWidth: true; text: page.constant; onTextEdited: page.constantEdited(text) }
+        TextField { id: songConstant; objectName: "importSongConstant"; Layout.row: 2; Layout.column: 1; Layout.fillWidth: true; text: page.constant; onTextEdited: page.constantEdited(text) }
         Label { Layout.row: 3; Layout.column: 0; text: qsTr("Player:"); color: page.colors.windowText }
         ComboBox {
             objectName: "importIdentityPlayer"

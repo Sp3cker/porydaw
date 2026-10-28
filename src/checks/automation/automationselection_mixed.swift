@@ -3,6 +3,7 @@ import Foundation
 @testable import PorydawAppPresentation
 import PorydawCore
 @testable import PorydawDocument
+import SwiftCoreCheckLogic
 
 @MainActor
 func drawerAutomationMixedSelectionFixture(

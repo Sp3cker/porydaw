@@ -1,4 +1,5 @@
 import Foundation
+import PorydawPlayback
 import PorydawCore
 import PorydawDocument
 import QtBridge
@@ -55,8 +56,6 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored
     var suppressedLeftRelease = false
     @QtIgnored
-    var bandAuditioned: [NoteID: (track: Int, pitch: Int)] = [:]
-    @QtIgnored
     var pendingControlToggle: NoteID?
     @QtIgnored
     var pendingVelocityReanchor: NoteID?
@@ -85,8 +84,14 @@ public final class PianoGrid: QmlUncreatable {
     var keyboardAuditionTrack: Int?
     @QtIgnored
     var keyboardTransposeAuditionActive = false
-    /// Receives roll auditions as (track, pitch, velocity), including band entrants.
+    /// Receives mono roll auditions as (track, pitch, velocity).
     @QtIgnored public var onAudition: ((Int, Int, Int) -> Void)?
+    /// Pending replay of a velocity drag's held audition, and the velocity last heard.
+    @QtIgnored var velocityAuditionTask: Task<Void, Never>?
+    @QtIgnored var velocityAuditionHeard = 0
+    /// Receives the ordered eligible band coverage; empty coverage releases the band.
+    @QtIgnored public var onBandAudition: (([BandAuditionNote]) -> Void)?
+    @QtIgnored var bandAuditionScratch: [BandAuditionNote] = []
     /// Fork commitEditCursor egress: a commit seeks the selected transport
     /// while paused/playing; the owner guards selection, stopped only moves.
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
@@ -142,7 +147,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtTracked public var visibleRowCount = 128
     @QtTracked public var tripletGrid = false
     @QtTracked public var gridSelectionMenuId = -1
-    public var gridMenuRows: QListModel<GridSubdivisionMenuItem> = QListModel()
+    public var gridMenuRows: QListModel<MenuRow> = QListModel()
     @QtTracked public var gridMenuKind = 0
     @QtTracked public var gridDivisionControlText = "Auto"
     @QtTracked public var gridFeelControlText = "Straight"
@@ -304,7 +309,7 @@ public final class PianoGrid: QmlUncreatable {
 
     public func dismissGridMenu() { dismissGridMenuImpl() }
 
-    public func gridMenuRow(index: Int) -> Optional<GridSubdivisionMenuItem> {
+    public func gridMenuRow(index: Int) -> Optional<MenuRow> {
         guard index >= 0, index < gridMenuRows.count else { return nil }
         return gridMenuRows[index]
     }
@@ -410,18 +415,3 @@ public final class PianoGrid: QmlUncreatable {
 
 }
 
-@MainActor
-@QtBridgeable
-public final class GridSubdivisionMenuItem {
-    public let actionId: Int
-    public let text: String
-    public var enabled: Bool = true
-    public var checkable: Bool = true
-    public let checked: Bool
-
-    init(actionId: Int, text: String, checked: Bool) {
-        self.actionId = actionId
-        self.text = text
-        self.checked = checked
-    }
-}

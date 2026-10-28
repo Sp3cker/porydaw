@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 
 func resonanceTimingChecks(_ report: CheckReport) {
     typealias P = ResonanceCheckFixture

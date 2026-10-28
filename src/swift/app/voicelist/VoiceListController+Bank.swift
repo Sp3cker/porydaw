@@ -6,39 +6,83 @@ import QtBridge
 
 @MainActor
 extension VoiceListController {
-    /// Binds the weak document session used for edit commits.
+    /// Binds song assignment separately from the retained voicegroup.
     @QtIgnored
     public func bindSession(_ session: DocumentSession) {
         self.session = session
+        publish(\.hasSongContext, true)
+        bindVoicegroup(session.voicegroup)
     }
 
     @QtIgnored
-    func editOrigin() -> VoiceListEditOrigin? {
-        guard let session else { return nil }
-        return VoiceListEditOrigin(
-            session: session,
-            sourcePath: session.bankLease.id.sourceRelativePath,
-            sectionLabel: session.bankLease.sectionLabel)
+    func bindVoicegroup(_ group: VoicegroupSession) {
+        guard voicegroup !== group else { return }
+        stopSampleAudition()
+        projectedVoicegroupValueRevision = nil
+        if let voicegroupObserver { voicegroup?.removeObserver(voicegroupObserver) }
+        voicegroup = group
+        voicegroupObserver = group.addObserver { [weak self] in self?.refreshVoicegroup() }
+        refreshVoicegroup()
     }
 
     @QtIgnored
-    func isCurrentEditOrigin(_ origin: VoiceListEditOrigin) -> Bool {
-        guard let session else { return false }
-        return session === origin.session && !session.isClosed
-            && session.bankLease.id.sourceRelativePath == origin.sourcePath
-            && session.bankLease.sectionLabel == origin.sectionLabel
+    func editOrigin() -> VoicegroupSession? {
+        editingEnabled ? voicegroup : nil
+    }
+
+    @QtIgnored
+    func isCurrentEditOrigin(_ origin: VoicegroupSession) -> Bool {
+        editingEnabled && voicegroup === origin
     }
 
     /// Rebinds the bank, selector, and used marks from a session.
     @QtIgnored
     public func refresh(from session: DocumentSession) {
         bindSession(session)
-        bindBank(
-            slots: session.bankSlots, dirty: session.bankDirty,
-            loadName: session.bankLoadName)
         let arg = session.document.state.config.voicegroupArgument
         setCurrentVoicegroupArg(arg.isEmpty ? "_dummy" : arg)
         refreshUsedVoices(from: session)
+    }
+
+    @QtIgnored
+    func detachSong() {
+        session = nil
+        publish(\.hasSongContext, false)
+        setCurrentVoicegroupArg("")
+        setUsedVoices([])
+        updateSelectorEnabled()
+        refreshVoicegroup()
+    }
+
+    @QtIgnored
+    func refreshVoicegroup() {
+        publish(\.bankBusy, voicegroup?.isBusy ?? false)
+        guard let voicegroup else {
+            bindBank(slots: nil)
+            return
+        }
+        if projectedVoicegroupValueRevision != voicegroup.valueRevision {
+            projectedVoicegroupValueRevision = voicegroup.valueRevision
+            let value = voicegroup.value
+            bindBank(slots: value.slots, dirty: value.dirty, loadName: value.loadName)
+            refreshRetainedGroups()
+        }
+        onVoicegroupStateChanged?()
+    }
+
+    @QtIgnored
+    func releaseVoicegroup() {
+        stopSampleAudition()
+        projectedVoicegroupValueRevision = nil
+        if let voicegroupObserver { voicegroup?.removeObserver(voicegroupObserver) }
+        voicegroupObserver = nil
+        publish(\.retainedGroupNames, [])
+        publish(\.retainedGroupIndex, -1)
+        publish(\.hasSongContext, false)
+        publish(\.bankBusy, false)
+        session = nil
+        voicegroup = nil
+        bindBank(slots: nil)
     }
 
     /// Derives used programs from active tracks and voice-change lanes.
@@ -90,8 +134,7 @@ extension VoiceListController {
         slots = newSlots ?? []
         publish(\.bankDirty, dirty)
         publish(\.bankLoadName, loadName)
-        let title = dirty ? "Voicegroup*" : "Voicegroup"
-        publish(\.panelTitle, title)
+        publish(\.panelTitle, dirty ? "Voicegroup*:" : "Voicegroup:")
         if wasLoading {
             let text = VoiceListSemantics.voicegroupDisplayName(currentArg)
             publish(\.selectorText, text)
@@ -169,11 +212,18 @@ extension VoiceListController {
     }
 
     @QtIgnored
+    func setEditingEnabled(_ enabled: Bool) {
+        guard editingEnabled != enabled else { return }
+        editingEnabled = enabled
+        updateSelectorEnabled()
+    }
+
+    @QtIgnored
     func updateSelectorEnabled() {
-        let enabled = isBound && !isLoading
+        let enabled = session != nil && isBound && !isLoading && editingEnabled
         publish(\.selectorEnabled, enabled)
         if !isLoading {
-            let placeholder = isBound ? "dummy" : "No song loaded"
+            let placeholder = session == nil ? "No song loaded" : "dummy"
             publish(\.selectorPlaceholder, placeholder)
         }
     }

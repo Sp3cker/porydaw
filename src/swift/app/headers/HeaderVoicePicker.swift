@@ -68,10 +68,9 @@ public final class HeaderVoicePicker {
 
     public func setPickerFilter(text: String) {
         guard pickerOpen else { return }
-        let filter = String(text.prefix(64))
-        guard filter != pickerFilter else { return }
-        pickerFilter = filter
-        selectedProgram = cache.filteredProgram(filter)
+        guard text != pickerFilter else { return }
+        pickerFilter = text
+        selectedProgram = cache.filteredProgram(text)
         publish()
     }
 

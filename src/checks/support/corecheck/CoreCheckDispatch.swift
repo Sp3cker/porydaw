@@ -1,11 +1,6 @@
 import Foundation
 import PorydawCoreCheckNative
-import SwiftCoreCheckEdit
-import SwiftCoreCheckMedia
-import SwiftCoreCheckPages
-import SwiftCoreCheckProject
-import SwiftCoreCheckRoll
-import SwiftCoreCheckSupport
+import SwiftCoreCheckLogic
 
 /// Same-thread synchronous handoff of a CheckReport into MainActor suites; see pdcSuiteRun.
 private final class ReportBox: @unchecked Sendable {
@@ -97,6 +92,7 @@ public func pdcSuiteRun(
     case PDC_SUITE_KEYSPLIT_TABLES: runKeysplitTablesSuite(report)
     case PDC_SUITE_BANK_OWNERSHIP: runBankOwnershipSuite(report)
     case PDC_SUITE_VOICE_LOCATOR: runVoicegroupLocatorSuite(report)
+    case PDC_SUITE_KIT_DRAFT: onMain(report, runKitDraftSuite)
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

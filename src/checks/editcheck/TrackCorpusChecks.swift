@@ -1,4 +1,5 @@
 import PorydawCore
+@testable import SwiftCoreCheckLogic
 
 // Corpus rows for tst_songdocument_songtracks.cpp; each eligible family reloads its own document.
 @MainActor

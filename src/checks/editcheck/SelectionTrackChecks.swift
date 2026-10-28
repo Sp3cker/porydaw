@@ -1,4 +1,3 @@
-import PorydawApp
 import PorydawCore
 import PorydawDocument
 

@@ -78,7 +78,8 @@ Item {
                 objectName: "shellShortcut_" + shortcutDelegate.modelData
                 sequences: content.shell.actionSequences(shortcutDelegate.modelData)
                 context: Qt.WindowShortcut
-                enabled: shortcutDelegate.actionState.enabled
+                // A modeless studio owns its own window shortcuts while active.
+                enabled: shortcutDelegate.actionState.enabled && content.root.active && content.root.activeFocusItem !== null
                 onActivated: content.shell.activate(shortcutDelegate.modelData)
             }
         }
@@ -144,6 +145,12 @@ Item {
     }
     SampleStudioHost {
         workflow: content.shell.session.sampleStudio()
+        hostWindow: content.root
+        applicationSession: content.shell.session
+        colors: content.root.colors
+    }
+    KitStudioHost {
+        workflow: content.shell.session.kitStudio()
         hostWindow: content.root
         applicationSession: content.shell.session
         colors: content.root.colors
@@ -243,6 +250,7 @@ Item {
                 }
             }
             footer: DialogButtonBox {
+                buttonLayout: DialogButtonBox.MacLayout
                 Button {
                     id: saveConflictOverwriteButton
                     objectName: "saveConflictOverwrite"

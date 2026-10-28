@@ -50,14 +50,14 @@ extension ProjectStore {
                 dirty: current.dirty, slotViews: current.slotViews))
     }
 
-    private func editingStore() throws -> VoicegroupStore {
+    internal func editingStore() throws -> VoicegroupStore {
         guard let store = voicegroupStore else {
             throw VoicegroupStoreError.operationFailed("Project is not open.")
         }
         return store
     }
 
-    private func adoptedEditOutcome(_ result: VoicegroupEditResult) -> ProjectBankEditOutcome {
+    internal func adoptedEditOutcome(_ result: VoicegroupEditResult) -> ProjectBankEditOutcome {
         switch result {
         case .applied(let applied):
             let adopted = adoptBankLease(view: applied.view)

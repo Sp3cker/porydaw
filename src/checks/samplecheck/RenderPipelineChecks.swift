@@ -1,5 +1,6 @@
 import Foundation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 public func runRenderPipelineChecks(_ report: CheckReport) {
     renderDeterminism(report)
@@ -10,6 +11,9 @@ public func runRenderPipelineChecks(_ report: CheckReport) {
     renderCompressed(report)
     renderSoundFont(report)
     renderCorpus(report)
+    renderZeroCrossing(report)
+    renderSlice(report)
+    renderRatePolicy(report)
 }
 
 func importedHiRes() throws -> ImportedSample {
@@ -85,8 +89,8 @@ struct RiffChunk {
 }
 
 func readRiffChunks(_ bytes: [UInt8]) -> [RiffChunk]? {
-    guard bytes.count >= 12, Array(bytes[0..<4]) == Array("RIFF".utf8),
-        Array(bytes[8..<12]) == Array("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count
+    guard bytes.count >= 12, bytes[0..<4].elementsEqual("RIFF".utf8),
+        bytes[8..<12].elementsEqual("WAVE".utf8), Int(getU32(bytes, 4)) + 8 == bytes.count
     else { return nil }
     var offset = 12
     var chunks: [RiffChunk] = []
@@ -195,8 +199,11 @@ private func renderCrossfade(_ report: CheckReport) {
     check.expect(
         fixed.seam.valid && fixed.seam.ampLsb < original.seam.ampLsb && fixed.seam.ampLsb <= 3,
         message: "crossfade bake tames the seam click")
+    let fadeWindowMatches: Bool =
+        fixed.size == original.size
+        && fixed.s8.dropLast(160).elementsEqual(original.s8.dropLast(160))
     check.expect(
-        fixed.size == original.size && Array(fixed.s8.dropLast(160)) == Array(original.s8.dropLast(160)),
+        fadeWindowMatches,
         message: "crossfade changes only the final fade window")
     params.loopStart = 2
     params.loopEnd = 700
@@ -300,4 +307,171 @@ private func renderCorpus(_ report: CheckReport) {
     let rms = loopRms.isEmpty ? 0 : median(loopRms)
     check.expect(peak >= 117 && peak <= 127, message: "optional corpus peak median stays in recorded IQR")
     check.expect(rms >= 37.9 && rms <= 50.7, message: "optional corpus loop RMS median stays in recorded IQR")
+}
+
+private func renderZeroCrossing(_ report: CheckReport) {
+    let check = report.scoped(cppID: "swiftcore/SampleZeroCrossing::boundedSnap")
+    let sine: [Float] = (0..<33).map { (index: Int) -> Float in
+        index % 4 == 0 ? 0 : Float(sin(.pi * Double(index) / 4))
+    }
+    for index in [8, 16, 24, 32] {
+        check.expect(
+            SampleZeroCrossing.nearest(buffer: sine.span, index: index, windowFrames: 2) == index,
+            message: "synthetic sine zero at \(index) is an exact crossing")
+    }
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: sine.span, index: 6, windowFrames: 1) == 5,
+        message: "a zero-to-negative sign change closes at the negative frame")
+    let tied: [Float] = [1, 1, -1, -1, -1, -1, 1, 1]
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: tied.span, index: 4, windowFrames: 2) == 2,
+        message: "equidistant crossings prefer the lower closing index")
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: tied.span, index: 4, windowFrames: 1) == 4,
+        message: "crossings beyond the search bound leave the index unchanged")
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: tied.span, index: 4, windowFrames: 0) == 4
+            && SampleZeroCrossing.nearest(buffer: tied.span, index: 4, windowFrames: -1) == 4,
+        message: "nonpositive windows disable snapping")
+    let flat = [Float](repeating: 1, count: 8)
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: flat.span, index: Int.min, windowFrames: 3) == 0
+            && SampleZeroCrossing.nearest(buffer: flat.span, index: Int.max, windowFrames: 3) == 7,
+        message: "input indices clamp to the first and last frames")
+    let edges: [Float] = [-1, 1, 1, -1]
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: edges.span, index: -10, windowFrames: 1) == 1
+            && SampleZeroCrossing.nearest(buffer: edges.span, index: 10, windowFrames: 1) == 3,
+        message: "edge searches use the clamped center and can find boundary crossings")
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: flat.span, index: 3, windowFrames: Int.max) == 3,
+        message: "a crossing-free buffer returns its center even with an unbounded caller window")
+    let empty: [Float] = []
+    let single: [Float] = [-1]
+    check.expect(
+        SampleZeroCrossing.nearest(buffer: empty.span, index: 10, windowFrames: 5) == 0
+            && SampleZeroCrossing.nearest(buffer: single.span, index: 10, windowFrames: 5) == 0,
+        message: "empty and one-frame buffers return the clamped identity index")
+    check.expect(
+        Int((0.003 * 13379.0).rounded()) == 40 && Int((0.003 * 44100.0).rounded()) == 132,
+        message: "caller-computed 3 ms windows are 40 frames at 13379 Hz and 132 at 44100 Hz")
+}
+
+private func renderSlice(_ report: CheckReport) {
+    let check = report.scoped(cppID: "swiftcore/SampleSlice::renderAndDeclick")
+    var buffer = [Float](repeating: 0.5, count: 600)
+    for index in 300..<600 { buffer[index] = -0.5 }
+    let source = ImportedSample(buffer: buffer, sampleRate: 44100, sourceChannels: 1)
+    var params = SampleEditParams()
+    params.cropStart = 20
+    params.cropEnd = 420
+    params.targetRate = 13379
+    params.normalizeMode = .oneShot
+    params.baseKey = 62
+    params.fineTuneCents = 37
+    params.ditherOn = true
+    let pipeline = SampleRender.render(source: source, params: params)
+    let untouched = SampleSlice.render(source: source, params: params, fadeIn: false, fadeOut: false)
+    check.expect(
+        untouched == pipeline,
+        message: "both declick fades off preserve cropped, resampled, normalized, dithered pipeline bytes and metadata")
+
+    params.cropStart = 40
+    params.cropEnd = 440
+    params.targetRate = source.sampleRate
+    params.normalizeMode = .off
+    params.fadeIn = false
+    params.fadeOut = false
+    params.ditherOn = false
+    let original = SampleRender.render(source: source, params: params)
+    let faded = SampleSlice.render(source: source, params: params)
+    let fade = min(Int((0.004 * original.outputRate).rounded()), original.preview.count / 2)
+    let tailStart = original.preview.count - fade
+    check.expect(
+        faded.size == original.size && faded.preview.count == original.preview.count
+            && faded.s8.count == original.s8.count,
+        message: "default fade-out preserves all output lengths")
+    check.expect(
+        faded.preview.last == 0 && faded.s8.last == 0,
+        message: "fade-out reaches exact float and undithered PCM zero at the last frame")
+    check.expect(
+        faded.preview[..<tailStart].elementsEqual(original.preview[..<tailStart])
+            && faded.preview[0] == 0.5,
+        message: "default arguments do not fade in or change frames before the tail fade")
+    params.cropStart = 0
+    params.cropEnd = 101
+    let shortOriginal = SampleRender.render(source: source, params: params)
+    let short = SampleSlice.render(source: source, params: params)
+    let shortFade = min(Int((0.004 * short.outputRate).rounded()), short.preview.count / 2)
+    let shortTail = short.preview.count - shortFade
+    check.expect(
+        Double(short.preview.count) / short.outputRate < 0.008
+            && short.preview[..<shortTail].elementsEqual(shortOriginal.preview[..<shortTail])
+            && short.preview[shortTail] != shortOriginal.preview[shortTail]
+            && short.preview.last == 0,
+        message: "a slice shorter than 8 ms fades exactly min(4 ms, half the slice), rounding half down")
+    let headOnly = SampleSlice.render(source: source, params: params, fadeIn: true, fadeOut: false)
+    check.expect(
+        headOnly.preview.first == 0
+            && headOnly.preview[shortFade...].elementsEqual(shortOriginal.preview[shortFade...]),
+        message: "fade-in alone obeys the same half-slice bound without touching the tail")
+
+    params.cropEnd = 400
+    params.targetRate = 13379
+    let resampled = SampleRender.render(source: source, params: params)
+    let resampledFade = min(Int((0.004 * resampled.outputRate).rounded()), resampled.preview.count / 2)
+    let resampledSlice = SampleSlice.render(source: source, params: params)
+    let resampledTail = resampled.preview.count - resampledFade
+    check.expect(
+        resampledSlice.outputRate == 13379
+            && resampledSlice.preview[..<resampledTail].elementsEqual(resampled.preview[..<resampledTail])
+            && resampledSlice.preview[resampledTail] != resampled.preview[resampledTail]
+            && resampledSlice.preview.last == 0,
+        message: "4 ms is measured at the rendered output rate rather than the source rate")
+
+    let silence = ImportedSample(buffer: [Float](repeating: 0, count: 100), sampleRate: 13379)
+    params.cropEnd = silence.frameCount
+    params.normalizeMode = .auto
+    let silent = SampleSlice.render(source: silence, params: params, fadeIn: true, fadeOut: true)
+    check.expect(
+        silent.preview.count == silence.frameCount
+            && silent.preview.allSatisfy { (value: Float) -> Bool in value.isFinite && value == 0 }
+            && silent.s8.allSatisfy { (value: Int8) -> Bool in value == 0 },
+        message: "a silent region normalizes and declicks without NaN")
+    params.cropEnd = 1
+    params.normalizeMode = .off
+    check.expect(
+        SampleSlice.render(source: source, params: params, fadeIn: true, fadeOut: true)
+            == SampleRender.render(source: source, params: params),
+        message: "a one-frame slice has zero half-slice fade length and remains the pipeline output")
+    params.cropEnd = 0
+    check.expect(
+        SampleSlice.render(source: source, params: params)
+            == SampleRender.render(source: source, params: params),
+        message: "an empty crop preserves the render's warning and empty output")
+}
+
+private func renderRatePolicy(_ report: CheckReport) {
+    let check = report.scoped(cppID: "swiftcore/SampleRatePolicy::sharedRates")
+    let fixed = [5734, 7884, 10512, 13379, 15768, 18157, 21024, 26758, 31536, 36314, 40137, 42048]
+    for sourceRate in [8000.0, 13379.0, 44100.0, 48000.5] {
+        check.expect(
+            SampleRatePolicy.targetRate(gbaReady: true, sourceRate: sourceRate) == sourceRate,
+            message: "a GBA-ready source keeps its \(sourceRate) Hz rate")
+        check.expect(
+            SampleRatePolicy.targetRate(gbaReady: false, sourceRate: sourceRate) == min(sourceRate, 13379),
+            message: "a non-GBA-ready source caps at 13379 Hz without upsampling")
+    }
+    check.expect(
+        SampleRatePolicy.rateOptions(sourceRate: 44100) == [44100] + fixed
+            && SampleRatePolicy.rateOptions(sourceRate: 48000.5) == [48001] + fixed,
+        message: "finite positive source rates round to the first option before the fixed table")
+    check.expect(
+        SampleRatePolicy.rateOptions(sourceRate: 13379) == [13379] + fixed,
+        message: "the source option is not deduplicated against an identical fixed rate")
+    for sourceRate in [0.0, -1.0] {
+        check.expect(
+            SampleRatePolicy.rateOptions(sourceRate: sourceRate) == fixed,
+            message: "invalid or unrepresentable source rate \(sourceRate) omits only the source option")
+    }
 }

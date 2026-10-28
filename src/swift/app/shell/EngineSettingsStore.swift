@@ -43,6 +43,8 @@ public struct EngineSettings: Equatable {
 @MainActor
 @QtBridgeable
 public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
+    @QtTracked public var channelsFormat = NumberFieldFormat(kind: .channels)
+    @QtTracked public var reverbFormat = NumberFieldFormat(kind: .reverb)
     @QtTracked public var mixer = "ipatix"
     @QtTracked public var maximumPcmChannels = Int(MAX_PCM_CHANNELS)
     @QtTracked public var maxPcmChannels = 5

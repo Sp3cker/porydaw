@@ -52,7 +52,7 @@ project's MIDI with Porydaw closed. Backups protect MIDI only, not voicegroups,
 samples, or other project files, and do not replace an external disk backup.
 
 The storage module is a standalone, Foundation-only Swift package at
-`src/swift/backups`. Run `deno task checks:backups` to test it without building
+`src/swift/backups`. Run `uv run --no-sync dev checks:backups` to test it without building
 Porydaw or Qt. See [Building Porydaw](docs/BUILDING.md#standalone-backup-module)
 for the module interface and standalone command.
 
@@ -83,8 +83,14 @@ Hidden windows do not start that work. Explicit project opens still prepare thei
 dependencies on demand. Closing before the frame or during content creation keeps
 the saved-session recipe and waits for scene/audio ownership to settle.
 
-Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
-Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+While a project opens, the status bar advances through reading the project,
+opening songs, and indexing instruments. The `1/3`–`3/3` labels count steps,
+not elapsed-time percentages. Progress remains active until the instrument
+catalog is installed; failed or cancelled opens release the progress status.
+
+Builds use standard Ninja through the uv/Python harness against a checkout-local Qt 6.11.
+Existing build directories configured with another generator must be removed and recreated.
+On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows
 x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
@@ -100,23 +106,24 @@ behind this and the qmltypes/AOT steps.
 
 Swift is formatted with swift-format, which ships with the Swift toolchain (`swift format`;
 config in `.swift-format`). Only Swift lines you change are formatted, so untouched code keeps
-its existing style. TypeScript under `tools/` is formatted with `deno fmt`. Before opening a
-pull request, run:
+its existing style. Python harness code is formatted and linted with Ruff. Run
+`uv sync --locked` in each checkout/worktree before using `uv run --no-sync dev`.
+Before opening a pull request, run:
 
 ```bash
-deno task format --check --base origin/fork-main  # what CI checks for a pull request
-deno task checks                             # native check runner harnesses (builds first)
+uv run --no-sync dev format --check --base origin/fork-main
+uv run --no-sync dev checks
 ```
 
 The full task index and per-slice guidance are in AGENTS.md § Build & checks; pipeline internals in docs/BUILDING.md.
 
-`deno task build:checks --asan` builds the app and native checks with AddressSanitizer
+`uv run --no-sync dev build:checks --asan` builds the app and native checks with AddressSanitizer
 in `build/asan`, separate from normal Debug and Release builds. On macOS it uses
 Clang from the selected Swift toolchain so both languages share an ASAN runtime.
 Run its native checks with:
 
 ```bash
-deno task checks --asan
+uv run --no-sync dev checks --asan
 ```
 
 Checks pin consumer-visible behavior and distinct input/state transitions. Prefer typed
@@ -124,6 +131,10 @@ rejections and preserved state over diagnostic wording. Remove assertions implie
 stronger checks in the same state, but retain fixture guards and lifecycle scenarios.
 Rendering checks observe painted output rather than pinning renderer-specific primitives.
 Update affected proof ledgers with their check changes; compile only referenced support.
+
+The old proof reader, editor, compactor, and check-runner proof-evidence
+artifact have been retired. There are currently no proof ledgers in `src/checks/`;
+native application checks and their runners still run.
 
 ### Shell and workspace
 
@@ -141,11 +152,11 @@ edit followed by Undo on the restored song.
 Measure the Release process's submitted window, chrome, workspace or editable-song frame:
 
 ```bash
-deno task build:app --release
-deno task bench:startup --project /path/to/project --song mus_title --check
-deno task bench:startup --until chrome-frame
-deno task bench:startup --until workspace-frame
-deno task bench:startup --until editor-frame
+uv run --no-sync dev build:app --release
+uv run --no-sync dev bench:startup --project /path/to/project --song mus_title --check --budget-ms 600
+uv run --no-sync dev bench:startup --until chrome-frame
+uv run --no-sync dev bench:startup --until workspace-frame
+uv run --no-sync dev bench:startup --until editor-frame
 ```
 
 The monotonic interval starts immediately before process creation and ends at the
@@ -160,9 +171,9 @@ submitted frame; it does not establish audible playback.
 Asynchronous incubation spreads GUI-thread creation across frames; it does not
 run Swift presenters on a background thread.
 The first run is reported separately, without claiming a cold OS cache; `--check`
-requires every launch, including that first run, to stay below `--budget-ms`
-(default 300). Only the benchmark's own processes are terminated. `--help` lists
-run-count, budget, and timeout options.
+requires every launch, including that first run, to stay below an explicit
+positive `--budget-ms`; there is no default compatibility ceiling.
+Only the benchmark's own processes are terminated. `--help` lists the options.
 
 To compare two builds, never benchmark them one after the other: system load drifts
 more between runs than most startup changes are worth. Keep the baseline bundle
@@ -171,7 +182,7 @@ median time per `PORYDAW_STARTUP_TRACE` stage with `--stages`:
 
 ```bash
 cp -R build/release/porydaw.app /tmp/porydaw-baseline.app   # before rebuilding
-deno task bench:startup:ab --until editor-frame --stages \
+uv run --no-sync dev bench:startup:ab --until editor-frame --stages \
   old=/tmp/porydaw-baseline.app/Contents/MacOS/porydaw \
   new=build/release/porydaw.app/Contents/MacOS/porydaw
 ```
@@ -210,6 +221,7 @@ Font Awesome outlines copied from their style's face plus custom artwork compile
 The Quick Controls style `PorydawStyle` (`src/ui/style/`) is Fusion with its image-backed
 indicators (combo and spin arrows, check marks, submenu arrows) drawn as the same glyphs
 and its progress bar without an image mask, so startup loads no Qt image plugins.
+The voicegroup creation button uses `Icons.plus`, extracted from Font Awesome Pro Regular.
 
 To add or change an icon, edit `resources/icons/manifest.json` and regenerate the font
 and the `Icons` singleton (requires fontTools):

@@ -12,10 +12,13 @@ function(porydaw_swift_module target module_name)
     )
     porydaw_enable_swift_batch_mode(${target})
 endfunction()
+# Lazy Qt C++ imports bill ~20–600 ms to whichever expression touches them first, so
+# interop modules and their importers keep a 1000 ms warning; the later flag wins.
 function(porydaw_swift_qt_interop target)
     target_compile_options(${target} PUBLIC
         "$<$<COMPILE_LANGUAGE:Swift>:-cxx-interoperability-mode=default>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -std=c++20>"
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=1000>"
     )
 endfunction()
 
@@ -28,14 +31,17 @@ add_library(PorydawApp STATIC
     samplestudio/Sf2ZonePickerModel.swift
     samplestudio/Sf2ZonePickerPresenter.swift
     samplestudio/SampleStudioHistory.swift
-    samplestudio/SampleStudioReadouts.swift
     samplestudio/SampleStudioPresenter.swift
     samplestudio/SampleLoopTools.swift
     samplestudio/SampleStudioAudition.swift
-    samplestudio/SampleWaveformModel.swift
-    samplestudio/SampleWaveformScene.swift
     samplestudio/SampleProvenanceStore.swift
+    samplestudio/SampleSourcePreparation.swift
+    StudioLibraryHost.swift
     samplestudio/SampleStudioWorkflow.swift
+    kitstudio/KitStudioCloseGuard.swift
+    kitstudio/KitStudioWorkflow.swift
+    kitstudio/KitLeaseReader.swift
+    kitstudio/KitEditLoader.swift
     audio/PolyphonyPanelPresenter.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
@@ -59,6 +65,7 @@ add_library(PorydawApp STATIC
     eventlist/EventListEditing.swift
     eventlist/EventListMenus.swift
     eventlist/EventListPresenter.swift
+    search/SearchQuery.swift
     songlist/SongListPresenter.swift
     songlist/SongDockController.swift
     songlist/SongIntake.swift
@@ -67,6 +74,7 @@ add_library(PorydawApp STATIC
     voicelist/SamplePickerRows.swift
     voicelist/VoiceEditorController.swift
     MouseHints.swift
+    MenuRow.swift
     QmlEngineAccess.swift
     roll/PianoGrid.swift
     roll/PianoGrid+Support.swift
@@ -229,21 +237,22 @@ add_library(PorydawAppAudio STATIC
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift
-    audio/AudioAudition.swift
-    audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
+    audio/Metronome.swift
     export/WavExport.swift
 )
 porydaw_swift_module(PorydawAppAudio PorydawAppAudio)
 target_compile_options(PorydawAppAudio PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature Lifetimes>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-enable-experimental-feature CheckImplementationOnly>"
 )
 set_target_properties(PorydawAppAudio PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppAudio)
 target_compile_options(PorydawAppAudio PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/audio/mp3_encode.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/audio>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/third_party>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"
@@ -261,11 +270,12 @@ porydaw_swift_module(PorydawAppEventList PorydawAppEventList)
 set_target_properties(PorydawAppEventList PROPERTIES
     AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
 )
-porydaw_swift_qt_interop(PorydawAppEventList)
 target_link_libraries(PorydawAppEventList PUBLIC PorydawCore)
 
 add_library(PorydawAppPresentation STATIC
     presentation/QListModelSync.swift
+    presentation/IntegerInputPolicy.swift
+    presentation/NumberFieldFormat.swift
     presentation/drawer/DrawerPan.swift
     presentation/drawer/DrawerStaticsContent.swift
     presentation/drawer/LaneCaptionMetrics.swift
@@ -281,6 +291,7 @@ add_library(PorydawAppPresentation STATIC
     presentation/theme/ThemeColorTables.swift
     presentation/timeline/DisplayListWriter.swift
     presentation/timeline/PlayheadGuides.swift
+    presentation/timeline/SharedPlayheadAppearance.swift
     presentation/timeline/TimelineScrollbar.swift
     presentation/typography/LayoutSpaces.swift
     presentation/typography/Typography.swift
@@ -316,12 +327,15 @@ target_link_libraries(PorydawAppHistory PUBLIC PorydawCore PorydawDocument Poryd
 
 add_dependencies(PorydawAppHistory QtBridgeMacros)
 
+add_subdirectory("${CMAKE_SOURCE_DIR}/src/swift/sampleui" "${CMAKE_BINARY_DIR}/src/swift/sampleui")
+add_subdirectory("${CMAKE_SOURCE_DIR}/src/swift/kitstudio" "${CMAKE_BINARY_DIR}/src/swift/kitstudio")
+
 target_link_libraries(PorydawApp PUBLIC
-    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation
+    PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI PorydawKitStudio
 )
 
 if(PORYDAW_BUILD_CHECKS)
-    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation)
+    foreach(leaf PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppHistory PorydawAppPresentation PorydawSampleUI PorydawKitStudio)
         target_compile_options(${leaf} PRIVATE
             "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
     endforeach()

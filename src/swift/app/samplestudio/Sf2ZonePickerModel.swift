@@ -37,14 +37,10 @@ public struct Sf2ZonePickerModel: Equatable {
     }
 
     private mutating func rebuild() {
-        let needle = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = SearchQuery(filter)
         groups = []
         for (index, zone) in zones.enumerated() {
-            if !needle.isEmpty
-                && ![zone.name, zone.instrument, zone.preset].contains(where: {
-                    $0.range(of: needle, options: .caseInsensitive) != nil
-                })
-            {
+            if !query.isEmpty && !query.matches(zone.name, zone.instrument, zone.preset) {
                 continue
             }
             var title = zone.instrument.isEmpty ? "(no instrument)" : zone.instrument

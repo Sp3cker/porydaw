@@ -164,14 +164,14 @@ public final class AutomationPage: EditorDrawerPage {
     public var menuOpen: Bool = false
     public var menuX: Double = 0
     public var menuY: Double = 0
-    public var menuRows: QListModel<AutomationMenuRowHandle> = QListModel()
+    public var menuRows: QListModel<MenuRow> = QListModel()
     @QtIgnored public var onMenuOpened: (() -> Void)?
     @QtIgnored public var onRequestTimeMenu: ((Tick, Double) -> Void)?
-    public var menuChildRows: QListModel<AutomationMenuRowHandle> = QListModel()
+    public var menuChildRows: QListModel<MenuRow> = QListModel()
     public var menuRowCount: Int = 0
     public var menuChildRowCount: Int = 0
 
-    public func menuRow(index: Int, child: Bool) -> Optional<AutomationMenuRowHandle> {
+    public func menuRow(index: Int, child: Bool) -> Optional<MenuRow> {
         let rows = child ? menuChildRows : menuRows
         guard index >= 0, index < rows.count else { return nil }
         return rows[index]
@@ -263,7 +263,7 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var staticsListWriter = DisplayListWriter()
     @QtIgnored var previewListWriter = DisplayListWriter()
     @QtIgnored var cachedEmptyDisplayList: Data?
-    @QtIgnored var menuRowSnapshots: [AutomationMenuRowHandle] = []
+    @QtIgnored var menuRowSnapshots: [MenuRow] = []
     @QtIgnored let projectionFacts: AutomationProjectionCache = AutomationProjectionCache()
 
     public init(baseFontPx: Double = AutomationPagePolicy.seedBaseFontPx) {

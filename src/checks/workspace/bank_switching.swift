@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawProject
@@ -34,11 +33,11 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         }
         edited.release = edited.release == 255 ? 254 : edited.release + 1
         try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: edited, expected: original[0].voice)
+            try await session.voicegroup.apply(slot: 0, value: edited, expected: original[0].voice)
             try await session.selectVoicegroup("_fixture_alt")
         }
         report.expect(
-            session.document.isDirty && !session.bankDirty
+            session.document.isDirty && !session.voicegroup.value.dirty
                 && session.document.state.config.voicegroupArgument == "_fixture_alt"
                 && session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
                 && session.bankLease !== originalLease,
@@ -47,7 +46,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             session.document.state.config.voicegroupArgument == "_fixture_alt",
             cppID: id, message: "the selector drives the undoable -G seam")
         report.expect(
-            !session.bankDirty,
+            !session.voicegroup.value.dirty,
             cppID: id, message: "the alternate bank remains clean after selector commit")
         report.expect(
             session.bankLease !== originalLease,
@@ -57,7 +56,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             what: "switch to B does not autosave dirty A")
         report.expect(
-            !session.bankDirty,
+            !session.voicegroup.value.dirty,
             cppID: id, message: "a -G switch carries the unsaved bank edit")
         report.expect(
             session.document.isDirty,
@@ -65,11 +64,11 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         try runBlocking { _ = try await session.undo() }
         report.expect(
             session.document.state.config.voicegroupArgument == originalArg
-                && session.bankSlots[0].voice == edited && session.bankDirty,
+                && session.bankSlots[0].voice == edited && session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             message: "undo of -G rebinds the unsaved home voicegroup")
         report.expect(
-            session.bankSlots[0].voice == edited && session.bankDirty,
+            session.bankSlots[0].voice == edited && session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             message: "undo replays the carried edit onto the home bank")
         report.expect(
@@ -83,18 +82,18 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             what: "returning to dirty A does not write its source")
-        try runBlocking { _ = try await session.undo() }
+        try runBlocking { _ = try await session.voicegroup.undo() }
         report.expect(
-            !session.bankDirty && !session.document.isDirty
+            !session.voicegroup.value.dirty && !session.document.isDirty
                 && session.bankSlots[0].voice == original[0].voice
                 && bytes(at: homeBankPath) == homeBytes,
             cppID: "vgsavecheck/VoicegroupSaveTest::switchCarriesUnsavedBankEdit",
             message: "a second undo restores the clean baseline without writing")
-        try runBlocking { _ = try await session.redo() }
+        try runBlocking { _ = try await session.voicegroup.redo() }
         try runBlocking { _ = try await session.redo() }
         report.expect(
             session.bankSlots[0].voice?.macro == BankVoiceMacro.square2
-                && !session.bankDirty,
+                && !session.voicegroup.value.dirty,
             cppID: id, message: "redo of -G rebinds the alternate bank")
         report.expectEqual(
             expected: Optional(homeBytes), actual: bytes(at: homeBankPath),
@@ -119,7 +118,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
         )
         report.expect(
             session.document.history.undoIndex == indexBeforeFailed + 1
-                && session.document.isDirty && !session.bankDirty,
+                && session.document.isDirty && !session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::failedRebindRetainsBinding",
             message: "missing -G records one document edit without dirtying the retained bank")
         try runBlocking { _ = try await session.undo() }
@@ -148,22 +147,22 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             message: "undo after the failed redo restores the previous cfg while retaining its dirty selector history")
         try runBlocking { _ = try await session.undo() }
         let beforeSave = session.bankLease
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
-            !session.bankDirty && !session.document.isDirty
+            !session.voicegroup.value.dirty && !session.document.isDirty
                 && !session.bankLease.sharesBank(with: beforeSave),
             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
             message: "save of song and edited home bank refreshes the clean lease")
         let savedBank = bytes(at: homeBankPath)
-        try runBlocking { _ = try await session.undo() }
+        try runBlocking { _ = try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[0].voice == original[0].voice
-                && session.bankDirty && bytes(at: homeBankPath) == savedBank,
+                && session.voicegroup.value.dirty && bytes(at: homeBankPath) == savedBank,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "value undo and redo resolve against the refreshed canonical bytes")
-        try runBlocking { _ = try await session.redo() }
+        try runBlocking { _ = try await session.voicegroup.redo() }
         report.expect(
-            session.bankSlots[0].voice == edited && !session.bankDirty
+            session.bankSlots[0].voice == edited && !session.voicegroup.value.dirty
                 && !session.document.isDirty && bytes(at: homeBankPath) == savedBank,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "value redo restores the saved canonical voice without writing")
@@ -172,7 +171,7 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             try await session.selectVoicegroup(originalArg)
         }
         report.expect(
-            !session.bankDirty && session.bankSlots[0].voice == edited
+            !session.voicegroup.value.dirty && session.bankSlots[0].voice == edited
                 && bytes(at: homeBankPath) == savedBank,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "a clean round trip reopens the saved home source without changing disk bytes")
@@ -193,32 +192,32 @@ internal func bankSwitchingParity(report: CheckReport, fixtureRoot: String) {
             _ = try await session.undo()
             _ = try await session.undo()
         }
-        try runBlocking { _ = try await session.undo() }
-        try runBlocking { try await session.save() }
+        try runBlocking { _ = try await session.voicegroup.undo() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
-            bytes(at: homeBankPath) == homeBytes && !session.bankDirty,
+            bytes(at: homeBankPath) == homeBytes && !session.voicegroup.value.dirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "a restoring save refreshes the baseline bytes")
         report.expect(
             !session.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "restoration save also leaves the song document clean")
-        try runBlocking { _ = try await session.redo() }
+        try runBlocking { _ = try await session.voicegroup.redo() }
         report.expect(
-            session.bankSlots[0].voice == edited && session.bankDirty
+            session.bankSlots[0].voice == edited && session.voicegroup.value.dirty
                 && bytes(at: homeBankPath) == homeBytes,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "the redo tail re-applies after a restoring save")
         report.expect(
-            session.bankDirty && !session.document.isDirty
+            session.voicegroup.value.dirty && !session.document.isDirty
                 && session.bankSlots[0].voice == edited
                 && bytes(at: homeBankPath) == homeBytes,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "redo tail dirties only the bank and preserves baseline disk bytes")
-        try runBlocking { _ = try await session.undo() }
+        try runBlocking { _ = try await session.voicegroup.undo() }
         report.expect(
             session.bankSlots[0].voice == original[0].voice
-                && !session.bankDirty && !session.document.isDirty,
+                && !session.voicegroup.value.dirty && !session.document.isDirty,
             cppID: "vgsavecheck/VoicegroupSaveTest::valueCommandSurvivesSourceReplacement",
             message: "redo-tail undo restores the clean baseline")
         blankTokenRebasesAcrossSourceReplacement(report: report, session: session, service: service, root: root)
@@ -253,18 +252,19 @@ private func blankTokenRebasesAcrossSourceReplacement(
             let homeBytes = bytes(at: path)
         else { return }
         let materialized = try runBlocking {
-            try await session.applyBankEdit(slot: blank, value: original, expected: nil)
+            try await session.voicegroup.apply(slot: blank, value: original, expected: nil)
         }
         report.expect(
-            materialized.materializationToken != nil && session.bankDirty && session.bankSlots[blank].voice == original,
+            materialized.materializationToken != nil && session.voicegroup.value.dirty
+                && session.bankSlots[blank].voice == original,
             cppID: id, message: "blank slot did not materialize under a reversible token")
         let beforeSave = session.bankLease
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
             !session.bankLease.sharesBank(with: beforeSave) && bytes(at: path) != homeBytes,
             cppID: id, message: "saving the materialized blank did not persist its source")
         report.expect(
-            !session.bankDirty && !session.document.isDirty && session.bankSlots[blank].voice == original,
+            !session.voicegroup.value.dirty && !session.document.isDirty && session.bankSlots[blank].voice == original,
             cppID: id, message: "materialized blank did not save")
 
         let writer = VoicegroupSource()
@@ -298,42 +298,42 @@ private func blankTokenRebasesAcrossSourceReplacement(
                 && session.bankLease.id.sourceRelativePath == homeLease.id.sourceRelativePath
                 && session.bankLease.sectionLabel == homeLease.sectionLabel
                 && !session.bankLease.sharesBank(with: savedLease)
-                && !session.bankDirty,
+                && !session.voicegroup.value.dirty,
             cppID: id, message: "external source refresh did not rebind cleanly")
         report.expect(
             session.bankSlots[blank].voice != nil && session.bankSlots[0].voice?.release == Int32(unrelated.release),
             cppID: id, message: "reopened source did not contain structural and unrelated edits")
 
-        let undone = try runBlocking { try await session.undo() }
+        let undone = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             undone && session.bankSlots[blank].voice == nil
-                && session.bankSlots[0].voice?.release == Int32(unrelated.release) && session.bankDirty
+                && session.bankSlots[0].voice?.release == Int32(unrelated.release) && session.voicegroup.value.dirty
                 && bytes(at: path) == refreshed,
             cppID: id, message: "blank undo restored stale file bytes instead of rebasing its token")
         guard undone else { return }
-        let redone = try runBlocking { try await session.redo() }
+        let redone = try runBlocking { try await session.voicegroup.redo() }
         report.expect(
             redone && session.bankSlots[blank].voice == original
-                && session.bankSlots[0].voice?.release == Int32(unrelated.release) && !session.bankDirty
+                && session.bankSlots[0].voice?.release == Int32(unrelated.release) && !session.voicegroup.value.dirty
                 && bytes(at: path) == refreshed,
             cppID: id, message: "blank redo did not preserve unrelated refreshed bytes")
-        let cleanupUndo = try runBlocking { try await session.undo() }
+        let cleanupUndo = try runBlocking { try await session.voicegroup.undo() }
         report.expect(
             cleanupUndo && session.bankSlots[blank].voice == nil,
             cppID: id, message: "cleanup blank undo did not apply")
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: original, expected: session.bankSlots[0].voice)
+            try await session.voicegroup.apply(slot: 0, value: original, expected: session.bankSlots[0].voice)
         }
         report.expect(
-            session.bankSlots[0].voice?.release == original.release && session.bankDirty,
+            session.bankSlots[0].voice?.release == original.release && session.voicegroup.value.dirty,
             cppID: id, message: "restoring unrelated slot did not settle")
         let beforeCleanupSave = session.bankLease
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
             !session.bankLease.sharesBank(with: beforeCleanupSave) && bytes(at: path) != refreshed,
             cppID: id, message: "saving the restored source did not persist cleanup")
         report.expect(
-            !session.bankDirty && !session.document.isDirty,
+            !session.voicegroup.value.dirty && !session.document.isDirty,
             cppID: id, message: "cleanup source save did not settle")
         report.expect(
             bytes(at: path) == homeBytes, cppID: id,

@@ -525,8 +525,10 @@ func drawerAutomationPresentationPaintingModel(
     let ruleColor = PaletteMath.argb(page.palette.gridLineSub2)
     report.expectEqual(
         expected: 3,
-        actual: drawnAxis.filter {
-            $0.argb == ruleColor && $0.x == 0 && $0.w == page.plotWidth
+        actual: drawnAxis.filter { (rect: AutomationDisplayProbe.Rect) -> Bool in
+            guard rect.argb == ruleColor else { return false }
+            guard rect.x == 0 else { return false }
+            return rect.w == page.plotWidth
         }.count, cppID: drawerAutomationPaintingModelID,
         what: "the centered lane keeps its three value rules")
     report.expectEqual(
@@ -570,17 +572,20 @@ func drawerAutomationPresentationPaintingModel(
         let hoveredAxis = AutomationDisplayProbe(page).axis.filter { $0.h != page.plotHeight }
         report.expectEqual(
             expected: 3,
-            actual: hoveredAxis.filter {
-                $0.argb == ruleColor && $0.x == 0 && $0.w == page.plotWidth
+            actual: hoveredAxis.filter { (rect: AutomationDisplayProbe.Rect) -> Bool in
+                guard rect.argb == ruleColor else { return false }
+                guard rect.x == 0 else { return false }
+                return rect.w == page.plotWidth
             }.count, cppID: drawerAutomationPaintingModelID,
             what: "a hover pass appends no duplicate value rules")
         report.expect(
             page.displayRevision == hoverRevision
                 && heights.allSatisfy { y in
-                    hoveredAxis.filter {
-                        $0.argb == separator
-                            && $0.w > 0 && $0.w < page.plotWidth / 4
-                            && abs($0.y + $0.h / 2 - y) <= 2
+                    hoveredAxis.filter { (rect: AutomationDisplayProbe.Rect) -> Bool in
+                        guard rect.argb == separator else { return false }
+                        guard rect.w > 0 else { return false }
+                        guard rect.w < page.plotWidth / 4 else { return false }
+                        return abs(rect.y + rect.h / 2 - y) <= 2
                     }.count == 1
                 }, cppID: drawerAutomationPaintingModelID,
             message: "hovering preserves each left-edge tick at its label height")

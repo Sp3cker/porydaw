@@ -7,4 +7,4 @@ scope: "tool"
 
 Do not create an ad hoc temporary copy, clone, archive extraction, rsync mirror, or worktree of a decomp project. This includes `hearth-test`, `pokemon-hearth`, `pokeemerald`, `pokeemerald-expansion`, and `emerald-imperium`.
 
-For the full sweep, use `tools/run_checks.sh`; isolation belongs in that script, not in agent commands. Run read-only checks directly against the existing checkout. For a mutating check, use the runner's managed scratch path. If neither route supports the task, ask before creating any project-sized fixture.
+For the native sweep, use `uv run --no-sync dev checks --all`; isolation belongs in the Python check runner, not in agent commands. QML lanes (`checks:shell`, `checks:qml`, `checks:qml-roll`) use the same isolation. Run read-only checks directly against the existing checkout. For a mutating check, use the runner's managed scratch path. If neither route supports the task, ask before creating any project-sized fixture.

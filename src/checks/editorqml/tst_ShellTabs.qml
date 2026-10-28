@@ -42,9 +42,6 @@ ShellTabsSupport {
         compare(shell.title, bootstrap.projectRoot.split("/").pop() + " — porydaw",
                 "a project-only restore shows its project title")
         compare(tabs().tabCount, 0, "a project-only restore creates no song tab")
-        compare(findChild(shell, "shellStatusText").text,
-                "Opened " + bootstrap.projectRoot,
-                "a project-only restore publishes Opened on the mounted status bar")
     }
 
     function test_duplicateRecipeRestoresOrderedTabsWithoutWritingProject() {

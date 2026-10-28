@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 
@@ -124,6 +125,12 @@ private func exportCase(
 
 @MainActor
 public func runExportChecks(_ report: CheckReport) {
+    let format = NumberFieldFormat(kind: .seconds)
+    for (value, text) in [(0, "0.0 s"), (1, "0.1 s"), (5, "0.5 s"), (50, "5.0 s"), (600, "60.0 s")] {
+        report.expect(
+            format.text(value: value) == text,
+            cppID: "exportcheck/WavExport::secondsFormat", message: "tenths display \(text)")
+    }
     let labels = ["mus_route101", "mus_route102"].filter {
         CheckEnvironment.fixturePath("sound/songs/midi/\($0).mid")
             .map { FileManager.default.fileExists(atPath: $0) } == true
@@ -170,8 +177,9 @@ public func runExportChecks(_ report: CheckReport) {
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S008: progress strictly increases and ends at one")
         let wav = try Data(contentsOf: path)
+        let expectedWavBytes: Int = 44 + Int(totals.totalFrames) * 4
         report.expect(
-            wav.count == 44 + Int(totals.totalFrames) * 4,
+            wav.count == expectedWavBytes,
             cppID: "exportcheck/MidiExportTest::offlineExportProducesValidRiffPcm",
             message: "S010: WAV byte count equals header plus stereo frames")
         guard wav.count >= 44 else { throw ExportCheckError.failed("WAV header truncated") }

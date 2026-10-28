@@ -59,4 +59,13 @@ public struct ImportedSample: Sendable, Equatable {
         self.phaseCancelStereo = phaseCancelStereo
         self.warnings = warnings
     }
+
+    /// A project sample's committed 8-bit PCM as a GBA-ready source; `frequency` is the header's rate × 1024.
+    public init(committed pcm: [Int8], frequency: UInt32, looped: Bool, loopStart: Int, name: String) {
+        self.init(
+            buffer: pcm.map { (value: Int8) -> Float in Float(value) / 128 },
+            sampleRate: Double(frequency) / 1024, hasLoop: looped, loopStart: looped ? loopStart : 0,
+            loopEndInclusive: max(0, pcm.count - 1), playLength: pcm.count, exactPitch: frequency,
+            suggestedName: name, sourceBits: 8, gbaReady: true)
+    }
 }

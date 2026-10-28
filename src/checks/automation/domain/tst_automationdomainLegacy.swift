@@ -347,9 +347,12 @@ func drawerAutomationLegacyDefaultPromotion(_ report: CheckReport, camera: Edito
         expect(!resolved.isEmpty, base + 3)
         _ = AutomationCommit.apply(resolved, in: document)
         expect(fixture.oneEdit(before), base + 5)
-        expect(
-            document.lanePoints(track: 0, lane: parameter.lane!)
-                .filter { $0.tick == 96 }.map(\.value) == [value], base + 6)
+        let writtenPoints: [LanePoint] = document.lanePoints(track: 0, lane: parameter.lane!)
+        let writtenValues: [Int] = writtenPoints.filter {
+            (point: LanePoint) -> Bool in point.tick == Tick(96)
+        }.map(\.value)
+        let expectedValues: [Int] = [value]
+        expect(writtenValues == expectedValues, base + 6)
         _ = document.history.undoDocument()
         expect(fixture.snapshot.bytes == before.bytes, base + 8)
         expect(points(parameter) == defaultPoints, base + 9)

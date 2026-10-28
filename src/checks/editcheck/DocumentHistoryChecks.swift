@@ -463,14 +463,6 @@ private func historyEvictionProjectionContract(_ report: CheckReport) throws {
     report.expect(
         history.undoCount == 511 && history.undoIndex == 511 && !history.canRedo,
         cppID: id, message: "record after undo discards only the redo tail")
-    let bankHistory = SongHistory()
-    for value in 1...513 {
-        bankHistory.recordConfirmedBank(ProjectionBankAction(before: -1, after: value))
-    }
-    report.expect(
-        bankHistory.undoCount == 512 && bankHistory.undoIndex == 512
-            && bankHistory.revision == 513 && bankHistory.hasEvictedSteps,
-        cppID: id, message: "nonmerged bank appends share the cap and single revision bump")
 }
 
 @MainActor
@@ -488,11 +480,6 @@ private func historySavedProjectionContract(_ report: CheckReport) throws {
     report.expect(
         history.step(at: 0)?.isSaved == true && !history.baseIsSaved,
         cppID: id, message: "save marks the document step rather than the base")
-    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
-    report.expect(
-        history.step(at: 0)?.isSaved == true && history.step(at: 1)?.isSaved == false,
-        cppID: id, message: "a bank step sharing the saved identity never carries its marker")
-    _ = try runBlocking { try await history.undo() }
     _ = history.undoDocument()
     report.expect(
         history.step(at: 0)?.isSaved == true && !history.baseIsSaved && document.isDirty,
@@ -599,14 +586,6 @@ private func historyLabelProjectionContract(_ report: CheckReport) throws {
         gesture.history.undoCount == 3
             && gesture.history.step(at: 2)?.label == "Track Later - edited 2 notes",
         cppID: id, message: "merged gesture refreshes its captured label and payload count")
-    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
-    report.expectEqual(
-        expected: "Edit probe slot 1", actual: history.step(at: 12)?.label, cppID: id,
-        what: "bank projection reads the explicit action label")
-    history.recordConfirmedBank(ProjectionBankAction(before: 1, after: 2))
-    report.expectEqual(
-        expected: "Edit probe slot 2", actual: history.step(at: 12)?.label, cppID: id,
-        what: "bank merge projects the replacement action's own label")
 }
 
 @MainActor
@@ -648,93 +627,23 @@ private func historyRevisionProjectionContract(_ report: CheckReport) throws {
     revision = history.revision
     _ = history.redoDocument()
     report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "document redo bumps once")
-    revision = history.revision
-    _ = try runBlocking { try await history.undo() }
-    report.expectEqual(
-        expected: revision + 1, actual: history.revision, cppID: id, what: "async document undo bumps once")
-    revision = history.revision
-    _ = try runBlocking { try await history.redo() }
-    report.expectEqual(
-        expected: revision + 1, actual: history.revision, cppID: id, what: "async document redo bumps once")
     _ = history.undoDocument()
     revision = history.revision
     document.setChunkEnd(0, tick: 100)
     report.expectEqual(
         expected: revision + 1, actual: history.revision, cppID: id, what: "redo discard folds into the append bump")
     revision = history.revision
-    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
-    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank append bumps once")
-    revision = history.revision
-    history.recordConfirmedBank(ProjectionBankAction(before: 1, after: 2))
-    report.expectEqual(
-        expected: revision + 1, actual: history.revision, cppID: id, what: "bank merge replace bumps once")
-    revision = history.revision
-    history.recordConfirmedBank(ProjectionBankAction(before: 2, after: 0))
-    report.expectEqual(
-        expected: revision + 1, actual: history.revision, cppID: id, what: "bank merge removal bumps once")
-    history.recordConfirmedBank(ProjectionBankAction(before: 0, after: 1))
-    revision = history.revision
-    history.sealBankMerge()
-    report.expectEqual(expected: revision, actual: history.revision, cppID: id, what: "bank sealing does not bump")
-    guard let token = history.beginBankTransition() else {
-        report.fail(id, "bank transition did not begin")
+    guard let token = history.beginBindingTransition() else {
+        report.fail(id, "binding transition did not begin")
         return
     }
-    let guardedUndo = try runBlocking { try await history.undo() }
-    let guardedRedo = try runBlocking { try await history.redo() }
+    let guardedUndo = history.undoDocument()
+    let guardedRedo = history.redoDocument()
     report.expect(
         !guardedUndo && !guardedRedo && history.revision == revision,
         cppID: id, message: "transition-guarded replay calls do not bump")
-    history.endBankTransition(token)
+    history.endBindingTransition(token)
     report.expectEqual(
         expected: revision, actual: history.revision, cppID: id, what: "transition begin and end do not bump")
-    _ = try runBlocking { try await history.undo() }
-    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank undo bumps once")
-    revision = history.revision
-    _ = try runBlocking { try await history.redo() }
-    report.expectEqual(expected: revision + 1, actual: history.revision, cppID: id, what: "bank redo bumps once")
-    history.sealBankMerge()
-    let stale = ProjectionBankAction(before: 0, after: 1)
-    stale.isStale = true
-    history.recordConfirmedBank(stale)
-    revision = history.revision
-    let count = history.undoCount
-    _ = try runBlocking { try await history.undo() }
-    report.expect(
-        history.revision == revision + 1 && history.undoCount == count - 1,
-        cppID: id, message: "stale undo removal bumps once")
-    let staleRedo = ProjectionBankAction(before: 0, after: 1)
-    history.recordConfirmedBank(staleRedo)
-    _ = try runBlocking { try await history.undo() }
-    staleRedo.isStale = true
-    revision = history.revision
-    let cursor = history.undoIndex
-    _ = try runBlocking { try await history.redo() }
-    report.expect(
-        history.revision == revision + 1 && history.undoIndex == cursor,
-        cppID: id, message: "stale redo removal bumps once without advancing the cursor")
 }
 
-@MainActor
-private final class ProjectionBankAction: BankHistoryAction {
-    let before: Int
-    let after: Int
-    let historyLabel: String
-    var isStale = false
-    var isRedundant: Bool { before == after }
-
-    init(before: Int, after: Int) {
-        self.before = before
-        self.after = after
-        historyLabel = "Edit probe slot \(after)"
-    }
-
-    func apply(direction _: BankHistoryDirection) async throws {
-        if isStale { throw BankHistoryReplayError.staleEntry }
-    }
-
-    func merged(with newer: any BankHistoryAction) -> (any BankHistoryAction)? {
-        guard let newer = newer as? ProjectionBankAction, after == newer.before else { return nil }
-        return ProjectionBankAction(before: before, after: newer.after)
-    }
-}

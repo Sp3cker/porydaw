@@ -7,6 +7,7 @@
       "goToStart": "step-backward",
       "loop": "repeat",
       "followPlayhead": "forward",
+      "metronome": "triangle-music",
       "closeTab": "times",
       "scrollTabsLeft": "caret-left",
       "scrollTabsRight": "caret-right",
@@ -17,6 +18,15 @@
       "check": "check",
       "disclosureClosed": "caret-right",
       "disclosureOpen": "caret-down"
+    },
+    "regular": {
+      "plus": "plus",
+      "zoomIn": "search-plus",
+      "zoomOut": "search-minus",
+      "undo": "undo",
+      "redo": "redo",
+      "addFolder": "folder-plus",
+      "dropFiles": "file-import"
     },
     "light": {
       "editSample": "pencil-alt",
@@ -65,6 +75,14 @@
     "spinUp": "E019",
     "submenuArrow": "E01A",
     "disclosureClosed": "E01B",
-    "disclosureOpen": "E01C"
+    "disclosureOpen": "E01C",
+    "metronome": "E01D",
+    "zoomIn": "E01E",
+    "zoomOut": "E01F",
+    "addFolder": "E020",
+    "dropFiles": "E021",
+    "redo": "E022",
+    "undo": "E023",
+    "plus": "E024"
   }
 }

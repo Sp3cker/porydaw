@@ -4,33 +4,41 @@ import QtQuick
 
 QtObject {
     readonly property string family: "Porydaw Icons"
-    readonly property var automation: ({ glyph: "\ue000", fit: 1.0000 })
-    readonly property var check: ({ glyph: "\ue016", fit: 1.0000 })
-    readonly property var closeTab: ({ glyph: "\ue001", fit: 1.0000 })
-    readonly property var comboArrow: ({ glyph: "\ue017", fit: 1.0000 })
-    readonly property var disclosureClosed: ({ glyph: "\ue01b", fit: 1.0000 })
-    readonly property var disclosureOpen: ({ glyph: "\ue01c", fit: 1.0000 })
-    readonly property var drumkit: ({ glyph: "\ue002", fit: 1.0000 })
-    readonly property var editSample: ({ glyph: "\ue003", fit: 1.0000 })
-    readonly property var flat: ({ glyph: "\ue004", fit: 1.0000 })
-    readonly property var followPlayhead: ({ glyph: "\ue005", fit: 1.0000 })
-    readonly property var goToStart: ({ glyph: "\ue006", fit: 1.0000 })
-    readonly property var keysplit: ({ glyph: "\ue007", fit: 0.8889 })
-    readonly property var loop: ({ glyph: "\ue008", fit: 1.0000 })
-    readonly property var noise: ({ glyph: "\ue009", fit: 0.8000 })
-    readonly property var pause: ({ glyph: "\ue00a", fit: 1.0000 })
-    readonly property var play: ({ glyph: "\ue00b", fit: 1.0000 })
-    readonly property var resonance: ({ glyph: "\ue00c", fit: 1.0000 })
-    readonly property var sample: ({ glyph: "\ue00d", fit: 0.8000 })
-    readonly property var scrollTabsLeft: ({ glyph: "\ue00e", fit: 1.0000 })
-    readonly property var scrollTabsRight: ({ glyph: "\ue00f", fit: 1.0000 })
-    readonly property var spinDown: ({ glyph: "\ue018", fit: 1.0000 })
-    readonly property var spinUp: ({ glyph: "\ue019", fit: 1.0000 })
-    readonly property var square1: ({ glyph: "\ue010", fit: 0.8000 })
-    readonly property var square2: ({ glyph: "\ue011", fit: 0.8000 })
-    readonly property var stop: ({ glyph: "\ue012", fit: 1.0000 })
-    readonly property var submenuArrow: ({ glyph: "\ue01a", fit: 1.0000 })
-    readonly property var velocity: ({ glyph: "\ue013", fit: 1.0000 })
-    readonly property var velocityLabels: ({ glyph: "\ue014", fit: 1.0000 })
-    readonly property var wave: ({ glyph: "\ue015", fit: 0.8000 })
+    readonly property IconSpec addFolder: IconSpec { glyph: "\ue020"; fit: 1.0000 }
+    readonly property IconSpec automation: IconSpec { glyph: "\ue000"; fit: 1.0000 }
+    readonly property IconSpec check: IconSpec { glyph: "\ue016"; fit: 1.0000 }
+    readonly property IconSpec closeTab: IconSpec { glyph: "\ue001"; fit: 1.0000 }
+    readonly property IconSpec comboArrow: IconSpec { glyph: "\ue017"; fit: 1.0000 }
+    readonly property IconSpec disclosureClosed: IconSpec { glyph: "\ue01b"; fit: 1.0000 }
+    readonly property IconSpec disclosureOpen: IconSpec { glyph: "\ue01c"; fit: 1.0000 }
+    readonly property IconSpec dropFiles: IconSpec { glyph: "\ue021"; fit: 1.0000 }
+    readonly property IconSpec drumkit: IconSpec { glyph: "\ue002"; fit: 1.0000 }
+    readonly property IconSpec editSample: IconSpec { glyph: "\ue003"; fit: 1.0000 }
+    readonly property IconSpec flat: IconSpec { glyph: "\ue004"; fit: 1.0000 }
+    readonly property IconSpec followPlayhead: IconSpec { glyph: "\ue005"; fit: 1.0000 }
+    readonly property IconSpec goToStart: IconSpec { glyph: "\ue006"; fit: 1.0000 }
+    readonly property IconSpec keysplit: IconSpec { glyph: "\ue007"; fit: 0.8889 }
+    readonly property IconSpec loop: IconSpec { glyph: "\ue008"; fit: 1.0000 }
+    readonly property IconSpec metronome: IconSpec { glyph: "\ue01d"; fit: 1.0000 }
+    readonly property IconSpec noise: IconSpec { glyph: "\ue009"; fit: 0.8000 }
+    readonly property IconSpec pause: IconSpec { glyph: "\ue00a"; fit: 1.0000 }
+    readonly property IconSpec play: IconSpec { glyph: "\ue00b"; fit: 1.0000 }
+    readonly property IconSpec plus: IconSpec { glyph: "\ue024"; fit: 1.0000 }
+    readonly property IconSpec redo: IconSpec { glyph: "\ue022"; fit: 1.0000 }
+    readonly property IconSpec resonance: IconSpec { glyph: "\ue00c"; fit: 1.0000 }
+    readonly property IconSpec sample: IconSpec { glyph: "\ue00d"; fit: 0.8000 }
+    readonly property IconSpec scrollTabsLeft: IconSpec { glyph: "\ue00e"; fit: 1.0000 }
+    readonly property IconSpec scrollTabsRight: IconSpec { glyph: "\ue00f"; fit: 1.0000 }
+    readonly property IconSpec spinDown: IconSpec { glyph: "\ue018"; fit: 1.0000 }
+    readonly property IconSpec spinUp: IconSpec { glyph: "\ue019"; fit: 1.0000 }
+    readonly property IconSpec square1: IconSpec { glyph: "\ue010"; fit: 0.8000 }
+    readonly property IconSpec square2: IconSpec { glyph: "\ue011"; fit: 0.8000 }
+    readonly property IconSpec stop: IconSpec { glyph: "\ue012"; fit: 1.0000 }
+    readonly property IconSpec submenuArrow: IconSpec { glyph: "\ue01a"; fit: 1.0000 }
+    readonly property IconSpec undo: IconSpec { glyph: "\ue023"; fit: 1.0000 }
+    readonly property IconSpec velocity: IconSpec { glyph: "\ue013"; fit: 1.0000 }
+    readonly property IconSpec velocityLabels: IconSpec { glyph: "\ue014"; fit: 1.0000 }
+    readonly property IconSpec wave: IconSpec { glyph: "\ue015"; fit: 0.8000 }
+    readonly property IconSpec zoomIn: IconSpec { glyph: "\ue01e"; fit: 1.0000 }
+    readonly property IconSpec zoomOut: IconSpec { glyph: "\ue01f"; fit: 1.0000 }
 }

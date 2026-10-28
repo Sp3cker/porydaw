@@ -7,6 +7,7 @@ import PorydawVoicegroup
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio
+import PorydawSampleUI
 
 public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
@@ -137,6 +138,7 @@ public final class NativeAudio {
     public func setResonanceSuppression(_ enabled: Bool) {
         device.renderer.setResonanceSuppression(enabled)
     }
+    public func setMetronomeEnabled(_ enabled: Bool) { device.renderer.setMetronomeEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { device.renderer.setPolyDebugInvert(enabled) }
     public func resetPolyStats() { device.renderer.resetPolyStats() }
     public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }
@@ -146,6 +148,11 @@ public final class NativeAudio {
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
         device.renderer.audition.previewNote(track: track, key: key, velocity: velocity)
+    }
+
+    /// Update the covered document-note identities without retriggering held members.
+    public func updateBandAudition(_ notes: [BandAuditionNote]) {
+        device.renderer.audition.updateBandAudition(notes)
     }
 
     public func previewNoteTimed(
@@ -176,12 +183,18 @@ public final class NativeAudio {
         device.renderer.audition.publishWave(wave16: wave16, key: key, adsr: adsr)
     }
 
+    public func auditionKit(_ tone: KitAuditionTone, key: UInt8) -> Bool {
+        device.renderer.audition.publishKitTone(tone, key: key)
+    }
+
     public func auditionSampleOff() { device.renderer.audition.sampleOff() }
 
     public func songSettings(for config: SongConfig) -> AudioSettings {
         engineSettings.applyingSong(config)
     }
 }
+
+extension NativeAudio: SampleAuditionOutput {}
 
 extension AudioSettings {
     public func applyingSong(_ config: SongConfig) -> AudioSettings {

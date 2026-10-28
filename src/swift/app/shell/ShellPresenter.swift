@@ -127,6 +127,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             menuLabel: ShellActionCatalog.menuLabels[id] ?? label,
             shortcut: keybindings.sequences(id).first?.nativeText ?? "")
         actionStates[id] = state
+        updateTargetLabel(id: id, state: state)
         return state
     }
 
@@ -136,7 +137,20 @@ public final class ShellPresenter: QmlInstantiableStatus {
             state.update(
                 enabled: isActionEnabled(id: id, workspaceLoaded: hasLoadedWorkspace),
                 checked: isActionChecked(id: id))
+            updateTargetLabel(id: id, state: state)
         }
+    }
+
+    private func updateTargetLabel(id: String, state: ShellActionState) {
+        let targetLabel: String
+        switch id {
+        case "file.save": targetLabel = "Save \(session.editingTargetLabel)"
+        case "edit.undo": targetLabel = "Undo \(session.editingTargetLabel)"
+        case "edit.redo": targetLabel = "Redo \(session.editingTargetLabel)"
+        default: return
+        }
+        if state.label != targetLabel { state.label = targetLabel }
+        if state.menuLabel != targetLabel { state.menuLabel = targetLabel }
     }
 
     /// Portable Qt sequence text, including every platform StandardKey
@@ -165,7 +179,11 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "file.new_song": session.songDockController().newSongController().requestNewSong()
         case "file.import_midi": session.songDockController().midiImportController().requestImport()
         case "tools.import_sample": session.sampleStudio().requestImport(slot: -1)
-        case "file.save_song": session.requestSave()
+        case "tools.split_studio": session.kitStudio().requestOpen()
+        case "file.save": session.requestSave()
+        case "file.save_song": session.requestSaveSong()
+        case "file.save_voicegroup": session.requestSaveVoicegroup()
+        case "file.save_all": session.requestSaveAll()
         case "file.register_song": session.songDockController().requestRegisterSelectedTab()
         case "file.close_tab":
             session.songTabs.requestClose(tabId: session.songTabs.selectedId)
@@ -190,6 +208,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "transport.resonance":
             let transport = session.transportBarPresenter()
             transport.setResonanceSuppression(enabled: !transport.resonanceSuppression)
+        case "transport.metronome":
+            let metronomeTransport = session.transportBarPresenter()
+            metronomeTransport.setMetronome(enabled: !metronomeTransport.metronome)
         case "view.event_list":
             session.songTabs.setSelectedTabEventsVisible(
                 visible:

@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 import PorydawDocument
@@ -301,9 +300,9 @@ private func sessionSaveConflictGate(report: CheckReport, fixtureRoot: String) {
         }
         var edited = original
         edited.release = original.release == 7 ? 6 : original.release + 1
-        _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: edited, expected: original) }
+        _ = try runBlocking { try await session.voicegroup.apply(slot: 0, value: edited, expected: original) }
         check.expect(
-            session.bankDirty && session.bankSlots[0].voice == edited,
+            session.voicegroup.value.dirty && session.bankSlots[0].voice == edited,
             message: "bank-conflict setup applies the edited voice to a dirty bank")
         _ = try session.document.addNotes([NewNote(track: 0, tick: tick + 288, pitch: 79, duration: 24, velocity: 87)])
         guard let bankConflictBytes = overwriteMidi(at: midiPath, marker: 0x7E) else {
@@ -314,13 +313,21 @@ private func sessionSaveConflictGate(report: CheckReport, fixtureRoot: String) {
             check.fail("bank-conflicted save threw the wrong error: \(error)"); return
         }
         check.expect(
-            bankConflicted && session.bankDirty,
-            message: "the conflicted unified save writes neither the bank nor the MIDI")
-        var bankSaved = false
-        do { _ = try runBlocking { try await service.saveBank(lease: session.bankLease) }; bankSaved = true } catch {
-            check.fail("bank-only save threw: \(error)"); return
+            bankConflicted && session.voicegroup.value.dirty,
+            message: "a conflicted song save leaves the independent voicegroup dirty")
+        try runBlocking { try await session.voicegroup.save() }
+        let savedBank = VoicegroupSource()
+        var bankError: String?
+        guard
+            savedBank.open(
+                projectRoot: root, voicegroupArg: session.document.state.config.voicegroupArgument, error: &bankError)
+        else {
+            check.fail("saved voicegroup cannot reopen from disk: \(bankError ?? "unknown error")"); return
         }
-        check.expect(bankSaved, message: "bank-only voicegroup saves bypass the MIDI conflict gate")
+        check.expect(
+            !session.voicegroup.value.dirty && session.document.isDirty
+                && savedBank.voiceAt(slot: 0).map(copyVoice) == edited,
+            message: "voicegroup save persists the exact voice despite a MIDI conflict and leaves the song dirty")
         check.expect(
             bytes(at: midiPath) == bankConflictBytes,
             message: "the bank-only save leaves the conflicted MIDI bytes alone")
@@ -390,9 +397,6 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
             report.fail(id, "The save receipt fixture lacks its original song or flags")
             return
         }
-        let bank = session.bankLease
-        let bankPath = bank.id.sourceRelativePath
-        let bankSection = bank.sectionLabel
         _ = try session.document.addNotes([
             NewNote(track: 0, tick: 288, pitch: 74, duration: 24, velocity: 90)
         ])
@@ -407,7 +411,7 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
             return
         }
 
-        let bare = try runBlocking { try await service.save(snapshot, bank: nil) }
+        try runBlocking { try await service.save(snapshot) }
         let bareMidi = try Data(contentsOf: URL(fileURLWithPath: midiPath))
         let bareFile = try MidiFile.decode(Array(bareMidi))
         let hasEditedNote = bareFile.chunks.contains { chunk in
@@ -415,15 +419,14 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
                 guard event.tick == 288,
                     case let .channel(status, pitch, velocity) = event.payload
                 else { return false }
-                return status & 0xF0 == 0x90 && pitch == 74 && velocity == 90
+                let command: UInt8 = status & 0xF0
+                guard command == UInt8(0x90), pitch == UInt8(74) else { return false }
+                return velocity == UInt8(90)
             }
         }
         report.expect(
             hasEditedNote, cppID: id,
             message: "A059 bare save completes with the literal edited note in persisted MIDI")
-        report.expect(
-            bare.bank == nil, cppID: id,
-            message: "bare save returns no refreshed bank without a recipe")
         let bareLoaded = try runBlocking { try await service.openSong(label: "mus_session_test") }
         report.expect(
             bareLoaded.label == "mus_session_test" && bareLoaded.midiPath == midiPath,
@@ -434,28 +437,7 @@ private func sessionSaveReceipts(report: CheckReport, fixtureRoot: String) {
         report.expect(
             configLineBytes(at: cfgPath, label: "mus_session_test2") == otherLine,
             cppID: id, message: "bare save leaves the other song flags unchanged")
-        report.expect(
-            bare.flagsWritten, cppID: id,
-            message: "A064 bare save reports that song flags were written")
 
-        let recipe = try runBlocking { try await service.save(snapshot, bank: bank) }
-        let recipeMidi = try Data(contentsOf: URL(fileURLWithPath: midiPath))
-        // Opaque MIDI bytes from immediately before the recipe are a passthrough baseline.
-        report.expect(
-            recipeMidi == bareMidi && configLineBytes(at: cfgPath, label: "mus_session_test") == expectedLine,
-            cppID: id, message: "A065 bank-recipe save retains the edited MIDI and literal flags")
-        report.expect(
-            recipe.bank != nil && recipe.bank?.dirty == false, cppID: id,
-            message: "A067 bank-recipe save returns a clean refreshed bank view")
-        report.expect(
-            recipe.bank?.lease.id.sourceRelativePath == bankPath && recipe.bank?.lease.sectionLabel == bankSection,
-            cppID: id, message: "A069 refreshed bank keeps the captured source and section identity")
-        report.expect(
-            recipe.flagsWritten, cppID: id,
-            message: "A071 bank-recipe save reports that song flags were written")
-        report.expect(
-            configLineBytes(at: cfgPath, label: "mus_session_test2") == otherLine,
-            cppID: id, message: "bank-recipe save leaves the other song flags unchanged")
         let reopened = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test")
         }
@@ -497,16 +479,20 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
         var edited = original
         edited.release = original.release == 7 ? 6 : original.release + 1
         try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: edited, expected: original)
+            try await session.voicegroup.apply(slot: 0, value: edited, expected: original)
             try await session.save()
+            report.expect(
+                session.voicegroup.value.dirty && bytes(at: bankPath) == bankBefore,
+                cppID: id, message: "song save leaves the group's dirty source and disk bytes untouched")
+            try await session.voicegroup.save()
         }
         let savedMidi = bytes(at: midiPath)
         let savedBank = bytes(at: bankPath)
         report.expect(
-            !session.document.isDirty && !session.bankDirty
+            !session.document.isDirty && !session.voicegroup.value.dirty
                 && savedMidi != midiBefore && savedBank != bankBefore
                 && savedMidi != nil && savedBank != nil,
-            cppID: id, message: "one save persists the song edit and the bank edit")
+            cppID: id, message: "independent saves persist their respective song and group edits")
         let reopened = try runBlocking {
             try await DocumentSession.open(service: service, label: "mus_session_test")
         }
@@ -514,10 +500,10 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
             reopened.bankSlots[0].voice == edited
                 && reopened.document.state.file == session.document.state.file,
             cppID: id, message: "the saved song and bank reopen together")
-        _ = try runBlocking { try await session.undo() }
-        try runBlocking { try await session.save() }
+        _ = try runBlocking { try await session.voicegroup.undo() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
-            !session.bankDirty && bytes(at: bankPath) == bankBefore,
+            !session.voicegroup.value.dirty && bytes(at: bankPath) == bankBefore,
             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
             message: "undo after save round-trips the bank bytes")
         let roundTrip = try runBlocking {
@@ -546,7 +532,7 @@ private func sessionSaveJourney(report: CheckReport, fixtureRoot: String) {
             NewNote(track: 0, tick: newerTick, pitch: 76, duration: 24, velocity: 89)
         ])
         let newerMidi = Data(try session.document.captureSave().bytes)
-        _ = try runBlocking { try await service.save(snapshot, bank: nil) }
+        try runBlocking { try await service.save(snapshot) }
         session.document.didSave(snapshot)
         report.expect(
             session.document.isDirty && bytes(at: midiPath) == Data(snapshot.bytes)
@@ -581,8 +567,9 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
             report.fail(id, "rich fixture does not expose the original DirectSound source voice")
             return
         }
-        try (richLines.prefix(3).joined(separator: "\n") + "\n")
-            .write(
+        let joinedSource: String = richLines.prefix(3).joined(separator: "\n")
+        let sourceText: String = joinedSource + "\n"
+        try sourceText.write(
                 toFile: root + "/sound/voicegroups/fixture_rich.inc",
                 atomically: true, encoding: .utf8)
         try """
@@ -626,7 +613,7 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
             report.fail(id, "synth journey fixture is missing the DirectSound voice")
             return
         }
-        let start = session.document.history.undoIndex
+        let start = session.voicegroup.history.undoIndex
         let descriptor = VgSynthDesc(
             baseDuty: 0x21, dutyStep: 0x43,
             modDepth: 0x65, phase: 0x87)
@@ -634,7 +621,7 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
         var edited = original
         edited.symbol = symbol
         let pulseVoice = edited
-        _ = try runBlocking { try await session.applyBankEdit(slot: 0, value: pulseVoice, expected: original) }
+        _ = try runBlocking { try await session.voicegroup.apply(slot: 0, value: pulseVoice, expected: original) }
         func slotZeroTone() -> (UInt32?, [UInt8]?) {
             guard let wave = session.bankLease[0].wav?.pointee, let data = wave.data else { return (nil, nil) }
             return (wave.size, (1...5).map { UInt8(bitPattern: data[$0]) })
@@ -652,20 +639,20 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
         report.expect(
             bytes(at: bankPath) == originalBytes,
             cppID: id, message: "synth activation does not write bank source bytes")
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         let savedSynth = bytes(at: synthPath)
         let sawSymbol = try runBlocking { try await session.mintSynth(VgSynthDesc(waveform: 1)) }
         var saw = edited
         saw.symbol = sawSymbol
         let selectedSaw = saw
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: selectedSaw, expected: pulseVoice)
+            try await session.voicegroup.apply(slot: 0, value: selectedSaw, expected: pulseVoice)
         }
         report.expect(
             session.bankSlots[0].voice?.symbol == sawSymbol,
             cppID: id, message: "the saw wave edit publishes its synth symbol")
         _ = try runBlocking {
-            try await session.applyBankEdit(slot: 0, value: pulseVoice, expected: selectedSaw)
+            try await session.voicegroup.apply(slot: 0, value: pulseVoice, expected: selectedSaw)
         }
         report.expect(
             session.bankSlots[0].voice?.symbol == symbol,
@@ -677,20 +664,20 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
         report.expect(
             pulseTone.1 == [0, 0x21, 0x43, 0x65, 0x87], cppID: id,
             message: "the pulse wave edit republishes its packed tone")
-        while session.document.history.undoIndex > start {
-            let before = session.document.history.undoIndex
-            let applied = try runBlocking { try await session.undo() }
+        while session.voicegroup.history.undoIndex > start {
+            let before = session.voicegroup.history.undoIndex
+            let applied = try runBlocking { try await session.voicegroup.undo() }
             guard applied else {
                 report.fail(id, "synth undo tail stopped before the original voice")
                 return
             }
-            let advanced = session.document.history.undoIndex == before - 1
+            let advanced = session.voicegroup.history.undoIndex == before - 1
             report.expect(
                 advanced, cppID: id,
                 message: "each synth undo consumes exactly one history command")
             guard advanced else { return }
         }
-        try runBlocking { try await session.save() }
+        try runBlocking { try await session.voicegroup.save() }
         report.expect(
             bytes(at: bankPath) == originalBytes,
             cppID: id, message: "the full synth undo tail restores the baseline bytes")
@@ -705,7 +692,7 @@ private func sessionSynthUndoTail(report: CheckReport, fixtureRoot: String) {
                 && savedSynth.map { $0.contains(Data("set_synth_pulse".utf8)) } == true,
             cppID: id, message: "the first synth save writes the minted pulse definition")
         report.expect(
-            !session.bankDirty, cppID: id,
+            !session.voicegroup.value.dirty, cppID: id,
             message: "post-undo synth save settles the bank clean")
     } catch {
         report.fail(id, "synth undo journey failed: \(error)")

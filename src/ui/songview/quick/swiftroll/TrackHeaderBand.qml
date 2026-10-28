@@ -57,7 +57,7 @@ Item {
     }
 
     Component.onCompleted: {
-        root.headersModel.dragDistance = Qt.styleHints.startDragDistance
+        root.headersModel.dragDistance = Application.styleHints.startDragDistance
         configureTextMetrics()
     }
 
@@ -65,7 +65,7 @@ Item {
         if (track < 0)
             return -1
         for (let index = 0; index < trackHeaderRowArea.rowCount; ++index) {
-            const row = root.headersModel.rowAt(index)
+            const row = root.headersModel.rowAt(index) as App.TrackHeaderRowHandle
             if (row && row.track === track)
                 return index
         }
@@ -154,7 +154,7 @@ Item {
                 }
                 MoveCoalescer {
                     id: headerMoves
-                    dispatch: headerMoves.dispatchMove
+                    onDispatch: (x, y, buttons, modifiers) => headerMoves.dispatchMove(x, y, buttons, modifiers)
                     function dispatchMove(x: real, y: real, buttons: int, modifiers: int): void {
                         if (buttons !== Qt.NoButton)
                             root.headersModel.updatePointer(x, y, modifiers)

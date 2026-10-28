@@ -1,229 +1,201 @@
 #!/usr/bin/env python3
-"""Regenerate Swift entries in <build>/compile_commands.json from ninja.
+"""Index current Ninja Swift compile jobs without changing real build outputs."""
 
-CMake's Ninja generator emits `command: ":"` for Swift objects, which leaves
-sourcekit-lsp with no build settings ("no input files": no hover, no
-references, no diagnostics). This script replaces those placeholder entries
-with each target's real whole-module swiftc invocation, extracted via
-`ninja -t commands` (printed, never executed).
-
-Background indexing is SwiftPM-only upstream, so compilation-database
-workspaces get no global index (no find-references, no workspace symbols).
-`--index` closes that gap without touching CMake: it emits each Swift
-target to scratch paths with `-index-store-path` into <build>/indexstore
-and records that path in the compdb entries, so sourcekit-lsp reads the
-build-produced index. Rerun `--index` after editing Swift sources; the
-index goes stale otherwise. `--check` exits 0 when the index is fresh,
-1 when `--index` needs rerunning (also on toolchain change).
-
-Usage:  python3 tools/gen_swift_compdb.py [build-dir] [--index] [--check]
-Rerun whenever CMake reconfigures (it rewrites compile_commands.json).
-Safe: <build>/ is gitignored; C++ entries are passed through untouched.
-"""
+import argparse
 import json
-import re
 import shlex
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
-ARGS = sys.argv[1:]
-DO_INDEX = "--index" in ARGS
-DO_CHECK = "--check" in ARGS
-ARGS = [a for a in ARGS if a not in ("--index", "--check")]
-ROOT = Path(__file__).resolve().parent.parent
-BUILD = Path(ARGS[0]).resolve() if ARGS else ROOT / "build" / "debug"
-NINJA_FILE = BUILD / "build.ninja"
-COMPDB = BUILD / "compile_commands.json"
-INDEXSTORE = BUILD / "indexstore"
-STAMP = INDEXSTORE / "swiftc-stamp.txt"
+from porydaw_dev.build import read_cache
 
-# `-output-file-map` is remapped, not dropped: `-wmo` multi-output index
-# units require per-file outputs, so object/dependency paths are rewritten
-# into the store's scratch dir instead of the real build tree.
 REMAP_KEYS = {"object", "swift-dependencies", "dependencies", "diagnostics"}
 
 
-def swift_edges():
-    """Yield (lib_output, [abs swift sources]) for each Swift link edge."""
-    text = NINJA_FILE.read_text()
-    lines = text.splitlines()
-    i = 0
-    while i < len(lines):
-        m = re.match(r"^build (\S+) .*Swift_STATIC_LIBRARY_LINKER", lines[i])
-        if m:
-            lib, sources, i = m.group(1), [], i + 1
-            while i < len(lines) and lines[i].startswith("  "):
-                kv = re.match(r"^  SWIFT_SOURCES = (.*)$", lines[i])
-                if kv:
-                    sources = [s for s in kv.group(1).split()
-                               if s.endswith(".swift") and s.startswith("/")]
-                i += 1
-            if sources:
-                yield lib, sources
+@dataclass(frozen=True)
+class CompileJob:
+    directory: Path
+    tokens: list[str]
+    sources: tuple[Path, ...]
+
+    @property
+    def name(self) -> str:
+        return self.tokens[self.tokens.index("-module-name") + 1]
+
+
+def compile_jobs(build: Path) -> list[CompileJob]:
+    ninja = read_cache(build)["CMAKE_MAKE_PROGRAM"]
+    result = subprocess.run(
+        [ninja, "-t", "compdb", "-x"],
+        cwd=build,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    jobs = []
+    for entry in json.loads(result.stdout):
+        tokens = shlex.split(entry["command"])
+        if not tokens or Path(tokens[0]).name not in {"swiftc", "swiftc.exe"}:
+            continue
+        if "-c" not in tokens:
+            continue
+        directory = Path(entry["directory"]).resolve()
+        sources = tuple(
+            (directory / token).resolve()
+            for token in tokens[1:]
+            if token.endswith(".swift")
+        )
+        if sources:
+            jobs.append(CompileJob(directory, tokens, sources))
+    if not jobs:
+        raise RuntimeError(
+            f"no Swift compile commands in {build / 'build.ninja'}; build the Debug app first"
+        )
+    return jobs
+
+
+def compiler_version(job: CompileJob) -> str:
+    result = subprocess.run(
+        [job.tokens[0], "--version"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    return result.stdout.splitlines()[0].strip()
+
+
+def index_command(job: CompileJob, store: Path) -> list[str]:
+    scratch = store / "objs" / job.name
+    scratch.mkdir(parents=True, exist_ok=True)
+    result = []
+    tokens = iter(job.tokens)
+    for token in tokens:
+        if token == "-emit-module-path":
+            result += [token, str(scratch / Path(next(tokens)).name)]
+        elif token == "-output-file-map":
+            original = job.directory / next(tokens)
+            data = json.loads(original.read_text(encoding="utf-8"))
+            for entry in data.values():
+                for key in REMAP_KEYS & entry.keys():
+                    entry[key] = str(scratch / Path(entry[key]).name)
+            remapped = scratch / "output-file-map.json"
+            remapped.write_text(json.dumps(data), encoding="utf-8")
+            result += [token, str(remapped)]
         else:
-            i += 1
+            result.append("-Onone" if token == "-O" else token)
+    return result + ["-index-store-path", str(store), "-index-ignore-system-modules"]
 
 
-def swiftc_command(lib):
-    """Expanded swiftc invocation for a link target (query only).
-
-    `ninja -t commands` also lists transitive deps, so select the edge
-    whose `-o` output is this lib; slice from the swiftc executable token
-    to drop `cd`/`:`/`&&` prefixes and skip cmake configure lines that
-    merely mention a swiftc path.
-    """
-    out = subprocess.run(["ninja", "-t", "commands", lib],
-                         capture_output=True, text=True, cwd=BUILD).stdout
-    for line in out.splitlines():
-        if "swiftc" not in line or ".swift" not in line:
-            continue
-        try:
-            toks = shlex.split(line)
-        except ValueError:
-            continue
-        for k, tok in enumerate(toks):
-            if "=" in tok or ":" in tok:
-                continue
-            if tok != "swiftc" and not tok.endswith("/swiftc"):
-                continue
-            rest = toks[k + 1:]
-            if ("-o" in rest and rest[rest.index("-o") + 1] == lib
-                    and any(t.endswith(".swift") for t in rest)):
-                return " ".join(shlex.quote(t) for t in toks[k:])
-    return None
-
-def remap_filemap(path_value, lib):
-    """Rewrite a whole-module output file map into the store scratch dir."""
-    data = json.loads((BUILD / path_value).read_text())
-    out = {}
-    for srcfile, m in data.items():
-        entry = dict(m)
-        for k in REMAP_KEYS:
-            if k in entry:
-                entry[k] = str(INDEXSTORE / "objs" / Path(entry[k]).name)
-        out[srcfile] = entry
-    dest = INDEXSTORE / "objs" / (lib.replace("/", "_") + "-output.json")
-    dest.write_text(json.dumps(out))
-    return str(dest)
-
-
-def index_command(cmd, lib):
-    """Whole-module emit command -> index-only emit to scratch paths.
-
-    Faithful redirect of the real build invocation: same mode and flags
-    (minus `-O`), outputs (.a/.swiftmodule/.o/.d) rewritten under the
-    store scratch dir so the real build tree is untouched. `-typecheck`
-    and `-emit-object` variants were tried: the former writes records
-    without units, the latter rejects `-wmo` multi-output file maps.
-    """
-    tag = lib.replace("/", "_")
-    redir = {
-        "-o": str(INDEXSTORE / "objs" / (tag + ".a")),
-        "-emit-module-path": str(INDEXSTORE / "objs" / (tag + ".swiftmodule")),
-    }
-    toks, out = shlex.split(cmd), []
-    i = 0
-    while i < len(toks):
-        tok = toks[i]
-        if tok in ("&&", ":"):
-            i += 1
-            continue
-        if tok in redir:
-            out += [tok, redir[tok]]
-            i += 2
-            continue
-        if tok == "-output-file-map":
-            out += [tok, remap_filemap(toks[i + 1], lib)]
-            i += 2
-            continue
-        out.append("-Onone" if tok == "-O" else tok)
-        i += 1
-    return (out
-            + ["-index-store-path", str(INDEXSTORE),
-               "-index-ignore-system-modules"])
-
-
-def swiftc_version():
-    """First line of `swiftc --version`; index stamp for toolchain drift."""
-    compiler = "swiftc"
-    for lib, _ in swift_edges():
-        cmd = swiftc_command(lib)
-        if cmd:
-            compiler = shlex.split(cmd)[0]
-            break
-    r = subprocess.run([compiler, "--version"],
-                       capture_output=True, text=True)
-    return (r.stdout.splitlines() or ["unknown"])[0].strip()
-
-
-def check_fresh():
-    """True when the index store matches toolchain and all inputs."""
-    if not STAMP.exists():
-        print("no Swift index store; run: deno task lsp:swift")
+def check_fresh(build: Path, jobs: list[CompileJob]) -> bool:
+    stamp = build / "indexstore/swiftc-stamp.txt"
+    if not stamp.exists():
+        print("no Swift index store; run: uv run --no-sync dev lsp:swift")
         return False
-    if STAMP.read_text().strip() != swiftc_version():
-        print("swiftc toolchain changed; run: deno task lsp:swift")
+    if stamp.read_text(encoding="utf-8").strip() != compiler_version(jobs[0]):
+        print("Swift toolchain changed; run: uv run --no-sync dev lsp:swift")
         return False
-    mtime = STAMP.stat().st_mtime
-    stale = [str(p) for p in (NINJA_FILE, COMPDB, Path(__file__))
-             if p.exists() and p.stat().st_mtime > mtime]
-    try:
-        entries = json.loads(COMPDB.read_text())
-        sources = [e["file"] for e in entries
-                   if e.get("file", "").endswith(".swift")]
-    except Exception:
-        sources = []
-    stale += [f for f in sources
-              if Path(f).exists() and Path(f).stat().st_mtime > mtime]
+    inputs = [build / "build.ninja", build / "compile_commands.json", Path(__file__)]
+    inputs += [source for job in jobs for source in job.sources]
+    stale = [
+        str(path) for path in inputs if path.stat().st_mtime > stamp.stat().st_mtime
+    ]
     if stale:
-        print(f"stale Swift index ({len(stale)} newer inputs);"
-              " run: deno task lsp:swift")
-        for f in stale[:10]:
-            print(f"  {f}")
+        print(
+            f"stale Swift index ({len(stale)} newer inputs); run: uv run --no-sync dev lsp:swift"
+        )
         return False
-    print(f"Swift index fresh ({len(sources)} files)")
+    print(f"Swift index fresh ({sum(len(job.sources) for job in jobs)} files)")
     return True
 
 
-def main():
-    if DO_CHECK:
-        sys.exit(0 if check_fresh() else 1)
-    if DO_INDEX:
-        (INDEXSTORE / "objs").mkdir(parents=True, exist_ok=True)
-    compdb = json.loads(COMPDB.read_text())
-    indexed_cmds, fixed, missing, failed = [], 0, [], []
-    for lib, sources in swift_edges():
-        cmd = swiftc_command(lib)
-        if not cmd:
-            missing.append(lib)
-            continue
-        if DO_INDEX:
-            indexed_cmds.append((lib, index_command(cmd, lib)))
-            cmd += f" -index-store-path {INDEXSTORE} -index-ignore-system-modules"
-        entry = {"directory": str(BUILD), "command": cmd}
-        by_file = {e["file"]: e for e in compdb}
-        for src in sources:
-            if src in by_file:
-                by_file[src].update(entry)
-            else:
-                compdb.append({"file": src, **entry})
-            fixed += 1
-    COMPDB.write_text(json.dumps(compdb, indent=2))
-    print(f"fixed {fixed} Swift entries in {COMPDB}")
-    for lib in missing:
-        print(f"WARNING: no swiftc command for {lib}", file=sys.stderr)
-    if DO_INDEX:
-        for lib, tokens in indexed_cmds:
-            print(f"indexing {lib} ...", flush=True)
-            r = subprocess.run(tokens, cwd=BUILD, capture_output=True, text=True)
-            if r.returncode != 0:
-                failed.append(lib)
-                print(f"FAILED {lib}:\n{r.stderr[-3000:]}", file=sys.stderr)
-        STAMP.write_text(swiftc_version() + "\n")
-        print(f"indexed {len(indexed_cmds) - len(failed)}/{len(indexed_cmds)}"
-              f" targets -> {INDEXSTORE}")
-        sys.exit(1 if failed else 0)
+def run(build: Path, indexing: bool, checking: bool) -> int:
+    jobs = compile_jobs(build)
+    if checking:
+        return 0 if check_fresh(build, jobs) else 1
+    store = build / "indexstore"
+    compdb = build / "compile_commands.json"
+    entries = json.loads(compdb.read_text(encoding="utf-8"))
+    replacements = {}
+    for job in jobs:
+        tokens = job.tokens
+        if indexing:
+            tokens = tokens + [
+                "-index-store-path",
+                str(store),
+                "-index-ignore-system-modules",
+            ]
+        for source in job.sources:
+            replacements[str(source)] = {
+                "directory": str(job.directory),
+                "command": shlex.join(tokens),
+                "file": str(source),
+            }
+    updated = []
+    for entry in entries:
+        source = str((Path(entry["directory"]) / entry["file"]).resolve())
+        if entry["file"].endswith(".swift"):
+            if replacement := replacements.pop(source, None):
+                updated.append({**entry, **replacement})
+        else:
+            updated.append(entry)
+    updated.extend(replacements.values())
+    compdb.write_text(json.dumps(updated, indent=2) + "\n", encoding="utf-8")
+    fixed = sum(len(job.sources) for job in jobs)
+    print(f"fixed {fixed} Swift entries in {compdb}")
+    if not indexing:
+        return 0
+    failures = []
+    for job in jobs:
+        print(f"indexing {job.name} ...", flush=True)
+        result = subprocess.run(
+            index_command(job, store),
+            cwd=job.directory,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        if result.returncode:
+            failures.append(job.name)
+            print(f"FAILED {job.name}:\n{result.stderr[-3000:]}", file=sys.stderr)
+    print(f"indexed {len(jobs) - len(failures)}/{len(jobs)} targets -> {store}")
+    if failures:
+        return 1
+    (store / "swiftc-stamp.txt").write_text(
+        compiler_version(jobs[0]) + "\n", encoding="utf-8"
+    )
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "build_dir",
+        nargs="?",
+        type=Path,
+        default=Path(__file__).resolve().parents[1] / "build/debug",
+    )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--index", action="store_true")
+    mode.add_argument("--check", action="store_true")
+    options = parser.parse_args()
+    try:
+        return run(options.build_dir.resolve(), options.index, options.check)
+    except (
+        OSError,
+        RuntimeError,
+        ValueError,
+        KeyError,
+        subprocess.CalledProcessError,
+    ) as error:
+        print(f"Swift index: {error}", file=sys.stderr)
+        return 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

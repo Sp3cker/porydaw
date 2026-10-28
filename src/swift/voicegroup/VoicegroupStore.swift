@@ -14,16 +14,28 @@ public enum VoicegroupStoreError: Error, LocalizedError {
 /// The source and its current bank are canonical; published slot values are snapshots.
 private struct BankRecord {
     let id: VoicegroupId
-    let source: VoicegroupSource
+    var source: VoicegroupSource
     var current: Bank
     var sourceFileTime: Date
     var published: LoadedBankView
+    var kitKeys = KitStaging.Keys()
 }
 
 private struct BankMemo {
     let id: VoicegroupId
     var filePath: String
     var sourceFileTime: Date
+}
+
+private struct KitStaging {
+    struct Keys {
+        var subgroups: Set<VoicegroupLocation> = []
+        var tables: Set<String> = []
+        var isEmpty: Bool { subgroups.isEmpty && tables.isEmpty }
+    }
+
+    var subgroups: [VoicegroupLocation: VoicegroupSource] = [:]
+    var tables: [String: KeysplitTable] = [:]
 }
 
 // Single-use tokens survive bank rebuilds; the source delta's byte match guards undo.
@@ -64,6 +76,7 @@ public final class VoicegroupStore {
     private var records: [VoicegroupId: BankRecord] = [:]
     private var memos: [String: BankMemo] = [:]
     private var tokens = TokenRegistry()
+    private var kitStaging = KitStaging()
 
     /// Opens the project's layout and parses its asset maps before loading banks.
     /// - Throws: `VoicegroupStoreError` when the root or asset maps cannot be read.
@@ -84,6 +97,13 @@ public final class VoicegroupStore {
         } catch {
             throw VoicegroupStoreError.operationFailed("Could not parse the project sample maps: \(error)")
         }
+    }
+
+    /// Refreshes discovery after resource creation, preserving every live bank.
+    public func refreshLocations() {
+        layout = ProjectLayout(projectRoot: projectRoot)
+        locator = VoicegroupLocator(layout: layout)
+        textCache.removeAll()
     }
 
     /// Refreshes maps and rebuilds loaded banks from their current, possibly dirty sources.
@@ -109,7 +129,8 @@ public final class VoicegroupStore {
         for (id, var record) in records {
             guard let bank = try? buildBank(source: record.source) else { continue }
             record.current = bank
-            record.published = Self.publish(id: id, source: record.source, bank: bank)
+            record.published = Self.publish(
+                id: id, source: record.source, bank: bank, staged: !record.kitKeys.isEmpty)
             records[id] = record
             views.append(record.published)
         }
@@ -136,11 +157,12 @@ public final class VoicegroupStore {
             throw VoicegroupStoreError.operationFailed("No voicegroup file declares voicegroup\(arg).")
         }
         let bytes = try VoicegroupText.read(location.filePath)
-        let text = try VoicegroupText.parse(bytes: bytes, sectionLabel: location.sectionLabel)
-        let bank = try BankBuilder(inputs: bankBuildInputs()).build(text, at: location)
         let source = VoicegroupSource()
         var error: String?
-        guard source.open(location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg, error: &error)
+        guard
+            source.open(
+                location: location, bytes: bytes, projectRoot: projectRoot, voicegroupArg: arg,
+                openMode: .projectArgument, error: &error)
         else {
             throw VoicegroupStoreError.operationFailed(error ?? "Could not open the voicegroup source.")
         }
@@ -169,14 +191,20 @@ public final class VoicegroupStore {
             }
             if retained {
                 record.sourceFileTime = time
-                if record.published.dirty != record.source.dirty {
-                    record.published = Self.publish(id: id, source: record.source, bank: record.current)
+                if record.published.dirty != (record.source.dirty || !record.kitKeys.isEmpty) {
+                    record.published = Self.publish(
+                        id: id, source: record.source, bank: record.current, staged: !record.kitKeys.isEmpty)
                 }
                 records[id] = record
                 memos[arg] = BankMemo(id: id, filePath: path, sourceFileTime: time)
                 return record.published
             }
         }
+        let staging = stagingWithoutKeys(of: id)
+        textCache.removeAll()
+        let bank = try buildBank(source: source, staging: staging)
+        kitStaging = staging
+        textCache.removeAll()
         let view = Self.publish(id: id, source: source, bank: bank)
         records[id] = BankRecord(
             id: id, source: source, current: bank,
@@ -226,14 +254,147 @@ public final class VoicegroupStore {
             precondition(restored, "Previously parsed voicegroup bytes must restore")
             throw VoicegroupStoreError.operationFailed("Edited voicegroup failed to load.")
         }
-        record.current = bank
-        record.published = Self.publish(id: record.id, source: source, bank: bank)
-        records[input.id] = record
+        republish(&record, bank: bank)
         let token = materialization.map { tokens.mint(id: input.id, materialization: $0) }
-        return .applied(
-            .init(
-                view: record.published, materialization: materialization,
-                materializationToken: token))
+        return .applied(.init(view: record.published, materialization: materialization, materializationToken: token))
+    }
+
+    /// Stages a kit edit and republishes only the requested voicegroup's bank.
+    /// - Throws: `VoicegroupStoreError` naming the source on conflict or build failure.
+    public func applyKitEdit(input: KitEditInput, expected: KitParentExpectation) throws -> VoicegroupEditResult {
+        guard try refreshIfStale(id: input.id), var record = records[input.id] else {
+            throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(input.id.sourceRelativePath)")
+        }
+        let source = record.source
+        guard (0..<128).contains(input.slot) else {
+            throw VoicegroupStoreError.operationFailed("Cannot edit slot \(input.slot) in \(source.filePath).")
+        }
+        if case .parent(let voice) = expected,
+            voice == nil ? source.kindAt(slot: input.slot) != .none : source.voiceAt(slot: input.slot) != voice
+        {
+            throw VoicegroupStoreError.operationFailed(
+                "Cannot edit slot \(input.slot) in \(source.filePath): parent changed.")
+        }
+        let parentOnly = input.subgroupSymbol.isEmpty && input.children.isEmpty && input.table == nil
+        let parent = try detachedSource(source)
+        var staging = kitStaging
+        var keys = record.kitKeys
+        if !parentOnly {
+            guard let targetParent = input.parent,
+                targetParent.macro == .keysplitAll || targetParent.macro == .keysplit,
+                targetParent.symbol == input.subgroupSymbol, input.children.count <= 128
+            else {
+                throw VoicegroupStoreError.operationFailed("Invalid kit edit in \(source.filePath).")
+            }
+            guard let location = locator.locateSubgroup(symbol: Array(input.subgroupSymbol.utf8)[...]) else {
+                throw VoicegroupStoreError.operationFailed(
+                    "no sub-voicegroup \(input.subgroupSymbol) found in the project (\(source.filePath))")
+            }
+            let subgroup = try resolveStagedSubgroup(location: location, forEditing: true)
+            if let table = input.table {
+                guard targetParent.macro == .keysplit, targetParent.keysplitTable == table.name,
+                    KeysplitTableWriter.isValid(table)
+                else {
+                    throw VoicegroupStoreError.operationFailed("Invalid keysplit table in \(parent.filePath).")
+                }
+                staging.tables[table.name] = table
+                keys.tables.insert(table.name)
+            }
+            for (slot, child) in input.children.enumerated() {
+                guard subgroup.setVoice(slot: slot, voice: child ?? kitBlankChildVoice) else {
+                    throw VoicegroupStoreError.operationFailed("Cannot edit slot \(slot) in \(subgroup.filePath).")
+                }
+            }
+            staging.subgroups[location] = subgroup
+            keys.subgroups.insert(location)
+        }
+        var materialization: BlankSlotMaterialization?
+        if let targetParent = input.parent {
+            if parent.kindAt(slot: input.slot) == .none {
+                guard let inserted = parent.materializeBlankSlot(slot: input.slot, voice: targetParent) else {
+                    throw VoicegroupStoreError.operationFailed(
+                        "Cannot materialize slot \(input.slot) in \(parent.filePath).")
+                }
+                materialization = inserted
+            } else if !parent.setVoice(slot: input.slot, voice: targetParent) {
+                throw VoicegroupStoreError.operationFailed("Cannot edit slot \(input.slot) in \(parent.filePath).")
+            }
+        } else {
+            guard parentOnly, let inserted = input.materialization,
+                inserted.firstAddedSlot <= input.slot,
+                input.slot < inserted.firstAddedSlot + inserted.addedLines.count,
+                parent.revertBlankSlotMaterialization(inserted, authoritative: expected == .authoritative)
+            else {
+                throw VoicegroupStoreError.operationFailed(
+                    "Cannot restore undefined slot \(input.slot) in \(parent.filePath).")
+            }
+        }
+        let bank: Bank
+        do {
+            bank = try buildBank(source: parent, staging: staging)
+        } catch {
+            textCache.removeAll()
+            throw error
+        }
+        record.source = parent
+        record.kitKeys = keys
+        kitStaging = staging
+        republish(&record, bank: bank)
+        return .applied(.init(view: record.published, materialization: materialization, materializationToken: nil))
+    }
+
+    /// Reads raw parent and child voices through the kit staging overlays (parent-only for a non-kit
+    /// or undefined slot); throws `VoicegroupStoreError` for an unloaded bank or invalid source.
+    public func kitSnapshot(id: VoicegroupId, slot: Int) throws -> KitSnapshot {
+        guard try refreshIfStale(id: id), let source = records[id]?.source else {
+            throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
+        }
+        guard (0..<128).contains(slot) else {
+            throw VoicegroupStoreError.operationFailed("Cannot read slot \(slot) in \(source.filePath).")
+        }
+        let parent = source.voiceAt(slot: slot)
+        guard let parent, parent.macro == .keysplitAll || parent.macro == .keysplit else {
+            return KitSnapshot(
+                voicegroup: source.voicegroupArg, parent: parent, subgroupSymbol: "", children: [], table: nil)
+        }
+        let inputs = try bankBuildInputs()
+        guard let location = inputs.locator.locateSubgroup(symbol: Array(parent.symbol.utf8)[...]) else {
+            throw VoicegroupStoreError.operationFailed(
+                "no sub-voicegroup \(parent.symbol) found in the project (\(source.filePath))")
+        }
+        let subgroup = try resolveStagedSubgroup(location: location, forEditing: false)
+        let children = (0..<128).map { (childSlot: Int) -> VgVoice? in subgroup.voiceAt(slot: childSlot) }
+        let table = parent.macro == .keysplit ? inputs.keysplits.table(named: parent.keysplitTable) : nil
+        return KitSnapshot(
+            voicegroup: source.voicegroupArg, parent: parent,
+            subgroupSymbol: parent.symbol, children: children, table: table)
+    }
+
+    /// Copies a project sample from the bank resolver without exposing cached pointers.
+    public func sampleAsset(symbol: String) throws -> KitSampleAsset? {
+        let builder = BankBuilder(inputs: try bankBuildInputs())
+        guard let wave = try builder.resolveSample(symbol: Array(symbol.utf8)[...]) else { return nil }
+        let header = Span(_unsafeStart: wave, count: 1)[0]
+        let pcm: [Int8]
+        if let data = header.data {
+            let samples = Span(_unsafeStart: data, count: Int(header.size))
+            pcm = (0..<samples.count).map { (index: Int) -> Int8 in samples[index] }
+        } else {
+            precondition(header.size == 0, "A decoded sample must have PCM storage")
+            pcm = []
+        }
+        return KitSampleAsset(
+            pcm: pcm,
+            frequency: header.freq, looped: header.status & 0x4000 != 0, loopStart: Int(header.loopStart))
+    }
+
+    /// Copies one programmable wave and releases the resolver's fresh allocation.
+    public func progWaveWords(symbol: String) throws -> [UInt32]? {
+        let builder = BankBuilder(inputs: try bankBuildInputs())
+        guard let wave = try builder.resolveProgWave(symbol: Array(symbol.utf8)[...]) else { return nil }
+        defer { free(wave) }
+        let words = Span(_unsafeStart: wave, count: 4)
+        return (0..<4).map { (index: Int) -> UInt32 in words[index] }
     }
 
     /// Consumes a materialization token, then attempts its narrow-delta undo.
@@ -255,33 +416,226 @@ public final class VoicegroupStore {
     /// - Returns: The clean publication, or nil if the source write fails.
     /// - Throws: `VoicegroupStoreError` for an unloaded bank or a failed reload.
     public func saveVoicegroup(id: VoicegroupId) throws -> LoadedBankView? {
-        // A failed stale reload must not hide the error from the actual write attempt.
-        guard (try? refreshIfStale(id: id)) != false, var record = records[id] else {
+        guard try refreshIfStale(id: id), var record = records[id] else {
             throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
         }
-        let saved: Bool
-        do {
-            saved = try record.source.save()
-        } catch let conflict as VoicegroupSourceConflict {
-            throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath): \(conflict.message)")
-        } catch {
-            throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath)")
+        if record.kitKeys.isEmpty {
+            let source = try detachedSource(record.source)
+            let saved: Bool
+            do {
+                saved = try source.save()
+            } catch let conflict as VoicegroupSourceConflict {
+                throw VoicegroupStoreError.operationFailed(
+                    "Cannot write \(record.source.filePath): \(conflict.message)")
+            } catch {
+                throw VoicegroupStoreError.operationFailed("Cannot write \(record.source.filePath)")
+            }
+            // Nil is reserved for an edit superseding the save snapshot.
+            guard saved else { return nil }
+            record.current = try buildBank(source: source)
+            guard let time = modificationTime(record.source.filePath) else {
+                throw VoicegroupStoreError.operationFailed("Cannot read \(record.source.filePath)")
+            }
+            record.sourceFileTime = time
+            record.source = source
+        } else {
+            try saveKit(record: &record)
         }
-        // Nil is reserved for the supersede race (another edit landed between the
-        // save snapshot and didSave); write failures throw above instead.
-        guard saved else { return nil }
-        let bank = try buildBank(source: record.source)
-        guard let time = modificationTime(record.source.filePath) else {
-            throw VoicegroupStoreError.operationFailed("Cannot read \(record.source.filePath)")
-        }
-        record.sourceFileTime = time
-        record.current = bank
-        record.published = Self.publish(id: id, source: record.source, bank: bank)
+        record.published = Self.publish(
+            id: id, source: record.source, bank: record.current, staged: !record.kitKeys.isEmpty)
         records[id] = record
         for (arg, memo) in memos where memo.id == id {
-            memos[arg] = BankMemo(id: id, filePath: record.source.filePath, sourceFileTime: time)
+            memos[arg] = BankMemo(
+                id: id, filePath: record.source.filePath, sourceFileTime: record.sourceFileTime)
         }
         return record.published
+    }
+
+    /// Reloads one bank transactionally, retaining other groups' kit dependencies.
+    /// A failed source read or bank build leaves the live publication untouched.
+    public func discardVoicegroup(id: VoicegroupId) throws -> LoadedBankView {
+        guard let record = records[id] else {
+            throw VoicegroupStoreError.operationFailed("Voicegroup is not loaded: \(id.sourceRelativePath)")
+        }
+        let source = try record.source.diskSnapshot()
+        let staging = stagingWithoutKeys(of: id)
+        let priorTables = keysplits
+        keysplits = try KeysplitTables.parse(files: layout.ensuringDeepScan().keysplitTableFiles)
+        var committed = false
+        textCache.removeAll()
+        defer {
+            textCache.removeAll()
+            if !committed { keysplits = priorTables }
+        }
+        let bank = try buildBank(source: source, staging: staging)
+        guard let time = modificationTime(source.filePath) else {
+            throw VoicegroupStoreError.operationFailed("Cannot read \(source.filePath)")
+        }
+        let view = Self.publish(id: id, source: source, bank: bank)
+        records[id] = BankRecord(
+            id: id, source: source, current: bank,
+            sourceFileTime: time, published: view)
+        kitStaging = staging
+        for (arg, memo) in memos where memo.id == id {
+            memos[arg] = BankMemo(id: id, filePath: source.filePath, sourceFileTime: time)
+        }
+        committed = true
+        return view
+    }
+
+    private func republish(_ record: inout BankRecord, bank: Bank) {
+        record.current = bank
+        record.published = Self.publish(
+            id: record.id, source: record.source, bank: bank, staged: !record.kitKeys.isEmpty)
+        records[record.id] = record
+    }
+
+    private func resolveStagedSubgroup(location: VoicegroupLocation, forEditing: Bool) throws -> VoicegroupSource {
+        if let staged = kitStaging.subgroups[location] {
+            return forEditing ? try detachedSource(staged) : staged
+        }
+        if !forEditing,
+            let loaded = records.values.first(where: { (record: BankRecord) in
+                record.source.filePath == location.filePath && record.source.sectionLabel == location.sectionLabel
+            })
+        {
+            return loaded.source
+        }
+        let subgroup = VoicegroupSource()
+        var error: String?
+        guard subgroup.open(location: location, error: &error) else {
+            throw VoicegroupStoreError.operationFailed(
+                "Cannot open \(location.filePath): \(error ?? "invalid source")")
+        }
+        return subgroup
+    }
+
+    private func detachedSource(_ source: VoicegroupSource) throws -> VoicegroupSource {
+        let copy = VoicegroupSource()
+        var error: String?
+        guard
+            copy.open(
+                location: VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel),
+                bytes: source.pristineSource, projectRoot: source.projectRoot,
+                voicegroupArg: source.voicegroupArg, openMode: source.openMode, error: &error),
+            copy.restoreSourceBytes(source.sourceBytes())
+        else {
+            throw VoicegroupStoreError.operationFailed("Cannot open \(source.filePath): \(error ?? "invalid source")")
+        }
+        return copy
+    }
+
+    private func stagingWithoutKeys(of id: VoicegroupId) -> KitStaging {
+        var staging = kitStaging
+        let retained = records.filter { $0.key != id }.values
+        staging.subgroups = staging.subgroups.filter { location, _ in
+            retained.contains { $0.kitKeys.subgroups.contains(location) }
+        }
+        staging.tables = staging.tables.filter { name, _ in
+            retained.contains { $0.kitKeys.tables.contains(name) }
+        }
+        return staging
+    }
+
+    private func saveKit(record: inout BankRecord) throws {
+        let parent = try detachedSource(record.source)
+        let keys = record.kitKeys
+        var subgroups: [VoicegroupSource] = []
+        var tableWrites: [(table: KeysplitTable, path: String)] = []
+        var originals: [String: Data] = [:]
+        var written: Set<String> = []
+        let priorTables = keysplits
+        var savedStaging = kitStaging
+        for location in keys.subgroups { savedStaging.subgroups.removeValue(forKey: location) }
+        for name in keys.tables { savedStaging.tables.removeValue(forKey: name) }
+        let bank: Bank
+        let time: Date
+        do {
+            originals[parent.filePath] = try ProjectFileStore.read(parent.filePath)
+            for location in keys.subgroups.sorted(by: {
+                ($0.filePath, $0.sectionLabel) < ($1.filePath, $1.sectionLabel)
+            }) {
+                guard let staged = kitStaging.subgroups[location] else {
+                    throw VoicegroupStoreError.operationFailed("Tracked kit subgroup has no staged source")
+                }
+                subgroups.append(try detachedSource(staged))
+                originals[location.filePath] = try ProjectFileStore.read(location.filePath)
+            }
+            let files = layout.ensuringDeepScan().keysplitTableFiles
+            for name in keys.tables.sorted() {
+                guard let table = kitStaging.tables[name] else {
+                    throw VoicegroupStoreError.operationFailed("Tracked kit table has no staged value")
+                }
+                var path = files.first ?? projectRoot + "/sound/keysplit_tables.inc"
+                for candidate in files {
+                    if try KeysplitTables.parse(files: [candidate]).table(named: name) != nil {
+                        path = candidate
+                        break
+                    }
+                }
+                originals[path] = try ProjectFileStore.read(path)
+                tableWrites.append((table, path))
+            }
+            let parentSaved = try parent.save()
+            written.insert(parent.filePath)
+            guard parentSaved else {
+                throw VoicegroupStoreError.operationFailed("Cannot save \(parent.filePath): edit superseded.")
+            }
+            for subgroup in subgroups {
+                let subgroupSaved = try subgroup.save()
+                written.insert(subgroup.filePath)
+                guard subgroupSaved else {
+                    throw VoicegroupStoreError.operationFailed("Cannot save \(subgroup.filePath): edit superseded.")
+                }
+            }
+            for write in tableWrites {
+                try KeysplitTableWriter.replace(table: write.table, inFile: write.path)
+                written.insert(write.path)
+            }
+            if subgroups.contains(where: { $0.filePath == parent.filePath }) {
+                guard try parent.rebasePreservingEdits(from: parent.diskSnapshot()) else {
+                    throw VoicegroupStoreError.operationFailed("Cannot refresh \(parent.filePath): source changed.")
+                }
+            }
+            keysplits = try KeysplitTables.parse(files: layout.ensuringDeepScan().keysplitTableFiles)
+            textCache.removeAll()
+            bank = try buildBank(source: parent, staging: savedStaging)
+            guard let savedTime = modificationTime(parent.filePath) else {
+                throw VoicegroupStoreError.operationFailed("Cannot read \(parent.filePath)")
+            }
+            time = savedTime
+        } catch {
+            keysplits = priorTables
+            textCache.removeAll()
+            for path in written {
+                guard let bytes = originals[path] else {
+                    throw VoicegroupStoreError.operationFailed("Written kit source has no snapshot: \(path)")
+                }
+                do {
+                    try ProjectFileStore.writeAtomic(path, data: bytes)
+                } catch {
+                    throw VoicegroupStoreError.operationFailed("Cannot restore \(path): \(error)")
+                }
+            }
+            throw VoicegroupStoreError.operationFailed("Cannot save \(parent.filePath): \(error)")
+        }
+        record.source = parent
+        record.current = bank
+        record.sourceFileTime = time
+        record.kitKeys = KitStaging.Keys()
+        for (otherId, var other) in records where otherId != record.id {
+            guard
+                !other.kitKeys.subgroups.isDisjoint(with: keys.subgroups)
+                    || !other.kitKeys.tables.isDisjoint(with: keys.tables)
+            else { continue }
+            other.kitKeys.subgroups.subtract(keys.subgroups)
+            other.kitKeys.tables.subtract(keys.tables)
+            other.published = Self.publish(
+                id: otherId, source: other.source, bank: other.current, staged: !other.kitKeys.isEmpty)
+            records[otherId] = other
+        }
+        kitStaging = savedStaging
+        textCache.removeAll()
     }
 
     /// Builds a detached bank directly from the loaded source's current descriptors.
@@ -301,6 +655,12 @@ public final class VoicegroupStore {
     /// Shares the store's maps, decode cache and text cache with the picker.
     /// All use stays on the owning project's serial executor; banks retain decoded assets.
     public func bankBuildInputs() throws -> BankBuildInputs {
+        try bankBuildInputs(staging: kitStaging)
+    }
+
+    private func bankBuildInputs(
+        staging: KitStaging, source: VoicegroupSource? = nil
+    ) throws -> BankBuildInputs {
         var overlay = soundMap
         for definition in VoicegroupSource.synthInstruments(projectRoot).defs {
             guard mintedSynthDesc(symbol: definition.symbol) != nil else { continue }
@@ -320,18 +680,31 @@ public final class VoicegroupStore {
                 Self.overlaySynth(descriptor, symbol: symbol, into: &overlay)
             }
         }
+        if let source {
+            let location = VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel)
+            textCache.set(source.sourceBytes(), at: location)
+        }
+        for (location, source) in staging.subgroups {
+            textCache.set(source.sourceBytes(), at: location)
+        }
+        var tables = keysplits
+        if !staging.tables.isEmpty {
+            let definitions = keysplits.tables.filter { staging.tables[$0.name] == nil } + Array(staging.tables.values)
+            tables = KeysplitTables(tables: definitions)
+        }
         return BankBuildInputs(
-            layout: layout, soundMap: overlay, progMap: progMap, keysplits: keysplits,
+            layout: layout, soundMap: overlay, progMap: progMap, keysplits: tables,
             cache: cache, locator: locator,
             textProvider: { location, contiguousFill, noSubRecurse in
                 try self.textCache.text(at: location, contiguousFill: contiguousFill, noSubRecurse: noSubRecurse)
             })
     }
 
-    private func buildBank(source: VoicegroupSource) throws -> Bank {
+    private func buildBank(source: VoicegroupSource, staging: KitStaging? = nil) throws -> Bank {
         do {
             let text = try source.descriptors()
-            var inputs = try bankBuildInputs()
+            let staging = staging ?? kitStaging
+            var inputs = try bankBuildInputs(staging: staging, source: source)
             for index in 0..<128 {
                 guard let symbol = text.voices[index]?.symbol else { continue }
                 let name = String(decoding: symbol, as: UTF8.self)
@@ -339,7 +712,6 @@ public final class VoicegroupStore {
                 Self.overlaySynth(descriptor, symbol: name, into: &inputs.soundMap)
             }
             let location = VoicegroupLocation(filePath: source.filePath, sectionLabel: source.sectionLabel)
-            textCache.set(source.sourceBytes(), at: location)
             return try BankBuilder(inputs: inputs).build(text, at: location)
         } catch let error as VoicegroupStoreError {
             throw error
@@ -375,7 +747,9 @@ public final class VoicegroupStore {
         (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date
     }
 
-    private static func publish(id: VoicegroupId, source: VoicegroupSource, bank: Bank) -> LoadedBankView {
+    private static func publish(
+        id: VoicegroupId, source: VoicegroupSource, bank: Bank, staged: Bool = false
+    ) -> LoadedBankView {
         var slots: [VoicegroupSlotView] = []
         slots.reserveCapacity(128)
         for slot in 0..<128 {
@@ -383,6 +757,6 @@ public final class VoicegroupStore {
         }
         return LoadedBankView(
             id: id, bank: bank, loadName: source.loadName,
-            dirty: source.dirty, slotViews: slots)
+            dirty: source.dirty || staged, slotViews: slots)
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import PorydawVoicegroup
 import PorydawCore
 import PorydawProject
 
@@ -86,6 +87,32 @@ extension ProjectService {
                 player: source.player)
             self.snapshot = try await store.snapshot()
         } catch { throw projectFailure(error) }
+    }
+
+    /// Reads a song's metadata and decoded MIDI for duplication. Pure read:
+    /// no bank lease, snapshot, or publication side effects.
+    public func songTemplate(label: String) async throws -> (song: ProjectSong, midi: MidiFile) {
+        let store = try requireStore()
+        do {
+            let song: ProjectSong
+            do {
+                song = try await store.songMeta(label: label)
+            } catch ProjectStoreReadError.songNotFound {
+                throw ProjectServiceError.songNotPlayable(label: label)
+            }
+            guard song.hasMid, let midiPath = song.midPath else {
+                throw ProjectServiceError.songNotPlayable(label: label)
+            }
+            let bytes: Data
+            do {
+                bytes = try await store.readFile(midiPath)
+            } catch ProjectFileStoreError.cannotRead(let path) {
+                throw ProjectServiceError.songMidiUnavailable(label: label, path: path)
+            }
+            return try (song, MidiFile.decode(bytes))
+        } catch {
+            throw projectFailure(error)
+        }
     }
 
     public func songRegistrationPlan(label: String) async throws -> SongRegistrationPlan {

@@ -156,6 +156,7 @@ Item {
                     id: pitchBendPopup
                     bridge: promptHost.root.pitchBendPresenter
                     fallbackFont: promptHost.root.bodyFont
+                    onDismissed: promptHost.rollInput.forceActiveFocus(Qt.OtherFocusReason)
                     width: implicitWidth
                     height: implicitHeight
                     x: Math.max(0, Math.min(

@@ -89,7 +89,7 @@ PromptCard {
         accessibleDescription: prompt.bridge.timeSigPromptTitle
         onValueCommitted: (committed) => prompt.draftNumerator = committed
         onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
-        textInput.KeyNavigation.backtab: cancelButton
+        textInput.KeyNavigation.backtab: acceptButton
     }
 
     Text {
@@ -183,24 +183,24 @@ PromptCard {
         spacing: prompt.appearance.spacing
 
         PromptButton {
-            id: acceptButton
-
-            objectName: "timeSignatureAccept"
-            appearance: prompt.appearance
-            text: qsTr("OK")
-            minimumWidth: numeratorInput.implicitWidth
-            onActivated: prompt.acceptDisplayed()
-        }
-
-        PromptButton {
             id: cancelButton
 
             objectName: "timeSignatureCancel"
             appearance: prompt.appearance
             text: qsTr("Cancel")
             minimumWidth: numeratorInput.implicitWidth
-            KeyNavigation.tab: numeratorInput.textInput
             onActivated: prompt.cancelDisplayed()
+        }
+
+        PromptButton {
+            id: acceptButton
+
+            objectName: "timeSignatureAccept"
+            appearance: prompt.appearance
+            text: qsTr("OK")
+            minimumWidth: numeratorInput.implicitWidth
+            KeyNavigation.tab: numeratorInput.textInput
+            onActivated: prompt.acceptDisplayed()
         }
     }
 }

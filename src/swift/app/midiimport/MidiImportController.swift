@@ -9,21 +9,22 @@ import QtBridge
 @QtBridgeable
 public final class ImportControllerRow {
     public var controller: String
-    public var function: String
+    public var functionName: String
     public var events: String
     public var inGame: String
     public var needsAttention: Bool
 
     init(_ value: ImportControllerRowValue) {
         controller = value.controller
-        function = value.function
+        functionName = value.function
         events = value.events
         inGame = value.inGame
         needsAttention = value.needsAttention
     }
 
     func matches(_ other: ImportControllerRow) -> Bool {
-        controller == other.controller && function == other.function && events == other.events && inGame == other.inGame
+        controller == other.controller && functionName == other.functionName && events == other.events
+            && inGame == other.inGame
             && needsAttention == other.needsAttention
     }
 }
@@ -157,7 +158,11 @@ public final class MidiImportController: QmlUncreatable {
         change { _ = $0.editLabel(text) }
         return label
     }
-    public func editConstant(text: String) { change { $0.editConstant(text) } }
+    public func editConstant(text: String) -> String {
+        guard state != nil else { return "" }
+        change { _ = $0.editConstant(text) }
+        return constant
+    }
     public func changeVoicegroupText(value: String) { change { $0.voicegroupText = value } }
     public func changeVolume(value: Int) { change { $0.volume = value } }
     public func changeReverb(value: Int) { change { $0.reverb = value } }

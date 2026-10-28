@@ -32,6 +32,7 @@ public final class SongDockController: QmlUncreatable {
         presenter.onSongOpenInNewTabRequested = { [weak self] id in self?.open(id, newTab: true) }
         presenter.onSongRegisterRequested = { [weak self] id in self?.prepare(id, deleting: false) }
         presenter.onSongDeleteRequested = { [weak self] id in self?.prepare(id, deleting: true) }
+        presenter.onSongDuplicateRequested = { [weak self] id in self?.duplicate(id) }
     }
 
     public func songListPresenter() -> SongListPresenter { presenter }
@@ -105,6 +106,46 @@ public final class SongDockController: QmlUncreatable {
     private func open(_ songId: Int, newTab: Bool) {
         guard let song = presenter.listing(songId: songId) else { return }
         session?.openSongFromDock(label: song.label, newTab: newTab)
+    }
+
+    /// Instant "Duplicate Song": copies the on-disk MIDI and flags through
+    /// the New Song intake, then opens the copy in a new tab. No dialog.
+    private func duplicate(_ songId: Int) {
+        guard !busy, confirmation.isEmpty, let service,
+            let song = presenter.listing(songId: songId),
+            session?.projectOpen == true, session?.saveInProgress == false
+        else { return }
+        busy = true
+        operation = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let (source, midi) = try await service.songTemplate(label: song.label)
+                let base = SongLabelPolicy.normalize(source.label)
+                var candidate = ""
+                for index in 0..<100 {
+                    let next = index == 0 ? base + "_copy" : "\(base)_copy\(index + 1)"
+                    guard SongName.isValid(label: next) else { continue }
+                    guard !self.presenter.songListings.contains(where: { $0.label == next }) else { continue }
+                    candidate = next
+                    break
+                }
+                guard !candidate.isEmpty else {
+                    throw ProjectServiceError.operationFailed(
+                        "Could not derive a unique song label for \(source.label).")
+                }
+                let request = SongImportRequest(
+                    label: candidate, constant: SongCatalog.constantForLabel(candidate),
+                    player: source.player, config: source.cfg, createVoicegroup: false, midi: midi)
+                _ = await registerImportedSong(
+                    request: request, service: service, dock: self, session: self.session,
+                    isCurrent: { self.service === service }, openInNewTab: true)
+            } catch {
+                if !Task.isCancelled, self.service === service {
+                    self.session?.publishOperationFailure(message: String(describing: error))
+                }
+            }
+            if !Task.isCancelled, self.service === service { self.busy = false }
+        }
     }
 
     private func prepare(_ songId: Int, deleting: Bool) {

@@ -9,6 +9,7 @@ Item {
     id: page
     required property list<string> voicegroupOptions
     required property string voicegroupText
+    readonly property bool voicegroupEditing: voicegroup.contentItem.activeFocus || voicegroup.popup.visible
     required property int volume
     required property int reverb
     required property int priority
@@ -44,8 +45,9 @@ Item {
             currentIndex: page.voicegroupOptions.indexOf(page.voicegroupText)
             editText: page.voicegroupText
             onEditTextChanged: { if (activeFocus) page.voicegroupEdited(editText) }
+            onAccepted: page.voicegroupEdited(editText)
             onActivated: page.voicegroupEdited(currentText)
-            ToolTip.text: qsTr("The symbol is \"voicegroup_\" + this name (mid2agb -G).")
+            ToolTip.text: qsTr("The symbol is \"voicegroup_\" + this name (mid2agb -G). Enter accepts the name; Finish creates the song.")
             ToolTip.visible: hovered
         }
         Label { Layout.row: 1; Layout.column: 0; text: qsTr("Master volume (-V):"); color: page.colors.windowText }

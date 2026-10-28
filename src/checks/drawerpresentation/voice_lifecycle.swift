@@ -221,7 +221,7 @@ func drawerVoiceHoverAndBankRefresh(
         let cleared = edited
         do {
             _ = try runBlocking {
-                try await fixture.session.applyBankEdit(slot: slot, value: cleared, expected: original[index])
+                try await fixture.session.voicegroup.apply(slot: slot, value: cleared, expected: original[index])
             }
         } catch {
             report.fail(drawerVoiceLabelID, "could not clear voice symbol through the bank: \(error)")
@@ -240,7 +240,7 @@ func drawerVoiceHoverAndBankRefresh(
 
     do {
         for _ in programs {
-            _ = try runBlocking { try await fixture.session.undo() }
+            _ = try runBlocking { try await fixture.session.voicegroup.undo() }
         }
     } catch {
         report.fail(drawerVoiceLabelID, "could not restore the bank symbols: \(error)")
@@ -260,7 +260,7 @@ func drawerVoiceHoverAndBankRefresh(
     renamed.symbol = "renamed_voice_symbol"
     do {
         _ = try runBlocking {
-            try await fixture.session.applyBankEdit(
+            try await fixture.session.voicegroup.apply(
                 slot: programs[1], value: renamed,
                 expected: beforeRename)
         }

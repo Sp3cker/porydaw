@@ -1,22 +1,26 @@
 import PorydawAppHistory
 import PorydawAppPresentation
 import PorydawDocument
+import PorydawKitStudio
+import PorydawSampleUI
 import QtBridge
 
 /// The QtBridge types registered by both the application and its build-time tooling.
 @MainActor
 public enum PorydawQmlTypes {
-    /// QtBridge keys QML URIs by Swift module; presentation and history types
-    /// belong to the app's module.
+    /// QtBridge keys QML URIs by Swift module; shared UI types belong to
+    /// the app's module.
     private static let aliasedModules: Void = {
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppPresentation"] = "PorydawApp"
         QMetaObjectBuilder.qmlModuleAliases["PorydawAppHistory"] = "PorydawApp"
+        QMetaObjectBuilder.qmlModuleAliases["PorydawSampleUI"] = "PorydawApp"
+        QMetaObjectBuilder.qmlModuleAliases["PorydawKitStudio"] = "PorydawApp"
     }()
 
     /// Types that QML may construct, in application registration order.
     public static var instantiable: [QmlInstantiable.Type] {
         _ = aliasedModules
-        return [ShellPresenter.self, ApplicationSession.self]
+        return [ShellPresenter.self, ApplicationSession.self, NumberFieldFormat.self]
     }
 
     /// Swift-owned types that QML may name: existing registrations, then alphabetical additions.
@@ -36,7 +40,9 @@ public enum PorydawQmlTypes {
         SampleStudioAudition.self,
         SampleStudioPresenter.self,
         SampleStudioWorkflow.self,
-        SampleWaveformModel.self,
+        KitStudioWorkflow.self,
+        LibraryPreviewStrip.self,
+        MarkerWaveformModel.self,
         Sf2ZonePickerPresenter.self,
         SongDockController.self,
         TransportBarPresenter.self,
@@ -45,19 +51,20 @@ public enum PorydawQmlTypes {
         VoiceListController.self,
         WavExportPresenter.self,
         AutomationHoverDisplay.self,
-        AutomationMenuRowHandle.self,
+        MenuRow.self,
         AutomationNodeHandle.self,
         AutomationPage.self,
         AutomationTabHandle.self,
         EditorDrawerPresenter.self,
         EditorDrawerSectionState.self,
-        EventListMenuItem.self,
         EventListRowHandle.self,
         GridPalette.self,
         GridScene.self,
-        GridSubdivisionMenuItem.self,
         HeaderVoicePicker.self,
         ImportControllerRow.self,
+        IntegerInputPolicy.self,
+        KitSourceRow.self,
+        KitStudioPresenter.self,
         LayoutSpaces.self,
         MouseHints.self,
         OtherEventsBandPresenter.self,
@@ -73,7 +80,9 @@ public enum PorydawQmlTypes {
         PolyphonyEventRow.self,
         PromptStyle.self,
         RulerMenuPresenter.self,
-        RulerMenuRow.self,
+        SampleLibraryFileRow.self,
+        SampleLibraryFolderRow.self,
+        SampleLibraryModel.self,
         SamplePickerRow.self,
         SceneRect.self,
         SceneText.self,
@@ -85,7 +94,6 @@ public enum PorydawQmlTypes {
         SongListRow.self,
         SongTabSession.self,
         SongTabsController.self,
-        TrackHeaderMenuItem.self,
         TrackHeaderRowHandle.self,
         TrackHeadersPresenter.self,
         TypographyFonts.self,
@@ -96,25 +104,24 @@ public enum PorydawQmlTypes {
         VoiceListArgChoice.self,
         VoiceListRowHandle.self,
         VoiceMarkerHandle.self,
-        VoiceMenuRowHandle.self,
         VoicePickerRowHandle.self,
+        WaveformMarkerRow.self,
     ]
 }
 
 extension AutomationHoverDisplay: QmlUncreatable {}
-extension AutomationMenuRowHandle: QmlUncreatable {}
+extension MenuRow: QmlUncreatable {}
 extension AutomationNodeHandle: QmlUncreatable {}
 extension AutomationPage: QmlUncreatable {}
 extension AutomationTabHandle: QmlUncreatable {}
 extension EditorDrawerPresenter: QmlUncreatable {}
 extension EditorDrawerSectionState: QmlUncreatable {}
-extension EventListMenuItem: QmlUncreatable {}
 extension EventListRowHandle: QmlUncreatable {}
 extension GridPalette: QmlUncreatable {}
 extension GridScene: QmlUncreatable {}
-extension GridSubdivisionMenuItem: QmlUncreatable {}
 extension HeaderVoicePicker: QmlUncreatable {}
 extension ImportControllerRow: QmlUncreatable {}
+extension IntegerInputPolicy: QmlUncreatable {}
 extension LayoutSpaces: QmlUncreatable {}
 extension MouseHints: QmlUncreatable {}
 extension OtherEventsBandPresenter: QmlUncreatable {}
@@ -130,7 +137,6 @@ extension PolyphonyCounterRow: QmlUncreatable {}
 extension PolyphonyEventRow: QmlUncreatable {}
 extension PromptStyle: QmlUncreatable {}
 extension RulerMenuPresenter: QmlUncreatable {}
-extension RulerMenuRow: QmlUncreatable {}
 extension SamplePickerRow: QmlUncreatable {}
 extension SceneRect: QmlUncreatable {}
 extension SceneText: QmlUncreatable {}
@@ -142,7 +148,6 @@ extension SongListPresenter: QmlUncreatable {}
 extension SongListRow: QmlUncreatable {}
 extension SongTabSession: QmlUncreatable {}
 extension SongTabsController: QmlUncreatable {}
-extension TrackHeaderMenuItem: QmlUncreatable {}
 extension TrackHeaderRowHandle: QmlUncreatable {}
 extension TrackHeadersPresenter: QmlUncreatable {}
 extension TypographyFonts: QmlUncreatable {}
@@ -153,5 +158,4 @@ extension VoiceChangesPage: QmlUncreatable {}
 extension VoiceListArgChoice: QmlUncreatable {}
 extension VoiceListRowHandle: QmlUncreatable {}
 extension VoiceMarkerHandle: QmlUncreatable {}
-extension VoiceMenuRowHandle: QmlUncreatable {}
 extension VoicePickerRowHandle: QmlUncreatable {}

@@ -1,9 +1,4 @@
 import Foundation
-#if canImport(Darwin)
-    import Darwin
-#else
-    import Glibc
-#endif
 
 public struct VoicegroupLocation: Hashable, Sendable {
     public let filePath: String
@@ -73,12 +68,14 @@ public final class VoicegroupLocator {
         let current = currentBytes.span
         var currentStart = 0
         for index in 0..<current.count {
-            if current[index] == 47 || current[index] == 92 { currentStart = index + 1 }
+            let byte: UInt8 = current[index]
+            if byte == UInt8(47) || byte == UInt8(92) { currentStart = index + 1 }
         }
         let start = currentBytes.index(currentBytes.startIndex, offsetBy: currentStart)
         guard let recorded = includedFiles[filePath[start...]], let next = recorded,
-            next.utf8.count < 512, next.withCString({ access($0, F_OK) }) == 0
+            next.utf8.count < 512
         else { return nil }
+        guard next.withCString(NativeFileSystem.exists) else { return nil }
         return next
     }
 
@@ -97,7 +94,7 @@ public final class VoicegroupLocator {
                 guard Self.matches(text, ".include") else { continue }
                 var first = text.startIndex + 8
                 while first < text.endIndex && VoicegroupSource.isSpace(text[first]) { first += 1 }
-                guard first < text.endIndex && text[first] == 34 else { continue }
+                guard first < text.endIndex && text[first] == UInt8(34) else { continue }
                 first += 1
                 var quote = first
                 while quote < text.endIndex && text[quote] != 34 { quote += 1 }
@@ -111,7 +108,7 @@ public final class VoicegroupLocator {
                 let nameBytes = name.utf8
                 let nameSpan = nameBytes.span
                 for index in 0..<nameSpan.count {
-                    if nameSpan[index] == 47 { basenameStart = index + 1 }
+                    if nameSpan[index] == UInt8(47) { basenameStart = index + 1 }
                 }
                 previous = name[nameBytes.index(nameBytes.startIndex, offsetBy: basenameStart)...]
             }
@@ -145,29 +142,32 @@ public final class VoicegroupLocator {
         }
         guard !base.isEmpty, base.count < 256 else { return nil }
         for directory in layout.voicegroupDirectories {
-            guard let stream = directory.withCString({ opendir($0) }) else { continue }
-            defer { closedir(stream) }
-            while let entry = readdir(stream) {
-                let name = withUnsafePointer(to: &entry.pointee.d_name) {
-                    $0.withMemoryRebound(to: CChar.self, capacity: Int(NAME_MAX) + 1) { String(cString: $0) }
-                }
+            for name in NativeFileSystem.names(directory, skippingDotFiles: false) {
                 let nameBytes = name.utf8
                 let extensionBytes = nameBytes.span
                 let count = extensionBytes.count
                 // C declared-name fallback: voicegroup_loader.c:2175 accepts .S/.INC too.
-                let assembly =
-                    count >= 2 && extensionBytes[count - 2] == 46
-                    && (extensionBytes[count - 1] == 115 || extensionBytes[count - 1] == 83)
-                let include =
-                    count >= 4 && extensionBytes[count - 4] == 46 && (extensionBytes[count - 3] | 32) == 105
-                    && (extensionBytes[count - 2] | 32) == 110 && (extensionBytes[count - 1] | 32) == 99
+                var assembly: Bool = false
+                if count >= 2, extensionBytes[count - 2] == UInt8(46) {
+                    let last: UInt8 = extensionBytes[count - 1]
+                    assembly = last == UInt8(115) || last == UInt8(83)
+                }
+                var include: Bool = false
+                if count >= 4, extensionBytes[count - 4] == UInt8(46) {
+                    let first: UInt8 = extensionBytes[count - 3] | UInt8(32)
+                    let middle: UInt8 = extensionBytes[count - 2] | UInt8(32)
+                    let last: UInt8 = extensionBytes[count - 1] | UInt8(32)
+                    include = first == UInt8(105) && middle == UInt8(110) && last == UInt8(99)
+                }
                 guard assembly || include else { continue }
                 let path = directory + "/" + name
                 guard path.utf8.count < 512 else { continue }
-                var info = stat()
-                guard path.withCString({ stat($0, &info) }) == 0, (info.st_mode & S_IFMT) != S_IFDIR else { continue }
+                guard let kind = NativeFileSystem.kind(path), kind != .directory else { continue }
                 if declares(path, symbol: base, isLabel: false) {
                     return VoicegroupLocation(filePath: path, sectionLabel: "")
+                }
+                if declares(path, symbol: label, isLabel: true) {
+                    return VoicegroupLocation(filePath: path, sectionLabel: String(decoding: label, as: UTF8.self))
                 }
             }
         }
@@ -185,7 +185,8 @@ public final class VoicegroupLocator {
             let text = raw[VoicegroupSource.contentBounds(raw)]
             if isLabel {
                 if text.count >= symbol.count + 2, Self.equalPrefix(text, symbol),
-                    text[text.startIndex + symbol.count] == 58, text[text.startIndex + symbol.count + 1] == 58,
+                    text[text.startIndex + symbol.count] == UInt8(58),
+                    text[text.startIndex + symbol.count + 1] == UInt8(58),
                     text.count == symbol.count + 2 || VoicegroupSource.isSpace(text[text.startIndex + symbol.count + 2])
                 {
                     return true
@@ -194,7 +195,9 @@ public final class VoicegroupLocator {
                 var first = text.startIndex + 11
                 while first < text.endIndex && VoicegroupSource.isSpace(text[first]) { first += 1 }
                 var last = first
-                while last < text.endIndex && !VoicegroupSource.isSpace(text[last]) && text[last] != 44 { last += 1 }
+                while last < text.endIndex && !VoicegroupSource.isSpace(text[last]) && text[last] != UInt8(44) {
+                    last += 1
+                }
                 let name = text[first..<last]
                 // C file_declares_voice_group matches the unprefixed declaration (2143–2147).
                 if name.count == symbol.count, Self.equalPrefix(name, symbol) { return true }
@@ -241,10 +244,10 @@ public final class VoicegroupLocator {
                 for offset in 0..<suffixSpan.count { path[index] = suffixSpan[offset]; index += 1 }
             }
             let bytes = storage.span
-            // POSIX access borrows the bounded, NUL-terminated path only for the syscall.
+            // The probe borrows the bounded, NUL-terminated path only for the call.
             let exists = bytes.withUnsafeBufferPointer {
                 guard let base = $0.baseAddress else { preconditionFailure("Inline path is nonempty") }
-                return access(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self), F_OK) == 0
+                return NativeFileSystem.exists(UnsafeRawPointer(base).assumingMemoryBound(to: CChar.self))
             }
             if exists {
                 return VoicegroupLocation(filePath: AsmLine.text(bytes.extracting(0..<count)), sectionLabel: "")

@@ -12,32 +12,11 @@ Item {
     required property ApplicationSession applicationSession
     required property GridPalette colors
 
-    FileDialog {
-        id: picker
-        objectName: "shellImportSamplePicker"
-        title: qsTr("Import Sample")
-        nameFilters: [qsTr("Audio files (*.wav *.aif *.aiff *.mp3 *.flac *.ogg *.sf2)"),
-                      qsTr("All files (*)")]
-        fileMode: FileDialog.OpenFile
-        currentFolder: host.workflow.pickerFolder
-        onAccepted: host.workflow.chooseSource(selectedFile)
-        onRejected: host.workflow.cancelSource()
-    }
     MessageDialog {
         id: alert
-        objectName: "shellSampleStudioAlert"
+        objectName: host.workflow.editorOpen ? "" : "shellSampleStudioAlert"
         buttons: MessageDialog.Ok
-        parentWindow: (studio.item as SampleStudioDialog)?.visible
-                      ? (studio.item as SampleStudioDialog) : host.hostWindow
-    }
-    MessageDialog {
-        id: stereo
-        objectName: "shellSampleStudioStereoPrompt"
-        title: qsTr("Import Sample")
-        text: host.workflow.stereoPromptText
-        buttons: MessageDialog.Yes | MessageDialog.No
         parentWindow: host.hostWindow
-        onButtonClicked: (button) => host.workflow.answerStereoPrompt(button === MessageDialog.Yes)
     }
     Loader {
         id: studio
@@ -45,11 +24,12 @@ Item {
         sourceComponent: SampleStudioDialog {
             objectName: "sampleStudioDialog"
             workflow: host.workflow
+            library: host.workflow.library() as SampleLibraryModel
             applicationSession: host.applicationSession
             colors: host.colors
             editor: host.workflow.editor() as SampleStudioPresenter
             tools: host.workflow.loopTools() as SampleLoopTools
-            waveformModel: host.workflow.waveform() as SampleWaveformModel
+            waveformModel: host.workflow.waveform() as MarkerWaveformModel
             audition: host.workflow.audition() as SampleStudioAudition
             transientParent: host.hostWindow
         }
@@ -77,17 +57,11 @@ Item {
     }
     Connections {
         target: host.workflow
-        function onPickerRequestedChanged(): void {
-            if (host.workflow.pickerRequested) picker.open()
-        }
         function onAlertRevisionChanged(): void {
+            if (host.workflow.editorOpen) return
             alert.title = host.workflow.alertTitle
             alert.text = host.workflow.alertText
             alert.open()
-        }
-        function onStereoPromptOpenChanged(): void {
-            if (host.workflow.stereoPromptOpen) stereo.open()
-            else stereo.close()
         }
     }
 }

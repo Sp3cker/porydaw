@@ -469,7 +469,7 @@ func importProjectRoundtrip(_ report: CheckReport) {
                 imported.division == 24, cppID: roundtripID,
                 message: "A080 rescaled imported MIDI uses division 24")
             report.expect(
-                imported.chunks.count == 3, cppID: roundtripID,
+                imported.chunks.count == Int(3), cppID: roundtripID,
                 message: "A081 decoded imported fixture retains three chunks")
 
             let label = "mus_onboardcheck_import"
@@ -483,31 +483,28 @@ func importProjectRoundtrip(_ report: CheckReport) {
             }
             let reread: MidiFile
             let serialized: Data
-            let repeatedBytes: Data
+            let reencodedBytes: Data
             do {
                 serialized = try Data(contentsOf: midi)
                 reread = try MidiFile.decode(Array(serialized))
-                let repeatFile = midiDir.appendingPathComponent(label + "_repeat.mid")
-                try Data(reread.encoded()).write(to: repeatFile)
-                repeatedBytes = try Data(contentsOf: repeatFile)
+                reencodedBytes = try Data(reread.encoded())
             } catch {
-                report.fail(roundtripID, "persisted import or repeat file could not be read: \(error)")
+                report.fail(roundtripID, "persisted import could not be read: \(error)")
                 return
             }
             // The complete opaque SMF stream must survive disk decode and re-encode unchanged.
             report.expect(
-                repeatedBytes == serialized, cppID: roundtripID,
+                reencodedBytes == serialized, cppID: roundtripID,
                 message: "A090 persisted imported MIDI re-encodes to identical complete file bytes")
             report.expect(
                 reread.division == 24, cppID: roundtripID,
                 message: "A091 persisted imported MIDI retains division 24")
             report.expect(
-                reread.chunks.count == 3, cppID: roundtripID,
+                reread.chunks.count == Int(3), cppID: roundtripID,
                 message: "A086 persisted imported MIDI retains all three fixture chunks")
             report.expect(
-                FileManager.default.fileExists(
-                    atPath: midiDir.appendingPathComponent(label + "_repeat.mid").path),
-                cppID: roundtripID, message: "A088 repeat MIDI file was written")
+                FileManager.default.fileExists(atPath: midi.path),
+                cppID: roundtripID, message: "A088 import MIDI file was written")
 
             let store = ProjectStore(projectRoot: root)
             guard case .success(let opened) = awaitValue({ try await store.open() }) else {

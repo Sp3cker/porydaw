@@ -140,7 +140,7 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.rollBackground
+            color: page.gridPalette.windowBackground
         }
         Rectangle {
             anchors.left: parent.left
@@ -352,7 +352,7 @@ DrawerLanePage {
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
                     return page.pageModel ? page.pageModel.pointerMove(x, y, buttons, modifiers) : false
                 }
-                dispatch: plotMoves.dispatchMove
+                onDispatch: (x, y, buttons, modifiers) => plotMoves.dispatchMove(x, y, buttons, modifiers)
             }
         }
 

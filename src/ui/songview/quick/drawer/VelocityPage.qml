@@ -61,7 +61,16 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.chromeBackground
+            color: page.gridPalette.windowBackground
+        }
+        // The label strip sits under the keyboard column, set apart from the header column.
+        Rectangle {
+            readonly property real stripWidth: page.gridModel ? page.gridModel.keyboardWidth : 0
+            objectName: "velocityRulerLabelStrip"
+            x: Math.max(0, parent.width - stripWidth)
+            width: Math.min(parent.width, stripWidth)
+            height: parent.height
+            color: page.gridPalette.alternateBackground
         }
 
         Item {
@@ -191,7 +200,7 @@ DrawerLanePage {
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
                     return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
                 }
-                dispatch: rulerMoves.dispatchMove
+                onDispatch: (x, y, buttons, modifiers) => rulerMoves.dispatchMove(x, y, buttons, modifiers)
             }
         }
 
@@ -246,7 +255,7 @@ DrawerLanePage {
 
         Rectangle {
             anchors.fill: parent
-            color: page.gridPalette.rollBackground
+            color: page.gridPalette.windowBackground
         }
 
         DisplayList {
@@ -419,7 +428,7 @@ DrawerLanePage {
                 function dispatchMove(x: real, y: real, buttons: int, modifiers: int): bool {
                     return page.pageModel ? page.pageModel.pointerMove(x, y, buttons) : false
                 }
-                dispatch: plotMoves.dispatchMove
+                onDispatch: (x, y, buttons, modifiers) => plotMoves.dispatchMove(x, y, buttons, modifiers)
             }
         }
 

@@ -101,12 +101,24 @@ PromptOverlay {
             accessibleDescription: promptRoot.model.promptTitle
             onValueCommitted: committed => promptRoot.model.updatePromptDraft("" + committed)
             onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
-            textInput.KeyNavigation.tab: acceptButton
-            textInput.KeyNavigation.backtab: cancelButton
+            textInput.KeyNavigation.tab: cancelButton
+            textInput.KeyNavigation.backtab: acceptButton
         }
 
         Row {
             spacing: prompt.appearance.spacing
+
+            PromptButton {
+                id: cancelButton
+
+                objectName: "noteVelocityCancel"
+                appearance: prompt.appearance
+                text: qsTr("Cancel")
+                minimumWidth: velocityInput.implicitWidth
+                KeyNavigation.tab: acceptButton
+                KeyNavigation.backtab: velocityInput.textInput
+                onActivated: prompt.cancelDisplayed()
+            }
 
             PromptButton {
                 id: acceptButton
@@ -116,20 +128,8 @@ PromptOverlay {
                 text: qsTr("OK")
                 minimumWidth: velocityInput.implicitWidth
                 onActivated: prompt.acceptDisplayed()
-                KeyNavigation.tab: cancelButton
-                KeyNavigation.backtab: velocityInput.textInput
-            }
-
-            PromptButton {
-                id: cancelButton
-
-                objectName: "noteVelocityCancel"
-                appearance: prompt.appearance
-                text: qsTr("Cancel")
-                minimumWidth: velocityInput.implicitWidth
                 KeyNavigation.tab: velocityInput.textInput
-                KeyNavigation.backtab: acceptButton
-                onActivated: prompt.cancelDisplayed()
+                KeyNavigation.backtab: cancelButton
             }
         }
     }

@@ -27,4 +27,11 @@ Fusion.ComboBox {
         icon: Icons.comboArrow
         color: control.editable ? control.palette.text : control.palette.buttonText
     }
+
+    // Desktop lists scroll by wheel, touchpad or scroll bar, never by mouse drag.
+    Binding {
+        target: control.popup.contentItem
+        property: "acceptedButtons"
+        value: Qt.NoButton
+    }
 }

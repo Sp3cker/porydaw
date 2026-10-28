@@ -220,13 +220,6 @@ ShellLaneSupport {
         verify(observation.ratio >= observation.required,
                "flashing counter text meets WCAG AA on its faded row surface: "
                + observation.fg + " on " + observation.bg + " = " + observation.ratio)
-        var flashSaved = false
-        verify(referencePane.grabToImage(function(result) {
-            flashSaved = result.saveToFile("file://" + probe.artifactPath(bootstrap.projectRoot,
-                                                                          "flash", ""))
-        }), "flashing pane capture starts")
-        tryVerify(function() { return flashSaved }, 5000,
-                  "the polyphony-flash.png artifact captures the painted flash")
         referencePane.height = referencePane.em * 30
         verify(waitForPolish(referencePane), "short pane settles its scroll extent")
         verify(scroll.contentHeight > scroll.height,

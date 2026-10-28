@@ -175,10 +175,9 @@ extension VoiceChangesPage {
     /// Draft filtering: presentation only, over the current bank's labels.
     func dispatchSetPickerFilter(text: String) {
         guard var live = picker else { return }
-        let filter = String(text.prefix(64))
-        guard filter != live.filter else { return }
-        live.filter = filter
-        live.program = pickerCache.filteredProgram(filter)
+        guard text != live.filter else { return }
+        live.filter = text
+        live.program = pickerCache.filteredProgram(text)
         picker = live
         publishPicker()
     }

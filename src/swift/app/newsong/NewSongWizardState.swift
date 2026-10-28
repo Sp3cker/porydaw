@@ -62,9 +62,10 @@ public struct NewSongWizardState: Equatable, Sendable {
         return label
     }
 
-    public mutating func editConstant(_ text: String) {
-        constant = text
+    @discardableResult public mutating func editConstant(_ proposed: String) -> String {
+        constant = SongLabelPolicy.acceptConstantEdit(previous: constant, proposed: proposed)
         constantEdited = true
+        return constant
     }
 
     @discardableResult public mutating func next() -> Bool {

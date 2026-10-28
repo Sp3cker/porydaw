@@ -6,18 +6,20 @@ import PorydawApp
 
 Item {
     id: surface
-    required property SampleWaveformModel model
+    required property MarkerWaveformModel model
     required property GridPalette colors
     required property real baseFontPx
-    property bool dragging: false
+    signal pressStarted(int button)
+    signal clicked(real x, real y)
+    signal doubleClicked(real x, real y)
 
     function resizeModel(): void {
-        surface.model.setViewport(surface.width, surface.height - seam.height)
-        surface.model.setSeamViewport(seam.width, seam.height)
+        surface.model.setViewport(surface.width, surface.height)
         surface.model.setBaseFontPx(surface.baseFontPx)
     }
     onWidthChanged: resizeModel()
     onHeightChanged: resizeModel()
+    onModelChanged: resizeModel()
     Component.onCompleted: resizeModel()
 
     Rectangle {
@@ -27,25 +29,10 @@ Item {
     DisplayList {
         id: waveformList
         objectName: "sampleWaveformDisplay"
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.bottom: seam.top
+        anchors.fill: parent
         clip: true
         source: surface.model
         list: 0
-        revision: surface.model.displayRevision
-    }
-    DisplayList {
-        id: seam
-        objectName: "sampleSeamDisplay"
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: 8 * surface.baseFontPx
-        clip: true
-        source: surface.model
-        list: 1
         revision: surface.model.displayRevision
     }
     MouseArea {
@@ -55,25 +42,31 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
         cursorShape: surface.model.handleAt(mouseX, mouseY) !== 0
                      ? Qt.SizeHorCursor : Qt.ArrowCursor
+        property bool moved: false
         onPressed: mouse => {
-            surface.dragging = surface.model.press(mouse.x, mouse.y)
-            mouse.accepted = true
+            moved = false
+            surface.pressStarted(mouse.button)
+            surface.model.press(mouse.x, mouse.y)
         }
         onPositionChanged: mouse => {
-            if (pressed) surface.model.drag(mouse.x)
+            if (!pressed)
+                return
+            moved = true
+            surface.model.drag(mouse.x)
         }
-        onReleased: {
-            surface.model.release()
-            surface.dragging = false
+        onReleased: surface.model.release()
+        onCanceled: surface.model.release()
+        onClicked: mouse => {
+            if (mouse.button === Qt.LeftButton && !moved)
+                surface.clicked(mouse.x, mouse.y)
         }
-        onCanceled: {
-            surface.model.release()
-            surface.dragging = false
+        onDoubleClicked: mouse => {
+            if (mouse.button === Qt.LeftButton)
+                surface.doubleClicked(mouse.x, mouse.y)
         }
         onWheel: wheel => {
             surface.model.zoom(wheel.x, wheel.angleDelta.y / 120)
             wheel.accepted = true
         }
-        onDoubleClicked: surface.model.fit()
     }
 }

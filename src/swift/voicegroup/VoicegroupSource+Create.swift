@@ -28,7 +28,7 @@ extension VoicegroupSource {
         let style = siblingHeaderStyle(dir: dir)
         let body: [Data]
         if copyFromFile.isEmpty {
-            body = [Data](repeating: Data("\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0".utf8), count: 128)
+            body = [Data](repeating: Data(kitBlankChildLine.utf8), count: 128)
         } else {
             let bytes: Data
             do {

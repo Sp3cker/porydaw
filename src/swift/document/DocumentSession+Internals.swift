@@ -14,28 +14,40 @@ extension DocumentSession {
     }
 
     internal func adoptBank(_ result: AppliedBankEdit) {
-        let next = service.bankViews.state(for: result)
-        if next !== sharedBank {
-            sharedBank.detach(self)
-            sharedBank = next
-            next.attach(self)
+        let next = service.bankViews.state(for: result, service: service)
+        if next !== voicegroup {
+            if let voicegroupObserver { voicegroup.removeObserver(voicegroupObserver) }
+            voicegroup = next
+            observeVoicegroup()
         }
-        service.bankViews.publish(result)
+        service.bankViews.publish(result, service: service)
     }
 
-    internal func sharedBankDidChange(_ state: SharedBankState) {
-        guard !isClosed, state === sharedBank else { return }
-        if bankPersistenceInFlight || document.history.bankTransitionInFlight {
+    internal func observeVoicegroup() {
+        let group = voicegroup
+        observedVoicegroupRevision = group.valueRevision
+        voicegroupObserver = group.addObserver { [weak self, weak group] in
+            guard let group else { return }
+            self?.voicegroupDidChange(group)
+        }
+    }
+
+    internal func voicegroupDidChange(_ state: VoicegroupSession) {
+        guard !isClosed, state === voicegroup,
+            state.valueRevision != observedVoicegroupRevision
+        else { return }
+        observedVoicegroupRevision = state.valueRevision
+        if songOperationInFlight || document.history.bindingTransitionInFlight {
             pendingBankNotification = true
         } else {
-            publishChange([.bank, .dirty])
+            publishChange([.bank])
         }
     }
 
     internal func flushPendingBankNotification() {
         guard pendingBankNotification, !isClosed else { return }
         pendingBankNotification = false
-        publishChange([.bank, .dirty])
+        publishChange([.bank])
     }
 
     internal func publishChange(

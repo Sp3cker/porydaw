@@ -55,6 +55,7 @@ public final class PitchBendPresenter {
     private var endSpeed = 22
     @QtTracked public var currentPitch: PitchBendLane?
     @QtTracked public var currentMod: PitchBendLane?
+    @QtTracked public var currentLfo: PitchBendLane?
     @QtIgnored public var onAuditionFromTick: ((Tick) -> Void)?
     @QtIgnored public var onSoloTracksRequested: (() -> Void)?
     private let keybindings = KeybindingRegistry()
@@ -128,6 +129,7 @@ public final class PitchBendPresenter {
             surface: .pitchBend)
         currentPitch?.refreshGeometry(geometry: geometry)
         currentMod?.refreshGeometry(geometry: geometry)
+        currentLfo?.refreshGeometry(geometry: geometry)
     }
 
     /// The routed Edit→Pitch Bend command opens the first selected note on the active track.
@@ -169,12 +171,20 @@ public final class PitchBendPresenter {
             guard let self, let mod else { return }
             self.commit(mod, lane: .controller(1), sampledStroke: sampledStroke)
         }
+        let lfo = PitchBendLane(
+            kernel: kernel(for: .controller(0x15), lane: .lfoSpeed, note: note),
+            palette: palette, track: note.track)
+        lfo.onCommit = { [weak self, weak lfo] sampledStroke in
+            guard let self, let lfo else { return }
+            self.commit(lfo, lane: .controller(0x15), sampledStroke: sampledStroke)
+        }
         pitch.onWheelSteps = { [weak self] steps in
             guard let self else { return }
             self.setBendRange(value: self.bendRange + steps)
         }
         currentPitch = pitch
         currentMod = mod
+        currentLfo = lfo
         refreshDescription()
         isOpen = true
         return true
@@ -184,9 +194,11 @@ public final class PitchBendPresenter {
         guard isOpen else { return }
         currentPitch?.cancelGesture()
         currentMod?.cancelGesture()
+        currentLfo?.cancelGesture()
         isOpen = false
         currentPitch = nil
         currentMod = nil
+        currentLfo = nil
         note = nil
     }
 
@@ -194,9 +206,11 @@ public final class PitchBendPresenter {
         guard isOpen else { return }
         currentPitch?.settleGesture()
         currentMod?.settleGesture()
+        currentLfo?.settleGesture()
         isOpen = false
         currentPitch = nil
         currentMod = nil
+        currentLfo = nil
         note = nil
     }
 
@@ -216,6 +230,15 @@ public final class PitchBendPresenter {
         guard mod.kernel.points != before else { return }
         mod.rebuild()
         commit(mod, lane: .controller(1))
+    }
+
+    public func resetLfoCurve() {
+        guard isOpen, let lfo = currentLfo else { return }
+        let before = lfo.kernel.points
+        lfo.kernel.reset()
+        guard lfo.kernel.points != before else { return }
+        lfo.rebuild()
+        commit(lfo, lane: .controller(0x15))
     }
 
     public func setBendRange(value: Int) {
@@ -239,16 +262,26 @@ public final class PitchBendPresenter {
     public func setLfoSpeed(value: Int) {
         let bounded = min(127, max(0, value))
         guard isOpen, bounded != lfoSpeed, let note, spanStillPresent() else { return }
+        // The numeric field only retunes note start; interior curve points survive.
+        var points = [LaneWrite(tick: note.tick, value: bounded)]
+        for point in session.document.lanePoints(track: note.track, lane: .controller(0x15)) {
+            if Int(point.tick) > Int(note.tick) && Int(point.tick) < noteEnd {
+                points.append(LaneWrite(tick: point.tick, value: point.value))
+            }
+        }
+        points.append(LaneWrite(tick: Tick(noteEnd), value: endSpeed))
         let before = session.document.revision
         session.document.writeLane(
             track: note.track, lane: .controller(0x15),
             from: note.tick, through: Tick(noteEnd),
-            points: [
-                LaneWrite(tick: note.tick, value: bounded),
-                LaneWrite(tick: Tick(noteEnd), value: endSpeed),
-            ])
+            points: points)
         guard session.document.revision != before else { return }
         lfoSpeed = bounded
+        if let lfo = currentLfo, !lfo.kernel.hasGesture {
+            let curve = kernel(for: .controller(0x15), lane: .lfoSpeed, note: note)
+            lfo.kernel.setCurve(curve.points, endValue: curve.endValue)
+            lfo.rebuild()
+        }
         refreshDescription()
     }
 
@@ -257,7 +290,9 @@ public final class PitchBendPresenter {
     public func documentDidChange() {
         guard isOpen else { return }
         guard spanStillPresent() else { cancelAndClose(); return }
-        if currentPitch?.kernel.hasGesture == true || currentMod?.kernel.hasGesture == true {
+        if currentPitch?.kernel.hasGesture == true || currentMod?.kernel.hasGesture == true
+            || currentLfo?.kernel.hasGesture == true
+        {
             return
         }
         (bendRange, endRange) = controllerValues(0x14, fallback: 2)
@@ -270,6 +305,9 @@ public final class PitchBendPresenter {
             let mod = kernel(for: .controller(1), lane: .modulation, note: note)
             currentMod?.kernel.setCurve(mod.points, endValue: mod.endValue)
             currentMod?.rebuild()
+            let lfo = kernel(for: .controller(0x15), lane: .lfoSpeed, note: note)
+            currentLfo?.kernel.setCurve(lfo.points, endValue: lfo.endValue)
+            currentLfo?.rebuild()
         }
         refreshDescription()
     }
@@ -283,17 +321,29 @@ public final class PitchBendPresenter {
         currentPitch?.rebuild()
         currentMod?.kernel.relattice(fineTicks: fineTicks)
         currentMod?.rebuild()
+        currentLfo?.kernel.relattice(fineTicks: fineTicks)
+        currentLfo?.rebuild()
+    }
+
+    public func isToggleKey(key: Int, modifiers: Int) -> Bool {
+        keybindings.matches(key, modifiers, "roll.pitch_bend")
     }
 
     public func routeUnclaimedKey(key: Int, modifiers: Int, autoRepeat: Bool) -> Bool {
+        if isToggleKey(key: key, modifiers: modifiers) {
+            if !autoRepeat { cancelAndClose() }
+            return true
+        }
         if key == 0x01000007 || key == 0x01000003 {
             currentPitch?.removeSelectedVertex()
             currentMod?.removeSelectedVertex()
+            currentLfo?.removeSelectedVertex()
             return true
         }
         if key == 0x01000004 || key == 0x01000005 {
             currentPitch?.kernel.finish()
             currentMod?.kernel.finish()
+            currentLfo?.kernel.finish()
             return true
         }
         if !autoRepeat && keybindings.matches(key, modifiers, "transport.play_pause") {
@@ -331,8 +381,9 @@ public final class PitchBendPresenter {
         for lane: Lane, lane graphLane: PitchBendKernel.Lane,
         note: Note
     ) -> PitchBendKernel {
-        var entering = 0
-        var ending = 0
+        let idle = PitchBendKernel.defaultValue(for: graphLane)
+        var entering = idle
+        var ending = idle
         var points: [Int: Int] = [:]
         for point in session.document.lanePoints(track: note.track, lane: lane) {
             if Int(point.tick) <= Int(note.tick) { entering = point.value }
@@ -410,8 +461,8 @@ public final class PitchBendPresenter {
         noteDescription = note.map { "\(midiKeyName(Int($0.pitch))) · note-scoped · channel-wide" } ?? ""
         description =
             "BENDR is \(bendRange) semitones and LFO speed is \(lfoSpeed) for this note. "
-            + "Edit pitch bend and modulation; scroll inside the pitch bend graph to change "
-            + "BENDR, and hold Shift while drawing for angled lines. Both lanes affect every "
+            + "Edit pitch bend, modulation, and LFO speed; scroll inside the pitch bend graph to change "
+            + "BENDR, and hold Shift while drawing for angled lines. All three lanes affect every "
             + "sounding note on this MIDI channel."
     }
 }

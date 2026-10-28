@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 # Release runners use the newest SDK; without a floor the app would require that macOS.
 # InlineArray (core, playback, sample) sets the floor at macOS 26.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0)
-project(porydaw VERSION 1.0.3 LANGUAGES C CXX)
+project(porydaw VERSION 1.0.5 LANGUAGES C CXX)
 
 find_package(Git QUIET)
 if(Git_FOUND)
@@ -57,14 +57,14 @@ endfunction()
 # Batch mode keeps one frontend process per batch of sources, so C++ interop's
 # per-process ClangImporter startup is paid once per batch instead of once per
 # source file. The driver ignores the flag outside incremental compilation, so
-# it stays gated on Debug — the only incremental configuration here. The
-# type-check budgets warn (never fail) past .omp/rules/swift-typecheck-complexity.md;
-# they sit above the ~1s lazy Qt C++ decl import the first body in each process pays.
+# it stays gated on Debug — the only incremental configuration here. Debug builds
+# warn (never fail) per .omp/rules/swift-typecheck-complexity.md: 50 ms per expression,
+# raised by porydaw_swift_qt_interop; bodies at 2000 ms sit above lazy C++ import cost.
 function(porydaw_enable_swift_batch_mode target)
     target_compile_options(${target} PRIVATE
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>"
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-function-bodies=2000>"
-        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=1000>")
+        "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=50>")
 endfunction()
 
 # Optimize the native audio path even in debug builds: the miniaudio converter
@@ -97,7 +97,7 @@ else()
 endif()
 
 # AddressSanitizer instruments both Swift and native code in an isolated tree.
-# Configure and build with: deno task build:checks --asan
+# Configure and build with: uv run --no-sync dev build:checks --asan
 option(PORYDAW_ASAN "Build with AddressSanitizer" OFF)
 option(PORYDAW_BUILD_CHECKS "Build the porydaw check executable" ON)
 if(PORYDAW_ASAN)
@@ -109,26 +109,12 @@ if(PORYDAW_ASAN)
         "$<$<LINK_LANGUAGE:Swift>:-sanitize=address>")
 endif()
 
+if(APPLE)
+    set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
+endif()
 find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Widgets)
 qt_standard_project_setup()
 qt_policy(SET QTP0004 NEW)
-
-function(porydaw_mark_interface_includes_system dependency)
-    get_target_property(dependency_include_dirs ${dependency} INTERFACE_INCLUDE_DIRECTORIES)
-    if(dependency_include_dirs)
-        set_property(TARGET ${dependency} APPEND PROPERTY
-            INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${dependency_include_dirs}")
-    endif()
-endfunction()
-
-if(APPLE)
-    # NO_SYSTEM_FROM_IMPORTED keeps Qt's exact framework-header paths ahead of
-    # unrelated non-framework Qt installs. Also classify those same paths as
-    # system headers so project warning flags do not diagnose Qt internals.
-    foreach(qt_target IN ITEMS Core Gui Qml Quick QuickControls2 Widgets)
-        porydaw_mark_interface_includes_system(Qt6::${qt_target})
-    endforeach()
-endif()
 
 # ---- poryaaaa engine core (MIT, statically linked) ----
 set(PORYAAAA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/poryaaaa/packages/poryaaaa"
@@ -186,6 +172,7 @@ if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
     message(FATAL_ERROR "The Qt main executor requires Swift 6.4 or newer on Linux and Windows")
 endif()
 include(cmake/BinaryParsing.cmake)
+include(cmake/Lame.cmake)
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/backups)
 add_subdirectory(src/swift/playback)
@@ -213,6 +200,8 @@ qt_add_library(porydaw_native_host STATIC
     src/audio/miniaudio_impl.c
     src/audio/sample_codec.h
     src/audio/sample_codec.c
+    src/audio/mp3_encode.h
+    src/audio/mp3_encode.c
 )
 qt_add_library(porydaw_app STATIC
     src/app/item_cursor.h
@@ -232,6 +221,7 @@ qt_add_qml_module(porydaw_icons
     NO_PLUGIN
     QML_FILES
         src/ui/icons/Icons.qml
+        src/ui/icons/IconSpec.qml
         src/ui/icons/AppIcon.qml
 )
 target_link_libraries(porydaw_icons PRIVATE Qt6::Quick)
@@ -258,6 +248,7 @@ qt_add_qml_module(porydaw_style
         src/ui/style/Menu.qml
         src/ui/style/MenuItem.qml
         src/ui/style/ProgressBar.qml
+        src/ui/style/ScrollView.qml
         src/ui/style/SpinBox.qml
 )
 target_link_libraries(porydaw_style PRIVATE Qt6::Quick porydaw_icons)
@@ -337,6 +328,12 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/ThemedWindow.qml
         src/ui/shell/DialogWindow.qml
         src/ui/shell/DisclosureLabel.qml
+        src/ui/shell/ValidatedTextField.qml
+        src/ui/shell/StudioToggle.qml
+        src/ui/shell/StudioSection.qml
+        src/ui/shell/IconToolButton.qml
+        src/ui/shell/DropZone.qml
+        src/ui/shell/NoteStepper.qml
         src/ui/shell/AboutDialog.qml
         src/ui/shell/TransportBar.qml
         src/ui/shell/TransportButton.qml
@@ -359,8 +356,16 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/WizardChrome.qml
         src/ui/shell/samplestudio/SampleStudioHost.qml
         src/ui/shell/samplestudio/SampleStudioDialog.qml
+        src/ui/shell/samplestudio/SampleLibraryPane.qml
         src/ui/shell/samplestudio/Sf2ZonePickerDialog.qml
         src/ui/shell/samplestudio/SampleWaveform.qml
+        src/ui/shell/kitstudio/KitStudioHost.qml
+        src/ui/shell/kitstudio/SplitStudioWindow.qml
+        src/ui/shell/kitstudio/OrphanCleanupDialog.qml
+        src/ui/shell/kitstudio/SliceEditorView.qml
+        src/ui/shell/kitstudio/ZoneEditorView.qml
+        src/ui/shell/kitstudio/KitInspector.qml
+        src/ui/shell/kitstudio/KitDragSource.qml
 )
 
 qt_add_resources(porydaw_app "cursor_images"
@@ -406,9 +411,6 @@ foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
     target_link_libraries(${native_target} PUBLIC Qt6::Gui poryaaaa_engine)
     target_link_libraries(${native_target} PRIVATE Qt6::Qml Qt6::Quick QtBridge)
     set_target_properties(${native_target} PROPERTIES LINKER_LANGUAGE CXX)
-    if(APPLE)
-        set_target_properties(${native_target} PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
-    endif()
     target_precompile_headers(${native_target} PRIVATE
         "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/src/porydaw_pch.hpp>")
     if(UNIX AND NOT APPLE)
@@ -416,6 +418,9 @@ foreach(native_target IN ITEMS porydaw_app porydaw_native_host)
         target_link_libraries(${native_target} PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
     endif()
 endforeach()
+# LAME is consumed only through src/audio/mp3_encode.c; keep it private to
+# the host so no Swift target inherits its headers.
+target_link_libraries(porydaw_native_host PRIVATE LameMp3)
 target_link_libraries(porydaw_app PUBLIC porydaw_native_host porydaw_icons porydaw_style)
 # Swift modules import native headers through their module maps; retain the
 # archive dependency without inheriting native compilation settings.
@@ -448,9 +453,6 @@ target_compile_options(porydaw_qmltypes PRIVATE
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${porydaw_qmltypes_modulemap}>"
 )
 target_link_libraries(porydaw_qmltypes PRIVATE PorydawApp QtBridge)
-if(APPLE)
-    set_target_properties(porydaw_qmltypes PROPERTIES NO_SYSTEM_FROM_IMPORTED ON)
-endif()
 if(WIN32)
     target_sources(porydaw_qmltypes PRIVATE
         "$ENV{SDKROOT}/usr/lib/swift/windows/x86_64/swiftrt.obj")
@@ -469,7 +471,8 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
     PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
-    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample BinaryParsing)
+    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample
+    PorydawSampleUI PorydawKitStudio BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
     "${porydaw_qmltypes_import_path}/PorydawApp/PorydawApp.qmltypes"
@@ -586,7 +589,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw
     porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawCore
-    PorydawVoicegroup PorydawBackups PorydawSample BinaryParsing)
+    PorydawVoicegroup PorydawBackups PorydawSample PorydawSampleUI PorydawKitStudio BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)
     add_subdirectory(src/checks)

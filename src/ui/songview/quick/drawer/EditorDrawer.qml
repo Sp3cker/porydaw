@@ -44,7 +44,7 @@ FocusScope {
         return ""
     }
 
-    function iconFor(kind: int): var {
+    function iconFor(kind: int): IconSpec {
         switch (kind) {
         case drawerScope.automationKind: return Icons.automation
         case drawerScope.velocityKind: return Icons.velocity
@@ -53,12 +53,11 @@ FocusScope {
         return emptyIcon
     }
 
-    QtObject {
+    IconSpec {
         id: emptyIcon
-        readonly property string glyph: ""
-        readonly property real fit: 1
+        glyph: ""
+        fit: 1
     }
-
 
     // Requests with no loaded page are skipped until the next transition.
     function sectionLoader(kind: int): Loader {
@@ -129,7 +128,7 @@ FocusScope {
         anchors.fill: parent
 
         readonly property string keyName: drawerScope.keyNameFor(section.kind)
-        readonly property var icon: drawerScope.iconFor(section.kind)
+        readonly property IconSpec icon: drawerScope.iconFor(section.kind)
         readonly property App.EditorDrawerSectionState sectionState: drawerScope.presenter.section(section.kind)
         // Only available sections own chrome; shown sections also own a body.
         readonly property bool available: section.sectionState.available

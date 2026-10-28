@@ -19,15 +19,15 @@ extension SampleDsp {
         public var passedGates: Bool
     }
 
-    private static func yinDifference(_ x: Span<Float>, start: Int, half: Int, lag: Double) -> Double {
+    private static func yinDifference(_ x: borrowing Span<Double>, half: Int, lag: Double) -> Double {
         let integer = Int(lag)
         let fraction = lag - Double(integer)
         var sum = 0.0
         for j in 0..<half {
             let delayed =
-                Double(x[start + j + integer]) * (1 - fraction)
-                + Double(x[start + j + integer + 1]) * fraction
-            let delta = Double(x[start + j]) - delayed
+                x[j + integer] * (1 - fraction)
+                + x[j + integer + 1] * fraction
+            let delta = x[j] - delayed
             sum += delta * delta
         }
         return sum
@@ -35,6 +35,15 @@ extension SampleDsp {
 
     /// Detect a stable fundamental from overlapping 4096-frame YIN windows.
     public static func detectPitchYin(_ samples: borrowing Span<Float>, rate: Double) -> PitchResult {
+        detectPitchYin(samples, rate: rate, checkpoint: {})
+    }
+
+    /// Detect pitch with checkpoints between windows and lag comparisons.
+    /// - Throws: The checkpoint's error, without converting cancellation into an unpitched result.
+    public static func detectPitchYin(
+        _ samples: borrowing Span<Float>, rate: Double, checkpoint: () throws -> Void
+    ) rethrows -> PitchResult {
+        try checkpoint()
         let frame = 4096
         let half = frame / 2
         guard rate.isFinite, rate > 0, rate < 4_000_000, samples.count >= frame else { return PitchResult() }
@@ -44,12 +53,17 @@ extension SampleDsp {
         var cmnd = [Double](repeating: 1, count: high + 1)
         var cumulativeEnergy = [Double](repeating: 0, count: high + 1)
         var frames: [(Double, Double)] = []
+        var window = InlineArray<4096, Double>(repeating: 0)
         for start in stride(from: 0, through: samples.count - frame, by: half) {
+            try checkpoint()
+            for j in 0..<frame { window[j] = Double(samples[start + j]) }
+            let converted = window.span
             var cumulative = 0.0
             for lag in 1...high {
+                try checkpoint()
                 var difference = 0.0
                 for j in 0..<half {
-                    let delta = Double(samples[start + j]) - Double(samples[start + j + lag])
+                    let delta = converted[j] - converted[j + lag]
                     difference += delta * delta
                 }
                 cumulative += difference
@@ -71,16 +85,17 @@ extension SampleDsp {
             let lower = max(Double(low), Double(best) - 1)
             let upper = min(Double(high), Double(best) + 1)
             var bestLag = Double(best)
-            var bestValue = yinDifference(samples, start: start, half: half, lag: bestLag)
+            var bestValue = yinDifference(converted, half: half, lag: bestLag)
             var candidate = lower
             while candidate <= upper + 1e-9 {
-                let value = yinDifference(samples, start: start, half: half, lag: candidate)
+                try checkpoint()
+                let value = yinDifference(converted, half: half, lag: candidate)
                 if value < bestValue { bestValue = value; bestLag = candidate }
                 candidate += 0.1
             }
             if bestLag - 0.1 >= lower && bestLag + 0.1 <= upper {
-                let a = yinDifference(samples, start: start, half: half, lag: bestLag - 0.1)
-                let c = yinDifference(samples, start: start, half: half, lag: bestLag + 0.1)
+                let a = yinDifference(converted, half: half, lag: bestLag - 0.1)
+                let c = yinDifference(converted, half: half, lag: bestLag + 0.1)
                 let denominator = a - 2 * bestValue + c
                 if denominator > 0 { bestLag += 0.05 * (a - c) / denominator }
             }
@@ -94,19 +109,21 @@ extension SampleDsp {
             }
             var bestCmnd = normalized(bestLag, bestValue)
             for divisor in stride(from: 4, through: 2, by: -1) {
+                try checkpoint()
                 let center = bestLag / Double(divisor)
                 if center < 1 || center < Double(low) - 0.6 { continue }
                 var subLag = center
                 var subValue = Double.infinity
                 var lag = max(1, center - 0.6)
                 while lag <= center + 0.6 {
-                    let value = yinDifference(samples, start: start, half: half, lag: lag)
+                    try checkpoint()
+                    let value = yinDifference(converted, half: half, lag: lag)
                     if value < subValue { subValue = value; subLag = lag }
                     lag += 0.05
                 }
                 if subLag - 0.05 >= 1 {
-                    let a = yinDifference(samples, start: start, half: half, lag: subLag - 0.05)
-                    let c = yinDifference(samples, start: start, half: half, lag: subLag + 0.05)
+                    let a = yinDifference(converted, half: half, lag: subLag - 0.05)
+                    let c = yinDifference(converted, half: half, lag: subLag + 0.05)
                     let denominator = a - 2 * subValue + c
                     if denominator > 0 { subLag += 0.025 * (a - c) / denominator }
                 }
@@ -120,6 +137,7 @@ extension SampleDsp {
             let f0 = rate / bestLag
             if f0 >= 40, f0 <= 2000 { frames.append((f0, 1 - cmnd[best])) }
         }
+        try checkpoint()
         guard frames.count >= 3 else { return PitchResult() }
         let frequencies = frames.map(\.0).sorted()
         let middle = frequencies.count / 2

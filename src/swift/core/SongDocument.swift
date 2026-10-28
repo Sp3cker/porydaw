@@ -564,7 +564,7 @@ public final class SongDocument {
     }
 
     private func applyHistory(
-        _ changes: DocumentChangeSet, direction: BankHistoryDirection,
+        _ changes: DocumentChangeSet, direction: HistoryDirection,
         trackRemap: TrackRemap?
     ) {
         gestureOrigin = nil

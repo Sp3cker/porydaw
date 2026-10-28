@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawCore
 
 // MARK: - Synchronous concurrency helper (canonical)

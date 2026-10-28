@@ -43,23 +43,24 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, viewport: Docu
         message: "A009 unsignatured document publishes sixteen beat lines")
     report.expect(
         lines.count == 16
-            && lines.indices.allSatisfy {
-                lines[$0].tick == Tick($0 * 24)
+            && lines.indices.allSatisfy { (index: Int) -> Bool in
+                lines[index].tick == Tick(index * 24)
             }, cppID: fallbackID, message: "A010 fallback line positions follow whole beats")
     report.expect(
         lines.count == 16
-            && lines.indices.allSatisfy {
-                lines[$0].bar == ($0 % 4 == 0)
+            && lines.indices.allSatisfy { (index: Int) -> Bool in
+                lines[index].bar == (index % 4 == 0)
             }, cppID: fallbackID, message: "A011 every fourth fallback line is a bar")
     report.expect(
         lines.count == 16
-            && lines.indices.allSatisfy {
-                lines[$0].barNumber == $0 / 4 + 1
+            && lines.indices.allSatisfy { (index: Int) -> Bool in
+                lines[index].barNumber == index / 4 + 1
             }, cppID: fallbackID, message: "A012 fallback bars use one-based grouping")
     report.expect(
         lines.count == 16
-            && lines.indices.allSatisfy {
-                lines[$0].beatNumber == $0 % 4 + 1
+            && lines.indices.allSatisfy { (index: Int) -> Bool in
+                let beatNumber: Int = index % 4 + 1
+                return lines[index].beatNumber == beatNumber
             }, cppID: fallbackID, message: "A013 fallback beats use one-based grouping")
     let opening = axis.segmentAt(0)
     report.expect(
@@ -75,7 +76,7 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, viewport: Docu
         opening.beatsPerBar == 4, cppID: fallbackID,
         message: "A017 fallback segment has four beats per bar")
 
-    let before = (1...8).map { viewport.camera.contentX(tick: Double($0 * 24)) }
+    let before = (1...8).map { (beat: Int) -> Double in viewport.camera.contentX(tick: Double(beat * 24)) }
     session.document.setTimeSignature(tick: 0, numerator: 3, denominatorPower: 2)
     defer { _ = session.document.history.undoDocument() }
     let bound = viewport.grid.axis.segmentAt(0)
@@ -99,8 +100,8 @@ private func checkFallbackAndSignatureBind(_ report: CheckReport, viewport: Docu
         cppID: bindID,
         message: "A049 the bound three-four camera retains a positive viewport lead pad")
     report.expect(
-        (1...8).allSatisfy {
-            abs(viewport.camera.contentX(tick: Double($0 * 24)) - before[$0 - 1]) <= 1e-6
+        (1...8).allSatisfy { (beat: Int) -> Bool in
+            abs(viewport.camera.contentX(tick: Double(beat * 24)) - before[beat - 1]) <= 1e-6
         }, cppID: bindID, message: "A050 binding 3/4 preserves beat content positions")
 }
 
@@ -141,7 +142,7 @@ private func checkDefaultBindKeepsGeometry(_ report: CheckReport) {
     let id = "swiftcore/PianoRollStaticTest::defaultBindKeepsGeometry"
     var camera = geometryCamera()
     let initialZoom = camera.snapshot.pixelsPerBeat
-    let original = (0..<6).map { camera.contentX(tick: Double($0 * 4 * 24)) }
+    let original = (0..<6).map { (bar: Int) -> Double in camera.contentX(tick: Double(bar * 4 * 24)) }
     camera.updateTimeDomain(ticksPerBeat: 24, lengthTicks: 16 * 4 * 24)
     report.expect(
         gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
@@ -158,9 +159,15 @@ private func checkDefaultBindKeepsGeometry(_ report: CheckReport) {
 private func checkTicksPerBeatKeepsGeometry(_ report: CheckReport) {
     let id = "swiftcore/PianoRollStaticTest::ticksPerBeatKeepsGeometry"
     var camera = geometryCamera(lengthTicks: 16 * 4 * 24)
-    let original = (1...8).map { camera.contentX(tick: Double($0 * 24)) }
+    let original = (1...8).map { (beat: Int) -> Double in
+        let tick: Double = Double(beat * 24)
+        return camera.contentX(tick: tick)
+    }
     let initialZoom = camera.snapshot.pixelsPerBeat
-    let originalColumns = (1...3).map { camera.viewX(tick: Double($0 * 24), dpr: 1) }
+    let originalColumns = (1...3).map { (beat: Int) -> Double in
+        let tick: Double = Double(beat * 24)
+        return camera.viewX(tick: tick, dpr: 1)
+    }
     camera.updateTimeDomain(ticksPerBeat: 48, lengthTicks: 16 * 4 * 48)
     report.expect(
         gridCameraNear(camera.snapshot.pixelsPerBeat, initialZoom, tolerance: 1e-9),
@@ -232,8 +239,8 @@ private func checkScaleProjectionInvariants(_ report: CheckReport, viewport: Doc
             let row = folded.row(forPitch: pitch)
             return row == PitchProjection.hiddenRow || folded.visiblePitch(at: row) == pitch
         }, cppID: id, message: "A008 each visible folded pitch maps back to itself")
-    let freeBase = stride(from: 1, through: 115, by: 12).first {
-        !occupied.contains(UInt8($0)) && !occupied.contains(UInt8($0 + 12))
+    let freeBase = stride(from: 1, through: 115, by: 12).first { (pitch: Int) -> Bool in
+        !occupied.contains(UInt8(pitch)) && !occupied.contains(UInt8(pitch + 12))
     }
     checkDocumentUndoProbe(
         report, session: session, id: id,
@@ -349,8 +356,8 @@ private func checkLiveFoldProjection(_ report: CheckReport, viewport: DocumentVi
                 == occupied.contains(UInt8($0))
         }, cppID: id, message: "production fold visibility exactly matches occupancy")
     guard
-        let base = stride(from: 1, through: 115, by: 12).first(where: {
-            !occupied.contains(UInt8($0)) && !occupied.contains(UInt8($0 + 12))
+        let base = stride(from: 1, through: 115, by: 12).first(where: { (pitch: Int) -> Bool in
+            !occupied.contains(UInt8(pitch)) && !occupied.contains(UInt8(pitch + 12))
         }),
         let added = try? document.addNotes([
             NewNote(

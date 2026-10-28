@@ -196,20 +196,25 @@ private func songListSearch(_ report: CheckReport) {
         expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
         what: "constant text matches")
 
-    // Single-word fuzzy fallback: subsequence, not substring.
-    presenter.updateSearch(text: "musrival")
+    // The shared SearchQuery rule: words may land in different fields.
+    let across = SongListPresenter()
+    across.setSongs([songListing(0, "mus_route101", constant: "THEME_OPENING")])
+    across.updateSearch(text: "route opening")
     report.expectEqual(
-        expected: [], actual: rowLabels(presenter), cppID: id,
-        what: "non-subsequence finds nothing")
-    presenter.updateSearch(text: "msray")
+        expected: ["mus_route101"], actual: rowLabels(across), cppID: id,
+        what: "words may match different fields")
+    // Case and diacritics fold.
+    let folded = SongListPresenter()
+    folded.setSongs([songListing(0, "café_intro")])
+    folded.updateSearch(text: "CAFE")
     report.expectEqual(
-        expected: ["mus_stray"], actual: rowLabels(presenter), cppID: id,
-        what: "subsequence query finds mus_stray")
-    // Fuzzy applies to single-word queries only.
-    presenter.updateSearch(text: "ms ray")
+        expected: ["café_intro"], actual: rowLabels(folded), cppID: id,
+        what: "search folds case and diacritics")
+    // Whitespace splits multi-word queries, even inside one label.
+    presenter.updateSearch(text: "route 101")
     report.expectEqual(
-        expected: [], actual: rowLabels(presenter), cppID: id,
-        what: "multi-word queries never fall back to fuzzy")
+        expected: ["mus_route101"], actual: rowLabels(presenter), cppID: id,
+        what: "multi-word query splits on whitespace")
 
     // Search composes with the category.
     presenter.updateSearch(text: "")

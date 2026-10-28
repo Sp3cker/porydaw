@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
 
@@ -21,7 +20,10 @@ func duplicationAndGlobals(_ report: CheckReport) {
             scope: TimeScope(tracks: [0])),
         cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
         message: "time duplication commits")
-    let copies = document.notes(in: 0).filter { $0.tick >= 620 && $0.tick < 640 }
+    let copies = document.notes(in: 0).filter { (note: Note) -> Bool in
+        guard note.tick >= 620 else { return false }
+        return note.tick < 640
+    }
     report.expect(
         copies.count == 2 && copies.allSatisfy { !originalIDs.contains($0.id) },
         cppID: "editcheck/EditCheckTest::timeRangeDuplicateClippingAndOrder",
@@ -282,8 +284,9 @@ func duplicationAndGlobals(_ report: CheckReport) {
                     endTick: seam + bar),
                 scope: TimeScope(wholeSong: true)),
             cppID: signatureID, message: "whole-song signature insertion commits")
-        let signatures = signature.timeSignatures.filter {
-            $0.numerator == 3 && $0.denominatorPower == 2
+        let signatures = signature.timeSignatures.filter { point -> Bool in
+            guard point.numerator == 3 else { return false }
+            return point.denominatorPower == 2
         }
         report.expect(
             signatures.contains { $0.tick == seam }, cppID: signatureID,

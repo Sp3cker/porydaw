@@ -147,8 +147,11 @@ ShellLaneSupport {
     function activateChoice(combo, index) {
         mouseClick(combo, combo.width - combo.height / 2, combo.height / 2)
         verify(waitForNative(function() { return combo.popup.opened }, 3000), "choices open")
+        combo.popup.contentItem.positionViewAtIndex(index, ListView.Contain)
+        verify(waitForNative(function() {
+            return combo.popup.contentItem.itemAtIndex(index) !== null
+        }, 3000), "requested choice is instantiated")
         const delegate = combo.popup.contentItem.itemAtIndex(index)
-        verify(delegate !== null, "requested choice is instantiated")
         mouseClick(delegate)
         verify(waitForNative(function() { return combo.currentIndex === index }, 3000),
                "choice selection settles")
@@ -236,6 +239,14 @@ ShellLaneSupport {
         compare(voicegroup.currentIndex, 1, "existing voicegroup is the default selection")
         verify(voicegroup.find("fixture_rich") >= 0, "A056 catalog includes fixture_rich")
         activateChoice(voicegroup, voicegroup.find("fixture_rich"))
+        voicegroup.contentItem.forceActiveFocus()
+        voicegroup.selectAll()
+        keyClick(Qt.Key_F)
+        keyClick(Qt.Key_Return)
+        compare(child("midiImportWizard").visible, true, "Return accepts the voicegroup without importing")
+        compare(voicegroup.editText, "fixture_alt", "autocomplete selects the first matching group")
+        compare(presenter.session.songDockController().midiImportController().voicegroupText,
+                "fixture_alt", "accepted completion reaches the import controller")
         mouseClick(child("importWizardFinish"))
         verify(waitForNative(function() { return !child("midiImportWizard").visible }, 5000),
                "Finish closes wizard")
@@ -262,6 +273,8 @@ ShellLaneSupport {
                 "A060 default timing adjustment persists")
         compare(probe.songTablePlayer(rootPath, "mus_external_import"), "MUSIC_PLAYER_SE_1TRK",
                 "A072 chosen player persists")
+        verify(probe.midiCfgFlags(rootPath, "mus_external_import").indexOf("-G_fixture_alt") >= 0,
+               "registered import uses the accepted voicegroup")
         compare(presenter.session.songTabs.tabCount, initialTabs,
                 "no voicegroup created, so no tab opens")
     }

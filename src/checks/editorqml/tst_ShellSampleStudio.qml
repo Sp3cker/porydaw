@@ -34,21 +34,39 @@ ShellLaneSupport {
         return presenter
     }
     function pickerFor(path) {
-        const picker = child("shellImportSamplePicker")
-        picker.selectedFile = "file://" + path
         const menu = child("shellToolsMenu")
         const action = child("shellAction_tools.import_sample")
         menu.open()
         mouseClick(action, action.width / 2, action.height / 2)
-        verify(waitForNative(function() { return picker.visible }, 5000), "Tools opens picker")
+        verify(waitForNative(function() {
+            const picker = child("shellImportSamplePicker")
+            return picker && picker.visible
+        }, 5000), "Tools opens the studio-owned picker")
+        const picker = child("shellImportSamplePicker")
+        picker.reject()
+        tryCompare(picker, "visible", false, 5000)
+        picker.currentFolder = shell.shellPresenter.session.sampleStudio().pickerFolder
+        picker.selectedFile = "file://" + path
+        mouseClick(child("sampleLibraryOpen"))
+        tryCompare(picker, "visible", true, 5000)
+        verify(waitForNative(function() {
+            return picker.selectedFile.toString() === "file://" + path
+        }, 5000), "visible picker selects the requested source")
         return picker
     }
     function editorFor(path) {
-        pickerFor(path).accept()
+        const picker = pickerFor(path)
+        picker.accept()
+        verify(waitForNative(function() { return !picker.visible }, 5000), "source chooser closes")
         verify(waitForNative(function() {
-            return child("sampleStudioDialog") && child("sampleStudioDialog").visible
-        }, 15000), "source opens mounted editor")
-        return child("sampleStudioDialog")
+            const dialog = child("sampleStudioDialog")
+            const play = child("sampleStudioPlay")
+            return dialog && dialog.visible && dialog.editor.hasSource && play && play.enabled
+        }, 15000), "decoded source and editor controls are ready")
+        const dialog = child("sampleStudioDialog")
+        dialog.requestActivate()
+        verify(waitForNative(function() { return dialog.active }, 5000), "decoded editor owns keyboard focus")
+        return dialog
     }
     function cleanup() {
         if (!shell) return
@@ -69,8 +87,8 @@ ShellLaneSupport {
         verify(row.enabled, "open project permits import")
         const editor = editorFor(rootPath + "/samplesources/hires_tone.wav")
         compare(child("sampleStudioName").text, "hires_tone", "sample-name prefill")
-        verify(child("sampleStudioSource").text.indexOf("16-bit PCM WAV") !== -1,
-               "source line describes WAV audio")
+        verify(child("sampleStudioFileRate").text.indexOf("44100") !== -1,
+               "file rate describes loaded audio")
         verify(!row.enabled, "editor blocks duplicate import")
         editor.close()
         verify(waitForNative(function() { return !child("sampleStudioDialog") }, 5000), "Cancel tears down editor")
@@ -112,12 +130,6 @@ ShellLaneSupport {
         verify(model.displayRevision > dragRevision
                && String(model.displayList(0)).startsWith("PDL1"),
                "zoom repaints nonempty mounted waveform")
-        const split = child("sampleStudioSplitter")
-        const height = canvas.height
-        mousePress(split, split.width / 2, canvas.height + 1)
-        mouseMove(split, split.width / 2, canvas.height - 30)
-        mouseRelease(split, split.width / 2, canvas.height - 30)
-        verify(canvas.height < height, "A105 splitter shrinks waveform")
         editor.height = 24 * presenter.session.baseFontPx
         const scroll = child("sampleStudioControlsScroll")
         const initial = scroll.contentItem.contentY
@@ -131,13 +143,13 @@ ShellLaneSupport {
         const text = name.text
         keyClick(Qt.Key_Space)
         verify(String(name.text) === String(text), "A127 Space does not type into name")
-        verify(child("sampleStudioPlay").enabled, "A120 live audio enables Play")
+        verify(child("sampleStudioPlay").enabled, "A120 live audio enables Listen")
         verify(workflow.audition().playing, "A126 Space plays with name focused")
         const key = child("sampleStudioAuditionKey")
         key.forceActiveFocus()
         keyClick(Qt.Key_Space)
         verify(!workflow.audition().playing, "A128 Space stops with key focused")
-        compare(child("sampleStudioPlay").text, "Play", "A130 Play text restored")
+        compare(child("sampleStudioPlay").text, "Listen", "A130 Listen text restored")
         keyClick(Qt.Key_Space, Qt.ControlModifier)
         verify(!workflow.audition().playing, "A129 Ctrl+Space ignored")
         const baseKey = child("sampleStudioBaseKey")
@@ -197,7 +209,7 @@ ShellLaneSupport {
     function test_flacOpensEditor() {
         openProject()
         editorFor(rootPath + "/samplesources/tone.flac")
-        verify(child("sampleStudioSource").text.indexOf("FLAC") !== -1,
+        verify(child("sampleStudioFileName").text.indexOf("tone") !== -1,
                "FLAC decodes through mounted source route")
     }
 }

@@ -15,11 +15,14 @@ add_library(PorydawProject STATIC
     ProjectStore+Bank.swift
     ProjectStore+Edit.swift
     ProjectStore+Save.swift
+    ProjectStore+Kit.swift
     ProjectStore+Picker.swift
     ProjectStore+Samples.swift
     ProjectStore+Synth.swift
     SampleRegistrar.swift
     SampleRegistrar+Committed.swift
+    KitUsageScanner.swift
+    SampleUsageScanner.swift
 )
 
 set_target_properties(PorydawProject PROPERTIES

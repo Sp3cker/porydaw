@@ -185,7 +185,7 @@ PromptOverlay {
                 Accessible.description: pickerRoot.pickerTitle
                 Accessible.editable: true
                 KeyNavigation.tab: list
-                KeyNavigation.backtab: cancelButton
+                KeyNavigation.backtab: pickerRoot.pickerHasMatch ? acceptButton : cancelButton
 
                 onTextChanged: pickerRoot.setPickerFilter(text)
                 Keys.onReturnPressed: (event) => {
@@ -206,6 +206,7 @@ PromptOverlay {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
 
             objectName: "voicePickerList"
             width: searchFrame.implicitWidth
@@ -220,7 +221,7 @@ PromptOverlay {
             Accessible.role: Accessible.List
             Accessible.name: qsTr("Voices")
             Accessible.description: qsTr("Click and hold to audition (middle C).")
-            KeyNavigation.tab: pickerRoot.pickerHasMatch ? acceptButton : cancelButton
+            KeyNavigation.tab: cancelButton
             KeyNavigation.backtab: search
 
             Connections {
@@ -315,6 +316,19 @@ PromptOverlay {
             spacing: pickerRoot.appearance.spacing
 
             PromptButton {
+                id: cancelButton
+
+                objectName: "voicePickerCancel"
+                claimsShortcuts: false
+                appearance: prompt.appearance
+                text: qsTr("Cancel")
+                minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.appearance.buttonPadding
+                KeyNavigation.tab: pickerRoot.pickerHasMatch ? acceptButton : search
+                KeyNavigation.backtab: list
+                onActivated: prompt.cancelDisplayed()
+            }
+
+            PromptButton {
                 id: acceptButton
 
                 objectName: "voicePickerAccept"
@@ -323,22 +337,9 @@ PromptOverlay {
                 text: qsTr("OK")
                 enabled: pickerRoot.pickerHasMatch
                 minimumWidth: cancelButton.labelWidth + 2 * pickerRoot.appearance.buttonPadding
-                KeyNavigation.tab: cancelButton
-                KeyNavigation.backtab: list
-                onActivated: prompt.acceptDisplayed()
-            }
-
-            PromptButton {
-                id: cancelButton
-
-                objectName: "voicePickerCancel"
-                claimsShortcuts: false
-                appearance: prompt.appearance
-                text: qsTr("Cancel")
-                minimumWidth: acceptButton.labelWidth + 2 * pickerRoot.appearance.buttonPadding
                 KeyNavigation.tab: search
-                KeyNavigation.backtab: pickerRoot.pickerHasMatch ? acceptButton : list
-                onActivated: prompt.cancelDisplayed()
+                KeyNavigation.backtab: cancelButton
+                onActivated: prompt.acceptDisplayed()
             }
         }
     }

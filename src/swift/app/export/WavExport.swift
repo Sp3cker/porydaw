@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawPlayback
 import PorydawPlaybackNative
+@_implementationOnly import PorydawMp3Encode
 
 #if canImport(Darwin)
     import Darwin
@@ -11,6 +12,11 @@ import PorydawPlaybackNative
     import ucrt
 #endif
 
+public enum SongExportFormat: Int, Sendable {
+    case wav = 0
+    case mp3 = 1
+}
+
 public struct WavExportOptions: Equatable, Sendable {
     public static let sampleRates = [32_000, 44_100, 48_000]
     public var sampleRate: Int
@@ -18,20 +24,21 @@ public struct WavExportOptions: Equatable, Sendable {
     public var fadeoutSeconds: Double
     public var tailSeconds: Double
     public var resonanceSuppression: Bool
+    public var format: SongExportFormat
 
     public init(
         sampleRate: Int = 48_000, loopCount: Int = 2,
         fadeoutSeconds: Double = 5.0, tailSeconds: Double = 3.0,
-        resonanceSuppression: Bool = false
+        resonanceSuppression: Bool = false, format: SongExportFormat = .wav
     ) {
         self.sampleRate = sampleRate
         self.loopCount = loopCount
         self.fadeoutSeconds = fadeoutSeconds
         self.tailSeconds = tailSeconds
         self.resonanceSuppression = resonanceSuppression
+        self.format = format
     }
 }
-
 public struct WavExportTotals: Equatable, Sendable {
     public static let noFade = UInt64.max
     public let totalFrames: UInt64
@@ -107,9 +114,11 @@ public enum WavExportResult: Equatable, Sendable {
     case cancelled
 }
 
-/// Owns the bounded, private offline render and its RIFF PCM16 output.
+/// Owns the bounded, private offline render and its WAV PCM16 or MP3 output.
 public enum WavExport {
     public static let chunkFrames = 4096
+    /// Worst-case LAME output per chunk (1.25x PCM plus framing) with flush headroom.
+    public static let mp3BufferBytes = 16_384
 
     public static func header(totals: WavExportTotals, sampleRate: Int) throws(WavExportError) -> [UInt8] {
         guard totals.totalFrames != 0 else { throw .nothingToRender }
@@ -141,7 +150,16 @@ public enum WavExport {
     ) throws(WavExportError) -> WavExportResult {
         precondition(timeline.sampleRate == Double(options.sampleRate))
         let totals = WavExportTotals(timeline: timeline, options: options)
-        let wavHeader = try header(totals: totals, sampleRate: options.sampleRate)
+        let wavHeader: [UInt8]?
+        switch options.format {
+        case .wav:
+            wavHeader = try header(totals: totals, sampleRate: options.sampleRate)
+        case .mp3:
+            // No RIFF size cap applies to MP3; only the empty render is rejected.
+            guard totals.totalFrames != 0 else { throw .nothingToRender }
+            wavHeader = nil
+        }
+        // The tag finalize pass seeks back to rewrite the delay/padding header.
         guard let file = path.withCString({ fopen($0, "wb") }) else {
             throw .cannotWrite(path: path, reason: errnoText())
         }
@@ -151,7 +169,9 @@ public enum WavExport {
             if fileOpen { _ = fclose(file) }
             if !keepFile { _ = path.withCString { remove($0) } }
         }
-        try write(wavHeader, count: wavHeader.count, to: file, path: path)
+        if let wavHeader {
+            try write(wavHeader, count: wavHeader.count, to: file, path: path)
+        }
 
         guard let engine = m4a_engine_create(Float(options.sampleRate)) else {
             throw .cannotWrite(path: path, reason: "Cannot initialize audio engine.")
@@ -159,10 +179,27 @@ public enum WavExport {
         defer { m4a_engine_free(engine) }
         AudioRenderEngine.configure(engine, voicegroup: voices, settings: settings)
 
+        // PdMp3Encoder is an opaque C struct and imports as OpaquePointer.
+        let mp3: OpaquePointer?
+        switch options.format {
+        case .wav:
+            mp3 = nil
+        case .mp3:
+            guard let created = pd_mp3_create(Int32(options.sampleRate)) else {
+                throw .cannotWrite(path: path, reason: "Cannot initialize MP3 encoder.")
+            }
+            mp3 = created
+        }
+        defer {
+            if let mp3 { pd_mp3_free(mp3) }
+        }
         var left = [Float](repeating: 0, count: chunkFrames)
         var right = [Float](repeating: 0, count: chunkFrames)
         var interleaved = [Float](repeating: 0, count: chunkFrames * 2)
-        var pcm = [UInt8](repeating: 0, count: chunkFrames * 4)
+        var pcm = [UInt8](repeating: 0, count: options.format == .wav ? chunkFrames * 4 : 0)
+        // MP3 reuses the WAV PCM16 scaling; the encoder consumes these frames.
+        var samples = [Int16](repeating: 0, count: options.format == .mp3 ? chunkFrames * 2 : 0)
+        var mp3Out = [UInt8](repeating: 0, count: options.format == .mp3 ? mp3BufferBytes : 0)
         var player = Sequencer()
         guard progress(0) else { return .cancelled }
 
@@ -202,19 +239,43 @@ public enum WavExport {
                     }
                 }
             }
-            do {
-                var bytes = pcm.mutableSpan
+            if let mp3 {
                 for frame in 0..<count {
                     let gain = totals.gain(atFrame: position + UInt64(frame))
                     let l = options.resonanceSuppression ? interleaved[2 * frame] : left[frame]
                     let r = options.resonanceSuppression ? interleaved[2 * frame + 1] : right[frame]
-                    putU16(clampPCM16(l * gain), into: &bytes, at: 4 * frame)
-                    putU16(clampPCM16(r * gain), into: &bytes, at: 4 * frame + 2)
+                    samples[2 * frame] = Int16(bitPattern: clampPCM16(l * gain))
+                    samples[2 * frame + 1] = Int16(bitPattern: clampPCM16(r * gain))
                 }
+                try stageMp3(buffer: &mp3Out, file: file, path: path) { output, capacity in
+                    samples.withUnsafeBufferPointer { staged in
+                        guard let input = staged.baseAddress else { return -1 }
+                        return pd_mp3_encode_s16(mp3, input, Int32(count), output, capacity)
+                    }
+                }
+            } else {
+                do {
+                    var bytes = pcm.mutableSpan
+                    for frame in 0..<count {
+                        let gain = totals.gain(atFrame: position + UInt64(frame))
+                        let l = options.resonanceSuppression ? interleaved[2 * frame] : left[frame]
+                        let r = options.resonanceSuppression ? interleaved[2 * frame + 1] : right[frame]
+                        putU16(clampPCM16(l * gain), into: &bytes, at: 4 * frame)
+                        putU16(clampPCM16(r * gain), into: &bytes, at: 4 * frame + 2)
+                    }
+                }
+                try write(pcm, count: count * 4, to: file, path: path)
             }
-            try write(pcm, count: count * 4, to: file, path: path)
             position += UInt64(count)
             guard progress(Double(position) / Double(totals.totalFrames)) else { return .cancelled }
+        }
+        if let mp3 {
+            try stageMp3(buffer: &mp3Out, file: file, path: path) { output, capacity in
+                pd_mp3_flush(mp3, output, capacity)
+            }
+            guard pd_mp3_write_tag(mp3, file) == 0 else {
+                throw .cannotWrite(path: path, reason: "Cannot finalize MP3 tag.")
+            }
         }
         if fclose(file) != 0 {
             fileOpen = false
@@ -259,6 +320,25 @@ public enum WavExport {
             if let base = $0.baseAddress { suppressor.process(base, frames: UInt32(count)) }
         }
         sourcePos += UInt64(sourceCount)
+    }
+
+    /// Runs one LAME call, writes any staged bytes, and reports failures
+    /// instead of ignoring them.
+    private static func stageMp3(
+        buffer: inout [UInt8], file: UnsafeMutablePointer<FILE>, path: String,
+        encode: (UnsafeMutablePointer<UInt8>, Int32) -> Int32
+    ) throws(WavExportError) {
+        let capacity = buffer.count
+        let staged: Int32 = buffer.withUnsafeMutableBufferPointer { output in
+            guard let base = output.baseAddress else { return -1 }
+            return encode(base, Int32(capacity))
+        }
+        guard staged >= 0 else {
+            throw .cannotWrite(path: path, reason: String(cString: pd_mp3_error_text(staged)))
+        }
+        if staged > 0 {
+            try write(buffer, count: Int(staged), to: file, path: path)
+        }
     }
 
     /// Clamps scaled PCM samples to signed 16-bit bounds [-32768, 32767].

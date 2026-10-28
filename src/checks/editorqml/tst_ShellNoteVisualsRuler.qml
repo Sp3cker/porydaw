@@ -159,7 +159,7 @@ ShellNoteVisualsSupport {
                 "natural and accidental rows paint identical pre-roll pad pixels")
         var naturalPlot = plotPixel(tickZero + grid.baseFontPx, natural)
         verify(channelDelta(naturalPlot,
-                            Helpers.channels(grid.palette.rollBackground)) <= 2,
+                            Helpers.channels(grid.palette.windowBackground)) <= 2,
                "the adjacent natural-key plot sample is unoccupied background: "
                + Helpers.hexOf(naturalPlot))
         verify(channelDelta(naturalPad, naturalPlot) > 1,

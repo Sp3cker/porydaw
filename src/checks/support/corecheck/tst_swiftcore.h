@@ -68,6 +68,7 @@ class SwiftCoreTest final : public QObject
     void keysplitTables();
     void bankOwnership();
     void voicegroupLocator();
+    void kitDraft();
 };
 
 int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments);

@@ -1,13 +1,48 @@
 import Foundation
 import PorydawCore
 import PorydawSample
+import PorydawSampleUI
 import QtBridge
 
 @MainActor
 @QtBridgeable
 public final class SampleLoopTools: QmlUncreatable {
     private let presenter: SampleStudioPresenter
-    private var pitchTried = false
+    private var sourceRevision: Int
+    private enum AnalysisState {
+        case idle, pending, ready, cancelled
+    }
+
+    private struct AnalysisRequest: Sendable {
+        let generation: Int
+        let buffer: [Float]
+        let rate: Double
+        let region: Range<Int>
+    }
+
+    private enum AnalysisOutcome: Sendable {
+        case completed(SampleDsp.PitchResult)
+        case cancelled
+    }
+
+    private enum PitchCommand {
+        case setLoopEnabled(Bool)
+        case applyDetectedPitch
+        case tryAnotherLoop
+        case refineLoop
+    }
+
+    private struct PendingCommands {
+        let params: SampleEditParams
+        var commands: [PitchCommand]
+    }
+
+    private var analysisState = AnalysisState.idle
+    private var analysisGeneration = 0
+    private var analysisWorker: Task<AnalysisOutcome, Never>?
+    private var analysisCompletion: Task<Void, Never>?
+    private var pendingAnalysis: AnalysisRequest?
+    private var pendingCommands: PendingCommands?
     private var pitch = SampleDsp.PitchResult()
     private var candidates: [SampleDsp.LoopCandidate] = []
     private var candidateIndex = -1
@@ -20,7 +55,6 @@ public final class SampleLoopTools: QmlUncreatable {
     @QtTracked public var pitchApplyVisible = false
     @QtTracked public var pitchApplyText = ""
     @QtTracked public var pitchApplyToolTip = ""
-    @QtTracked public var suggestStatus = ""
     @QtTracked public var canTryAnother = false
     @QtTracked public var seamBadgeVisible = false
     @QtTracked public var seamBadgeText = ""
@@ -29,14 +63,39 @@ public final class SampleLoopTools: QmlUncreatable {
 
     @QtIgnored
     public init(presenter: SampleStudioPresenter) {
+        sourceRevision = presenter.sourceRevision
         self.presenter = presenter
         presenter.addRenderObserver { [weak self] in self?.refresh() }
         refresh()
     }
 
-    private func detectPitchIfNeeded() {
-        guard !pitchTried else { return }
-        pitchTried = true
+    deinit {
+        analysisWorker?.cancel()
+        analysisCompletion?.cancel()
+    }
+
+    /// Cancel analysis and deferred actions without restarting on subsequent parameter refreshes.
+    @QtIgnored
+    public func cancelAnalysis() {
+        analysisGeneration += 1
+        analysisState = .cancelled
+        pendingAnalysis = nil
+        pendingCommands = nil
+        analysisWorker?.cancel()
+        clearAnalysisReadouts()
+    }
+
+    /// Await owned analysis and deferred actions, including cancelled work, without blocking the UI.
+    @QtIgnored
+    public func waitForPitchAnalysis() async {
+        while let completion = analysisCompletion {
+            await completion.value
+        }
+    }
+
+    private func requestAnalysisIfNeeded() {
+        guard analysisState == .idle else { return }
+        analysisState = .pending
         let p = presenter.params
         let source = presenter.source
         var from: Int
@@ -55,14 +114,110 @@ public final class SampleLoopTools: QmlUncreatable {
         }
         let first = min(max(0, from), source.buffer.count)
         let last = min(source.buffer.count, first + max(0, length))
-        pitch = SampleDsp.detectPitchYin(source.buffer.span.extracting(first..<last), rate: source.sampleRate)
+        pendingAnalysis = AnalysisRequest(
+            generation: analysisGeneration, buffer: source.buffer,
+            rate: source.sampleRate, region: first..<last)
+        // Keep only the newest snapshot; the completion path starts it after the old worker exits.
+        analysisWorker?.cancel()
+        startPendingAnalysis()
+    }
+
+    private func startPendingAnalysis() {
+        guard analysisWorker == nil, let request = pendingAnalysis else { return }
+        pendingAnalysis = nil
+        let worker = Task(priority: .userInitiated) { await Self.analyze(request) }
+        let generation = request.generation
+        analysisWorker = worker
+        analysisCompletion = Task { [weak self] in
+            let outcome = await worker.value
+            guard !Task.isCancelled else { return }
+            self?.finishAnalysis(outcome, generation: generation)
+        }
+    }
+
+    @concurrent
+    private static func analyze(_ request: AnalysisRequest) async -> AnalysisOutcome {
+        do {
+            let pitch = try SampleDsp.detectPitchYin(
+                request.buffer.span.extracting(request.region), rate: request.rate,
+                checkpoint: { try Task.checkCancellation() })
+            return .completed(pitch)
+        } catch {
+            precondition(error is CancellationError, "Pitch analysis only throws cancellation")
+            return .cancelled
+        }
+    }
+
+    private func finishAnalysis(_ outcome: AnalysisOutcome, generation: Int) {
+        analysisWorker = nil
+        analysisCompletion = nil
+        guard generation == analysisGeneration, analysisState == .pending else {
+            startPendingAnalysis()
+            return
+        }
+        switch outcome {
+        case .cancelled:
+            analysisState = .cancelled
+            pendingCommands = nil
+        case .completed(let result):
+            analysisState = .ready
+            pitch = result
+            refresh()
+            let deferred = pendingCommands
+            pendingCommands = nil
+            guard let deferred, deferred.params == presenter.params else { return }
+            for command in deferred.commands {
+                guard generation == analysisGeneration, analysisState == .ready else { return }
+                switch command {
+                case .setLoopEnabled(let on): setLoopEnabled(on: on)
+                case .applyDetectedPitch: applyDetectedPitch()
+                case .tryAnotherLoop: tryAnotherLoop()
+                case .refineLoop: refineLoop()
+                }
+            }
+        }
+    }
+
+    private func deferUntilPitchReady(_ command: PitchCommand) -> Bool {
+        guard analysisState != .cancelled else { return true }
+        guard analysisState != .ready else { return false }
+        if pendingCommands?.params != presenter.params {
+            pendingCommands = PendingCommands(params: presenter.params, commands: [])
+        }
+        pendingCommands?.commands.append(command)
+        return true
+    }
+
+    private func clearAnalysisReadouts() {
+        pitch = SampleDsp.PitchResult()
+        candidates.removeAll()
+        candidateIndex = -1
+        candidateCropStart = -1
+        candidateCropEnd = -1
+        candidateRate = 0
+        candidatesValid = false
+        canTryAnother = false
+        pitchApplyVisible = false
+        pitchApplyText = ""
+        pitchApplyToolTip = ""
+        seamBadgeVisible = false
+        seamBadgeText = ""
+        seamBadgeSeverity = 0
     }
 
     private func refresh() {
+        if sourceRevision != presenter.sourceRevision {
+            sourceRevision = presenter.sourceRevision
+            analysisGeneration += 1
+            if analysisState != .cancelled { analysisState = .idle }
+            pendingCommands = nil
+            clearAnalysisReadouts()
+        }
         let p = presenter.params
+        if let deferred = pendingCommands, deferred.params != p { pendingCommands = nil }
         loopBodyVisible = p.loopOn
         crossfadeOn = p.crossfadeOn
-        detectPitchIfNeeded()
+        requestAnalysisIfNeeded()
         let exact = 69 + 12 * log2(pitch.f0 / 440)
         let current = Double(p.baseKey) + p.fineTuneCents / 100
         pitchApplyVisible = pitch.pitched && abs(exact - current) > 0.40
@@ -81,16 +236,69 @@ public final class SampleLoopTools: QmlUncreatable {
                 seam.ampLsb <= 2 && seam.derivLsb <= 3
                 ? 0
                 : seam.ampLsb <= 4 && seam.derivLsb <= 6 ? 1 : 2
-            seamBadgeText = ["seam: clean", "seam: fair", "seam: click"][seamBadgeSeverity]
+            seamBadgeText = ["Clean", "Fair", "Clicks"][seamBadgeSeverity]
         }
         if candidatesValid
             && (candidateCropStart != p.cropStart || candidateCropEnd != p.cropEnd || candidateRate != p.targetRate)
         {
             candidatesValid = false
             candidateIndex = -1
-            suggestStatus = ""
         }
         canTryAnother = candidatesValid && !candidates.isEmpty
+    }
+
+    /// Installs the Sample Studio marker adapter without coupling the shared model to a presenter.
+    @QtIgnored
+    public func bindWaveform(_ wave: MarkerWaveformModel) {
+        wave.onMarkerPressed = { [weak presenter] _ in presenter?.beginMarkerGesture() }
+        wave.onMarkerDragged = { [weak self, weak wave] id, frame in
+            guard let self, let wave else { return }
+            let before = self.presenter.params
+            self.dragMarker(id: id, frame: frame)
+            if self.presenter.params == before { self.publishWaveform(wave, sourceChanged: false) }
+        }
+        wave.onMarkerReleased = { [weak presenter] in presenter?.endMarkerGesture() }
+    }
+
+    private var lastPeakFit = 1.0
+    @QtIgnored
+    public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
+        if sourceChanged {
+            // Peak-fit like Split Studio; a normalize gain at or above the fit is preserved.
+            lastPeakFit = MarkerWaveformModel.peakFitGain(presenter.source.buffer)
+            wave.setSamples(
+                presenter.source.buffer, sampleRate: presenter.source.sampleRate,
+                gain: max(presenter.processed.normalizeGain, lastPeakFit))
+        } else {
+            wave.setGain(max(presenter.processed.normalizeGain, lastPeakFit))
+        }
+        let p = presenter.params
+        var markers: [(id: Int, frame: Int, kind: String, label: String)] = [
+            (1, p.cropStart, "crop", "Crop start"), (2, p.cropEnd, "crop", "Crop end"),
+        ]
+        if p.loopOn {
+            markers.append((3, p.loopStart, "loop", "Loop start"))
+            markers.append((4, p.loopEnd, "loop", "Loop end"))
+        }
+        wave.setMarkers(markers)
+    }
+
+    private func dragMarker(id: Int, frame: Int) {
+        let p = presenter.params
+        var cropStart = p.cropStart, cropEnd = p.cropEnd
+        var loopStart = p.loopStart, loopEnd = p.loopEnd
+        switch id {
+        case 1: cropStart = min(max(0, frame), cropEnd - (p.loopOn ? 2 : 1))
+        case 2: cropEnd = min(max(cropStart + (p.loopOn ? 2 : 1), frame), presenter.sourceFrameCount)
+        case 3: loopStart = min(max(cropStart, frame), min(loopEnd - 1, cropEnd - 2))
+        case 4: loopEnd = min(max(loopStart + 1, frame), min(cropEnd - 1, presenter.sourceFrameCount - 1))
+        default: return
+        }
+        if p.loopOn {
+            loopEnd = min(max(loopEnd, cropStart + 1), cropEnd - 1)
+            loopStart = min(max(loopStart, cropStart), loopEnd - 1)
+        }
+        presenter.dragMarkers(cropStart: cropStart, cropEnd: cropEnd, loopStart: loopStart, loopEnd: loopEnd)
     }
 
     private func analysisParams() -> SampleEditParams {
@@ -111,18 +319,16 @@ public final class SampleLoopTools: QmlUncreatable {
         {
             return !candidates.isEmpty
         }
-        detectPitchIfNeeded()
+        guard analysisState == .ready else { return false }
         candidatesValid = true
         candidateCropStart = p.cropStart
         candidateCropEnd = p.cropEnd
         candidateRate = p.targetRate
         candidates.removeAll()
         candidateIndex = -1
-        suggestStatus = ""
         let analysis = SampleRender.render(source: presenter.source, params: analysisParams())
         let count = analysis.preview.count
         guard count >= 256 else {
-            suggestStatus = "sample too short for a loop search — drag the markers."
             canTryAnother = false
             return false
         }
@@ -141,7 +347,6 @@ public final class SampleLoopTools: QmlUncreatable {
                 candidates.append(mapped)
             }
         }
-        if candidates.isEmpty { suggestStatus = "no loop candidates found — drag the markers." }
         canTryAnother = !candidates.isEmpty
         return !candidates.isEmpty
     }
@@ -149,7 +354,6 @@ public final class SampleLoopTools: QmlUncreatable {
     private func applyCandidate(_ index: Int) {
         guard candidates.indices.contains(index) else { return }
         candidateIndex = index
-        suggestStatus = "loop \(index + 1) of \(candidates.count)"
         let candidate = candidates[index]
         var p = presenter.params
         p.loopOn = true
@@ -160,6 +364,9 @@ public final class SampleLoopTools: QmlUncreatable {
 
     public func setLoopEnabled(on: Bool) {
         var p = presenter.params
+        if (on && p.loopStart == p.loopEnd) || pendingCommands != nil {
+            if deferUntilPitchReady(.setLoopEnabled(on)) { return }
+        }
         guard p.loopOn != on else { return }
         if on && p.loopStart == p.loopEnd {
             p.loopOn = true
@@ -168,7 +375,6 @@ public final class SampleLoopTools: QmlUncreatable {
                 p.loopEnd = best.loopEnd
                 p.crossfadeOn = false
                 candidateIndex = 0
-                suggestStatus = "loop 1 of \(candidates.count)"
             } else {
                 p.loopStart = p.cropStart
                 p.loopEnd = max(p.cropStart, p.cropEnd - 1)
@@ -180,7 +386,7 @@ public final class SampleLoopTools: QmlUncreatable {
     }
 
     public func applyDetectedPitch() {
-        detectPitchIfNeeded()
+        if deferUntilPitchReady(.applyDetectedPitch) { return }
         guard pitch.pitched else { return }
         let exact = 69 + 12 * log2(pitch.f0 / 440)
         var p = presenter.params
@@ -191,12 +397,16 @@ public final class SampleLoopTools: QmlUncreatable {
     }
 
     public func tryAnotherLoop() {
+        if deferUntilPitchReady(.tryAnotherLoop) { return }
         guard ensureCandidates() else { return }
         applyCandidate(candidateIndex < 0 ? 0 : (candidateIndex + 1) % candidates.count)
     }
 
     public func refineLoop() {
         let current = presenter.params
+        if current.loopOn || pendingCommands != nil {
+            if deferUntilPitchReady(.refineLoop) { return }
+        }
         guard current.loopOn else { return }
         let analysis = SampleRender.render(source: presenter.source, params: analysisParams())
         let count = analysis.preview.count

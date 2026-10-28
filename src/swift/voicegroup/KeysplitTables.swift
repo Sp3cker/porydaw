@@ -11,6 +11,13 @@ public struct KeysplitTable: Equatable, Sendable {
     public let startingNote: Int
     public let maxNote: Int
     public let table: [UInt8]
+
+    public init(name: String, startingNote: Int, maxNote: Int, table: [UInt8]) {
+        self.name = name
+        self.startingNote = startingNote
+        self.maxNote = maxNote
+        self.table = table
+    }
 }
 
 public struct KeysplitTables: Sendable {

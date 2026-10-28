@@ -291,8 +291,9 @@ public struct PlaybackTimelineBuilder {
                 }
             }
         }
-        orderedTempo.sort {
-            $0.point.tick == $1.point.tick ? $0.order < $1.order : $0.point.tick < $1.point.tick
+        orderedTempo.sort { (lhs: OrderedTempo, rhs: OrderedTempo) -> Bool in
+            if lhs.point.tick == rhs.point.tick { return lhs.order < rhs.order }
+            return lhs.point.tick < rhs.point.tick
         }
         let ticksPerBeat = UInt32(file.division)
         let tempoMap = buildTempoMap(
@@ -406,14 +407,21 @@ public struct PlaybackTimelineBuilder {
             }
         }
 
-        rawEvents.sort { lhs, rhs in
-            lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
+        rawEvents.sort { (lhs: RawPlaybackEvent, rhs: RawPlaybackEvent) -> Bool in
+            if lhs.tick == rhs.tick { return lhs.order < rhs.order }
+            return lhs.tick < rhs.tick
         }
-        rawOthers.sort { lhs, rhs in
-            lhs.tick == rhs.tick ? lhs.order < rhs.order : lhs.tick < rhs.tick
+        rawOthers.sort { (lhs: RawOtherEvent, rhs: RawOtherEvent) -> Bool in
+            if lhs.tick == rhs.tick { return lhs.order < rhs.order }
+            return lhs.tick < rhs.tick
         }
-        timeSignatures.sort { lhs, rhs in
-            lhs.point.tick == rhs.point.tick ? lhs.order < rhs.order : lhs.point.tick < rhs.point.tick
+        timeSignatures.sort {
+            (
+                lhs: (point: PlaybackTimeSignature, order: Int), rhs: (point: PlaybackTimeSignature, order: Int)
+            ) -> Bool
+            in
+            if lhs.point.tick == rhs.point.tick { return lhs.order < rhs.order }
+            return lhs.point.tick < rhs.point.tick
         }
 
         let mapping = file.engineTracks()

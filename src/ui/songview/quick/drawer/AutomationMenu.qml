@@ -58,7 +58,7 @@ FocusScope {
     function firstEnabled(level: QuickMenuPanel, start: int, step: int): int {
         const count = model ? (level === panel ? model.menuRowCount : model.menuChildRowCount) : 0
         for (let i = start; i >= 0 && i < count; i += step) {
-            const row = model.menuRow(i, level !== panel)
+            const row = model ? model.menuRow(i, level !== panel) : null
             if (row && row.enabled && !row.separator) return i
         }
         return -1

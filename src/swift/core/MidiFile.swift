@@ -472,7 +472,7 @@ public struct MidiFile: Equatable, Sendable {
     }
 
     public static func blankSong() -> MidiFile {
-        let oneBar: Tick = Tick(24 * 4)
+        let oneBar: Tick = Tick(24) * Tick(4)
         let conductor = MidiChunk(
             events: [
                 .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),

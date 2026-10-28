@@ -27,6 +27,7 @@ public final class TransportBarPresenter: QmlUncreatable {
     @QtTracked public var scaleNames = ScaleID.displayOrder.map(\.displayName)
     @QtTracked public var followPlayhead = true
     @QtTracked public var resonanceSuppression = false
+    @QtTracked public var metronome = false
     @QtTracked public var polyMeterVisible = false
     @QtTracked public var pcmText = ""
     @QtTracked public var cgbText = ""
@@ -62,6 +63,7 @@ public final class TransportBarPresenter: QmlUncreatable {
     func audioBecameReady(_ audio: NativeAudio) {
         audio.setOutputVolume(outputVolume)
         audio.setResonanceSuppression(resonanceSuppression)
+        audio.setMetronomeEnabled(metronome)
         refresh()
     }
 
@@ -227,10 +229,21 @@ public final class TransportBarPresenter: QmlUncreatable {
         store.synchronize()
     }
 
+    public func setMetronome(enabled: Bool) {
+        guard metronome != enabled else { return }
+        metronome = enabled
+        session?.transportAudio?.setMetronomeEnabled(enabled)
+        onAvailabilityChanged?()
+        let store = PreferencesStore()
+        store.setBool(key: "metronome", value: enabled)
+        store.synchronize()
+    }
+
     public func restoreTransportToggles() {
         let store = PreferencesStore()
         setFollowPlayhead(enabled: store.bool(key: "followPlayhead", fallback: true))
         setResonanceSuppression(enabled: store.bool(key: "dsp.resonanceSuppression", fallback: false))
+        setMetronome(enabled: store.bool(key: "metronome", fallback: false))
     }
 
     public func restoreOutputVolume() {

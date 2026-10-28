@@ -163,7 +163,7 @@ private func checkFailedProjectSwitch(report: CheckReport, projectDir: String) {
             == SongConfig(
                 rawFlags: ["-R50", "-G_test_vg", "-V100"],
                 voicegroupArgument: "_test_vg", masterVolume: 100, reverb: 50)
-        && first.bankLoadName == "test_vg" && !first.bankDirty
+        && first.bankLoadName == "test_vg" && !first.voicegroup.value.dirty
     let retainedPayload =
         (try? first.document.state.file.encoded()) == midiBeforeFailure
         && first.bankSlots == bankSlotsBeforeFailure
@@ -790,7 +790,7 @@ internal func sessionFailureStages(
             voice.release = voice.release == 255 ? 254 : voice.release + 1
             let editedVoice = voice
             _ = try runBlocking {
-                try await live.applyBankEdit(
+                try await live.voicegroup.apply(
                     slot: 0, value: editedVoice,
                     expected: live.bankSlots[0].voice)
             }
@@ -847,7 +847,7 @@ internal func sessionFailureStages(
                         hasConfig: true),
                     revision: revision, identity: identity)
                 do {
-                    _ = try runBlocking { try await caseService.save(snapshot, bank: nil) }
+                    try runBlocking { try await caseService.save(snapshot) }
                 } catch {
                     failure = error as? ProjectServiceError
                 }
@@ -898,7 +898,7 @@ internal func sessionFailureStages(
                 expected: true, actual: document.isDirty, cppID: scenario.id,
                 what: "failed stage leaves document dirty")
             report.expectEqual(
-                expected: true, actual: live.bankDirty, cppID: scenario.id,
+                expected: true, actual: live.voicegroup.value.dirty, cppID: scenario.id,
                 what: "failed stage leaves bank dirty")
             report.expect(
                 live.document === document, cppID: scenario.id,
@@ -944,6 +944,7 @@ internal func sessionFailureStages(
                 actual: recovered.bank.id.sourceRelativePath, cppID: scenario.id,
                 what: "restored source opens the original bank")
             try runBlocking { try await live.save() }
+            try runBlocking { try await live.voicegroup.save() }
             report.expectEqual(
                 expected: Optional(stagedBytes), actual: bytes(at: midiPath),
                 cppID: scenario.id, what: "recovered save persists staged MIDI bytes")
@@ -954,7 +955,7 @@ internal func sessionFailureStages(
                 expected: false, actual: document.isDirty,
                 cppID: scenario.id, what: "recovered save clears document dirty state")
             report.expectEqual(
-                expected: false, actual: live.bankDirty,
+                expected: false, actual: live.voicegroup.value.dirty,
                 cppID: scenario.id, what: "recovered save clears bank dirty state")
             try runBlocking { _ = await live.close() }
         } catch {

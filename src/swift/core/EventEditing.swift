@@ -171,7 +171,9 @@ extension SongDocument {
     public func renameTrack(_ track: Int, to proposedName: String) {
         guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
-        let name = String(proposedName.trimmingCharacters(in: .whitespacesAndNewlines).prefix(64))
+        let singleLine = String(
+            proposedName.map { (character: Character) -> Character in character.isNewline ? " " : character })
+        let name = String(singleLine.trimmingCharacters(in: .whitespaces).prefix(64))
         guard !MidiFile.textIsMarker(name) else { return }
         var mutation = DocumentMutation(state)
         let locations = classifyEvents(in: state.file).chunks[mapping.chunk].trackNames
@@ -518,7 +520,8 @@ extension SongDocument {
                 Xcmd.traffic(
                     in: copy.chunks[chunk],
                     stream: stream))
-            let removals = patch.removeEvents.filter { $0 <= UInt64(Int.max) }.map(Int.init)
+            let removals: [Int] = patch.removeEvents.filter { (index: UInt64) -> Bool in index <= UInt64(Int.max) }
+                .map { (index: UInt64) -> Int in Int(index) }
             let insertions = patch.inserts.map {
                 MidiEvent.channel(
                     tick: $0.tick, status: 0xB0 | $0.channel,

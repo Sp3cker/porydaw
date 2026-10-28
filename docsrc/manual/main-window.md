@@ -45,6 +45,9 @@ The transport clock shows the current playback time and total song duration.
 It is read-only: hovering shows no tooltip, and dragging it does not change the
 song. Edit tempo in the [Automation](automation.md) pane instead.
 
+The Output volume control appears only when the transport controls fit at the
+current font size. Narrowing the window hides the Output label and dial together.
+
 <!-- TODO: Explain transport controls, master volume, and the polyphony meter. -->
 
 ## Voice changes

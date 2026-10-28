@@ -26,7 +26,7 @@ ShellPitchBendSupport {
         compare(findChild(opened.view, "pitchBendPopup"), opened.popup)
     }
 
-    function test_graphKeyOwnershipAndRepeatedOpener() {
+    function test_graphKeyOwnershipAndToggleClosed() {
         const opened = openViaG()
         const graph = findChild(opened.view, "pitchBendGraph")
         const selected = JSON.parse(opened.grid.fetchNoteSummary()).find(function(note) {
@@ -53,16 +53,6 @@ ShellPitchBendSupport {
         const revision = opened.grid.appliedRevisionText
         compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
                 "delivered G opens the editor exactly once")
-        graph.forceActiveFocus(Qt.OtherFocusReason)
-        tryCompare(graph, "activeFocus", true, 5000,
-                   "the repeated G arrives with the pitch graph focused")
-        keyClick(Qt.Key_G)
-        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
-                "repeat G never reopens the editor")
-        compare(opened.editor.isOpen, true,
-                "a second eligible G leaves the captured editor open")
-        compare(opened.grid.appliedRevisionText, revision,
-                "a second delivered G never edits the document")
 
         const solo = findChild(opened.view, "timelineHeaderSolo_" + selected.track)
         const mute = findChild(opened.view, "timelineHeaderMute_" + selected.track)
@@ -95,9 +85,11 @@ ShellPitchBendSupport {
         compare(opened.grid.appliedRevisionText, revision,
                 "graph ownership leaves the document unchanged")
         probe.destroy()
-        keyClick(Qt.Key_Escape)
+        keyClick(Qt.Key_G)
         tryCompare(opened.editor, "isOpen", false, 5000,
-                   "Escape dismisses the repeated-opener pitch popup")
+                   "a second G closes the pitch popup")
+        compare(opened.grid.appliedRevisionText, revision,
+                "closing with G leaves the document unchanged")
         tryCompare(opened.roll, "activeFocus", true, 5000,
                    "the dismissed pitch popup returns keyboard focus to the roll")
         keyClick(Qt.Key_Right)
@@ -188,6 +180,26 @@ ShellPitchBendSupport {
                    "the resumed window Solo toggles twice total")
         compare(opened.grid.fetchNoteSummary(), originalNotes,
                 "the closed session leaves no note changes")
+    }
+
+    function test_gClosesFromNumericField_data() {
+        return [
+            { tag: "bend range", input: "bendRangeInput" },
+            { tag: "LFO speed", input: "lfoSpeedInput" }
+        ]
+    }
+
+    function test_gClosesFromNumericField(data) {
+        const opened = openViaG()
+        const input = findChild(opened.view, data.input)
+        input.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(input, "activeFocus", true)
+        const revision = opened.grid.appliedRevisionText
+        keyClick(Qt.Key_G)
+        tryCompare(opened.editor, "isOpen", false)
+        compare(opened.grid.appliedRevisionText, revision,
+                "G dismisses from numeric input without editing automation")
+        tryCompare(opened.roll, "activeFocus", true)
     }
 
     function test_numericFieldOwnsCopyAndYieldsSpace() {

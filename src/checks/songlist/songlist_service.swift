@@ -5,6 +5,7 @@ import PorydawCoreCheckNative
 import PorydawDocument
 import PorydawPlayback
 import PorydawProject
+@testable import SwiftCoreCheckLogic
 
 // Fixture-backed ProjectService song-listing checks: the staged decomp
 // project gains one unregistered stray (.mid only) and one partial
@@ -412,7 +413,7 @@ public func runSongListServiceChecks(_ report: CheckReport, fixtureRoot: String)
             file: try MidiFile.decode(opened.midiBytes), config: opened.config,
             source: opened.source, trackBudget: opened.trackBudget)
         let savedSnapshot = try savedDocument.captureSave()
-        _ = try runBlocking { try await service.save(savedSnapshot, bank: nil) }
+        try runBlocking { try await service.save(savedSnapshot) }
         let savedAttributes = try FileManager.default.attributesOfItem(atPath: opened.midiPath)
         let savedDate = savedAttributes[.modificationDate] as? Date
         report.expect(

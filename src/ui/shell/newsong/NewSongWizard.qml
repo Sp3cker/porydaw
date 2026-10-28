@@ -47,10 +47,11 @@ DialogWindow {
                 identityPlayers: wizard.controller.identityPlayers
                 playerIndex: wizard.controller.playerIndex
                 onLabelEdited: function(text): void { identityPage.acceptLabel(wizard.controller.editLabel(text)) }
-                onConstantEdited: function(text): void { wizard.controller.editConstant(text) }
+                onConstantEdited: function(text): void { identityPage.acceptConstant(wizard.controller.editConstant(text)) }
                 onPlayerSelected: function(index): void { wizard.controller.selectPlayer(index) }
             }
             ImportSoundPage {
+                id: soundPage
                 colors: wizard.colors; typography: wizard.typography; layoutSpaces: wizard.layoutSpaces
                 voicegroupOptions: wizard.controller.voicegroupOptions
                 voicegroupText: wizard.controller.voicegroupText
@@ -69,6 +70,7 @@ DialogWindow {
                 onNoCompressionEdited: function(value): void { wizard.controller.changeNoCompression(value) }
             }
         footer: [
+            Button { objectName: "newSongWizardCancel"; text: qsTr("Cancel"); onClicked: wizard.controller.cancel() },
             Button { objectName: "newSongWizardBack"; text: qsTr("< Back"); visible: wizard.controller.page > 0; onClicked: wizard.controller.back() },
             Button {
                 objectName: "newSongWizardNext"
@@ -83,14 +85,13 @@ DialogWindow {
                 visible: wizard.controller.page === 1
                 enabled: wizard.controller.identityComplete && !wizard.controller.busy
                 onClicked: wizard.controller.finish()
-            },
-            Button { objectName: "newSongWizardCancel"; text: qsTr("Cancel"); onClicked: wizard.controller.cancel() }
+            }
         ]
     }
     Shortcut {
         sequences: ["Return", "Enter"]
         context: Qt.WindowShortcut
-        enabled: wizard.visible
+        enabled: wizard.visible && !(wizard.controller.page === 1 && soundPage.voicegroupEditing)
         onActivated: {
             if (!wizard.controller.identityComplete || wizard.controller.busy)
                 return

@@ -181,8 +181,12 @@ private func checkKeyboardDuplicateNotes(_ report: CheckReport, viewport: Docume
         report.expect(
             document.history.currentIdentity != before && copy?.duration == source.duration && copy?.id != source.id,
             cppID: id, message: "duplicate creates one equal-length copy one span later")
+        var matchesMappedExpectation1: Bool = false
+        if let matchedValue = copy {
+            matchesMappedExpectation1 = session.selectedNoteOrder == ([matchedValue.id] as [NoteID])
+        }
         report.expect(
-            copy.map { session.selectedNoteOrder == [$0.id] } == true,
+            matchesMappedExpectation1,
             cppID: id, message: "duplicate selects only its copy")
         report.expect(
             document.history.undoIndex == index + 1
@@ -291,10 +295,14 @@ private func checkKeyboardSplitNotesGrid(_ report: CheckReport, viewport: Docume
                 && session.document.history.undoCount == count + 1,
             cppID: id, message: "grid Split commits exactly one undo step")
         for selected in session.selectedNoteOrder {
-            report.expect(
-                session.document.note(selected).map {
-                    $0.tick >= fixture.tick && $0.tick < fixture.tick + 3 * fixture.step
-                } == true, cppID: id, message: "selected fragment lies inside the source span")
+            var matchesNoteExpectation1: Bool = false
+            if let note = session.document.note(selected) {
+                matchesNoteExpectation1 = note.tick >= fixture.tick
+                if matchesNoteExpectation1 {
+                    matchesNoteExpectation1 = note.tick < fixture.tick + 3 * fixture.step
+                }
+            }
+            report.expect(matchesNoteExpectation1, cppID: id, message: "selected fragment lies inside the source span")
         }
         report.expect(
             session.document.history.undoDocument() && (try? session.document.state.file.encoded()) == original
@@ -395,8 +403,12 @@ private func checkKeyboardJoinNotes(_ report: CheckReport, viewport: DocumentVie
         report.expect(
             fixture.note(at: secondTick) == nil, cppID: id,
             message: "join removes its second note")
+        var matchesMappedExpectation2: Bool = false
+        if let matchedValue = joined {
+            matchesMappedExpectation2 = session.selectedNoteOrder == ([matchedValue.id] as [NoteID])
+        }
         report.expect(
-            joined.map { session.selectedNoteOrder == [$0.id] } == true,
+            matchesMappedExpectation2,
             cppID: id, message: "join selects only the joined note")
         report.expect(
             session.document.history.undoIndex == index + 1
@@ -474,10 +486,15 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, viewport: Docum
         report.expect(
             fixture.note(at: openTick, pitch: UInt8(openPitch))?.isUnterminated == true,
             cppID: id, message: "mixed join does not synthesize an open note's end")
+        var matchesExpectation23: Bool = false
+        if let matchedValue = joined {
+            matchesExpectation23 = session.selectedNotes == [singleton.id, open.id, matchedValue.id]
+        }
+        if matchesExpectation23 {
+            matchesExpectation23 = session.selectedNoteOrder.count == Int(3)
+        }
         report.expect(
-            joined.map {
-                session.selectedNotes == [singleton.id, open.id, $0.id]
-            } == true && session.selectedNoteOrder.count == 3,
+            matchesExpectation23,
             cppID: id, message: "mixed join selects the joined and surviving notes")
         report.expect(
             session.document.history.undoIndex == index + 1
@@ -622,8 +639,12 @@ private func checkKeyboardNoteCommandPopupActivation(
                 report.expect(
                     copy?.duration == source.duration, cppID: id,
                     message: "Duplicate row creates a same-length copy one span later")
+                var matchesMappedExpectation3: Bool = false
+                if let matchedValue = copy {
+                    matchesMappedExpectation3 = session.selectedNoteOrder == ([matchedValue.id] as [NoteID])
+                }
                 report.expect(
-                    copy.map { session.selectedNoteOrder == [$0.id] } == true,
+                    matchesMappedExpectation3,
                     cppID: id, message: "Duplicate row selects its copy")
             case .split:
                 let pieces = (0..<3).compactMap { offset in
@@ -645,8 +666,12 @@ private func checkKeyboardNoteCommandPopupActivation(
                 report.expect(
                     fixture.note(at: secondTick) == nil, cppID: id,
                     message: "Join row removes its partner")
+                var matchesMappedExpectation4: Bool = false
+                if let matchedValue = joined {
+                    matchesMappedExpectation4 = session.selectedNoteOrder == ([matchedValue.id] as [NoteID])
+                }
                 report.expect(
-                    joined.map { session.selectedNoteOrder == [$0.id] } == true,
+                    matchesMappedExpectation4,
                     cppID: id, message: "Join row selects the merged note")
             default:
                 break

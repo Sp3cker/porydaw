@@ -103,6 +103,69 @@ func checkHeldDrawResnapsAnchor(
     if document.history.undoIndex == history + 1 { _ = document.history.undoDocument() }
 }
 
+/// A note planted finer than the current grid stays put under half a stride of travel and
+/// lands on the grid past it.
+@MainActor
+func checkOffGridMoveSnapsToLattice(
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
+) {
+    let session = viewport.session
+    let checkID = "swiftcore/PianoRoll::offGridMoveSnapsToLattice"
+    let document = session.document
+    let camera = viewport.camera
+    let selection = viewport.grid.selection
+    let selected = session.selectedNoteOrder
+    let history = document.history.undoIndex
+    defer {
+        while document.history.undoIndex > history { _ = document.history.undoDocument() }
+        session.setSelectedNotes(selected)
+        _ = viewport.mutateCamera { $0 = camera }
+        _ = viewport.grid.setSelection(selection)
+        grid.refreshFromSession()
+    }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    _ = viewport.mutateCamera { _ = $0.setHScroll($0.snapshot.maxHScroll) }
+    _ = viewport.grid.setSelection(.musical(8))
+    let beat = Double(document.ticksPerBeat)
+    let beatStart = (viewport.camera.tickAtContentX(320) / beat).rounded(.up) * beat
+    let eighth = Int(viewport.grid.snapTicksAt(Tick(beatStart), camera: viewport.camera))
+    let planted = Int(beatStart) + eighth / 4
+    let pitch = grid.pitch(atY: 160)
+    guard pitch >= 0,
+        let id = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(planted), pitch: UInt8(pitch),
+                duration: Tick(eighth / 2), velocity: 100)
+        ]).first
+    else {
+        report.fail(checkID, "could not plant an off-grid note")
+        return
+    }
+    grid.refreshFromSession()
+    guard let rect = selectionRect(id, grid: grid) else {
+        report.fail(checkID, "planted note is not projected")
+        return
+    }
+    let x = rect.x + rect.width / 2
+    let y = rect.y + rect.height / 2
+    let afterPlant = document.history.undoIndex
+    let stridePx = Double(eighth) * viewport.camera.snapshot.pixelsPerTick
+    grid.beginPointer(x: x, y: y, modifiers: 0)
+    grid.updatePointer(x: x + 0.3 * stridePx, y: y)
+    grid.endPointer(x: x + 0.3 * stridePx, y: y)
+    report.expect(
+        document.note(id)?.tick == Tick(planted) && document.history.undoIndex == afterPlant,
+        cppID: checkID, message: "under half a stride of travel the off-grid note stays put")
+    grid.beginPointer(x: x, y: y, modifiers: 0)
+    grid.updatePointer(x: x + 0.6 * stridePx, y: y)
+    grid.endPointer(x: x + 0.6 * stridePx, y: y)
+    let tick = document.note(id).map { Int($0.tick) } ?? planted
+    report.expect(
+        tick != planted && abs(tick - planted) <= eighth
+            && Int(viewport.grid.snapTick(Double(tick), camera: viewport.camera)) == tick,
+        cppID: checkID, message: "past half a stride the off-grid note lands on the 1/8 lattice")
+}
+
 @MainActor
 func checkProjection(
     _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid

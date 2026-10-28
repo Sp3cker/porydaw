@@ -120,6 +120,7 @@ FocusScope {
 
         ListView {
             id: list
+            acceptedButtons: Qt.NoButton
             objectName: "songList"
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -196,7 +197,7 @@ FocusScope {
                         const menuX = position.x
                         const menuY = position.y
                         songMenu.songId = clickedSongId
-                        songMenu.canRegister = root.songs.canRegister(clickedSongId)
+                        root.songs.prepareMenu(clickedSongId)
                         root.songs.selectSong(clickedSongId)
                         list.currentIndex = clickedIndex
                         songMenu.x = menuX
@@ -217,12 +218,6 @@ FocusScope {
             text: loadingPlaceholder.visible ? "" : root.songs.countText
         }
     }
-    component SongMenuEntry: QtObject {
-        property string actionId: ""
-        property string text: ""
-        property bool enabled: true
-        property bool separator: false
-    }
 
     Popup {
         id: songMenu
@@ -230,19 +225,12 @@ FocusScope {
         parent: Overlay.overlay
         font: root.applicationSession.typographyFonts.body
         property int songId: -1
-        property bool canRegister: false
-        readonly property list<QtObject> menuEntries: [
-            SongMenuEntry { actionId: "open"; text: qsTr("Open") },
-            SongMenuEntry { actionId: "newTab"; text: qsTr("Open in New Tab") },
-            SongMenuEntry { separator: true },
-            SongMenuEntry { actionId: "register"; text: qsTr("Register Song"); enabled: songMenu.canRegister },
-            SongMenuEntry { actionId: "delete"; text: qsTr("Delete Song…") }
-        ]
         padding: 0
         // Qt keeps the popup inside the window, like the style's Menu.
         margins: 0
         width: Math.ceil(root.baseFontPx * 15)
-        height: Math.ceil(root.baseFontPx * 1.7) * 4 + root.pad
+        // Five action rows plus the 1px separator: keep in step with prepareMenu.
+        height: Math.ceil(root.baseFontPx * 1.7) * 5 + 1 + root.pad
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
@@ -252,7 +240,8 @@ FocusScope {
             host: songMenu
             rootLevel: true
             rowObjectNamePrefix: "songs.menu."
-            menuModel: songMenu.menuEntries
+            actionObjectNames: ["open", "newTab", "", "register", "delete", "duplicate"]
+            menuModel: root.songs.menuRows
             menuWidth: songMenu.width
             menuHeight: songMenu.height
             rowHeight: Math.ceil(root.baseFontPx * 1.7)
@@ -274,9 +263,13 @@ FocusScope {
         function hoverRow(panel: QuickMenuPanel, index: int): void { panel.highlightedRow = index }
         function activateRow(panel: QuickMenuPanel, index: int): void {
             const chosenId = songMenu.songId
-            switch (index) {
+            const row = root.songs.menuRow(index) as MenuRow
+            if (!row || !row.enabled || row.separator)
+                return
+            switch (row.actionId) {
             case 0: root.songs.requestOpen(chosenId); break
             case 1: root.songs.requestOpenInNewTab(chosenId); break
+            case 5: root.songs.requestDuplicate(chosenId); break
             case 3: root.songs.requestRegister(chosenId); break
             case 4: root.songs.requestDelete(chosenId); break
             }

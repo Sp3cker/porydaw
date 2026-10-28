@@ -360,6 +360,8 @@ ShellNoteVisualsSupport {
                             - Math.floor(noteOrigin.x * dpr),
                          h: Math.ceil((noteOrigin.y + selectedItem.height) * dpr)
                             - Math.floor(noteOrigin.y * dpr) }
+        // Offscreen grabImage returns logical pixels, not grabToImage's physical DPR2 pixels.
+        // Keep the saved artifact for the driver and the Canvas reader for physical ring/border samples.
         var reader = physicalCaptureReader.createObject(plot)
         verify(reader !== null, "the physical DPR2 capture has an image reader")
         tryCompare(reader, "available", true, 3000)

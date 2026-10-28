@@ -30,12 +30,12 @@ New regression coverage is in `tst_ShellWindowShortcuts.qml`, `tst_ShellEventLis
 On a supported host, run:
 
 ```sh
-deno task checks --filter swiftcore --verbose
-deno task checks:shell --filter shellwindow-shortcuts --verbose
-deno task checks:shell --filter shellwindow-editor-keys --verbose
-deno task checks:shell --filter shell-event-list-keyboard-selection --verbose
-deno task checks:shell --filter shellwindow-focus --verbose
-deno task checks:qml-roll --filter swiftroll-window --verbose
+uv run --no-sync dev checks --filter swiftcore --verbose
+uv run --no-sync dev checks:shell --filter shellwindow-shortcuts --verbose
+uv run --no-sync dev checks:shell --filter shellwindow-editor-keys --verbose
+uv run --no-sync dev checks:shell --filter shell-event-list-keyboard-selection --verbose
+uv run --no-sync dev checks:shell --filter shellwindow-focus --verbose
+uv run --no-sync dev checks:qml-roll --filter swiftroll-window --verbose
 ```
 
 ## Catalogue review

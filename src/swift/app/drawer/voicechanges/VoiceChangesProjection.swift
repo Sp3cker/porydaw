@@ -86,7 +86,7 @@ final class VoicePickerProjectionCache {
     }
 
     func filteredProgram(_ text: String) -> Int {
-        resolve(filter: String(text.prefix(64)))
+        resolve(filter: text)
         return programs.first ?? -1
     }
 
@@ -130,8 +130,9 @@ final class VoicePickerProjectionCache {
     func resolve(filter: String) {
         guard self.filter != filter else { return }
         self.filter = filter
-        filtered = rows.filter {
-            filter.isEmpty || $0.label.range(of: filter, options: .caseInsensitive) != nil
+        let query = SearchQuery(filter)
+        filtered = rows.filter { (row: VoicePickerRowHandle) -> Bool in
+            query.isEmpty || query.matches(row.label)
         }
         programs = filtered.map(\.program)
         indices = Dictionary(uniqueKeysWithValues: programs.enumerated().map { ($1, $0) })
@@ -160,19 +161,6 @@ final class VoicePickerProjectionCache {
     }
 }
 
-@MainActor
-@QtBridgeable
-public final class VoiceMenuRowHandle {
-    public var actionId: Int = 0
-    public var text: String = ""
-    public var primitiveName: String = "voiceChangeMenuRow"
-
-    @QtIgnored
-    func matches(_ other: VoiceMenuRowHandle) -> Bool {
-        actionId == other.actionId && text == other.text
-            && primitiveName == other.primitiveName
-    }
-}
 
 /// Captions measured through the native font metrics used by the roll.
 @MainActor
@@ -446,7 +434,7 @@ enum VoiceChangesProjection {
         }
     }
 
-    static func menuRows(for target: VoiceTarget) -> [VoiceMenuRowHandle] {
+    static func menuRows(for target: VoiceTarget) -> [MenuRow] {
         let values: [(Int, String)] =
             target.occurrence == nil
             ? [(VoiceChangesPagePolicy.insertVoiceChangeAction, "Insert voice change")]
@@ -454,11 +442,8 @@ enum VoiceChangesProjection {
                 (VoiceChangesPagePolicy.changeVoiceAction, "Change voice"),
                 (VoiceChangesPagePolicy.deleteMarkerAction, "Delete"),
             ]
-        return values.map { action, text in
-            let row = VoiceMenuRowHandle()
-            row.actionId = action
-            row.text = text
-            return row
+        return values.map { (action: Int, text: String) -> MenuRow in
+            MenuRow(actionId: action, text: text)
         }
     }
 

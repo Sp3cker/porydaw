@@ -1,6 +1,7 @@
 extension ShellPresenter {
     func isActionEnabled(id: String, workspaceLoaded: Bool) -> Bool {
         guard sceneActive, let action = ShellActionCatalog.byId[id] else { return false }
+        guard !session.songTabs.isClosingAll else { return false }
         if session.wavExportPresenter().active { return false }
         if id == "view.polyphony_debugger" || id == "edit.preferences"
             || id == "edit.engine_settings"
@@ -23,16 +24,27 @@ extension ShellPresenter {
         case "file.new_song": return session.projectOpen
         case "file.import_midi": return session.projectOpen
         case "tools.import_sample": return session.projectOpen && !session.sampleStudio().editorOpen
-        case "file.save_song": return session.songOpen && !session.saveInProgress
+        case "tools.split_studio": return session.projectOpen
+        case "file.save":
+            return !session.saveInProgress
+                && (session.editingVoicegroup
+                    ? session.voiceList.isBound && !session.voiceList.bankBusy : session.songOpen)
+        case "file.save_voicegroup":
+            return session.voiceList.isBound && !session.voiceList.bankBusy
+                && !session.saveInProgress
+        case "file.save_all":
+            return session.projectOpen && !session.saveInProgress
+        case "file.save_song":
+            return session.songOpen && !session.saveInProgress
         case "file.register_song":
             return session.songOpen
                 && session.songDockController().selectedTabRegistrationPending()
         case "file.close_tab": return session.songTabs.selectedPage != nil
         case "file.export_wav": return session.wavExportPresenter().exportAvailable
-        case "edit.undo": return session.songOpen && session.canUndo
-        case "edit.redo": return session.songOpen && session.canRedo
+        case "edit.undo": return session.canUndo
+        case "edit.redo": return session.canRedo
         case "edit.song_settings": return session.songOpen
-        case "transport.follow_playhead", "transport.resonance":
+        case "transport.follow_playhead", "transport.resonance", "transport.metronome":
             return true
         case "transport.go_to_start", "transport.play_pause":
             return session.songOpen && session.transportBarPresenter().state != 0
@@ -48,7 +60,7 @@ extension ShellPresenter {
         case "view.event_list":
             return session.songTabs.selectedPage != nil
         case "view.undo_history":
-            return session.songOpen || undoHistoryVisible
+            return session.songOpen || session.voiceList.isBound || undoHistoryVisible
         case "view.automation_drawer", "view.velocity_drawer", "view.voice_changes_drawer":
             return session.songTabs.selectedPage != nil && !session.songTabs.selectedTabShowsEvents
         default: return true  // open project and quit were always enabled
@@ -60,7 +72,7 @@ extension ShellPresenter {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer", "view.polyphony_debugger", "view.undo_history",
             "view.note_names", "transport.loop",
-            "transport.follow_playhead", "transport.resonance":
+            "transport.follow_playhead", "transport.resonance", "transport.metronome":
             return true
         default: return false
         }
@@ -81,6 +93,7 @@ extension ShellPresenter {
         case "transport.loop": return session.transportBarPresenter().loopEnabled
         case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
         case "transport.resonance": return session.transportBarPresenter().resonanceSuppression
+        case "transport.metronome": return session.transportBarPresenter().metronome
         default: return false
         }
     }

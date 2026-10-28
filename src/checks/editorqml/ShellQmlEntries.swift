@@ -5,7 +5,7 @@ enum ShellQmlRegistry {
         let name: String
         let inputFileName: String
         let fixtureFiles: [String]
-        /// run_checks.ts windowing: "offscreen", or "window-system" for real
+        /// Python check-runner windowing: "offscreen", or "window-system" for real
         /// focus/activation delivery (run serially, never beside other windows).
         var windowing = "offscreen"
         /// Qt Quick Test selectors run when the caller passes none, so one
@@ -13,7 +13,7 @@ enum ShellQmlRegistry {
         var testFunctions: [String] = []
     }
 
-    /// The rendered text-contrast audit: one entry per shell state and theme.
+    /// One rendered audit per state/theme; song rows share the Split Studio opening audit.
     private static let textContrastEntries: [Entry] = ["empty", "song"].flatMap { state in
         ["vanilla", "dark-neutral-high", "immaterial"].map { mode in
             Entry(
@@ -234,7 +234,9 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
             Entry(
                 name: "shell-tabs-bank-lifetime", inputFileName: "tst_ShellTabsBankLifetime.qml",
-                fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
+                fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym") + [
+                    "sound/voicegroups/fixture_alt.inc"
+                ]),
             Entry(
                 name: "shell-tabs-reload", inputFileName: "tst_ShellTabsReload.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test", "mus_route102", "mus_gym")),
@@ -338,6 +340,7 @@ enum ShellQmlRegistry {
                     "ShellExport::test_loopOptions",
                     "ShellExport::test_tailOptions",
                     "ShellExport::test_fileDialogMemory",
+                    "ShellExport::test_formatSelectionSurvivesCancelAndNewWindow",
                 ]),
             Entry(
                 name: "shell-export-render", inputFileName: "tst_ShellExport.qml",
@@ -346,6 +349,13 @@ enum ShellQmlRegistry {
                     "ShellExport::test_exportRendersLiveSessionAndStopsPlayback",
                     "ShellExport::test_modalRenderBlocksInputAndCancels",
                     "ShellExport::test_writeFailureReportsAndLeavesNoFile",
+                ]),
+            Entry(
+                name: "shell-export-mp3", inputFileName: "tst_ShellExport.qml",
+                fixtureFiles: songs("mus_route101", "mus_route102"),
+                testFunctions: [
+                    "ShellExport::test_mp3ExportUsesSelectedFormatAndExtension",
+                    "ShellExport::test_mp3CancelRemovesIncompleteOutput",
                 ]),
             Entry(
                 name: "shell-sample-studio", inputFileName: "tst_ShellSampleStudio.qml",
@@ -370,11 +380,23 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101") + [
                     "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
                     "samplesources/tone.flac", "samplesources/zones.sf2",
+                    "sound/voicegroups/fixture_alt.inc",
                 ]),
             Entry(
                 name: "shell-sample-studio-refusal",
                 inputFileName: "tst_ShellSampleStudioRefusal.qml",
                 fixtureFiles: songs("mus_route101")),
+            Entry(
+                name: "shell-split-studio-save", inputFileName: "tst_ShellSplitStudioSave.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "Makefile", "audio_rules.mk", "samplesources/hires_tone.wav",
+                    "sound/voice_groups.inc",
+                ]),
+            Entry(
+                name: "shell-edit-in-studio", inputFileName: "tst_ShellEditInStudio.qml",
+                fixtureFiles: songs("mus_route101") + [
+                    "sound/voice_groups.inc", "sound/voicegroups/fixture_alt.inc",
+                ]),
             Entry(
                 name: "shell-settings", inputFileName: "tst_ShellSettings.qml",
                 fixtureFiles: songs("mus_route101"),

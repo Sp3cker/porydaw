@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawCoreCheckNative
+@testable import SwiftCoreCheckLogic
 
 // Tags for the checked-in independent value expectations below.
 internal enum CoreMidiOracleValueOp: UInt32 {
@@ -103,9 +104,11 @@ private func assertTempoProjection(
     _ timeline: PlaybackTimeline, tempoValues: [Int],
     cppID: String, report: CheckReport
 ) {
-    let tickOneTempos = timeline.events.filter {
-        $0.type == playbackTempoEventType && $0.tick == 1
+    let isTickOneTempo: (PlaybackEvent) -> Bool = { event in
+        let isTempo: Bool = event.type == playbackTempoEventType
+        return isTempo && event.tick == 1
     }
+    let tickOneTempos = timeline.events.filter(isTickOneTempo)
     report.expectEqual(
         expected: tempoValues.count, actual: tickOneTempos.count, cppID: cppID,
         what: "tick-one tempo event count")
@@ -118,7 +121,8 @@ private func assertTempoProjection(
         expected: [UInt64](repeating: 230, count: tempoValues.count),
         actual: tickOneTempos.map(\.sample), cppID: cppID,
         what: "tick-one tempo sample positions")
-    let noteOns = timeline.events.filter { $0.type == 0x9 }
+    let isNoteOn: (PlaybackEvent) -> Bool = { $0.type == 0x9 }
+    let noteOns = timeline.events.filter(isNoteOn)
     report.expectEqual(expected: 1, actual: noteOns.count, cppID: cppID, what: "one scheduled note-on")
     report.expectEqual(
         expected: [Tick(2)], actual: noteOns.map(\.tick), cppID: cppID,
@@ -129,7 +133,8 @@ private func assertTempoProjection(
     report.expectEqual(
         expected: [UInt8(0)], actual: noteOns.map(\.track), cppID: cppID,
         what: "note-on engine track")
-    let noteOffs = timeline.events.filter { $0.type == 0x8 }
+    let isNoteOff: (PlaybackEvent) -> Bool = { $0.type == 0x8 }
+    let noteOffs = timeline.events.filter(isNoteOff)
     report.expectEqual(
         expected: [Tick(4)], actual: noteOffs.map(\.tick), cppID: cppID,
         what: "note-off tick")
@@ -236,8 +241,10 @@ func engineMappingProjection(_ report: CheckReport) {
             expected: [0, 0], actual: raw.otherEvents.map(\.track), cppID: cppID,
             what: "pressure events map to engine zero")
         let expectedNoteKeys = Array(60...74)
-        let noteOns = raw.events.filter { $0.type == 0x9 }
-        let noteOffs = raw.events.filter { $0.type == 0x8 }
+        let isNoteOn: (PlaybackEvent) -> Bool = { $0.type == 0x9 }
+        let isNoteOff: (PlaybackEvent) -> Bool = { $0.type == 0x8 }
+        let noteOns = raw.events.filter(isNoteOn)
+        let noteOffs = raw.events.filter(isNoteOff)
         report.expectEqual(
             expected: 15, actual: noteOns.count, cppID: cppID,
             what: "mapped note-on event count")
@@ -436,8 +443,9 @@ public func runMusicalSemanticsSuite(_ report: CheckReport) {
     for cc in 0...255 {
         let controller = UInt8(cc)
         let domain = TimeDefaults.laneDomain(for: controller)
+        let defaultValue: Int = TimeDefaults.controllerDefault(for: controller).map { Int($0) } ?? -1
         coreMidiExpectOracleValue(
-            Int64(TimeDefaults.controllerDefault(for: controller).map(Int.init) ?? -1),
+            Int64(defaultValue),
             .controllerDefault, Int64(cc), row: "controller-\(cc)-default",
             cppID: timeDefaultsID, report: report)
         coreMidiExpectOracleValue(

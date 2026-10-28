@@ -16,6 +16,7 @@ extension ApplicationSession {
         polyphony.setVisible(showing: false)
         polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
+        voiceList.releaseVoicegroup()
         audio?.unload()
         refreshDocumentState()
         // Keep the project alive until every released document and any in-flight
@@ -35,6 +36,34 @@ extension ApplicationSession {
             _ = await closing?.value
             await service?.close()
         }
+    }
+
+    @QtIgnored
+    func guardSplitStudioClose(
+        tab: SongTabSession? = nil, proceed: @escaping () -> Void, cancel: @escaping () -> Void
+    ) {
+        guard let workflow = kitStudioWorkflow else {
+            proceed()
+            return
+        }
+        let source: KitStudioCloseGuard.Source
+        if tab != nil {
+            source = .tab
+        } else if pendingProjectSwitch != nil {
+            source = .project
+        } else {
+            source = .quit
+        }
+        workflow.guardClose(source: source, proceed: proceed, cancel: cancel)
+    }
+
+    @QtIgnored
+    func offerSplitStudioOrphans(proceed: @escaping () -> Void, cancel: @escaping () -> Void) {
+        guard hasSplitStudioCreatedSamples, let workflow = kitStudioWorkflow else {
+            proceed()
+            return
+        }
+        workflow.offerOrphanCleanup(proceed: proceed, cancel: cancel)
     }
 
     /// The gate's Save answer for one tab, reported back through
@@ -85,7 +114,7 @@ extension ApplicationSession {
             }
             guard let self, !self.isDisposed, self.catalogService === service else { return }
             self.publishSaveState(inProgress: false)
-            self.songTabs.closeAfterSave(tabId: tabId, saved: true)
+            self.songTabs.closeAfterSave(tabId: tabId, saved: !session.document.isDirty)
         }
     }
 
@@ -102,16 +131,16 @@ extension ApplicationSession {
             return
         }
         publishSaveState(inProgress: true, error: "")
-        let service = catalogService
-        let lease = target.lease
+        let group = target.session
         Task { [weak self] in
             var saved = true
             do {
-                guard let service else { throw ProjectServiceError.serviceClosed }
-                _ = try await service.saveBank(lease: lease)
+                try await group.save()
+                await self?.refreshVoicegroupCatalog()
+                self?.voiceList.refreshRetainedGroups()
             } catch {
                 saved = false
-                let message = String(describing: error)
+                let message = "Voicegroup \(target.title): \(error)"
                 self?.publishLastSaveError(message)
                 self?.publishOperationFailure(message: message)
             }
@@ -121,15 +150,55 @@ extension ApplicationSession {
     }
 
     @QtIgnored
-    func dirtyBanksForClose() -> [AppliedBankEdit] {
-        catalogService?.bankViews.dirtyBanks() ?? []
+    func discardBankBeforeClose(_ target: BankCloseTarget) {
+        guard !saveInProgress else {
+            songTabs.bankCloseAfterSave(saved: false)
+            return
+        }
+        publishSaveState(inProgress: true, error: "")
+        let group = target.session
+        Task { [weak self] in
+            var discarded = true
+            do {
+                try await group.discard()
+                self?.voiceList.refreshRetainedGroups()
+            } catch {
+                discarded = false
+                let message = "Voicegroup \(target.title): \(error)"
+                self?.publishOperationFailure(message: message)
+                self?.publishLastSaveError(message)
+            }
+            self?.publishSaveState(inProgress: false)
+            self?.songTabs.bankCloseAfterSave(saved: discarded)
+        }
+    }
+
+    @QtIgnored
+    func dirtyBanksForClose() -> [VoicegroupSession] {
+        catalogService?.bankViews.dirtySessions() ?? []
     }
 
     @QtIgnored
     func closeAllResolved(closed: Bool) {
+        guard closed else {
+            finishCloseAllResolved(closed: false)
+            return
+        }
+        offerSplitStudioOrphans(
+            proceed: { [weak self] in self?.finishCloseAllResolved(closed: true) },
+            cancel: { [weak self] in self?.finishCloseAllResolved(closed: false) })
+    }
+
+    private func finishCloseAllResolved(closed: Bool) {
+        // Approved release stays in the canonical close state until new ownership is installed.
+        if !closed { songTabs.setClosingAll(false) }
+        if closed, pendingProjectSwitch != nil { isReplacingProject = true }
+        refreshDocumentState()
+        songTabs.projectSwitchApprovalIndex = nil
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
             guard closed else {
+                finishProjectOpening(generation: pending.generation)
                 songDock.songsLoading = false
                 Task { await pending.service.close() }
                 persistTabRecipe()
@@ -149,6 +218,7 @@ extension ApplicationSession {
             persistTabRecipe()
             closeCancelled()
         } else {
+            songTabs.releaseAll()
             allTabsClosed()
         }
     }
@@ -160,8 +230,12 @@ extension ApplicationSession {
     }
 
     func hostClosingImpl() {
+        kitStudioWorkflow?.dispose()
         closeSampleStudio()
         isDisposed = true
+        songTabs.cancelCloseSettlement()
+        songTabs.setClosingAll(true)
+        finishProjectOpening(generation: projectOpeningGeneration)
         if case .preparing(let task) = audioReadiness { task.cancel() }
         if let pending = pendingProjectSwitch {
             pendingProjectSwitch = nil
@@ -194,7 +268,12 @@ extension ApplicationSession {
     func requestCloseAllImpl() {
         persistTabRecipe()
         isHostCloseWalk = true
-        songTabs.startCloseAll()
+        guardSplitStudioClose(
+            proceed: { [weak self] in self?.songTabs.startCloseAll() },
+            cancel: { [weak self] in
+                self?.isHostCloseWalk = false
+                self?.closeCancelled()
+            })
     }
 
     // MARK: - Save conflict
@@ -253,12 +332,10 @@ extension ApplicationSession {
                     message: "Song saved, but the song list could not refresh: \(error)")
             }
             guard let self, !self.isDisposed, self.catalogService === service else { return }
-            await self.refreshVoicegroupCatalog()
-            guard !self.isDisposed, self.catalogService === service else { return }
             self.publishSaveState(inProgress: false)
             if tabId != -1 {
                 self.songTabs.savingCloseId = tabId
-                self.songTabs.closeAfterSave(tabId: tabId, saved: true)
+                self.songTabs.closeAfterSave(tabId: tabId, saved: !session.document.isDirty)
             }
         }
     }

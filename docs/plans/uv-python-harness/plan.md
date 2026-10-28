@@ -1,0 +1,126 @@
+# uv/Python harness cutover
+
+Base: `4e20bd87`. Controller writes Python; m1 (Claude Opus 5.5) proposes and judges every file. User priorities: agent ergonomics, build attribution and environment download cost, then removing accumulated complexity. Clean cutover, no Deno shims. External `poryaaaa` is outside the migration.
+
+## Shared contract
+
+One root uv project, lockfile, editable `porydaw_dev` package under `tools/`, console command `dev`. Python 3.13 pinned by `.python-version`, floor 3.13. uv 0.13.0 is the bootstrap version. Default dependencies: pinned Ninja; default dev group: pinned Ruff; optional `qt` group: aqtinstall at the existing exact git revision required by Qt 6.11 on Windows. Host prerequisites: Git, CMake >=3.24, C/C++ compiler/SDK, Swift >=6.4. No automatic privileged host installs, second Python environment, npm, task-runner dependency or type-checker runtime.
+
+Provision: `uv sync --locked`. Warm: `uv run --no-sync dev <command>`. Qt setup explicitly syncs `--locked --group qt` only when Qt must be downloaded, then runs aqt with the current interpreter. This work is attributed as environment provisioning, not native build time. A root guard compares cwd's Git toplevel with the package's owning repository before any mutation; subdirectories within that repository are accepted. Lazy command imports avoid loading checks/profiling on help/build paths.
+
+Run `uv sync --locked` once in each new worktree and after edits to `pyproject.toml` or `uv.lock`; warm `--no-sync` commands intentionally do not repair missing environments. Python 3.13 is security-maintained; the pin favors its smaller/faster harness runtime over new language features.
+
+Command names retain the meaningful existing lane names. `setup:check` becomes `tools:check`; add `checks:run <binary>` and `qt:patch <prefix>` for prebuilt CI consumers. Bare `dev` prints the command index successfully; remove the misleading bare `build` alias. Baseline writes exist only as distinct baseline commands, not flags on read-only checks. Remove obsolete `--reporter`, `--no-build` special diagnostics and `--dry-run`. Checks default to incremental build; preserve platform lanes, fixtures, serial native-window execution, offscreen pooling, opt-in selection, terminal Qt payload and nonzero empty-selection/failure outcomes.
+
+Build attribution: elapsed environment preparation, dependency validation, configure, Swift-object reconciliation and native build phases. Persist full streamed output and per-command native durations in `build/<config>/build.log`; concise actionable stdout/stderr. Ninja records are grouped by `(start, end, command hash)`, not timestamps alone. Native command durations overlap and must not be represented as a wall-time partition. Snapshot comparison must not accidentally report historical edges as current work. Setup reports provisioning separately. Do not invent wire-byte measurements: distinguish compressed release/wheel sizes, uv's reported downloads and installed disk footprint.
+
+Keep the Swift compile-directive SHA stamp semantics and pre/post-build reconciliation, including reconfiguration inside `cmake --build`. Support `.o` and `.obj` outputs. Existing trees retain cached Qt; an explicit setup Qt selection forces reconfiguration when changed. macOS swiftly pin/in-use checks, ASAN compiler pairing and bundle paths remain. Windows VsDevCmd and Swift runtime/SDK setup remain; unsupported Windows ASAN is rejected. No native application behavior changes; obsolete harness comments may change in Swift/CMake.
+
+Approved prerequisite repair: reproduce the main checkout's macOS header-policy fix in this worktree. Set `CMAKE_NO_SYSTEM_FROM_IMPORTED` before Qt discovery; remove the redundant interface-system helper and per-target overrides. The first native build reproduced `/usr/local/include/QtCore` shadowing Qt 6.11; the user explicitly requested reapplying the fix here.
+
+Tests exercise consumer behavior and failure boundaries, not help wording, wiring, literal argument copies or incidental defaults. Use stdlib unittest. Preserve baseline findings/count semantics without re-pinning. Verification is controller-owned after a batch settles; m1 is read-only and does not build/lint/test/format. Each batch includes CLI/runtime smoke, not tests alone. Review fixes remain within the same task. Checkpoint accepted batches before later tasks reuse their files; push every commit.
+
+No proof ledgers exist at this base. Retire reader/anchor/tool-command instructions; any retained ledger guidance applies only if a surface has an actual ledger.
+
+## File-by-file adjudication
+
+All source paths below are relative to `tools/`; Python owners are relative to `tools/porydaw_dev/`.
+
+| TypeScript file | Controller decision on m1 proposal | Python owner / deletion |
+|---|---|---|
+| cli.ts | Agree on console dispatcher, lazy imports, root guard, lane orchestration; disagree on implicit uv sync during warm execution | cli.py |
+| build.ts | Agree on merged configuration and streamed log; fix attribution grouping and include Windows .obj outputs | build.py |
+| build_output.ts | Agree; preserve actionable compiler/linker/CMake diagnostics and project-warning filtering | build_output.py |
+| checks_options.ts | Agree; argparse and terminal Qt split; remove redundant flags | checks.py + cli.py |
+| checks_reporter.ts | Agree on folding/deletion; default shows failure blocks, severity-classified diagnostics and summary; passing detail requires --verbose or terminal --qt | checks.py |
+| checks_walls.ts | Agree on deletion; disagree on introducing a persistent duration cache | Delete; manifest order within scheduling classes |
+| run_checks.ts | Agree on merged runner and threads; disagree on removing classification validation that can lead to false success; ensure child cleanup on interruption | checks.py |
+| format.ts | Agree; changed Swift hunks, whole-file opt-in, Ruff for Python; no compiler-command quoting machinery | format.py |
+| local_build_environment.ts | Agree; split Qt ownership from build policy; uv replaces venv marker paths | qt.py + build.py |
+| native_build_tool_installers.ts | Agree; privileged/interactive installs become explicit host-prerequisite instructions | Delete |
+| native_build_tools.ts | Agree; uv owns Python/Ninja, configure owns compile/link probes | setup.py |
+| poryaaaa_source.ts | Agree; shared canonical checkout validation remains, simplify redundant wrapping | poryaaaa.py |
+| qml_aot.ts | Agree on ratchet semantics and separate baseline command; default output is one summary plus failures, per-file details require --verbose | qml_aot.py |
+| qt_version_number_patch.ts | Agree; retain narrowly scoped idempotent Windows importer patch | qt.py |
+| qtbridge_surface.ts | Agree on lexer/model and finding keys; fix the inherited key-path emission bug (`\.signal` / `\Owner.signal`); no proof tooling | bridge_surface.py |
+| setup.ts | Agree on shared build path and four high-level stages; disagree on nested implicitly syncing uv run; explicitly time Qt environment sync | setup.py |
+| setup_reporter.ts | Agree; fold stage reporting into setup, remove heartbeat machinery | setup.py |
+| setup_swift_test.ts | Agree; removed quoting/installer behavior needs no re-pinned tests | Delete |
+| setup_test.ts | Agree on deletion; retain only meaningful Qt selection behavior tests | tools/tests/test_qt.py |
+| startup_ab.ts | Agree on alternating launches and stdlib statistics; handle one-sample quartiles explicitly | bench.py |
+| startup_bench.ts | Agree on shared measurement; remove compatibility budget default; require --budget-ms with --check; reject nonfinite deadlines/budgets | bench.py |
+| swift_toolchain.ts | Agree; CMake owns SWIFTC parsing, retain selected driver paths and pinned Swift validation | build.py + setup.py |
+| worktree.ts | Agree; same canonical dependency policy, no stale sync hints or redundant URL override | worktree.py |
+| xctrace.ts | Agree; argparse command front end, same JSON metrics and schema semantics | xctrace/cli.py |
+| xctrace/compare.ts | Disagree with mixed analysis module; retain separately named comparison concern | xctrace/compare.py |
+| xctrace/inline.ts | Disagree with mixed analysis module; retain separately named inline-call concern | xctrace/inline.py |
+| xctrace/summarize.ts | Disagree with mixed analysis module; retain separately named summary concern | xctrace/summarize.py |
+| xctrace/tables.ts | Agree; merge native export decoding into one owned module; ensure identity cache cannot alias recycled objects | xctrace/export.py |
+| xctrace/toc.ts | Agree; merge export metadata, schema precedence and dates into export owner | xctrace/export.py |
+| xctrace/xml.ts | Agree; stdlib expat, streamed rows, id/ref identity, unresolved-ref failure and process reap | xctrace/export.py |
+| lib/exec.ts | Agree; direct subprocess calls replace shallow wrapper | Delete |
+
+## Tasks and review milestones
+
+1. **Foundation and build** — SDD-track: package/root contract, canonical dependency ownership, platform build correctness and attribution. Write `pyproject.toml`, `.python-version`, lockfile, package init, CLI foundation, `build.py`, `build_output.py`, `qt.py`, `poryaaaa.py`, `setup.py`, `worktree.py`, corresponding meaningful tests. Verify locked sync, root isolation, real debug build/no-op, Swift flag invalidation, Qt selection/patch boundaries and attribution. m1 judges every new file and every source disposition. Checkpoint before adding further CLI commands.
+2. **Checks and source guards** — SDD-track: harness process lifetime, fixture isolation, concurrent scheduling and static source lexing. Add checks, formatter, bridge and QML AOT owners; complete their CLI commands. Verify native suite, shell/drawer/roll lanes, bridge/AOT parity, failure/empty/Qt payload selection and formatter changed-hunk behavior. m1 per-file review; checkpoint before further CLI reuse.
+3. **Benchmark and Instruments** — SDD-track: subprocess cleanup, deadline correctness, XML identity and weighted aggregation. Add bench and xctrace owners and commands. Verify real native submitted-frame launches and a real trace against the original TS JSON analysis before deleting originals; edge tests for refs, interruption/deadlines and statistical boundaries. m1 per-file review; checkpoint.
+4. **Cutover and integration** — Direct mechanical callers plus SDD integration gate: remove all 31 TS files and deno.json/lock; update workflows, hooks, active docs, authorized AGENTS guidance and obsolete proof-command references. Preserve archived docs/plans and external submodule. Verify tools:check, formatting, bridge/AOT, native and QML lanes, isolated environment provisioning, warm offline execution and active-reference sweep. m1 file-by-file integration review, final commit and push.
+
+Source-guard/profiling preservation is judged against original source and actual outputs, not blanket API compatibility. Where an acceptance command uses a transient source or header change, restore that exact task-owned change after observing the result. No user-owned edits are present in this worktree at the base.
+
+## Primary-source references
+
+- uv locking/sync: https://docs.astral.sh/uv/concepts/projects/sync/
+- uv entry points: https://docs.astral.sh/uv/concepts/projects/config/#entry-points
+- uv build backend: https://docs.astral.sh/uv/concepts/build-backend/
+- dependency groups: https://docs.astral.sh/uv/concepts/projects/dependencies/#default-groups
+- Python expat: https://docs.python.org/3/library/pyexpat.html
+
+Measured uv bootstrap on this host: verified 0.13.0 ARM64 archive, 14,692,549 downloaded bytes in 0.778226 s. Not a full environment measurement.
+
+## Foundation checkpoint evidence
+
+m1 accepted all 17 foundation files and all 14 foundation TS dispositions after one fix round. Ruff lint/format and 13 behavioral tests passed. Actual Debug build completed, native Swift flag edit/restore rebuilt selectively, and Release setup reused Qt 6.11.2 without a root installer log. A real `Qt6_DIR-NOTFOUND` cache recovered its prior kit; the next build spent 0 s in explicit configure and 0.040 s in Ninja with no compilation. Console smoke distinguished argument failure (2) from corrupt runtime configuration (1); Qt patch smoke preserved CRLF/UTF-8 and was byte-stable on repeat/unrelated headers.
+
+Locked optional-Qt sync completed in 0.15 s from cache. Cold Qt installation was observed separately; its first post-download lookup failed because aqt now uses the `macos` kit directory, then the corrected setup built Release successfully. Windows environment quoting/encoding is source-reviewed only, not executed on this Mac. Keep strict UTF-16LE environment decoding: malformed environment data should fail rather than inject replacement characters into paths.
+
+## Process and baseline limits
+
+POSIX SIGINT/SIGTERM/SIGHUP take the owned cancellation path; SIGKILL cannot run cleanup. Windows terminates direct children; descendant containment is not guaranteed without a Job Object, and is source-reviewed only here. POSIX post-reap group cleanup retains the theoretical PID-reuse window noted by m1. Baseline values remain unchanged; a future explicit Python AOT baseline update uses codepoint key ordering rather than TS locale ordering.
+
+## Checks checkpoint evidence
+
+Ruff and all 32 behavioral tests passed. Real Release native checks passed 58/58, production shell 91/91, drawer 2/2 and roll 1/1. Native and QML harness baselines/predicates were not edited. Original TS and Python guards both reported bridge 0 findings and AOT 6393/6534 compiled with 141 rejections. These harness counts are not assertion counts; production-startup is an application `--version` smoke, not submitted-frame proof.
+
+m1's first review rejected four details: signal cleanup, noisy default output, standalone formatter discovery and missing qualified-key-path coverage. All four were repaired. Before SIGTERM handling, an owned native check remained alive and its scratch remained after runner exit -15. Afterward, the same scenario exited 130, reaped the child and removed scratch; a permanent isolated process regression also passes. Default native output is now selection plus summary, and a real QML check still prints its severity-classified QWARN without a PASS line.
+
+Actual Swift driver check/edit/check succeeded for a task-owned untracked file; disposable Git smoke proved quoted paths, tracked changed-hunk formatting, preserved unrelated spacing and nonmutating checks. No temporary Swift file remains. Windows formatter discovery is source-reviewed only. Existing/uncertain QML font aliases, null font access, delayed focusInput and DelegateModel cancellation warnings remain visible and outside this harness migration.
+
+## Instruments and benchmark adjudication
+
+The shared `process.py` owns signal cancellation and bounded TERM/KILL reap for benchmark/export children; checks reuse its cancellation scope but retain their registry/global grace. This is an owned lifecycle policy, not a resurrected shallow command wrapper. Python benchmark interruption uses the harness-wide exit 130. A/B labels must be distinct. Standard argparse replaces the bespoke both-side flag splitter and `--launch -- app` alias; recording time-limit is positive finite seconds, not arbitrary xctrace duration strings.
+
+Compare rejects mixed CPU/time weight units rather than preserving the old same-kind-only bug. Native TOC dates retain exported datetime precision. Existing malformed/nonfinite sidecars now fail closed at the first existing candidate; explicit intervals still override sidecars, and both documented names/shapes remain. Inline JSON retains its distinct full run object and explicit whole-run interval, not summary's number/null representation.
+
+Ruff and 45 behavioral tests passed. Real first-frame receipts: three fresh launches; real A/B smoke: A B then B A, two samples per label, same executable (not an A/B performance claim). Budget-miss exit 1 and malformed/missing check inputs exit 2 were observed. Actual benchmark SIGTERM exited 130 and left no owned native app. Python recorded an owned app with Time Profiler for 3 seconds and exported 278 time-profile samples, total 278000000 weight; its first-frame marker was observed.
+
+Original TS summary, main-thread/binary-scoped summary, self-comparison with symbol lookup and complete inline JSON were preserved before deleting originals. Python matches all four parsed JSON payloads exactly on the same real 426-sample trace. The initial inline parity check caught run/interval shape mismatch; it is repaired. The initial 100 ms Python-fixture deadline test expired before its handler installed; a lightweight POSIX fixture with a 500 ms deadline now exercises TERM-ignore escalation and reap. No application/check predicates or baselines were changed.
+
+m1's batch-3 review found an exit-versus-stderr-reader race and lossy fractional epoch interval formatting. Both are repaired: exit drains the reader until EOF or a bounded 250 ms grace, never past the launch deadline; comparison, summary and inline share full-precision interval labels. A permanent real-process test deliberately delays the reader 150 ms; all 46 behavioral tests and Ruff pass. A real trace comparison with fractional epoch sidecar now matches the original TS JSON exactly, not just whole-run metadata. Malformed sidecar errors identify the offending path.
+
+Adjudicated root-guard exemption: benchmark and xctrace commands use package-owned default app artifacts or caller-supplied external paths and do not mutate source/build trees, so they do not call Git. All build/check/format/setup/LSP/guard/worktree/Qt/tools commands retain the owning-repository guard before mutation. Bench launch cwd remains the owning repository; xctrace preserves caller cwd. Actual app benchmark and trace summary succeeded from `/tmp` with Git absent from PATH; an outside-owner build still failed. Windows sanitized-PATH behavior remains source-reviewed only.
+
+## Final cutover
+
+Batch 3 was accepted file by file by m1 and checkpointed/pushed as `8abb6297`. All 31 first-party TS files (7,932 lines) and both Deno config files are removed. The batch-3 package/tests snapshot was 5,512 Python lines; the final index repair adds two behavioral regressions. Active workflows, hook, published install guidance, AGENTS and build/proof/profile rules use uv/Python. Historical command records remain labelled by their original verification context; no old runtime claim is attributed to the new harness.
+
+An isolated fresh uv cache, managed-Python directory and venv synchronized default dependencies in 1.731 s: Python 3.13.16 download 24.1 MiB, Ruff 8.8 MiB, project/Ninja/Ruff installed, no Qt installer group. Locked offline repeat 0.015 s; the fresh environment's console help succeeded offline. This excludes the separately measured uv binary and native SDK/Swift/Qt provisioning. All three workflow YAML files parsed successfully; no Windows/CI runtime is claimed.
+
+After cutover, Release build:checks passed (16 steps, 4.0 s, Ninja 3.937 s). Actual prebuilt native catalog 58/58 passed in 11.73 s; bridge 0 findings; AOT 6393/6534 compiled, 141 rejected. Production shell 91/91, drawer 2/2, roll 1/1 and standalone backups 9/9 passed. Existing Qt font/focus/delegate warnings remained visible; no assertions failed.
+
+The initial narrow reference scan missed the root AGENTS LSP command and bare runner names. Corrected them and expanded the final specialized grep to root Markdown guidance, .github, .githooks, .vscode, .omp agents/rules/LSP config, .claude, src, tools, cmake, root CMakeLists, docsrc and top-level docs/ADR. Searched retired task commands, all deleted TS-owner names and bare runner/proof names. Only dated historical Deno execution records in the Windows and keyboard audit documents remain; there are no active command references in that scope. Historical plans/old docs, third-party external/vendor trees and generated build/cache trees are excluded. First-party TS/Deno config glob inventory is empty.
+
+Final runtime smoke exposed the old Python Swift-index helper falsely reporting 0/0 success. m1 proposed/accepted replacing archive-shape parsing with the configured Ninja's expanded compilation database. Controller implemented all source entries, disjoint module scratch outputs, zero-command failure before writes and success-only freshness stamps; no old graph fallback remains. Corrected SourceKit's active search directory from build to build/debug. Real Debug build:checks passed (69 steps, 22.4 s); final post-comment build was 1 step, 0.1 s (Ninja 0.059 s). The final index fixed 635 entries and indexed 23/23 targets; --check reported fresh. A real SourceKit JSON-RPC session using the repository configuration and worktree root returned 205 TimeRange references, then exited 0 with empty stderr. The host tool's main-rooted client could not observe the worktree index; this is not counted as a successful reference check.
+
+Final tools:check passed 48 tests in 2.333 s with Ruff; format --check passed all 29 selected Python files. Locked/offline --no-dev installed only project and Ninja; its console launched a real first frame from /tmp under PATH=/usr/bin:/bin (385.22 ms, one sample, not a performance comparison). Runtime-only CI jobs skip Ruff's 8.8 MiB wheel. An owned disposable worktree based on the current feature checkpoint was created by dev worktree:create, synchronized offline, passed its owning-root bridge guard and used the canonical shared poryaaaa pin; the worktree/branch were removed afterward. No Windows or workflow execution is claimed.

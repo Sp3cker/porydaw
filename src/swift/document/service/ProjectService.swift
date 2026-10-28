@@ -92,6 +92,30 @@ public struct BankVoice: Equatable, Sendable {
     }
 }
 
+/// Document-value form of one complete kit edit.
+public struct KitEditValue: Equatable, Sendable {
+    public var voicegroup: String
+    public var slot: Int
+    public var parent: BankVoice?
+    public var subgroupSymbol: String
+    public var children: [BankVoice?]
+    public var tableName: String?
+    public var table: [UInt8]?
+
+    public init(
+        voicegroup: String, slot: Int, parent: BankVoice?, subgroupSymbol: String,
+        children: [BankVoice?], tableName: String?, table: [UInt8]?
+    ) {
+        self.voicegroup = voicegroup
+        self.slot = slot
+        self.parent = parent
+        self.subgroupSymbol = subgroupSymbol
+        self.children = children
+        self.tableName = tableName
+        self.table = table
+    }
+}
+
 /// The scalar envelope of a loaded tone; keysplit/drumkit tones carry none.
 public struct BankToneAdsr: Equatable, Sendable {
     public var attack: Int32
@@ -241,12 +265,8 @@ public struct AppliedBankEdit: Sendable {
     /// Live blank-materialization token, nil unless this edit materialized a
     /// blank slot. Single-shot: consumed by the matching revert.
     public var materializationToken: UInt64?
-}
-
-/// An ordered save receipt. The bank stage, when run, refreshes the lease.
-public struct SaveReceipt: Sendable {
-    public var flagsWritten: Bool
-    public var bank: AppliedBankEdit?
+    /// Raw insertion delta retained by whole-kit history; scalar edits use tokens.
+    public var materialization: BlankSlotMaterialization? = nil
 }
 
 /// The registration plan behind the native Register Song confirmation
@@ -334,7 +354,87 @@ public actor ProjectService {
     }
     internal func publish(_ value: AppliedBankEdit, from source: ProjectStore) async {
         guard !closed, store === source else { return }
-        await bankViews.publish(value)
+        await bankViews.publish(value, service: self)
+    }
+
+    private func withStore<Value: Sendable>(
+        lease: ProjectBankLease,
+        operation: (isolated ProjectService, ProjectStore) async throws -> Value
+    ) async throws -> Value {
+        let store = try requireStore()
+        guard lease.publicationOwner == store.publicationOwner else {
+            throw ProjectServiceError.serviceClosed
+        }
+        do {
+            let result = try await operation(self, store)
+            guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            return result
+        } catch {
+            throw projectFailure(error)
+        }
+    }
+
+    /// Applies the complete kit through the store and returns the refreshed bound bank;
+    /// the session owns publication. Throws a bank conflict or wrapped project failure.
+    public func applyKitEdit(
+        lease: ProjectBankLease, input: KitEditValue, expected: KitEditValue?,
+        publishResult: Bool = true, materialization: BlankSlotMaterialization? = nil
+    ) async throws -> AppliedBankEdit {
+        try await withStore(lease: lease) { (service: isolated ProjectService, store: ProjectStore) in
+            let table: KeysplitTable?
+            switch (input.tableName, input.table) {
+            case let (.some(name), .some(bytes)) where bytes.count == 128:
+                table = KeysplitTable(name: name, startingNote: 0, maxNote: 128, table: bytes)
+            case (.none, .none):
+                table = nil
+            default:
+                throw ProjectServiceError.operationFailed("A keysplit table requires a name and 128 bytes.")
+            }
+            let converted = try KitEditInput(
+                id: lease.id, slot: input.slot, parent: input.parent.map(projectVoice),
+                subgroupSymbol: input.subgroupSymbol,
+                children: input.children.map { (voice: BankVoice?) in try voice.map(projectVoice) },
+                table: table, materialization: materialization)
+            let expectation: KitParentExpectation
+            if let expected {
+                expectation = .parent(try expected.parent.map(projectVoice))
+            } else {
+                expectation = .authoritative
+            }
+            let result = try await store.applyKitEdit(
+                lease: lease, input: converted, expected: expectation)
+            let applied = try bankEditResult(result)
+            if publishResult { await service.publish(applied, from: store) }
+            return applied
+        }
+    }
+
+    /// Reads the bound slot's staged kit (parent-only for a non-kit or undefined slot) without
+    /// publishing a bank transition; throws if the lease or source is unavailable.
+    public func readKit(lease: ProjectBankLease, slot: Int) async throws -> KitEditValue {
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
+            let snapshot = try await store.kitSnapshot(lease: lease, slot: slot)
+            return KitEditValue(
+                voicegroup: snapshot.voicegroup, slot: slot,
+                parent: snapshot.parent.map(copyVoice),
+                subgroupSymbol: snapshot.subgroupSymbol,
+                children: snapshot.children.map { (voice: VgVoice?) in voice.map(copyVoice) },
+                tableName: snapshot.table?.name, table: snapshot.table?.table)
+        }
+    }
+
+    /// Resolves owned sample PCM through the bank's normal project asset path.
+    public func sampleAsset(lease: ProjectBankLease, symbol: String) async throws -> KitSampleAsset? {
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
+            try await store.sampleAsset(lease: lease, symbol: symbol)
+        }
+    }
+
+    /// Resolves owned programmable-wave words through the bank's normal asset path.
+    public func progWaveWords(lease: ProjectBankLease, symbol: String) async throws -> [UInt32]? {
+        try await withStore(lease: lease) { (_: isolated ProjectService, store: ProjectStore) in
+            try await store.progWaveWords(lease: lease, symbol: symbol)
+        }
     }
 
     /// Captures dirty document bytes without saving the source or its flags.
@@ -382,7 +482,8 @@ internal func projectFailure(_ error: any Error) -> ProjectServiceError {
     return .operationFailed(error.localizedDescription)
 }
 
-internal func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice {
+/// Converts every persisted macro argument without narrowing to editor-visible fields.
+public func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoice {
     guard let macro = PorydawVoicegroup.VgMacro(rawValue: voice.macro) else {
         throw ProjectServiceError.operationFailed("Voice macro ordinal is out of range.")
     }
@@ -394,7 +495,8 @@ internal func projectVoice(_ voice: BankVoice) throws -> PorydawVoicegroup.VgVoi
         sustain: Int(voice.sustain), release: Int(voice.release))
 }
 
-private func copyVoice(_ voice: PorydawVoicegroup.VgVoice) -> BankVoice {
+/// Copies every persisted macro argument into the editor's value representation.
+public func copyVoice(_ voice: PorydawVoicegroup.VgVoice) -> BankVoice {
     let macro = voice.macro.rawValue
     let key = Int32(voice.key)
     let pan = Int32(voice.pan)
@@ -447,7 +549,10 @@ internal func appliedBank(_ lease: ProjectBankLease, token: UInt64?) -> AppliedB
 
 internal func bankEditResult(_ result: ProjectBankEditOutcome) throws -> AppliedBankEdit {
     switch result {
-    case let .applied(lease, _, token): appliedBank(lease, token: token)
+    case let .applied(lease, materialization, token):
+        var applied = appliedBank(lease, token: token)
+        applied.materialization = materialization
+        return applied
     case .conflict: throw ProjectServiceError.bankConflict
     }
 }

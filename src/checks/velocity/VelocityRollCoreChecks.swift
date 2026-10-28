@@ -110,7 +110,7 @@ func drawerVelocityRollCoreDragDefersAndCommits(
             cppID: drawerVelocityRollCoreDragID, what: "one relative delta covers every frozen note at once")
     }
     report.expectEqual(
-        expected: [127, 92], actual: [firstQuiet, firstLater].map { Int($0 ?? 0) },
+        expected: ([127, 92] as [Int]), actual: [firstQuiet, firstLater].map { Int($0 ?? 0) },
         cppID: drawerVelocityRollCoreDragID,
         what: "the staged preview pins to the fixture literal plus the dragged pixels")
     report.expect(
@@ -158,7 +158,7 @@ func drawerVelocityRollCoreDragDefersAndCommits(
             cppID: drawerVelocityRollCoreDragID, what: "the updated previews still share one relative delta")
     }
     report.expectEqual(
-        expected: [96, 60], actual: [secondQuiet, secondLater].map { Int($0 ?? 0) },
+        expected: ([96, 60] as [Int]), actual: [secondQuiet, secondLater].map { Int($0 ?? 0) },
         cppID: drawerVelocityRollCoreDragID,
         what: "the reversed preview pins to the fixture literal minus the dragged pixels")
     report.expect(
@@ -201,7 +201,7 @@ func drawerVelocityRollCoreDragDefersAndCommits(
         cppID: drawerVelocityRollCoreDragID,
         what: "a released drag republishes the staged velocities into the timeline projection")
     report.expectEqual(
-        expected: [96, 60],
+        expected: ([96, 60] as [Int]),
         actual: [document.note(notes[0].id), document.note(notes[1].id)].map { Int($0?.velocity ?? 0) },
         cppID: drawerVelocityRollCoreDragID, what: "the committed value equals the pinned staged preview")
     report.expect(
@@ -716,11 +716,11 @@ func drawerVelocityRollCoreOctaveShortcut(_ report: CheckReport, session: Docume
         expected: Int(notes[2].pitch), actual: Int(document.note(notes[2].id)?.pitch ?? 0),
         cppID: drawerVelocityRollCoreOctaveID, what: "the unselected note keeps its pitch")
     report.expectEqual(
-        expected: [100, 64, 32],
+        expected: ([100, 64, 32] as [Int]),
         actual: [
-            document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity,
-            document.note(notes[2].id)?.velocity,
-        ].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID,
+            Int(document.note(notes[0].id)?.velocity ?? 0), Int(document.note(notes[1].id)?.velocity ?? 0),
+            Int(document.note(notes[2].id)?.velocity ?? 0),
+        ], cppID: drawerVelocityRollCoreOctaveID,
         what: "the octave shortcut preserves every velocity")
     report.expectEqual(
         expected: 100, actual: drawerVelocityTimelineVelocity(fixture.session, notes[0].id),
@@ -762,11 +762,11 @@ func drawerVelocityRollCoreOctaveShortcut(_ report: CheckReport, session: Docume
             document.note(notes[0].id)?.pitch, document.note(notes[1].id)?.pitch, document.note(notes[2].id)?.pitch,
         ].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo reapplies the octave move")
     report.expectEqual(
-        expected: [100, 64, 32],
+        expected: ([100, 64, 32] as [Int]),
         actual: [
-            document.note(notes[0].id)?.velocity, document.note(notes[1].id)?.velocity,
-            document.note(notes[2].id)?.velocity,
-        ].map { Int($0 ?? 0) }, cppID: drawerVelocityRollCoreOctaveID, what: "redo still preserves every velocity")
+            Int(document.note(notes[0].id)?.velocity ?? 0), Int(document.note(notes[1].id)?.velocity ?? 0),
+            Int(document.note(notes[2].id)?.velocity ?? 0),
+        ], cppID: drawerVelocityRollCoreOctaveID, what: "redo still preserves every velocity")
 }
 
 @MainActor

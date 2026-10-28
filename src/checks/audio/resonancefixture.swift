@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawAppAudio
 
 // Signal generators and independent probes translated from resonancefixture.cpp.

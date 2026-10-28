@@ -11,7 +11,7 @@ import QtBridgeCpp
 /// the production `SwiftRollOverlay` composition — the same document the
 /// application's resource engine loads — through Qt Quick Test, with a real
 /// `ApplicationSession` the suite declares as a direct child of the lane's
-/// bootstrap. It owns exactly one `tools/run_checks.ts` manifest entry, refuses
+/// bootstrap. It owns exactly one Python runner manifest entry, refuses
 /// to have its `-input` taken over, and hands Qt Quick Test the staged scratch
 /// directory.
 ///
@@ -23,8 +23,7 @@ import QtBridgeCpp
 /// children.
 @main
 enum RollQmlLane {
-    /// The manifest entry `tools/run_checks.ts --filter swiftroll-window`
-    /// selects.
+    /// Manifest entry selected with `uv run --no-sync dev checks:qml-roll --filter swiftroll-window`.
     static let entryName = "swiftroll-window"
 
     /// Qt Quick Test runs one `tst_*.qml` per child process: each ledger
@@ -86,7 +85,7 @@ enum RollQmlLane {
             return fail("usage: roll_qml_tests <staged-project-directory> [--qt <Qt args>]")
         }
         // The same terminal separator `porydaw_checks` uses: everything after
-        // `--qt` is the Qt Quick Test payload the Deno runner forwarded.
+        // `--qt` is the Qt Quick Test payload the Python runner forwarded.
         var payload = Array(arguments.dropFirst())
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])

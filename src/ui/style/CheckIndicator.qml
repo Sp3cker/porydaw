@@ -7,18 +7,22 @@ import QtQuick.Templates as T
 import Porydaw.Icons
 
 // Fusion's check box frame with a glyph check mark, shared by CheckBox and MenuItem.
+// Callers supply typed palette colors for ahead-of-time compilation.
 Rectangle {
     id: indicator
 
     required property T.AbstractButton control
+    required property color baseColor
+    required property color windowTextColor
+    required property color textColor
     readonly property T.CheckBox checkBox: control as T.CheckBox
     property real baseLightness: 1.6
 
     implicitWidth: Math.round(control.font.pixelSize * 1.1)
     implicitHeight: implicitWidth
     color: control.down
-        ? (Fusion.Fusion.mergedColors(indicator.control.palette.base, indicator.control.palette.windowText, 85) as color)
-        : (Qt.lighter(indicator.control.palette.base, baseLightness) as color)
+        ? (Fusion.Fusion.mergedColors(baseColor, windowTextColor, 85) as color)
+        : (Qt.lighter(baseColor, baseLightness) as color)
     border.color: control.visualFocus
         ? (Fusion.Fusion.highlightedOutline(indicator.control.palette) as color)
         : (Qt.lighter(Fusion.Fusion.outline(indicator.control.palette), 1.1) as color)
@@ -36,7 +40,7 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 2
         icon: Icons.check
-        color: indicator.control.palette.text
+        color: indicator.textColor
         visible: indicator.checkBox ? indicator.checkBox.checkState === Qt.Checked
                                     : indicator.control.checked
     }
@@ -44,7 +48,7 @@ Rectangle {
     Rectangle {
         anchors.fill: parent
         anchors.margins: Math.round(indicator.width / 4)
-        color: indicator.control.palette.text
+        color: indicator.textColor
         visible: indicator.checkBox && indicator.checkBox.checkState === Qt.PartiallyChecked
     }
 }

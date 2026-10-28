@@ -386,7 +386,7 @@ func drawerVelocityLifecycleCancellation(
     editedVoice.pan = editedVoice.pan == 15 ? 14 : 15
     do {
         _ = try runBlocking {
-            try await bankFixture.session.applyBankEdit(
+            try await bankFixture.session.voicegroup.apply(
                 slot: 0, value: editedVoice,
                 expected: originalVoice)
         }
@@ -395,7 +395,7 @@ func drawerVelocityLifecycleCancellation(
         return
     }
     report.expect(
-        bankFixture.session.bankDirty
+        bankFixture.session.voicegroup.value.dirty
             && bankFixture.session.bankSlots[0].voice == editedVoice,
         cppID: drawerVelocityCancellationID,
         message: "the genuine bank edit advances bank state")

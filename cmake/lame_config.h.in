@@ -1,0 +1,27 @@
+/* Configure-equivalent for the bundled LAME 3.100 encoder build (see cmake/Lame.cmake).
+   Mirrors autoconf's macros on standard IEEE-754 targets; only universal headers declared. */
+#ifndef PORYDAW_LAME_CONFIG_H
+#define PORYDAW_LAME_CONFIG_H
+
+#define STDC_HEADERS 1
+#define HAVE_STRCHR 1
+#define HAVE_MEMCPY 1
+#define HAVE_STDINT_H 1
+#define HAVE_INTTYPES_H 1
+#define HAVE_ERRNO_H 1
+#if !defined(_WIN32) && !defined(_WIN64)
+# define HAVE_FCNTL_H 1
+#endif
+
+/* config.h.in fallbacks: no supported target provides these names. */
+#ifndef HAVE_IEEE754_FLOAT32_T
+typedef float ieee754_float32_t;
+#endif
+#ifndef HAVE_IEEE754_FLOAT64_T
+typedef double ieee754_float64_t;
+#endif
+#ifndef HAVE_IEEE854_FLOAT80_T
+typedef long double ieee854_float80_t;
+#endif
+
+#endif

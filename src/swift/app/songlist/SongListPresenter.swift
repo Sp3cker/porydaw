@@ -52,18 +52,8 @@ public final class SongListCategory {
     }
 }
 
-/// The Songs dock's observable list contract, without the widgets.
-///
-/// Mirrors SongListPanel: setSongs keeps only playable listings while
-/// preserving search/sort/category; categories are the labels' shared
-/// prefixes with at least two songs (biggest first), singletons pooling into
-/// Other; the search is per-word substring over label+constant with a
-/// single-word fuzzy-subsequence fallback; ordering is snapshot (ID) order,
-/// case-insensitive alphabetical, or newest MIDI modification first with an ID
-/// tie-break; the loaded song stays selected across rebuilds except mid-search;
-/// and Enter activates the
-/// selection or the first visible row. Context actions report through the
-/// on* closures with the native song ID.
+/// The Songs dock's filtered, sorted catalog and selection contract.
+/// Uses SearchQuery for filtering; defaults to newest MIDI modification first.
 @MainActor
 @QtBridgeable
 public final class SongListPresenter {
@@ -72,6 +62,7 @@ public final class SongListPresenter {
 
     public var rows: QListModel<SongListRow> = QListModel()
     public var categories: QListModel<SongListCategory> = QListModel()
+    public var menuRows: QListModel<MenuRow> = QListModel()
     @QtTracked public var rowCount = 0
     @QtTracked public var totalCount = 0
     /// "%1 songs" or "%1 of %2 songs" while filtered.
@@ -98,6 +89,7 @@ public final class SongListPresenter {
     @QtIgnored public var onSongOpenInNewTabRequested: ((Int) -> Void)?
     @QtIgnored public var onSongRegisterRequested: ((Int) -> Void)?
     @QtIgnored public var onSongDeleteRequested: ((Int) -> Void)?
+    @QtIgnored public var onSongDuplicateRequested: ((Int) -> Void)?
 
     private var songs: [SongListing] = []
     private var visible: [SongListing] = []
@@ -278,9 +270,32 @@ public final class SongListPresenter {
         onSongDeleteRequested?(songId)
     }
 
+    /// Context-menu "Duplicate Song" — instant copy through the New Song
+    /// intake. Only a visible row can be targeted.
+    public func requestDuplicate(songId: Int) {
+        guard visible.contains(where: { $0.id == songId }) else { return }
+        onSongDuplicateRequested?(songId)
+    }
+
     /// Register Song enablement: any song with missing registration entries.
     public func canRegister(songId: Int) -> Bool {
         songs.first { $0.id == songId }?.registrationIncomplete ?? false
+    }
+
+    public func prepareMenu(songId: Int) {
+        menuRows.reset(to: [
+            MenuRow(actionId: 0, text: "Open"),
+            MenuRow(actionId: 1, text: "Open in New Tab"),
+            MenuRow(actionId: 5, text: "Duplicate Song"),
+            MenuRow(actionId: 2, enabled: false, separator: true),
+            MenuRow(actionId: 3, text: "Register Song", enabled: canRegister(songId: songId)),
+            MenuRow(actionId: 4, text: "Delete Song…"),
+        ])
+    }
+
+    public func menuRow(index: Int) -> Optional<MenuRow> {
+        guard menuRows.indices.contains(index) else { return nil }
+        return menuRows[index]
     }
 
     // MARK: - New Song name laws (fork newsongwizard identity field)
@@ -338,7 +353,7 @@ public final class SongListPresenter {
         categoryIndex = built.firstIndex { $0.prefix == previous } ?? 0
     }
 
-    private func matchesFilters(_ song: SongListing) -> Bool {
+    private func matchesFilters(_ song: SongListing, query: SearchQuery) -> Bool {
         let category = currentCategoryPrefix()
         if category == Self.otherPrefix {
             if knownPrefixes.contains(Self.prefix(of: song.label)) {
@@ -347,24 +362,15 @@ public final class SongListPresenter {
         } else if !category.isEmpty && !song.label.hasPrefix(category) {
             return false
         }
-
-        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if query.isEmpty {
             return true
         }
-        let hay = (song.label + " " + song.constant).lowercased()
-        let words = query.split(separator: " ", omittingEmptySubsequences: true)
-        if words.allSatisfy({ hay.contains($0) }) {
-            return true
-        }
-        // Fuzzy fallback: "musrival" finds mus_rival.
-        return words.count == 1
-            && (Self.isSubsequence(query, song.label.lowercased())
-                || Self.isSubsequence(query, song.constant.lowercased()))
+        return query.matches(song.label, song.constant)
     }
 
     private func rebuildList() {
-        var shown = songs.filter { matchesFilters($0) }
+        let query = SearchQuery(searchText)
+        var shown = songs.filter { (song: SongListing) -> Bool in matchesFilters(song, query: query) }
         if sortIndex == 1 {
             shown.sort { a, b in
                 let order = a.label.caseInsensitiveCompare(b.label)
@@ -413,7 +419,7 @@ public final class SongListPresenter {
 
         // Keep the loaded song selected across rebuilds — except mid-search,
         // where the selection must stay clear so Enter takes the first match.
-        if currentSongId >= 0 && searchText.trimmingCharacters(in: .whitespaces).isEmpty,
+        if currentSongId >= 0 && query.isEmpty,
             shown.contains(where: { $0.id == currentSongId })
         {
             selectedSongId = currentSongId
@@ -456,15 +462,5 @@ public final class SongListPresenter {
         case "ph_": return "Bard phonemes (ph_)"
         default: return prefix + "*"
         }
-    }
-
-    private static func isSubsequence(_ needle: String, _ hay: String) -> Bool {
-        var index = needle.startIndex
-        for character in hay where index < needle.endIndex {
-            if character == needle[index] {
-                index = needle.index(after: index)
-            }
-        }
-        return index == needle.endIndex
     }
 }

@@ -34,7 +34,6 @@ public enum ShellAppearance {
         let sampleWaveformInk: String
         let sampleCropHandle: String
         let sampleLoopHandle: String
-        let sampleSeamEndInk: String
     }
 
     // Secondary and severity inks retain AA contrast on their darkest surfaces.
@@ -50,7 +49,7 @@ public enum ShellAppearance {
         automationNodeInk: "#EA3C3C", automationTabBackground: "#E7E1DB",
         automationTabOutline: "#8C857F",
         sampleWaveformInk: "#005B63", sampleCropHandle: "#92681F",
-        sampleLoopHandle: "#2A7292", sampleSeamEndInk: "#C54444")
+        sampleLoopHandle: "#2A7292")
 
     private static let darkNeutralHigh = Colors(
         window: "#373737", text: "#D8D8D8", disabledText: "#A0A0A0",
@@ -64,7 +63,7 @@ public enum ShellAppearance {
         automationNodeInk: "#FF4D47", automationTabBackground: "#51555E",
         automationTabOutline: "#62666F",
         sampleWaveformInk: "#9FCDD7", sampleCropHandle: "#E0A030",
-        sampleLoopHandle: "#4AB4E2", sampleSeamEndInk: "#F08D8D")
+        sampleLoopHandle: "#4AB4E2")
 
     private static let immaterial = Colors(
         window: "#2E3138", text: "#CBCBCD", disabledText: "#979AA3",
@@ -78,7 +77,7 @@ public enum ShellAppearance {
         automationNodeInk: "#FF91C3", automationTabBackground: "#4A4E59",
         automationTabOutline: "#616571",
         sampleWaveformInk: "#ABCAD2", sampleCropHandle: "#E0A030",
-        sampleLoopHandle: "#40B0E0", sampleSeamEndInk: "#EF8585")
+        sampleLoopHandle: "#40B0E0")
 
     public static func mode(_ stored: String) -> String {
         switch stored {
@@ -149,7 +148,6 @@ public enum ShellAppearance {
         palette.publish(\.sampleWaveformInk, PaletteMath.qmlColor(colors.sampleWaveformInk))
         palette.publish(\.sampleCropHandle, PaletteMath.qmlColor(colors.sampleCropHandle))
         palette.publish(\.sampleLoopHandle, PaletteMath.qmlColor(colors.sampleLoopHandle))
-        palette.publish(\.sampleSeamEndInk, PaletteMath.qmlColor(colors.sampleSeamEndInk))
         palette.publish(\.scrollbarHandle, PaletteMath.qmlColor(colors.scrollbar))
         // Qt control-palette surfaces: editable fields and tooltips use the
         // preset's input swatch, where text and placeholder ink keep 4.5:1.

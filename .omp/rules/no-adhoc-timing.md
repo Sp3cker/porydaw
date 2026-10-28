@@ -5,7 +5,7 @@ scope: "tool:edit(src/swift/**/*.swift, src/app/**, src/audio/**, src/project/**
 interruptMode: never
 ---
 Ad-hoc timing is not accepted in app code or checks: no clock snapshots, manual counters, or `print`/`Logger` output used as performance measurement.
-Answer performance questions with Instruments: `deno task xctrace record` plus `summarize`/`compare` (templates: `CPU Profiler`, `Time Profiler`, `Logging` for signposts, `Allocations`).
+Answer performance questions with Instruments: `uv run --no-sync dev xctrace record` plus `summarize`/`compare` (templates: `CPU Profiler`, `Time Profiler`, `Logging` for signposts, `Allocations`).
 For playback CPU, follow the `porydaw-instruments-playback-cpu` skill.
 The only permitted in-code instrumentation is `OSSignposter` (`import os`) interval/event signposts with a stable subsystem and one category per feature; signposts may stay in production code:
 ```swift
@@ -16,4 +16,4 @@ signposter.endInterval("decode", state)
 ```
 Exempt: `ContinuousClock` (or equivalent) as product behavior, e.g. an audition tick advancing a playhead, and benchmark executables under `tools/`.
 The exemption is for behavior, never for measurement that will be reported.
-Never write trace parsers; `tools/xctrace.ts` is the single parser.
+Never write separate trace parsers; `tools/porydaw_dev/xctrace/export.py` owns streaming XML, TOC and table decoding.

@@ -101,7 +101,7 @@ public final class EventListPresenter: QmlUncreatable {
     @QtIgnored public var selectedRows: [Int] = [] {
         didSet { publishSelection(previous: oldValue) }
     }
-    public var menuItems: QListModel<EventListMenuItem> = QListModel()
+    public var menuItems: QListModel<MenuRow> = QListModel()
     @QtTracked public var menuShortcutText = ""
     @QtTracked public var menuSeparatorCount = 0
     @QtTracked public var menuX = 0.0
@@ -419,8 +419,20 @@ public final class EventListPresenter: QmlUncreatable {
         tableRows.value(row: row, column: 0) as? EventListRowHandle
     }
 
-    public func menuItem(row: Int) -> Optional<EventListMenuItem> {
+    public func menuItem(row: Int) -> Optional<MenuRow> {
         menuItems.indices.contains(row) ? menuItems[row] : nil
+    }
+
+    public func matchingMenuRow(prefix: String, highlightedRow: Int) -> Int {
+        let count = menuItems.count
+        guard count > 0 else { return -1 }
+        let foldedPrefix = prefix.lowercased()
+        for offset in 1...count {
+            let index = (highlightedRow + offset + count) % count
+            guard let row = menuItem(row: index), row.enabled, !row.separator else { continue }
+            if row.text.lowercased().utf16.starts(with: foldedPrefix.utf16) { return index }
+        }
+        return -1
     }
 
     func publishColumnWidths() {

@@ -1,5 +1,12 @@
 import Foundation
 import PorydawVoicegroupNative
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#elseif canImport(ucrt)
+    import ucrt
+#endif
 
 private let bankStorageCapacity =
     128 + (128 * Int(VG_VOICE_NAME_LEN) + MemoryLayout<ToneData>.stride - 1) / MemoryLayout<ToneData>.stride

@@ -167,6 +167,11 @@ ShellGridMenuSupport {
         var origin = RollNoteFaces.rect(renderer, roll, target.note.id).x
         var ppt = grid.beatWidth / grid.ticksPerBeat
         var reach = 1.4 * grid.beatWidth
+        // The fixture restates 4/4 at tick 12, so the musical lattice is anchored there;
+        // the grabbed start snaps absolutely to the nearest line of that lattice.
+        var seam = 12
+        var desired = target.note.tick + 1.4 * grid.ticksPerBeat
+        var pulled = seam + Math.round((desired - seam) / grid.ticksPerBeat) * grid.ticksPerBeat
         function faceShift() {
             if (renderer.fetchedRevision !== grid.scene.displayRevision)
                 return NaN
@@ -176,21 +181,21 @@ ShellGridMenuSupport {
         mousePress(roll, target.point.x, target.point.y, Qt.LeftButton)
         mouseMove(roll, target.point.x + reach / 2, target.point.y, -1, Qt.LeftButton)
         mouseMove(roll, target.point.x + reach, target.point.y, -1, Qt.LeftButton)
-        tryVerify(function() { return Math.abs(faceShift() - grid.ticksPerBeat * ppt) <= 1 },
-                  3000, "the quarter grid snaps the held drag to one beat")
+        tryVerify(function() { return Math.abs(faceShift() - (pulled - target.note.tick) * ppt) <= 1 },
+                  3000, "the quarter grid snaps the held drag to the beat line past the seam")
         keyClick(Qt.Key_1, Qt.ControlModifier)
         keyClick(Qt.Key_1, Qt.ControlModifier)
         keyClick(Qt.Key_1, Qt.ControlModifier)
         tryCompare(grid, "gridSelectionMenuId", 32, 3000,
                    "Ctrl+1 narrows the grid while the note drag is held")
         var step = grid.ticksPerBeat / 8
-        var finer = Math.round(1.4 * grid.ticksPerBeat / step) * step
-        tryVerify(function() { return Math.abs(faceShift() - finer * ppt) <= 1 },
+        var finer = seam + Math.round((desired - seam) / step) * step
+        tryVerify(function() { return Math.abs(faceShift() - (finer - target.note.tick) * ppt) <= 1 },
                   3000, "the held drag re-snaps to the 1/32 grid without moving the pointer")
         mouseRelease(roll, target.point.x + reach, target.point.y, Qt.LeftButton)
         tryVerify(function() {
             return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
-                return note.id === target.note.id && note.tick === target.note.tick + finer
+                return note.id === target.note.id && note.tick === finer
             })
         }, 3000, "releasing commits the re-snapped position")
     }

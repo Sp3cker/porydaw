@@ -14,6 +14,15 @@ Rectangle {
         readonly property int statusGripHeight: 13 + 4
         readonly property bool showingFailure: statusBar.shell.session.lastSaveError.length > 0
                                                 && statusBar.shell.statusText === statusBar.shell.session.lastSaveError
+        readonly property string openingText: {
+            switch (statusBar.shell.session.projectOpeningStage) {
+            case 1: return qsTr("Reading project… (1/3)")
+            case 2: return qsTr("Opening songs… (2/3)")
+            case 3: return qsTr("Indexing instruments… (3/3)")
+            default: return ""
+            }
+        }
+        readonly property bool showingProgress: openingText.length > 0 && !showingFailure
         implicitHeight: Math.max(statusBar.captionMetrics.height, statusBar.bodyMetrics.height, statusGripHeight)
                         + statusTopInset + statusBottomInset
         color: statusBar.shell.session.palette.windowBackground
@@ -21,7 +30,7 @@ Rectangle {
             objectName: "shellStatusText"
             id: shellStatus
             anchors.left: parent.left
-            width: Math.max(0, Math.min(implicitWidth, statusBar.showingFailure
+            width: Math.max(0, Math.min(implicitWidth, statusBar.showingFailure || statusBar.showingProgress
                 ? statusBar.width - (polyMeter.visible ? polyMeter.width : 0)
                   - statusBar.root.chromeSpacing.two * 3
                 : statusBar.width / 4 - statusBar.root.chromeSpacing.two))
@@ -30,7 +39,8 @@ Rectangle {
             anchors.topMargin: statusBar.statusTopInset
             anchors.bottomMargin: statusBar.statusBottomInset
             anchors.leftMargin: statusBar.root.chromeSpacing.two
-            text: statusBar.shell.sceneActive ? statusBar.shell.statusText : qsTr("Closing…")
+            text: !statusBar.shell.sceneActive ? qsTr("Closing…")
+                  : statusBar.showingProgress ? statusBar.openingText : statusBar.shell.statusText
             font: statusBar.root.chromeTypography.caption
             color: statusBar.root.colors.windowText
             verticalAlignment: Text.AlignVCenter
@@ -38,7 +48,7 @@ Rectangle {
         }
         Text {
             objectName: "shellMouseHintText"
-            visible: !statusBar.showingFailure
+            visible: !statusBar.showingFailure && !statusBar.showingProgress
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
             anchors.bottom: parent.bottom

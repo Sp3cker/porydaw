@@ -422,7 +422,7 @@ ShellTransportSupport {
                 "toolbar height follows the base icon and Two token")
         var actionRegions = ["transport.go-to-start", "transport.play", "transport.pause",
                              "transport.stop", "transport.loop", "transport.follow-playhead",
-                             "transport.resonance", "transportScaleRoot", "transportScaleType",
+                             "transport.resonance", "transport.metronome", "transportScaleRoot", "transportScaleType",
                              "transportScaleHighlight", "transportScaleFold"]
         wait(50)
         // References drop the two 6px separators: expanded bars grow the fill spacer by 2*(6 + spacing);
@@ -457,11 +457,6 @@ ShellTransportSupport {
                            + ": " + item.width + " vs " + region.w)
             }
         }
-        var captured = false
-        verify(bar.grabToImage(function(result) {
-            captured = result.saveToFile(bootstrap.transportCapturePath(data.fontPx))
-        }), "transport capture starts")
-        tryVerify(function() { return captured }, 3000, "the mounted pane screenshot is saved")
     }
 
     function test_transportGlyphTintMatchesEnabledState() {

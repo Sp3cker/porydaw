@@ -1,10 +1,12 @@
 import Foundation
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runSampleChecks(_ report: CheckReport) {
     runDecoderChecks(report)
     runCompressedDecoderChecks(report)
+    runOverviewScanChecks(report)
     runSoundFontChecks(report)
 }
 
@@ -23,4 +25,7 @@ public func runSampleEditorChecks(_ report: CheckReport) {
     runLoopToolsChecks(report)
     runAuditionStripChecks(report)
     runWaveformChecks(report)
+    runLibraryModelChecks(report)
+    runStudioLifecycleChecks(report)
+    runSourceReplacementChecks(report)
 }

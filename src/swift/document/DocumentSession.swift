@@ -77,14 +77,8 @@ public struct SaveConflictError: Error, Sendable {
 
 // MARK: - Document session
 
-/// One document plus its confirmed bank history,
-/// session-only selection/track-scope/mute-solo, the current bank
-/// lease, and the published playback projection.
-///
-/// Initial open and edit/history projections share one retained timeline builder.
-/// Document history stays immediate; bank transitions serialize on the service actor.
-/// Selection and other session state never dirty the document and never enter
-/// history.
+/// One song document, its assignment and session-only selection/playback state.
+/// Voice edits belong to the canonical project-owned voicegroup session.
 @MainActor
 public final class DocumentSession {
     public private(set) var document: SongDocument
@@ -92,10 +86,9 @@ public final class DocumentSession {
     /// Current immutable projection from the session's retained builder.
     public internal(set) var timeline: PlaybackTimeline
     internal var timelineBuilder: PlaybackTimelineBuilder
-    public var bankLease: ProjectBankLease { sharedBank.value.lease }
-    public var bankSlots: [BankSlotView] { sharedBank.value.slots }
-    public var bankDirty: Bool { sharedBank.value.dirty }
-    public var bankLoadName: String { sharedBank.value.loadName }
+    public var bankLease: ProjectBankLease { voicegroup.value.lease }
+    public var bankSlots: [BankSlotView] { voicegroup.value.slots }
+    public var bankLoadName: String { voicegroup.value.loadName }
     public private(set) var isClosed = false
     /// On-disk MIDI identity at the last load or save. Nil predates tracking
     /// (direct init); the first save then adopts the disk without prompting.
@@ -174,12 +167,12 @@ public final class DocumentSession {
 
     /// Borrowed from ApplicationSession, which owns the project service.
     internal unowned let service: ProjectService
-    internal let inbox = BankResultInbox()
-    internal var sharedBank: SharedBankState
+    public internal(set) var voicegroup: VoicegroupSession
+    internal var voicegroupObserver: UUID?
+    internal var observedVoicegroupRevision: UInt64 = 0
     internal var pendingBankNotification = false
-    /// A queued bank write owns the session's bank/history lifecycle, but not
-    /// ordinary document mutation admission.
-    public internal(set) var bankPersistenceInFlight = false
+    /// Serializes song persistence, assignment loading and history replay.
+    internal var songOperationInFlight = false
     /// Nested synchronous state changes accumulate one final publication.
     internal var stateChangeDepth = 0
     internal var pendingDomains: SessionChangeDomains = []
@@ -193,17 +186,17 @@ public final class DocumentSession {
     ) {
         self.document = document
         self.service = service
-        sharedBank = service.bankViews.state(
+        voicegroup = service.bankViews.state(
             for: AppliedBankEdit(
                 lease: lease, slots: slots, dirty: dirty, loadName: loadName,
-                materializationToken: nil))
+                materializationToken: nil), service: service)
         var builder = PlaybackTimelineBuilder()
         timeline = builder.build(state: document.state, sampleRate: sampleRate)
         timelineBuilder = builder
         document.onChange = { [weak self] change in
             self?.handleDocumentChange(change)
         }
-        sharedBank.attach(self)
+        observeVoicegroup()
         periodicBackupTask = Task { [weak self] in
             while !Task.isCancelled {
                 do {
@@ -319,40 +312,29 @@ public final class DocumentSession {
     /// the caller can prompt. Bank-only voicegroup saves bypass this session.
     public func save(forceOverwrite: Bool = false) async throws {
         try requireOpen()
-        guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else {
-            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
+        guard !songOperationInFlight, !document.history.bindingTransitionInFlight else {
+            throw ProjectServiceError.operationFailed("A song save or voicegroup assignment is already in progress.")
         }
-        guard document.isDirty || bankDirty else { return }
-        let bank = bankDirty ? bankLease : nil
-        if bank != nil { bankPersistenceInFlight = true }
+        guard document.isDirty else { return }
+        songOperationInFlight = true
         defer {
-            if bank != nil {
-                bankPersistenceInFlight = false
-                flushPendingBankNotification()
-            }
+            songOperationInFlight = false
+            flushPendingBankNotification()
         }
         let snapshot = try document.captureSave()
         if !forceOverwrite { try checkMidiConflict(against: snapshot) }
-        let receipt = try await service.save(snapshot, bank: bank)
+        try await service.save(snapshot)
         try requireOpen()
         document.didSave(snapshot)
         lastKnownMidiBytes = snapshot.bytes
-        var domains: SessionChangeDomains = [.dirty, .history]
-        if let refreshed = receipt.bank {
-            adoptBank(refreshed)
-            domains.insert(.bank)
-        }
-        if domains.contains(.bank) { pendingBankNotification = false }
-        publishChange(domains)
+        publishChange([.dirty, .history])
     }
 
     /// Compares the MIDI file against the last load or save. Readable bytes
     /// that differ prompt, unless the write would land identical bytes
-    /// anyway. A path that exists but cannot be read is a save failure, not
-    /// a conflict: it falls through so the bank stage still runs and the
-    /// write stage reports the real error. Outright deletion is the one
-    /// unreadable case that prompts — the write would succeed by recreating
-    /// the file, so the external change would otherwise pass silently.
+    /// anyway. An existing unreadable path falls through so the write stage
+    /// reports its failure. Outright deletion prompts because recreating the
+    /// file would otherwise silently overwrite the external change.
     private func checkMidiConflict(against snapshot: SaveSnapshot) throws {
         guard let known = lastKnownMidiBytes else { return }
         guard
@@ -370,50 +352,6 @@ public final class DocumentSession {
         }
     }
 
-    /// Confirmed user bank edit: applies through the service, then records the
-    /// replayable action. Conflicts throw and record nothing.
-    @discardableResult
-    public func applyBankEdit(
-        slot: Int, value: BankVoice,
-        expected: BankVoice?
-    ) async throws -> AppliedBankEdit {
-        try requireOpen()
-        guard !bankPersistenceInFlight else {
-            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
-        }
-        if !bankDirty { document.history.sealBankMerge() }
-        guard let transition = document.history.beginBankTransition() else {
-            throw ProjectServiceError.operationFailed("A bank transition is already in progress.")
-        }
-        publishChange([.history])
-        var ownsTransition = true
-        defer {
-            if ownsTransition {
-                document.history.endBankTransition(transition)
-                publishChange([.history])
-            }
-            flushPendingBankNotification()
-        }
-        let result = try await service.bankApply(
-            lease: bankLease, slot: slot,
-            value: value, expected: expected,
-            publishResult: false)
-        let materializationToken = expected == nil ? result.materializationToken : nil
-        withStateChanges {
-            document.history.finishBankTransition(
-                transition,
-                recording: ServiceBankAction(
-                    service: service, slot: slot, before: expected, after: value,
-                    token: materializationToken,
-                    materializedBlank: materializationToken != nil,
-                    current: result, inbox: inbox))
-            ownsTransition = false
-            adoptBank(result)
-            pendingBankNotification = false
-            publishChange([.bank, .dirty, .history])
-        }
-        return result
-    }
 
     /// Reserves a synth symbol in the project without changing this document.
     /// - Parameter descriptor: The desired waveform and pulse parameters.
@@ -429,11 +367,11 @@ public final class DocumentSession {
     public func selectVoicegroup(_ arg: String) async throws {
         try requireOpen()
         guard !arg.isEmpty, arg != document.state.config.voicegroupArgument,
-            !bankPersistenceInFlight, !document.history.bankTransitionInFlight
+            !songOperationInFlight, !document.history.bindingTransitionInFlight
         else { return }
-        bankPersistenceInFlight = true
+        songOperationInFlight = true
         defer {
-            bankPersistenceInFlight = false
+            songOperationInFlight = false
             flushPendingBankNotification()
         }
         withStateChanges {
@@ -471,50 +409,44 @@ public final class DocumentSession {
             target = min(target, history.undoCount)
             let indexBefore = history.undoIndex
             guard indexBefore != target else { return indexBefore }
-            let countBefore = history.undoCount
-            let direction: BankHistoryDirection = indexBefore > target ? .undo : .redo
+            let direction: HistoryDirection = indexBefore > target ? .undo : .redo
             guard try await stepHistory(direction) else { return history.undoIndex }
-            if direction == .redo, history.undoCount < countBefore,
-                history.undoIndex == indexBefore
-            {
-                target -= 1
-            }
         }
     }
 
     /// Crosses a -G history edit even if its replacement bank fails to load.
     /// The last valid lease remains bound while the requested cfg stays undoable.
-    private func stepHistory(_ direction: BankHistoryDirection) async throws -> Bool {
+    private func stepHistory(_ direction: HistoryDirection) async throws -> Bool {
         try requireOpen()
-        guard !bankPersistenceInFlight else { return false }
+        guard !songOperationInFlight else { return false }
         var preparedBank: AppliedBankEdit?
         var loadFailure: Error?
         if let arg = document.history.voicegroupArgumentAfter(direction) {
-            guard let token = document.history.beginBankTransition() else { return false }
-            bankPersistenceInFlight = true
+            guard let token = document.history.beginBindingTransition() else { return false }
+            songOperationInFlight = true
             do {
                 preparedBank = try await service.loadBank(voicegroupArg: arg)
                 try requireOpen()
             } catch {
                 loadFailure = error
             }
-            document.history.endBankTransition(token)
+            document.history.endBindingTransition(token)
         }
-        bankPersistenceInFlight = true
+        songOperationInFlight = true
         defer {
-            bankPersistenceInFlight = false
+            songOperationInFlight = false
             flushPendingBankNotification()
         }
         let previousArg = document.state.config.voicegroupArgument
         let identityBefore = document.history.currentIdentity
         let changed: Bool
         switch direction {
-        case .undo: changed = try await document.history.undo()
-        case .redo: changed = try await document.history.redo()
+        case .undo: changed = document.history.undoDocument()
+        case .redo: changed = document.history.redoDocument()
         }
         withStateChanges {
             var domains: SessionChangeDomains = [.dirty, .history]
-            // Bank entries keep the identity; only a crossed document entry restores.
+            // Only song history restores song selection.
             let identityAfter = document.history.currentIdentity
             if changed, identityAfter != identityBefore,
                 let duplicated = duplicatedSelections[direction == .undo ? identityBefore : identityAfter]
@@ -527,10 +459,6 @@ public final class DocumentSession {
                 adoptBank(preparedBank)
                 domains.insert(.bank)
             }
-            if changed, let result = inbox.drain() {
-                adoptBank(result)
-                domains.insert(.bank)
-            }
             if domains.contains(.bank) { pendingBankNotification = false }
             publishChange(domains)
         }
@@ -540,10 +468,10 @@ public final class DocumentSession {
 
     /// Breaks document and presenter callbacks without stopping the project worker.
     /// ApplicationSession keeps the borrowed service alive across song replacement.
-    /// Returns `false` while a bank transition or persistence write owns it.
+    /// Returns `false` while a binding transition or song persistence write owns it.
     @discardableResult
     public func close() async -> Bool {
-        guard !bankPersistenceInFlight, !document.history.bankTransitionInFlight else { return false }
+        guard !songOperationInFlight, !document.history.bindingTransitionInFlight else { return false }
         isClosed = true
         periodicBackupTask?.cancel()
         periodicBackupTask = nil
@@ -557,7 +485,8 @@ public final class DocumentSession {
         selectionTransitionObservers.removeAll()
         onPlayback = nil
         document.onChange = nil
-        sharedBank.detach(self)
+        if let voicegroupObserver { voicegroup.removeObserver(voicegroupObserver) }
+        voicegroupObserver = nil
         return true
     }
 

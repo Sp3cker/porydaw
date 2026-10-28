@@ -171,7 +171,7 @@ Item {
             trackHeaderScrollBar.dragLastPosition = mouse.y
             if (!trackHeaderScrollBar.dragThresholdReached) {
                 if (Math.abs(mouse.y - trackHeaderScrollBar.dragStartPosition)
-                        < Qt.styleHints.startDragDistance)
+                        < Application.styleHints.startDragDistance)
                     return
                 trackHeaderScrollBar.dragThresholdReached = true
             }

@@ -183,15 +183,15 @@ ShellVoicegroupSupport {
             return draft.macro === 3 && controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
         compare(type.currentValue, 3)
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.macro === 0 && !controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
-        app.requestRedo()
+        redoVoicegroup()
         verify(waitForNative(function() {
             return draft.macro === 3 && controller.bankDirty
         }, 15000), "the blank template materializes Square 1 undoably")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return !controller.bankDirty }, 15000),
                "blank materialization undo settles the bank")
         for (const slot of [0, 4, 6, 7, 8, 13]) {
@@ -206,6 +206,12 @@ ShellVoicegroupSupport {
         statusSpy.clear()
         const button = findChild(panel, "vgNewVoicegroupButton")
         verify(button !== null, "the mounted dock exposes its New voicegroup button")
+        const selector = findChild(panel, "vgArgCombo")
+        const besideName = button.mapToItem(selector, 0, button.height / 2)
+        verify(besideName.x >= selector.width && besideName.y >= 0
+               && besideName.y <= selector.height
+               && button.x + button.width <= panel.width,
+               "voicegroup creation remains visible beside the name input")
         mouseClick(button, button.width / 2, button.height / 2)
         verify(waitForNative(function() { return controller.newVoicegroupPrompt }, 5000),
                "the mounted New button opens the name prompt")
@@ -245,6 +251,9 @@ ShellVoicegroupSupport {
         verify(shellPresenter.statusText.indexOf("vgsave_created") >= 0
                && shellPresenter.statusText.indexOf("mus_route101") >= 0,
                "the status line names the created file and song: " + shellPresenter.statusText)
+        // The choices model updates after the bind; the editable combo must still show it.
+        tryCompare(findChild(panel, "vgArgCombo"), "editText", "vgsave_created")
+        app.setEditingVoicegroup(false)
         app.requestUndo()
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_rich"

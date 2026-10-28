@@ -55,6 +55,7 @@ FocusScope {
 
     ListView {
         id: historyList
+        acceptedButtons: Qt.NoButton
         objectName: "undoHistoryList"
         anchors.fill: parent
         anchors.margins: panel.margin

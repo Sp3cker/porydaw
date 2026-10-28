@@ -3,6 +3,29 @@ import QtBridge
 
 @MainActor
 extension SongTabsController {
+    @QtIgnored
+    func setClosingAll(_ closing: Bool) {
+        if !closing { cancelCloseSettlement() }
+        guard isClosingAll != closing else { return }
+        isClosingAll = closing
+        app?.voiceList.setEditingEnabled(!closing)
+    }
+
+    @QtIgnored
+    func cancelCloseSettlement() {
+        closeSettlementTask?.cancel()
+        closeSettlementTask = nil
+        clearCloseWaitObservers()
+    }
+
+    @QtIgnored
+    func clearCloseWaitObservers() {
+        for observation in closeWaitObservers {
+            observation.group.removeObserver(observation.token)
+        }
+        closeWaitObservers.removeAll()
+    }
+
     /// Reloads a selected song through the close gate, keeping its original
     /// tab selectable until the replacement document is ready.
     @QtIgnored
@@ -52,7 +75,6 @@ extension SongTabsController {
         guard let identity = savingCloseBank else { return }
         savingCloseBank = nil
         guard saved, pendingCloseBank?.identity == identity else { return }
-        answeredCloseBanks.insert(identity)
         clearPendingCloseBank()
         advanceCloseAll()
     }
@@ -70,8 +92,13 @@ extension SongTabsController {
         // the outcome.
         reloadId = -1
         replacementLabel = nil
-        answeredCloseBanks = []
-        isClosingAll = true
+        setClosingAll(true)
+        app?.refreshDocumentState()
+        if app?.kitStudioWorkflow != nil, app?.hasSplitStudioCreatedSamples == true {
+            projectSwitchApprovalIndex = tabIndex(of: pendingCloseId) ?? 0
+        } else {
+            projectSwitchApprovalIndex = nil
+        }
         if pendingCloseId == -1 { advanceCloseAll() }
     }
 
@@ -80,8 +107,8 @@ extension SongTabsController {
         guard !isClosingAll else { return }
         reloadId = -1
         projectSwitchApprovalIndex = 0
-        answeredCloseBanks = []
-        isClosingAll = true
+        setClosingAll(true)
+        app?.refreshDocumentState()
         if pendingCloseId == -1 { advanceCloseAll() }
     }
 
@@ -129,6 +156,18 @@ extension SongTabsController {
             app?.reloadApproved(label: replacement, replacing: PendingReload(tab))
             return
         }
+        let removeTab = { [weak self, weak tab] in
+            guard let self, let tab, self.tab(id: tabId) === tab,
+                let currentIndex = self.tabIndex(of: tabId)
+            else { return }
+            self.removeClosedTab(index: currentIndex)
+        }
+        app?.offerSplitStudioOrphans(proceed: removeTab, cancel: removeTab)
+    }
+
+    private func removeClosedTab(index: Int) {
+        let tab = tabs[index]
+        let tabId = tab.tabId
         reloadsInFlight.remove(tabId)
         let closingSelected = tabId == selectedId
         app?.tabWillLeave(tab)
@@ -195,21 +234,35 @@ extension SongTabsController {
     }
 
     func advanceCloseAll() {
-        guard isClosingAll, !advancePending else { return }
-        advancePending = true
-        Task { [weak self] in
-            guard let self else { return }
-            self.advancePending = false
+        guard isClosingAll, closeSettlementTask == nil, app?.isReplacingProject != true,
+            app?.isDisposed != true
+        else { return }
+        closeSettlementTask = Task { [weak self] in
+            guard !Task.isCancelled, let self else { return }
+            self.closeSettlementTask = nil
             self.settleCloseAll()
         }
     }
 
     private func settleCloseAll() {
-        guard isClosingAll else { return }
+        clearCloseWaitObservers()
+        guard isClosingAll, app?.isReplacingProject != true, app?.isDisposed != true else { return }
+        let busyGroups =
+            app?.catalogService?.bankViews.sessions().filter { (group: VoicegroupSession) -> Bool in
+                group.isBusy
+            } ?? []
+        for group in busyGroups {
+            let token = group.addObserver { [weak self] in self?.advanceCloseAll() }
+            closeWaitObservers.append((group, token))
+        }
+        guard app?.saveInProgress != true, busyGroups.isEmpty else { return }
         let projectSwitch = projectSwitchApprovalIndex != nil
+        let retainTabs = app?.kitStudioWorkflow != nil && app?.hasSplitStudioCreatedSamples == true
+        // Only a possible orphan offer needs every lease kept loaded through final resolution.
         if let approvalIndex = projectSwitchApprovalIndex {
             for index in approvalIndex..<tabs.count {
                 let tab = tabs[index]
+                tab.refreshDirty()
                 guard tab.dirty else { continue }
                 projectSwitchApprovalIndex = index
                 if tab.tabId != selectedId { select(tabId: tab.tabId) }
@@ -218,24 +271,23 @@ extension SongTabsController {
             }
             projectSwitchApprovalIndex = nil
         }
-        while let tab = tabs.first {
-            guard tab.dirty && !projectSwitch else {
-                closeTab(index: 0)
-                continue
+        if !retainTabs {
+            while let tab = tabs.first {
+                guard tab.dirty && !projectSwitch else {
+                    closeTab(index: 0)
+                    continue
+                }
+                if tab.tabId != selectedId { select(tabId: tab.tabId) }
+                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
+                return
             }
-            if tab.tabId != selectedId { select(tabId: tab.tabId) }
-            if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
-            return
         }
-        if let bank = app?.dirtyBanksForClose().first(where: {
-            !answeredCloseBanks.contains(BankBindingIdentity($0.lease))
-        }) {
+        if let bank = app?.dirtyBanksForClose().first {
             let target = BankCloseTarget(bank)
             pendingCloseBank = target
             if pendingCloseBankTitle != target.title { pendingCloseBankTitle = target.title }
             return
         }
-        isClosingAll = false
         app?.closeAllResolved(closed: true)
     }
 
@@ -270,6 +322,7 @@ extension SongTabsController {
     /// Drops every row, retaining each tab with the application until the page
     /// that bound it is gone. Returns false when the strip was already empty.
     private func dropAllTabs() -> Bool {
+        cancelCloseSettlement()
         guard !tabs.isEmpty else { return false }
         let released = tabs.asArray
         // The one shared engine goes with the selection, before any page is
@@ -284,7 +337,6 @@ extension SongTabsController {
         reloadId = -1
         reloadsInFlight.removeAll()
         savingCloseId = -1
-        isClosingAll = false
         publishSelection(index: -1)
         app?.tabsDidChange()
         return true

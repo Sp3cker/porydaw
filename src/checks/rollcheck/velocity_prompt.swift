@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawCore
 import PorydawDocument
+import PorydawAppPresentation
 
 // Existing scenarios paired with velocity_prompt.cpp.
 // Entry order remains in VelocityPageChecks.swift.
@@ -11,6 +12,29 @@ func drawerVelocityPromptTransaction(
     _ report: CheckReport, session: DocumentSession,
     service: ProjectService
 ) {
+    let input = PromptStyle().integerInput
+    let id = drawerVelocityPromptID
+    for (text, expected, accepted) in [
+        ("", 4, false), ("-", 4, false), ("-3", 4, false),
+        ("-2", -2, true), ("127", 127, true), ("128", 4, false),
+    ] {
+        let result = input.commit(text: text, current: 4, minimum: -2, maximum: 127)
+        report.expect(
+            result["value"] as? Int == expected && result["accepted"] as? Bool == accepted
+                && result["text"] as? String == String(expected),
+            cppID: id, message: "integer prompt boundary \(text.debugDescription)")
+    }
+    report.expect(
+        input.acceptsPaste(text: "-", minimum: -2)
+            && input.acceptsPaste(text: "127", minimum: 0)
+            && !input.acceptsPaste(text: "+1", minimum: -2)
+            && !input.acceptsPaste(text: "1x", minimum: -2)
+            && !input.acceptsPaste(text: "-", minimum: 0)
+            && input.acceptsCharacter(
+                text: "-", draft: "-12", selectedText: "-1", cursor: 2, selectionStart: 0, minimum: -2)
+            && !input.acceptsCharacter(
+                text: "-", draft: "-12", selectedText: "", cursor: 0, selectionStart: 0, minimum: -2),
+        cppID: id, message: "integer prompt paste/character filters retain the digit/minus domain")
     let fixture = drawerVelocityVelocityFixture(session: session, service: service)
     let page = fixture.page
     let document = fixture.document

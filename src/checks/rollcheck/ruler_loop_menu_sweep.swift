@@ -141,7 +141,7 @@ private func checkDuplicateUndoRehighlightsSource(
     func shifted(_ copies: Tick) -> TimeRange {
         TimeRange(startTick: swept.range.startTick + copies * span, endTick: swept.range.endTick + copies * span)
     }
-    func step(_ direction: BankHistoryDirection) -> Bool {
+    func step(_ direction: HistoryDirection) -> Bool {
         (try? runBlocking { direction == .undo ? try await session.undo() : try await session.redo() }) == true
     }
     let original = coreTimeBytes(document)

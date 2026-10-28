@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 public func runEventEditsSuite(_ report: CheckReport) {

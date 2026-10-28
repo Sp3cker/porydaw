@@ -15,56 +15,56 @@
             "h": 30,
             "name": "transportMasterVolume",
             "w": 111,
-            "x": 960,
+            "x": 995,
             "y": 4
         },
         {
             "h": 35,
             "name": "transportMasterVolumeCaption",
             "w": 72,
-            "x": 887,
+            "x": 922,
             "y": 2
         },
         {
             "h": 27,
             "name": "transportScaleFold",
             "w": 54,
-            "x": 795,
+            "x": 830,
             "y": 6
         },
         {
             "h": 33,
             "name": "transportScaleHighlight",
             "w": 33,
-            "x": 761,
+            "x": 796,
             "y": 3
         },
         {
             "h": 26,
             "name": "transportScaleRoot",
             "w": 71,
-            "x": 458,
+            "x": 493,
             "y": 6
         },
         {
             "h": 26,
             "name": "transportScaleType",
             "w": 230,
-            "x": 530,
+            "x": 565,
             "y": 6
         },
         {
             "h": 35,
             "name": "transportTimeLabel",
             "w": 217,
-            "x": 240,
+            "x": 275,
             "y": 2
         },
         {
             "h": 35,
             "name": "transportVolumeSpacer",
-            "w": 36,
-            "x": 850,
+            "w": 1,
+            "x": 885,
             "y": 2
         },
         {
@@ -117,52 +117,59 @@
             "y": 3
         },
         {
+            "h": 33,
+            "name": "transport.metronome",
+            "w": 33,
+            "x": 240,
+            "y": 3
+        },
+        {
             "h": 35,
             "name": "transport.time",
             "w": 217,
-            "x": 240,
+            "x": 275,
             "y": 2
         },
         {
             "h": 26,
             "name": "transport.scale-root",
             "w": 71,
-            "x": 458,
+            "x": 493,
             "y": 6
         },
         {
             "h": 26,
             "name": "transport.scale-type",
             "w": 230,
-            "x": 530,
+            "x": 565,
             "y": 6
         },
         {
             "h": 33,
             "name": "transport.scale-highlight",
             "w": 33,
-            "x": 761,
+            "x": 796,
             "y": 3
         },
         {
             "h": 27,
             "name": "transport.scale-fold",
             "w": 54,
-            "x": 795,
+            "x": 830,
             "y": 6
         },
         {
             "h": 35,
             "name": "transport.master-volume-caption",
             "w": 72,
-            "x": 887,
+            "x": 922,
             "y": 2
         },
         {
             "h": 30,
             "name": "transport.master-volume",
             "w": 111,
-            "x": 960,
+            "x": 995,
             "y": 4
         },
         {

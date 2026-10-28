@@ -28,8 +28,31 @@ used-by-this-song highlighting; "Show voice in voicegroup" from a note. -->
 
 ## Editing a voice
 
-<!-- TODO: The editable fields per type; all edits undoable and saved with
-the song (one document, one save). -->
+Voice parameters belong to the voicegroup, not to the song. Changing ADSR,
+tuning, sample selection, or voice type marks the voicegroup unsaved without
+marking the song tab unsaved. All songs using that group hear the changes.
+
+The header shows the group name in the selector without repeating it in
+the label. An asterisk beside **Voicegroup** marks unsaved group edits.
+
+The voicegroup editor has its own undo history. Undo/Redo while editing a
+voice operates on the shared group's history; Undo/Redo in the piano roll
+operates on the song. Changing the song's assigned voicegroup remains a song
+edit and does not undo parameters inside either group.
+
+Use **Save Voicegroup** in the menu or dock to save the group without
+rewriting song MIDI. **Save Song** saves only the song; **Save All** saves
+dirty songs and voicegroups. The standard **Save** shortcut targets the
+current editing surface.
+
+Closing a song tab leaves unsaved voicegroup edits available in the dock,
+even after the last song closes. Closing the project or quitting waits for
+in-progress group edits, then prompts separately for each unsaved voicegroup.
+**Discard** restores the group for
+every song using it; **Cancel** stops closing.
+
+With no song tabs open, the dock's group selector switches between loaded
+voicegroups. Saved groups stay available with their own undo history.
 
 ### ADSR envelopes
 
@@ -50,5 +73,7 @@ automation); changing instrument mid-song. -->
 
 ## Creating and registering voicegroups
 
-<!-- TODO: When you need a new voicegroup vs. editing an existing one;
-how New Song / MIDI Import can create one; where the files land. -->
+Click **+** beside the voicegroup name in the dock to create a voicegroup.
+Enter a name, choose a copy of the current bank or an empty template, then
+click **Create**. The new group is written under `sound/voicegroups/` and
+assigned to the current song.

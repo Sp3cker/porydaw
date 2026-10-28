@@ -116,44 +116,6 @@ public final class AutomationNodeHandle {
     }
 }
 
-/// One published menu row: the captured action, its label and its availability.
-/// A separator carries no action and is never activatable.
-@MainActor
-@QtBridgeable
-public final class AutomationMenuRowHandle {
-    public var actionId: Int = 0
-    public var text: String = ""
-    public var enabled: Bool = true
-    public var separator: Bool = false
-    public var checkable: Bool = false
-    public var checked: Bool = false
-    public var hasSubmenu: Bool = false
-    public var shortcutText: String = ""
-    public var primitiveName: String = "automationMenuRow"
-
-    public init() {}
-
-    init(actionId: Int, text: String, enabled: Bool) {
-        self.actionId = actionId
-        self.text = text
-        self.enabled = enabled
-    }
-
-    init(separator: Bool) {
-        self.separator = separator
-        actionId = -1
-        enabled = false
-        primitiveName = "automationMenuSeparator"
-    }
-
-    @QtIgnored
-    func matches(_ other: AutomationMenuRowHandle) -> Bool {
-        actionId == other.actionId && text == other.text && enabled == other.enabled
-            && separator == other.separator && primitiveName == other.primitiveName
-            && checkable == other.checkable && checked == other.checked
-            && hasSubmenu == other.hasSubmenu && shortcutText == other.shortcutText
-    }
-}
 
 /// One retained hover presentation shared by the plot's rings and labels.
 @MainActor

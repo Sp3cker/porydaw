@@ -2,6 +2,7 @@ import Foundation
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawPlayback
 import QtBridge
 import PorydawAppAudio
 import PorydawAppCommands
@@ -84,27 +85,33 @@ extension ApplicationSession {
     }
 
     func connectVoiceAudition() {
-        voiceList.onAuditionVoice = { [weak self] voice, key, velocity in
-            guard (0..<128).contains(voice), (0..<128).contains(key),
+        voiceList.onAuditionVoice = { [weak self] (voice: Int, key: Int32, velocity: Int32) in
+            guard let self, (0..<128).contains(voice), (0..<128).contains(key),
                 (0..<128).contains(velocity)
             else { return }
-            self?.audio?.previewVoice(
+            if velocity > 0 {
+                guard self.voiceList.editingEnabled, let group = self.voiceList.voicegroup else { return }
+                if self.selectedDocument == nil { self.audio?.updateVoicegroup(group.value.lease) }
+            }
+            self.audio?.previewVoice(
                 program: UInt8(voice), key: UInt8(key),
                 velocity: UInt8(velocity))
         }
         voiceList.onVoicegroupChangeRequested = { [weak self] arg in
-            guard let self, let session = self.selectedDocument else { return }
-            Task { [weak self, weak session] in
-                guard let session else { return }
+            guard let self, let tab = self.songTabs.selectedPage else { return }
+            let song = tab.workspace.session
+            self.setEditingVoicegroup(enabled: false)
+            Task { [weak self, weak song] in
+                guard let song else { return }
                 do {
-                    try await session.selectVoicegroup(arg)
+                    try await song.selectVoicegroup(arg)
                 } catch ProjectServiceError.operationFailed(let message) {
                     self?.publishLastSaveError(message)
                 } catch {
                     self?.publishLastSaveError(String(describing: error))
                 }
-                if self?.selectedDocument === session {
-                    self?.voiceList.refresh(from: session)
+                if self?.selectedDocument === song {
+                    self?.voiceList.refresh(from: song)
                 }
             }
         }
@@ -117,17 +124,17 @@ extension ApplicationSession {
         voiceList.onStatusMessage = { [weak self] message in
             self?.publishStatusMessage(message: message)
         }
-        voiceList.onSaveRequested = { [weak self] in self?.requestSave() }
+        voiceList.onSaveRequested = { [weak self] in self?.requestSaveVoicegroup() }
         voiceList.onPickerSampleInfoRequested = { [weak self] in
             guard let self, let service = self.catalogService,
-                let session = self.selectedDocument
+                let group = self.voiceList.voicegroup
             else { return }
             self.voiceList.pickerInfoRevision += 1
             let revision = self.voiceList.pickerInfoRevision
             self.voiceList.pickerSampleInfo = [:]
-            Task { [weak self, weak session] in
+            Task { [weak self, weak group] in
                 let info = await service.pickerSampleInfo()
-                guard let self, let session, self.selectedDocument === session,
+                guard let self, let group, self.voiceList.voicegroup === group,
                     self.catalogService === service,
                     self.voiceList.pickerInfoRevision == revision
                 else { return }
@@ -135,16 +142,20 @@ extension ApplicationSession {
                 self.voiceList.pickerInfoRevision += 1
             }
         }
-        voiceList.onSampleAuditionRequested = { [weak self] symbol, kind, adsr in
+        voiceList.onSampleAuditionRequested = {
+            [weak self] (
+                symbol: String, kind: VoiceListAuditionKind, adsr: VoiceListAdsr
+            ) in
             guard let self, let service = self.catalogService,
-                let session = self.selectedDocument
+                let group = self.voiceList.voicegroup, self.voiceList.editingEnabled
             else { return }
             self.audio?.auditionSampleOff()
             self.pickerAuditionRevision += 1
             let revision = self.pickerAuditionRevision
-            Task { [weak self, weak session] in
+            Task { [weak self, weak group] in
                 let sound = await service.pickerSound(symbol: symbol, kind: kind)
-                guard let self, let session, self.selectedDocument === session,
+                guard let self, let group, self.voiceList.voicegroup === group,
+                    self.voiceList.editingEnabled,
                     self.catalogService === service,
                     self.pickerAuditionRevision == revision,
                     let audio = self.audio, let sound

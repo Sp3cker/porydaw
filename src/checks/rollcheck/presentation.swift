@@ -506,12 +506,14 @@ private func checkPresenterMetrics(_ report: CheckReport, viewport: DocumentView
     let summaryMatches =
         decoded.count == notes.count
         && zip(decoded, notes).allSatisfy { summary, note in
-            summary.id == note.id.rawValue && summary.tick == Int(note.tick)
-                && summary.duration == Int(note.duration)
-                && summary.pitch == Int(note.pitch) && summary.track == note.track
-                && summary.velocity == Int(note.velocity)
-                && summary.ghost == (note.track != grid.trackIndex)
-                && summary.selected == session.selectedNotes.contains(note.id)
+            guard summary.id == note.id.rawValue else { return false }
+            guard summary.tick == Int(note.tick) else { return false }
+            guard summary.duration == Int(note.duration) else { return false }
+            guard summary.pitch == Int(note.pitch) else { return false }
+            guard summary.track == note.track else { return false }
+            guard summary.velocity == Int(note.velocity) else { return false }
+            guard summary.ghost == (note.track != grid.trackIndex) else { return false }
+            return summary.selected == session.selectedNotes.contains(note.id)
         }
     report.expect(
         summaryMatches,

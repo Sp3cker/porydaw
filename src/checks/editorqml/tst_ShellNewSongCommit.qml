@@ -93,6 +93,37 @@ ShellLaneSupport {
         wait(0)
     }
 
+    function test_enterAcceptsVoicegroupBeforeFinishing() {
+        stage("voicegroup-enter")
+        const wizard = openWizard("mus_group_enter")
+        next(wizard)
+        const group = findChild(wizard, "importVoicegroup")
+        const expected = "fixture_alt"
+        verify(group.find(expected) >= 0, "fixture offers the matching voicegroup")
+        group.contentItem.forceActiveFocus()
+        group.selectAll()
+        keyClick(Qt.Key_F)
+        verify(waitForNative(function() { return group.editText.indexOf("f") === 0 }, 3000),
+               "typing starts voicegroup completion")
+        compare(group.contentItem.selectedText, expected.slice(1),
+                "the untyped suffix is visibly selected for autocomplete")
+        keyClick(Qt.Key_Return)
+        compare(wizard.visible, true, "accepting completion keeps the wizard open")
+        compare(controller().wizardOpen, true, "accepting completion does not create a song")
+        compare(group.editText, expected, "Return accepts the completed voicegroup")
+        compare(controller().voicegroupText, expected, "accepted group reaches the controller")
+        compare(group.popup.visible, false, "completion leaves no dropdown open")
+        keyClick(Qt.Key_Enter)
+        compare(controller().wizardOpen, true, "keypad Enter also stays in the voicegroup field")
+        verify(!probe.exists(rootPath + "/sound/songs/midi/mus_group_enter.mid"),
+               "neither Enter key starts song creation")
+        mouseClick(findChild(wizard, "newSongWizardFinish"))
+        verify(waitForNative(function() { return !controller().wizardOpen && !controller().busy }, 30000),
+               "explicit Finish creates the song")
+        verify(probe.midiCfgFlags(rootPath, "mus_group_enter").indexOf("-G_" + expected) >= 0,
+               "song uses the accepted voicegroup")
+    }
+
     function test_newSongFinishCreatesBlankSong() {
         const presenter = stage("existing-group")
         const label = "mus_blank_commit"

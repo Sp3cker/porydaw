@@ -1,9 +1,11 @@
 import Foundation
 import PorydawApp
+import PorydawCore
 import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
 import PorydawSample
+@testable import SwiftCoreCheckLogic
 
 @MainActor
 internal func runEditorPresenterChecks(_ report: CheckReport) {
@@ -39,25 +41,30 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             SampleRegistrar.validate(
                 projectRoot: root, name: name, existingSymbols: ["DirectSoundWaveData_samplecheck_tone"])
         }
-        let presenter = SampleStudioPresenter(source: imported, validateName: validator)
+        let presenter = SampleStudioPresenter(document: SampleDocument(source: imported), validateName: validator)
         prefill.expect(presenter.sampleName == "samplecheck_tone", message: "A006 name prefilled from source file")
         prefill.expect(!presenter.canCommit, message: "A007 collision disables the commit")
-        prefill.expect(!presenter.nameStatus.isEmpty, message: "A008 collision displays validation status")
+        prefill.expect(presenter.nameInvalid, message: "A008 collision marks the name invalid")
+        presenter.setSampleName(name: "samplecheck_tone")
+        prefill.expect(
+            presenter.nameInvalid && !presenter.canCommit,
+            message: "invalid name sets the flag and blocks the commit")
         presenter.setSampleName(name: "fresh_tone")
         prefill.expect(presenter.canCommit, message: "A009 valid name enables the commit")
-        prefill.expect(
-            presenter.nameStatus == "Registers as DirectSoundWaveData_fresh_tone",
-            message: "A010 valid name displays registration status")
+        prefill.expect(!presenter.nameInvalid, message: "A010 valid name clears the invalid flag")
         prefill.expect(presenter.sampleName == "fresh_tone", message: "A011 sampleName returns the edited name")
-        presenter.setSampleName(name: "Bad Name")
-        prefill.expect(!presenter.canCommit, message: "A012 bad grammar disables the commit")
+        presenter.setSampleName(name: "Fresh Tone!")
+        prefill.expect(
+            presenter.sampleName == "Fresh Tone!" && presenter.registeredName == "fresh_tone" && presenter.canCommit,
+            message: "A012 typed name stays raw and registers under its sanitized symbol")
 
         let defaults = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelinePreparedDefaults")
         let defaultSource = try SampleImport.decode(preparedWav, sourcePath: "fix/prepared_tone.wav")
         defaults.expect(
             defaultSource.gbaReady && defaultSource.frameCount == 64,
             message: "A013 prepared source imports")
-        let defaultPresenter = SampleStudioPresenter(source: defaultSource, validateName: validator)
+        let defaultPresenter = SampleStudioPresenter(
+            document: SampleDocument(source: defaultSource), validateName: validator)
         let initial = defaultPresenter.processed
         defaults.expect(
             initial.freq == 15_000_000 && initial.size == 64 && initial.looped && initial.loopStart == 8,
@@ -75,20 +82,21 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         pitch.expect(
             pitchSource.exactPitch == 15_000_000 && pitchSource.baseKey == 58,
             message: "A018 key-override source imports")
-        let pitchPresenter = SampleStudioPresenter(source: pitchSource, validateName: validator)
-        pitchPresenter.setBaseKeyText(text: "B3")
+        let pitchPresenter = SampleStudioPresenter(
+            document: SampleDocument(source: pitchSource), validateName: validator)
+        pitchPresenter.setBaseKey(key: 59)
         pitch.expect(
             pitchPresenter.params.baseKey == 59 && pitchPresenter.params.exactPitchOverride == 0
                 && pitchPresenter.processed.freq != 15_000_000,
             message: "A020 key edit flows into the render and drops the override")
-        pitchPresenter.setBaseKeyText(text: "A#3")
+        pitchPresenter.setBaseKey(key: 58)
         pitch.expect(
             pitchPresenter.processed.freq == 15_000_000, message: "A021 restoring source key restores verbatim agbp")
 
         let rate = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelineRateCommit")
         let rateSource = try SampleImport.decode(preparedWav, sourcePath: "fix/prepared_tone.wav")
         rate.expect(rateSource.gbaReady && rateSource.hasLoop, message: "A025 rate source imports")
-        let ratePresenter = SampleStudioPresenter(source: rateSource, validateName: validator)
+        let ratePresenter = SampleStudioPresenter(document: SampleDocument(source: rateSource), validateName: validator)
         ratePresenter.setLoopOn(enabled: false)
         rate.expect(!ratePresenter.processed.looped, message: "A027 rate fixture is in one-shot mode")
         let beforeTyping = ratePresenter.renderRevision
@@ -101,15 +109,27 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         rate.expect(
             ratePresenter.processed.declaredRate == 6690, message: "A030 fractional rate rounds declared WAV rate")
         rate.expect(ratePresenter.params.exactPitchOverride == 0, message: "A031 rate edit drops verbatim agbp")
+        let romBefore = ratePresenter.romText
         ratePresenter.chooseRate(index: 1)
+        rate.expect(
+            ratePresenter.romText != romBefore
+                && ratePresenter.romText
+                    == SampleStudioReadouts.romSize(
+                        bytes: SampleStudioReadouts.romBytes(
+                            SampleRender.render(source: rateSource, params: ratePresenter.params))),
+            message: "ROM text changes when the target rate changes")
         ratePresenter.chooseRate(index: 0)
         rate.expect(
             ratePresenter.params.targetRate == rateSource.sampleRate, message: "A032 preset pick restores source rate")
-
+        ratePresenter.commitRateText(text: "6689.5")
+        ratePresenter.commitRateText(text: "1e3")
+        rate.expect(
+            ratePresenter.params.targetRate == 6689.5,
+            message: "exponent rate text keeps the current target rate")
         let crop = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelineCropNormalize")
         let cropSource = try SampleImport.decode(preparedWav, sourcePath: "fix/prepared_tone.wav")
         crop.expect(cropSource.frameCount == 64 && cropSource.hasLoop, message: "A033 crop source imports")
-        let cropPresenter = SampleStudioPresenter(source: cropSource, validateName: validator)
+        let cropPresenter = SampleStudioPresenter(document: SampleDocument(source: cropSource), validateName: validator)
         cropPresenter.setLoopOn(enabled: false)
         cropPresenter.setCropEnd(value: 32)
         crop.expect(cropPresenter.processed.size == 32, message: "A035 crop end trims one-shot render")
@@ -119,10 +139,10 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             message: "A036 normalize mode applies gain to render")
 
         let hiRes = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
-        let undoPresenter = SampleStudioPresenter(source: hiRes, validateName: validator)
+        let undoPresenter = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
         let undo = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorUndo")
         undo.expect(hiRes.frameCount == 12_000 && hiRes.hasLoop, message: "A091 undo source imports")
-        undoPresenter.setBaseKeyText(text: "A3")
+        undoPresenter.setBaseKey(key: 57)
         undo.expect(
             undoPresenter.canUndo && undoPresenter.baseKey == 57, message: "A093 key edit creates an undo entry")
         undoPresenter.undo()
@@ -137,8 +157,9 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         commit.expect(
             commitSource.frameCount == 12_000 && commitSource.sampleRate == 44_100,
             message: "A108 commit source imports")
-        let commitPresenter = SampleStudioPresenter(source: commitSource, validateName: validator)
-        commitPresenter.setBaseKeyText(text: "A3")
+        let commitPresenter = SampleStudioPresenter(
+            document: SampleDocument(source: commitSource), validateName: validator)
+        commitPresenter.setBaseKey(key: 57)
         commit.expect(
             commitPresenter.params.baseKey == 57 && commitPresenter.params.exactPitchOverride == 0,
             message: "A110 commit preserves edited render parameters")
@@ -193,7 +214,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         edit.expect(
             editSource.frameCount == 12_000 && editSource.sampleRate == 44_100,
             message: "A060 edit source imports")
-        let editPresenter = SampleStudioPresenter(source: editSource, validateName: validator)
+        let editPresenter = SampleStudioPresenter(document: SampleDocument(source: editSource), validateName: validator)
         editPresenter.setEditTarget(name: "provenance_tone")
         var baseline = SampleDocument.defaultParams(for: editSource)
         baseline.cropStart = 150
@@ -211,7 +232,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             editPresenter.params == baseline && !editPresenter.canUndo,
             message: "A064 restored provenance params are baseline not undo entry")
         let state = report.scoped(cppID: "swiftcore/SampleStudioPresenter::historyAndReadouts")
-        let gesture = SampleStudioPresenter(source: hiRes, validateName: validator)
+        let gesture = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
         var observed: [Int] = []
         gesture.addRenderObserver { observed.append(1) }
         gesture.addRenderObserver { observed.append(2) }
@@ -233,66 +254,34 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         gesture.undo()
         state.expect(gesture.cropStart == 200, message: "marker drag reverts to pre-gesture render")
         state.expect(
-            gesture.outputSummary.contains("ROM") && gesture.techDetail.contains("agbp"),
-            message: "editor readouts report ROM and rendered pitch")
+            defaultPresenter.fileRateText == "13240.09 Hz"
+                && defaultPresenter.rateChoices[0] == "File rate (13240.09 Hz)"
+                && defaultPresenter.loadedFileName == "prepared_tone.wav",
+            message: "file-rate text equals the decoded file's rate")
         state.expect(
-            defaultPresenter.sourceLine == "8-bit PCM WAV, 1 channel, 13240.09 Hz, 64 samples (0.00 s)"
-                && defaultPresenter.rateChoices[0] == "Keep source (13240.09 Hz)",
-            message: "source and keep-rate labels reproduce fork PCM text")
-        var floatStereo = hiRes
-        floatStereo.sourceChannels = 2
-        floatStereo.sourceBits = 32
-        floatStereo.sourceFloat = true
-        floatStereo.sampleRate = 44100.25
-        state.expect(
-            SampleStudioReadouts.sourceLine(floatStereo)
-                == "32-bit float WAV, 2 channels, 44100.25 Hz, 12000 samples (0.27 s)",
-            message: "floating stereo source uses fractional rate and plural channels")
-        state.expect(
-            gesture.normalizeChoices
-                == ["Auto", "Looped (−9 dBFS loop RMS)", "One-shot (peak)", "Off"],
-            message: "normalize choices reproduce fork labels")
-        state.expect(
-            Array(gesture.rateChoices.dropFirst())
-                == [
-                    "5734", "7884", "10512", "13379", "15768", "18157",
-                    "21024", "26758", "31536", "36314", "40137", "42048",
-                ],
-            message: "rate presets reproduce fork kGbaMixRates ordering")
+            SampleStudioReadouts.fileRate(32000) == "32000 Hz", message: "whole file rates print no decimals")
         var formatted = ProcessedSample()
         formatted.size = 1520
-        formatted.outputRate = 1000
-        formatted.declaredRate = 1000
-        formatted.freq = 225_280
         formatted.normalizeGain = 2
-        formatted.seam.valid = true
-        formatted.seam.ampLsb = 2
-        formatted.seam.derivLsb = 3
-        formatted.seam.nccValid = true
-        formatted.seam.ncc = 0.987
-        formatted.warnings = ["render notice"]
-        var warned = defaultSource
-        warned.warnings = ["decode notice"]
         state.expect(
-            SampleStudioReadouts.summary(source: warned, output: formatted)
-                == "1.52 s · 1.5 KB ROM\nWarning: decode notice\nWarning: render notice",
-            message: "ROM summary rounds KB to one decimal and retains warning order")
-        state.expect(
-            SampleStudioReadouts.technical(formatted)
-                == "Output: 1520 samples @ 1000 Hz — one-shot\nPitch: 220.00 Hz at C4 (60) — agbp 225280, unity 60 (C4)\nROM cost: 1536 bytes — seam amp 2 LSB, slope 3, match 98%",
-            message: "technical readout truncates seam match to integer percent")
+            SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(formatted)) == "1.5 KB",
+            message: "ROM size rounds KB to one decimal")
         state.expect(
             SampleStudioReadouts.gain(formatted, mode: .oneShot) == "gain 6.0 dB"
                 && SampleStudioReadouts.gain(formatted, mode: .off) == "gain 0.0 dB",
             message: "gain readout formats enabled and disabled modes")
-        let parsed = SampleStudioPresenter(source: hiRes, validateName: validator)
-        parsed.setBaseKeyText(text: "A3 (57)")
-        state.expect(parsed.baseKey == 57, message: "display-form note parses back to its MIDI key")
-        parsed.setBaseKeyText(text: "C9999")
-        state.expect(parsed.baseKey == 127, message: "out-of-range note clamps to MIDI high end")
-        parsed.setBaseKeyText(text: "C-9999")
-        state.expect(parsed.baseKey == 0, message: "out-of-range negative octave clamps to MIDI low end")
-        let returning = SampleStudioPresenter(source: hiRes, validateName: validator)
+        state.expect(
+            midiKey(from: "C4") == 60 && midiKey(from: "c#-1") == 1 && midiKey(from: "G9") == 127
+                && midiKey(from: "G#9") == nil && midiKey(from: "128") == nil
+                && midiKey(from: "C4 (60)") == nil && midiKey(from: "C4x") == nil,
+            message: "note grammar accepts full names and in-range integers only")
+        let tuned = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
+        tuned.commitFineTuneCentsText(text: "12.50")
+        tuned.commitFineTuneCentsText(text: "1e3")
+        state.expect(
+            tuned.fineTuneCents == 12.5 && tuned.fineTuneText == "12.50",
+            message: "cents text commits decimals and keeps current on exponent text")
+        let returning = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
         let baselineBytes = returning.wavBytes()
         returning.setFineTuneCents(value: 10)
         returning.setFineTuneCents(value: returning.source.fracSemitone * 100)

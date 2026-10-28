@@ -158,31 +158,13 @@ ShellPitchBendSupport {
     }
 
     function test_cancelReopenAndOutsideClickDoNotEdit() {
-        openSong()
-        const view = surface()
-        const grid = view.gridModel
-        shell.height += 12 * grid.baseFontPx
-        const roll = findChild(view, "swiftRollInput")
-        const plot = findChild(view, "timelineQuickRollPlot")
-        verify(roll !== null && plot !== null)
-        const note = visibleNote(view, grid, roll, plot)
-        verify(note !== null, "a selected track's editable note is revealed: " + noteProbe)
-        const renderer = findChild(view, "timelineRendererPlot")
-        const faceY = RollNoteFaces.rect(renderer, roll, note.id).y
-        grid.setCameraVScroll(grid.cameraScrollY + faceY - plot.height * 0.1)
-        waitForRendering(roll)
-        const center = RollNoteFaces.center(renderer, roll, note.id)
-        note.x = center.x
-        note.y = center.y
-        mouseClick(roll, note.x, note.y, Qt.LeftButton)
+        const opened = openViaG(true)
+        const view = opened.view
+        const grid = opened.grid
+        const roll = opened.roll
+        const note = opened.note
+        const editor = opened.editor
         const before = grid.appliedRevisionText
-        grid.performCommand(6)
-        const editor = view.pitchBendPresenter
-        tryCompare(editor, "isOpen", true)
-        tryVerify(function() { return findChild(view, "pitchBendPopup") !== null }, 5000,
-                  "the popup loader realizes the published open state")
-        const popup = findChild(view, "pitchBendPopup")
-        compare(grid.appliedRevisionText, before)
         keyClick(Qt.Key_Escape)
         tryCompare(editor, "isOpen", false)
         compare(grid.appliedRevisionText, before)

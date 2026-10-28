@@ -335,6 +335,12 @@ func trackRenameContract(_ report: CheckReport) {
         expected: "editcheck name", actual: timeline.tracks.first?.name,
         cppID: "editcheck/EditCheckTest::trackRename",
         what: "timeline reports the renamed track")
+    document.renameTrack(0, to: "editcheck\r\nname\n")
+    report.expectEqual(
+        expected: "editcheck name", actual: document.trackName(0),
+        cppID: "editcheck/EditCheckTest::trackRename",
+        what: "pasted line breaks become spaces before trimming")
+    document.renameTrack(0, to: "editcheck name")
     let before = document.revision
     document.renameTrack(0, to: "  editcheck name  ")
     report.expectEqual(

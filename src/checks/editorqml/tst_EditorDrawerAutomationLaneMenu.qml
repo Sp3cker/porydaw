@@ -192,7 +192,7 @@ EditorDrawerTestSupport {
                 disabledRow = drawn[d]
         }
         verify(disabledRow, "the projected node's Delete row is drawn")
-        compare(disabledRow.model.enabled, false,
+        compare(disabledRow.itemData.enabled, false,
                 "the projected engine node's Delete row is published disabled")
         var beforeDisabled = bootstrap.automationLaneTicks()
         AutomationMenuSupport.clickAutomationMenuRow(testCase, 2)
@@ -269,7 +269,7 @@ EditorDrawerTestSupport {
         mouseMove(range, range.width / 2, range.height / 2)
         tryVerify(function() {
             var selected = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 16)
-            return !!selected && selected.model.checked
+            return !!selected && selected.itemData.checked
         }, 1000, "the drawn range choice remains 64")
         var full = AutomationMenuSupport.menuRowByAction(testCase, childPanel, 17)
         verify(full && PageSupport.isEffectivelyVisible(testCase, full))

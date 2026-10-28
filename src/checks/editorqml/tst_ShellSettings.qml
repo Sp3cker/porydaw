@@ -43,6 +43,8 @@ ShellLaneSupport {
         const song = songGeometryComponent.createObject(testCase, properties)
         verify(engine !== null && song !== null, "production settings pages load")
         try {
+            const channels = findChild(engine, "engine.polyphony")
+            compare(channels.displayText, channels.numberFormat.text(channels.value))
             const engineX = 105 + 84 * delta
             checkPinnedRect(engine, "engine.polyphony", engineX, 11 * unit,
                             520 - engineX, 25 + 15 * delta)
@@ -131,13 +133,6 @@ ShellLaneSupport {
                + child.width + "x" + child.height + "; widget "
                + expected.x + "," + expected.y + " " + expected.w + "x" + expected.h)
     }
-    function capture(page, px) {
-        var saved = false
-        verify(findChild(dialog(), "settingsBody").grabToImage(function(result) {
-            saved = result.saveToFile(bootstrap.settingsCapturePath(page, px))
-        }), page + " settings capture starts")
-        tryVerify(function() { return saved }, 3000, page + " settings image is saved")
-    }
     function test_engineRoundTripAndInvalidMixer() {
         const presenter = createShell()
         const model = presenter.settingsStore
@@ -168,7 +163,6 @@ ShellLaneSupport {
         const baseline = reference("macos-dpr1-font12", "engine")
         for (const name of engineRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("engine", presenter.session.baseFontPx)
         compare(findChild(dialog(), "pcmMixerCombo").currentIndex, 1)
         model.changeMixer("ipatix")
         model.changeMaxPcmChannels(7)
@@ -441,7 +435,6 @@ ShellLaneSupport {
         verify(model.voicegroups.indexOf("fixture_rich") >= 0)
         for (const name of songRegions)
             checkRegion(baseline, name, findChild(dialog(), name), 6)
-        capture("song", app.baseFontPx)
         compare(model.voicegroup, "fixture_rich", "song config voicegroup is presented")
         compare(findChild(dialog(), "song.voicegroup").editText, model.voicegroup,
                 "editable selector preserves the current song's voicegroup")

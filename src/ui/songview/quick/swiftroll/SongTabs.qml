@@ -223,6 +223,7 @@ FocusScope {
 
         Flickable {
             id: stripViewport
+            acceptedButtons: Qt.NoButton
             anchors.left: parent.left
             anchors.right: scrollControls.visible ? scrollControls.left : parent.right
             height: strip.height
@@ -303,7 +304,7 @@ FocusScope {
                             height: root.closeExtent
                             padding: 2
                             focusPolicy: Qt.NoFocus
-                            enabled: selectButton.session !== null && !selectButton.session.bankTransitionPending
+                            enabled: selectButton.session !== null && !selectButton.session.bindingTransitionPending
                             contentItem: Item {
                                 AppIcon {
                                     anchors.centerIn: parent
@@ -383,6 +384,7 @@ FocusScope {
     Item {
         id: pageStack
         objectName: "songTabPages"
+        enabled: !root.controller.isClosingAll
         anchors.top: strip.bottom
         anchors.left: parent.left
         anchors.right: parent.right
@@ -430,6 +432,7 @@ FocusScope {
         }
         footer: DialogButtonBox {
             id: closeButtons
+            buttonLayout: DialogButtonBox.MacLayout
             // Kept deliberately: stock contentItem animates ~350ms while hidden (accf62cf); silencing the residual transient costs a line for zero visible gain.
             contentItem: ListView {
                 implicitWidth: saveButton.implicitWidth + discardButton.implicitWidth

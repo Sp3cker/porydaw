@@ -2,9 +2,18 @@ import BinaryParsing
 import Foundation
 
 public enum SampleImport {
+    /// File extensions offered as audio sources by libraries and drop targets.
+    public static let fileExtensions: Set<String> = ["wav", "aif", "aiff", "mp3", "flac", "ogg"]
+
+    /// Receives the decoded mono prefix every `observedChunk` frames and at the end, with the total
+    /// frame count; a thrown failure stops the decode.
+    public typealias FrameObserver = (_ decoded: Span<Float>, _ total: Int) throws(SampleImportFailure) -> Void
+    public static let observedChunk = 1 << 16
+
     public static func decode(
         _ bytes: Data, sourcePath: String,
-        leftChannelOnly: Bool = false
+        leftChannelOnly: Bool = false,
+        onFrames: FrameObserver = { (_: Span<Float>, _: Int) in }
     ) throws(SampleImportFailure) -> ImportedSample {
         let basename = URL(fileURLWithPath: sourcePath).deletingPathExtension().lastPathComponent
         let name = SampleNames.sanitize(basename)
@@ -19,30 +28,39 @@ public enum SampleImport {
             }
             var sample: ImportedSample
             if matches(0, "RIFF") && matches(8, "WAVE") {
-                sample = try SampleWavReader.decode(data, leftChannelOnly: leftChannelOnly)
+                sample = try SampleWavReader.decode(data, leftChannelOnly: leftChannelOnly, onFrames: onFrames)
             } else if matches(0, "FORM") && matches(8, "AIFF") {
-                sample = try SampleAiffReader.decode(data, leftChannelOnly: leftChannelOnly)
+                sample = try SampleAiffReader.decode(data, leftChannelOnly: leftChannelOnly, onFrames: onFrames)
             } else if matches(0, "FORM") && matches(8, "AIFC") {
                 throw SampleImportFailure("AIFF-C is not supported — export uncompressed AIFF or WAV.")
             } else if matches(0, "RIFF") && matches(8, "sfbk") {
                 throw SampleImportFailure(
                     "SoundFont files hold multiple samples — pick a zone with the SoundFont zone picker.")
             } else if matches(0, "fLaC") {
-                sample = try SampleCompressedDecode.decode(bytes, kind: .flac, leftChannelOnly: leftChannelOnly)
+                sample = try SampleCompressedDecode.decode(
+                    bytes, kind: .flac, leftChannelOnly: leftChannelOnly, onFrames: onFrames)
             } else if matches(0, "OggS") {
-                sample = try SampleCompressedDecode.decode(bytes, kind: .ogg, leftChannelOnly: leftChannelOnly)
+                sample = try SampleCompressedDecode.decode(
+                    bytes, kind: .ogg, leftChannelOnly: leftChannelOnly, onFrames: onFrames)
             } else if data.byteCount >= 4
                 && (matches(0, "ID3")
                     || (data[0] == 0xFF && data[1] & 0xE0 == 0xE0))
             {
-                sample = try SampleCompressedDecode.decode(bytes, kind: .mp3, leftChannelOnly: leftChannelOnly)
+                sample = try SampleCompressedDecode.decode(
+                    bytes, kind: .mp3, leftChannelOnly: leftChannelOnly, onFrames: onFrames)
             } else {
                 throw SampleImportFailure(
                     "not a supported audio file (WAV, AIFF, MP3, FLAC, and Ogg Vorbis sources are supported).")
             }
             sample.sourcePath = sourcePath
             sample.suggestedName = name
-            let clipped = sample.buffer.reduce(0) { $0 + (abs($1) >= 0.9999 ? 1 : 0) }
+            var clipped = 0
+            do {
+                let frames = sample.buffer.span
+                for index in 0..<frames.count {
+                    if abs(frames[index]) >= 0.9999 { clipped += 1 }
+                }
+            }
             if sample.frameCount > 0 && Double(clipped) / Double(sample.frameCount) > 0.001 {
                 sample.warnings.append("source is already clipped (\(clipped) samples at full scale).")
             }
@@ -64,8 +82,10 @@ public enum SampleImport {
     @discardableResult
     static func downmix(
         _ frames: Int, channels: Int, leftOnly: Bool,
-        read: (Int) -> (value: Double, clamped: Bool), into sample: inout ImportedSample
-    ) -> Int {
+        read: (Int) -> (value: Double, clamped: Bool), into sample: inout ImportedSample,
+        onFrames: FrameObserver
+    ) throws(SampleImportFailure) -> Int {
+        var failure: SampleImportFailure?
         var lr = 0.0
         var ll = 0.0
         var rr = 0.0
@@ -101,9 +121,16 @@ public enum SampleImport {
                     }
                     destination.append(Float(sum / Double(channels)))
                 }
+                if (frame + 1) % observedChunk == 0 || frame + 1 == frames {
+                    do throws(SampleImportFailure) { try onFrames(destination.span, frames) } catch {
+                        failure = error
+                        break
+                    }
+                }
             }
             initialized = destination.count
         }
+        if let failure { throw failure }
         sample.phaseCancelStereo = channels == 2 && ll > 0 && rr > 0 && lr / sqrt(ll * rr) < 0
         if leftOnly && channels > 1 {
             sample.warnings.append("imported the left channel only.")

@@ -1,5 +1,5 @@
 pragma ComponentBehavior: Bound
-// Swift owns both graph lanes and their document transactions.
+// Swift owns all three graph lanes and their document transactions.
 // The popup projects the scene models through Quick Shapes.
 import QtQuick
 import QtQuick.Shapes
@@ -14,6 +14,7 @@ Rectangle {
     required final property PitchBendPresenter bridge
 
     required final property font fallbackFont
+    signal dismissed()
 
 
     readonly property real outerInset: bridge ? bridge.outerInset : 0
@@ -70,8 +71,12 @@ Rectangle {
             event.accepted = false
             return
         }
-        if (!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
+        if ((!bendRangeField.textInput.activeFocus && !lfoSpeedField.textInput.activeFocus)
+                || bridge.isToggleKey(event.key, event.modifiers)) {
             bridge.routeUnclaimedKey(event.key, event.modifiers, event.isAutoRepeat)
+            if (!bridge.isOpen)
+                root.dismissed()
+        }
         event.accepted = true
     }
     Keys.onReleased: (event) => event.accepted = true
@@ -85,8 +90,10 @@ Rectangle {
             return
         if (graph === pitchGraph)
             bridge.resetPitchCurve()
-        else
+        else if (graph === modGraph)
             bridge.resetModCurve()
+        else
+            bridge.resetLfoCurve()
         graph.forceActiveFocus(Qt.OtherFocusReason)
     }
     function focusInitialGraph(): void { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
@@ -118,7 +125,9 @@ Rectangle {
         Text {
             id: liveValue
             objectName: labels.graph && labels.graph === pitchGraph
-                        ? "pitchBendLiveValue" : "modWheelLiveValue"
+                        ? "pitchBendLiveValue"
+                        : labels.graph && labels.graph === modGraph
+                          ? "modWheelLiveValue" : "lfoSpeedLiveValue"
 
             x: labels.canvas.x
             y: 0
@@ -422,6 +431,17 @@ Rectangle {
         activeFocusOnTab: true
     }
 
+    GraphCanvas {
+        id: lfoGraph
+        lane: root.bridge ? root.bridge.currentLfo : null
+        objectName: "lfoSpeedGraph"
+        x: 0
+        y: root.headerHeight + root.graphHeight * 2
+        width: root.width
+        height: root.graphHeight
+        activeFocusOnTab: true
+    }
+
     GraphLaneLabels {
         graph: pitchGraph
         x: pitchGraph.x
@@ -436,6 +456,14 @@ Rectangle {
         y: modGraph.y
         width: modGraph.width
         height: modGraph.height
+    }
+
+    GraphLaneLabels {
+        graph: lfoGraph
+        x: lfoGraph.x
+        y: lfoGraph.y
+        width: lfoGraph.width
+        height: lfoGraph.height
     }
 
     ResetButton {
@@ -454,6 +482,15 @@ Rectangle {
         resetDescription: qsTr("Reset the mod wheel curve to its default")
         x: root.width - root.outerInset - root.resetWidth
         y: modGraph.y + Math.max(0, (modGraph.canvasRect.y - height) / 2)
+    }
+
+    ResetButton {
+        objectName: "lfoSpeedReset"
+
+        graph: lfoGraph
+        resetDescription: qsTr("Reset the LFO speed curve to its default")
+        x: root.width - root.outerInset - root.resetWidth
+        y: lfoGraph.y + Math.max(0, (lfoGraph.canvasRect.y - height) / 2)
     }
 
     Text {

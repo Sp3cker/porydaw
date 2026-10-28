@@ -25,6 +25,13 @@ Windows note:
     Preferences are stored under organization sp3cker and do not share with
     upstream Porydaw releases.
 
+Linux note:
+    Requires glibc 2.35 or later (Ubuntu 22.04-era distributions).
+    Make porydaw.AppImage executable (chmod +x porydaw.AppImage). AppImages
+    need FUSE 2; if it will not start, install libfuse2 (libfuse2t64 on
+    Ubuntu 24.04) or run ./porydaw.AppImage --appimage-extract-and-run.
+    X11 and Wayland sessions are both supported.
+
 Project home:
     https://github.com/Sp3cker/porydaw
 

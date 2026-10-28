@@ -138,7 +138,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() { return draft.macro === 12 }, 15000),
                "choosing the Drumkit type converts the voice")
         tryCompare(combo, "visible", true, 5000, "a drumkit voice shows the drumkit selector")
-        compare(combo.editText, "fixture_drums_a", "the converted voice names the first drumkit")
+        compare(combo.displayText, "fixture_drums_a", "the converted voice names the first drumkit")
         findChild(panel, "voiceEditorScrollView").contentY = 0
         waitForRendering(combo)
         mouseClick(combo.indicator, combo.indicator.width / 2, combo.indicator.height / 2)
@@ -146,7 +146,7 @@ ShellVoicegroupSupport {
         compare(combo.count, 2, "the open dropdown lists both catalog drumkits")
         compare(combo.textAt(1), "fixture_drums_b", "the dropdown rows name the catalog drumkits")
         combo.popup.close()
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return draft.macro === 0 }, 15000),
                "undo restores the DirectSound voice")
     }
@@ -255,7 +255,7 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() {
             return draft.symbol === "unlisted_typography_sample"
         }, 15000), "an unlisted typed symbol commits via the fallback row")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() { return draft.symbol === sampleOriginal }, 15000),
                "picker undo restores the symbol and preview")
         popup = openPicker()
@@ -285,11 +285,11 @@ ShellVoicegroupSupport {
         verify(waitForNative(function() {
             return draft.symbol === "ProgrammableWaveData_fixture_saw"
         }, 15000), "Return commits the typed wave symbol")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.symbol === "ProgrammableWaveData_fixture_pulse" && draft.macro === 7
         }, 15000), "wave undo restores the wave voice and the DirectSound original")
-        app.requestUndo()
+        undoVoicegroup()
         verify(waitForNative(function() {
             return draft.symbol === sampleOriginal && draft.macro === 0
         }, 15000), "wave undo restores the wave voice and the DirectSound original")
@@ -481,5 +481,74 @@ ShellVoicegroupSupport {
                        "mounted outage restores the staged sound directory")
             }
         }
+    }
+
+    function test_zzzNoSongPickerLoadsCommittedMetadataAndAssigns() {
+        const shell = createFullShell()
+        const presenter = shell.shellPresenter
+        const session = presenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        const controller = session.voiceListController()
+        verify(waitForNative(function() {
+            return session.songOpen && controller.isBound && !controller.isLoading
+        }, 30000))
+        controller.selectSlot(0)
+        const original = String(controller.editorModel().symbol)
+        const sampleName = original === "DirectSoundWaveData_fixture_loop" ? "fixture_drum" : "fixture_loop"
+        const symbol = "DirectSoundWaveData_" + sampleName
+        const bankPath = bootstrap.projectRoot + "/sound/voicegroups/fixture_rich.inc"
+        const bankBefore = fileProbe.fileFingerprint(bankPath)
+        verify(bankBefore.length > 0)
+        const tabs = findChild(shell, "shellSongTabs")
+        verify(!!tabs, "Object exists")
+        const close = findChild(tabs, "songTabClose_" + session.songTabs.selectedId)
+        verify(!!close, "Object exists")
+        mouseClick(close)
+        verify(waitForNative(function() {
+            return session.songTabs.tabCount === 0 && !controller.hasSongContext && controller.isBound
+        }, 5000))
+        const retainedPanel = findChild(shell, "voicegroupPanel")
+        verify(!!retainedPanel, "Object exists")
+        const scroll = findChild(retainedPanel, "voiceEditorScrollView")
+        verify(!!scroll, "Object exists")
+        scroll.contentY = 0
+        const trigger = findChild(retainedPanel, "vgSamplePickerButton")
+        verify(!!trigger, "Object exists")
+        verify(waitForRendering(trigger))
+        mouseClick(trigger)
+        const popup = findChild(retainedPanel, "vgSamplePickerPopup")
+        verify(!!popup, "Object exists")
+        tryCompare(popup, "opened", true, 5000)
+        verify(waitForNative(function() {
+            const index = pickerIndex(controller, row => row.symbol === symbol)
+            return index >= 0 && controller.samplePickerRow(index).detail.length > 0
+        }, 15000))
+        const search = findChild(popup, "vgSamplePickerSearch")
+        verify(!!search, "Object exists")
+        const list = findChild(popup, "vgSamplePickerList")
+        verify(!!list, "Object exists")
+        const detail = findChild(popup, "vgSamplePickerDetail")
+        verify(!!detail, "Object exists")
+        search.text = symbol
+        const index = pickerIndex(controller, row => row.symbol === symbol)
+        verify(index >= 0)
+        list.positionViewAtIndex(index, ListView.Contain)
+        tryVerify(function() { return !!list.itemAtIndex(index) }, 5000)
+        const row = list.itemAtIndex(index)
+        mouseClick(row)
+        tryCompare(detail, "text", expectedDetail(sampleName, sampleName === "fixture_loop"))
+        compare(controller.editorModel().symbol, original)
+        mouseClick(row)
+        tryCompare(popup, "opened", false, 5000)
+        verify(waitForNative(function() {
+            return controller.editorModel().symbol === symbol && controller.bankDirty && !controller.bankBusy
+        }, 15000))
+        verify(!session.documentDirty)
+        compare(fileProbe.fileFingerprint(bankPath), bankBefore)
+        presenter.activate("edit.undo")
+        verify(waitForNative(function() {
+            return controller.editorModel().symbol === original && !controller.bankDirty && !controller.bankBusy
+        }, 15000))
+        compare(fileProbe.fileFingerprint(bankPath), bankBefore)
     }
 }

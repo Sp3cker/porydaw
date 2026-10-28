@@ -1,5 +1,4 @@
 import Foundation
-import PorydawApp
 import PorydawDocument
 import PorydawProject
 

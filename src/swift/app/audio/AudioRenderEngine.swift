@@ -27,6 +27,7 @@ public final class AudioRenderEngine {
     private let handoff = AudioTimelineHandoff()
     let transportState: AudioTransport
     private let telemetry = AudioTelemetry()
+    private let metronome: Metronome
     private let loop = Atomic<Bool>(true)
     private let mute = Atomic<UInt32>(0)
     private let solo = Atomic<UInt32>(0)
@@ -55,6 +56,7 @@ public final class AudioRenderEngine {
         transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames)
         audition = AudioAudition()
         suppression = ResonanceSuppression(sampleRate: Float(sampleRate))
+        metronome = Metronome(sampleRate: sampleRate)
         left = .allocate(capacity: capacity)
         right = .allocate(capacity: capacity)
         previewLeft = .allocate(capacity: capacity)
@@ -107,6 +109,7 @@ public final class AudioRenderEngine {
     }
     public func setOutputVolume(_ percent: Int) { transportState.outputVolume = percent }
     public func setResonanceSuppression(_ enabled: Bool) { suppression.setEnabled(enabled) }
+    public func setMetronomeEnabled(_ enabled: Bool) { metronome.setEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { invert.store(enabled, ordering: .relaxed) }
     public func resetPolyStats() { polyReset.wrappingAdd(1, ordering: .relaxed) }
     public func seek(_ sample: UInt64) {
@@ -260,19 +263,23 @@ public final class AudioRenderEngine {
         if let timeline = handoff.acquirePending() { adopt(timeline.pointee) }
         applySeek()
         applyMute()
-        audition.apply(main: main, preview: preview, frames: frames, deferTimed: transportState.cutting)
         applyPolyDebug()
+        audition.apply(main: main, preview: preview, frames: frames, deferTimed: transportState.cutting)
         transportState.prepareVolume()
         var done = 0
         while done < Int(frames) {
             let count = min(Int(frames) - done, capacity)
             if transportState.applied == .playing, let timeline = handoff.active {
                 let looping = loopEnabled
+                let start = player.position
                 player.render(
                     engine: main, timeline: timeline.pointee,
                     left: UnsafeMutableBufferPointer(start: left, count: count),
                     right: UnsafeMutableBufferPointer(start: right, count: count),
-                    looping: looping, muteMask: appliedMute)
+                    looping: looping, muteMask: appliedMute, audition: audition)
+                metronome.mix(
+                    left: left, right: right, frames: count, from: start,
+                    timeline: timeline.pointee, looping: looping)
                 if !(looping && timeline.pointee.hasLoop)
                     && player.position > timeline.pointee.lengthSamples + UInt64(3 * sampleRate)
                 {
@@ -280,7 +287,8 @@ public final class AudioRenderEngine {
                     transition()
                 }
             } else {
-                m4a_engine_process(main, left, right, Int32(count))
+                audition.render(main: main, left: left, right: right, frames: count)
+                metronome.mixTail(left: left, right: right, frames: count)
             }
             m4a_engine_process(preview, previewLeft, previewRight, Int32(count))
             let block = output + done * 2
@@ -294,6 +302,7 @@ public final class AudioRenderEngine {
                 case .none: break
                 case let .cut(target, resetStats):
                     audition.cut(main: main, preview: preview)
+                    metronome.silence()
                     if target == .stopped { player.reset() }
                     if resetStats { m4a_engine_reset_poly_stats(main) }
                     (block + i * 2).update(repeating: 0, count: (count - i) * 2)

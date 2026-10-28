@@ -5,30 +5,6 @@ import QtBridge
 import PorydawAppCommands
 import PorydawAppPresentation
 
-@MainActor
-@QtBridgeable
-public final class RulerMenuRow {
-    public var actionId: Int = 0
-    public var text: String = ""
-    public var shortcutText: String = ""
-    public var enabled: Bool = true
-    public var separator: Bool = false
-
-    public init() {}
-
-    init(_ id: Int, _ available: Bool = true) {
-        actionId = id
-        enabled = available
-    }
-
-    static func divider() -> RulerMenuRow {
-        let row = RulerMenuRow()
-        row.actionId = -1
-        row.separator = true
-        row.enabled = false
-        return row
-    }
-}
 
 /// The positional ruler menu and its selection-scoped variant share the
 /// document's automation selection, clipboard and history command executor.
@@ -54,7 +30,7 @@ public final class RulerMenuPresenter {
     private let keybindings = KeybindingRegistry()
     private static let controlModifier = 0x0400_0000
     @QtTracked public var isOpen = false
-    public var rows: QListModel<RulerMenuRow> = QListModel()
+    public var rows: QListModel<MenuRow> = QListModel()
     @QtTracked public var menuKind = 0  // 1: ruler background; 2: selected time range
     @QtTracked public var insertTimePromptOpen = false
     @QtTracked public var promptStyle = PromptStyle()
@@ -99,7 +75,7 @@ public final class RulerMenuPresenter {
     private var pendingInsert: (tick: Tick, revision: UInt64, beatTicks: UInt32, beatsPerBar: UInt32)?
     /// Fork commitEditCursor egress, installed by the owning session.
     @QtIgnored public var onCommitCursor: ((Tick) -> Void)?
-    private var rowSnapshot: [RulerMenuRow] = []
+    private var rowSnapshot: [MenuRow] = []
     private var clipboardObserver: UUID?
     private var selectionObserver: UUID?
 
@@ -145,33 +121,36 @@ public final class RulerMenuPresenter {
         capturedRevision = session.document.revision
         let loop = session.timeline
         let hasLoop = loop.loopStartTick != TimeDefaults.noTick || loop.loopEndTick != TimeDefaults.noTick
-        var items: [RulerMenuRow] = []
+        var items: [MenuRow] = []
         if inside {
             items = [
-                RulerMenuRow(Action.loopFromSelection.rawValue),
-                RulerMenuRow(
-                    Action.insertTime.rawValue,
-                    automation.selectionCommandAvailable(command: .insertTime)),
-                RulerMenuRow(
-                    Action.duplicate.rawValue,
-                    automation.selectionCommandAvailable(command: .duplicate)),
-                RulerMenuRow(
-                    Action.removeContents.rawValue,
-                    automation.selectionCommandAvailable(command: .deleteTime)),
-                RulerMenuRow(Action.clearSelection.rawValue),
-                .divider(), RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
+                MenuRow(actionId: Action.loopFromSelection.rawValue),
+                MenuRow(
+                    actionId: Action.insertTime.rawValue,
+                    enabled: automation.selectionCommandAvailable(command: .insertTime)),
+                MenuRow(
+                    actionId: Action.duplicate.rawValue,
+                    enabled: automation.selectionCommandAvailable(command: .duplicate)),
+                MenuRow(
+                    actionId: Action.removeContents.rawValue,
+                    enabled: automation.selectionCommandAvailable(command: .deleteTime)),
+                MenuRow(actionId: Action.clearSelection.rawValue),
+                MenuRow(actionId: -1, enabled: false, separator: true),
+                MenuRow(actionId: Action.removeLoop.rawValue, enabled: hasLoop),
             ]
         } else {
             items = [
-                RulerMenuRow(Action.insertTime.rawValue, tick < TimeDefaults.maxTick),
-                RulerMenuRow(Action.paste.rawValue, canPaste),
-                .divider(), RulerMenuRow(Action.setLoopStart.rawValue),
-                RulerMenuRow(Action.setLoopEnd.rawValue),
-                RulerMenuRow(Action.removeLoop.rawValue, hasLoop),
-                .divider(), RulerMenuRow(Action.editTimeSignature.rawValue),
+                MenuRow(actionId: Action.insertTime.rawValue, enabled: tick < TimeDefaults.maxTick),
+                MenuRow(actionId: Action.paste.rawValue, enabled: canPaste),
+                MenuRow(actionId: -1, enabled: false, separator: true),
+                MenuRow(actionId: Action.setLoopStart.rawValue),
+                MenuRow(actionId: Action.setLoopEnd.rawValue),
+                MenuRow(actionId: Action.removeLoop.rawValue, enabled: hasLoop),
+                MenuRow(actionId: -1, enabled: false, separator: true),
+                MenuRow(actionId: Action.editTimeSignature.rawValue),
             ]
             let explicit = press.chip == tick
-            items.append(RulerMenuRow(Action.removeTimeSignature.rawValue, explicit))
+            items.append(MenuRow(actionId: Action.removeTimeSignature.rawValue, enabled: explicit))
         }
         if automation.hasMenu { automation.dismissMenu() }
         if grid.gridMenuKind != 0 { grid.dismissGridMenu() }
@@ -206,27 +185,27 @@ public final class RulerMenuPresenter {
         if automation.hasMenu { automation.dismissMenu() }
         if grid.gridMenuKind != 0 { grid.dismissGridMenu() }
         publish([
-            RulerMenuRow(
-                Action.copy.rawValue,
-                automation.selectionCommandAvailable(command: .copy)),
-            RulerMenuRow(
-                Action.cut.rawValue,
-                automation.selectionCommandAvailable(command: .cut)),
-            RulerMenuRow(
-                Action.deleteSelection.rawValue,
-                automation.selectionCommandAvailable(command: .delete)),
-            RulerMenuRow(
-                Action.insertTime.rawValue,
-                automation.selectionCommandAvailable(command: .insertTime)),
-            RulerMenuRow(
-                Action.duplicate.rawValue,
-                automation.selectionCommandAvailable(command: .duplicate)),
-            RulerMenuRow(
-                Action.removeContents.rawValue,
-                automation.selectionCommandAvailable(command: .deleteTime)),
-            RulerMenuRow(Action.paste.rawValue, canPaste),
-            .divider(),
-            RulerMenuRow(Action.clearSelection.rawValue),
+            MenuRow(
+                actionId: Action.copy.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .copy)),
+            MenuRow(
+                actionId: Action.cut.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .cut)),
+            MenuRow(
+                actionId: Action.deleteSelection.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .delete)),
+            MenuRow(
+                actionId: Action.insertTime.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .insertTime)),
+            MenuRow(
+                actionId: Action.duplicate.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .duplicate)),
+            MenuRow(
+                actionId: Action.removeContents.rawValue,
+                enabled: automation.selectionCommandAvailable(command: .deleteTime)),
+            MenuRow(actionId: Action.paste.rawValue, enabled: canPaste),
+            MenuRow(actionId: -1, enabled: false, separator: true),
+            MenuRow(actionId: Action.clearSelection.rawValue),
         ])
         menuKind = 2
     }
@@ -252,7 +231,7 @@ public final class RulerMenuPresenter {
 
     public func targetTick() -> Double { Double(capturedTick) }
 
-    public func menuRow(index: Int) -> Optional<RulerMenuRow> {
+    public func menuRow(index: Int) -> Optional<MenuRow> {
         guard index >= 0, index < rows.count else { return nil }
         return rows[index]
     }
@@ -533,7 +512,7 @@ public final class RulerMenuPresenter {
         return viewport.grid.snapTick(position, camera: viewport.camera)
     }
 
-    private func publish(_ items: [RulerMenuRow]) {
+    private func publish(_ items: [MenuRow]) {
         close()
         for row in items {
             guard let action = Action(rawValue: row.actionId),

@@ -47,6 +47,12 @@ ShellMenusSupport {
         var closeTab = checkMenuItem(fileMenu, "file.close_tab", "Close Tab")
         compare(closeTab.enabled, false, "no tab disables Close Tab")
 
+        for (var saveId of ["file.save", "file.save_song", "file.save_voicegroup", "file.save_all"]) {
+            var saveAction = findChild(fileMenu, "shellAction_" + saveId)
+            verify(saveAction !== null && !saveAction.enabled,
+                   "without a project the mounted " + saveId + " cannot write an owner")
+        }
+
         var goToStart = checkMenuItem(transportMenu, "transport.go_to_start", "Go to Start")
         var play = checkMenuItem(transportMenu, "transport.play", "Play")
         var playPause = checkMenuItem(transportMenu, "transport.play_pause", "Play/Pause")
@@ -95,7 +101,11 @@ ShellMenusSupport {
         verify(importSample.text.indexOf("Import Sample...") === 0,
                "Tools displays the fork's Import Sample... label")
         compare(importSample.enabled, false, "no project disables sample import")
-        menuOrder(toolsMenu, ["tools.import_sample"])
+        var splitStudio = checkMenuItem(toolsMenu, "tools.split_studio", "Split Studio")
+        verify(splitStudio.text.indexOf("Split Studio...") === 0,
+               "Tools displays the Split Studio... label")
+        compare(splitStudio.enabled, false, "no project disables Split Studio")
+        menuOrder(toolsMenu, ["tools.import_sample", "tools.split_studio"])
         var about = checkMenuItem(helpMenu, "help.about", "About porydaw")
         compare(about.enabled, true, "About stays available with no song")
     }
@@ -159,8 +169,6 @@ ShellMenusSupport {
                 "Follow Playhead ends the View preference group")
         compare(presenter.action("roll.copy").label, "Copy Selection",
                 "menu rows show the keymap label")
-        compare(presenter.action("file.save_song").label, "Save Song",
-                "Save Song uses the keymap wording")
         compare(findChild(file, "shellAction_file.open_project").text.indexOf("Open Project...") >= 0,
                 true, "the File menu keeps the fork Open Project ellipsis")
         verify(findChild(view, "shellAction_view.voice_changes_drawer").text

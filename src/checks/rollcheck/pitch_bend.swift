@@ -106,21 +106,17 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
         cppID: "swiftcore/PitchBendEditingTest::vertexDeletion",
         message: "Delete removes only the selected interior vertex")
 
-    var modulation = PitchBendKernel(
+    let modulation = PitchBendKernel(
         lane: .modulation, geometry: geometry,
         startTick: 96, endTick: 192,
         fineTicks: 1, snap: pitchBendFixtureSnap,
         snapUp: pitchBendFixtureSnapUp,
         points: origin, endValue: 0)
-    modulation.begin(x: modulation.x(at: 144), y: geometry.canvasY, line: false)
-    modulation.finish()
     report.expect(
-        modulation.points[144] == 126
-            && modulation.value(
-                atY: geometry.canvasY
-                    + geometry.canvasHeight) == 0,
+        modulation.value(atY: geometry.canvasY + geometry.canvasHeight) == 0,
         cppID: "swiftcore/PitchBendEditingTest::vertexCreation",
-        message: "modulation uses the oracle's QRect-height scaling at the top pixel and clamps below zero")
+        message: "modulation clamps values below the graph to zero")
+    pitchBendDenseVertexDragPredicates(report, geometry: geometry)
     pitchBendSharedGridPredicates(report, viewport: viewport)
     pitchBendGridRulePredicates(report, suite: session)
     pitchBendReadoutPredicates(report, viewport: viewport)
@@ -134,4 +130,55 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
     pitchBendSetterPredicates(report, viewport: viewport)
     pitchBendFineRampPredicates(report, viewport: viewport)
     pitchBendVertexPredicates(report, suite: session)
+}
+
+@MainActor
+private func pitchBendDenseVertexDragPredicates(_ report: CheckReport, geometry: PitchBendGeometry) {
+    let id = "swiftcore/PitchBendEditingTest::denseVertexDragStaysLocal"
+    for lane: PitchBendKernel.Lane in [.pitch, .modulation] {
+        let originalValue = lane == .pitch ? 3001 : 61
+        var original = [96: 0, 192: 0]
+        for tick in 100...170 { original[tick] = 0 }
+        original[137] = originalValue
+        var curve = PitchBendKernel(
+            lane: lane, geometry: geometry, startTick: 96, endTick: 192,
+            fineTicks: 1, snap: pitchBendFixtureSnap, snapUp: pitchBendFixtureSnapUp,
+            points: original, endValue: 0)
+        let grabX = curve.x(at: 137) + 2
+        let grabY = curve.y(at: originalValue) - 2
+        curve.begin(x: grabX, y: grabY, line: false)
+        curve.update(x: grabX, y: grabY, fine: false)
+        curve.finish()
+        report.expect(
+            curve.points == original && curve.selectedTick == 137,
+            cppID: id, message: "\(lane): selecting an off-grid vertex preserves its exact tick and value")
+
+        curve.setCurve(original, endValue: 0)
+        curve.begin(x: grabX, y: grabY, line: false)
+        let dy = geometry.canvasHeight / 4
+        var vertical = original
+        vertical[137] = curve.value(atY: curve.y(at: originalValue) + dy)
+        curve.update(x: grabX + 1, y: grabY + dy, fine: false)
+        report.expect(
+            curve.points == vertical && curve.selectedTick == 137,
+            cppID: id, message: "\(lane): a vertical drag changes only the grabbed off-grid vertex")
+
+        curve.update(x: curve.x(at: 144) + 2, y: grabY + dy, fine: false)
+        report.expect(
+            curve.points == vertical && curve.selectedTick == 137,
+            cppID: id, message: "\(lane): an occupied destination never sends the vertex to a distant gap")
+
+        curve.update(x: curve.x(at: 180) + 2, y: grabY, fine: false)
+        var moved = original
+        moved.removeValue(forKey: 137)
+        moved[180] = originalValue
+        report.expect(
+            curve.points == moved && curve.selectedTick == 180,
+            cppID: id, message: "\(lane): a horizontal drag reaches a free tick without changing its value")
+        curve.update(x: grabX, y: grabY, fine: false)
+        report.expect(
+            curve.points == original && curve.selectedTick == 137,
+            cppID: id, message: "\(lane): returning to the grab position restores the exact original curve")
+        curve.cancelGesture()
+    }
 }

@@ -19,13 +19,42 @@ ColumnLayout {
     readonly property int typeWidth: Math.round(baseFontPx * 3.75)
     readonly property int adsrWidth: Math.round(baseFontPx * 8.33)
     // Indexed by VoiceListGlyph; the reverse sample reuses the sample glyph rotated.
-    readonly property list<var> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
-                                          Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
-    readonly property QtObject emptyIcon: QtObject {
-        readonly property string glyph: ""
-        readonly property real fit: 1
-    }
+    readonly property list<IconSpec> typeIcons: [Icons.sample, Icons.sample, Icons.square1, Icons.square2,
+                                                Icons.wave, Icons.noise, Icons.keysplit, Icons.drumkit]
+    readonly property IconSpec emptyIcon: IconSpec { glyph: ""; fit: 1 }
+    property int contextSlot: -1
     spacing: 0
+    enabled: panel.controller.editingEnabled
+
+    function isSongAssignmentFocus(focusedItem: Item): bool {
+        let item = focusedItem
+        while (item && item !== panel) {
+            if (item === selector || item === newVoicegroup)
+                return true
+            item = item.parent
+        }
+        return false
+    }
+
+    Menu {
+        id: rowMenu
+        objectName: "voicegroupRowMenu"
+        MenuItem {
+            objectName: "voicegroupEditInStudio"
+            text: qsTr("Edit in Studio")
+            onTriggered: panel.controller.requestEditKit(panel.contextSlot)
+        }
+    }
+
+    ComboBox {
+        objectName: "retainedVoicegroupCombo"
+        Layout.fillWidth: true
+        visible: !panel.controller.hasSongContext && panel.controller.isBound
+        model: panel.controller.retainedGroupNames
+        currentIndex: panel.controller.retainedGroupIndex
+        Accessible.name: qsTr("Retained voicegroup")
+        onActivated: panel.controller.selectRetainedVoicegroup(currentIndex)
+    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -34,8 +63,10 @@ ColumnLayout {
         Layout.rightMargin: Math.round(panel.baseFontPx * 0.33)
         spacing: Math.round(panel.baseFontPx * 0.16)
         Label {
-            text: qsTr("voicegroup_")
-            Layout.preferredWidth: Math.round(panel.baseFontPx * 6.08)
+            objectName: "voicegroupPanelTitle"
+            text: panel.controller.panelTitle
+            Layout.maximumWidth: panel.width * 0.6
+            elide: Text.ElideMiddle
             color: panel.colors.primaryText
         }
         ComboBox {
@@ -47,12 +78,30 @@ ColumnLayout {
             enabled: panel.controller.selectorEnabled
             model: panel.controller.argChoices
             textRole: "name"
+            // Qt re-derives the current row from this value on every model update; a bare
+            // editText would be overwritten when the catalog resets the choices.
+            valueRole: "name"
+            currentValue: panel.controller.selectorText
             editText: panel.controller.selectorText
+            // An editable ComboBox rewrites editText from currentText on every model
+            // update; re-apply the controller's text once the synchronous update is over.
+            Timer {
+                id: resync
+                interval: 0
+                onTriggered: selector.editText = panel.controller.selectorText
+            }
             Connections {
                 target: panel.controller
                 function onSelectorTextChanged(): void {
                     selector.editText = panel.controller.selectorText
                 }
+            }
+            Connections {
+                target: panel.controller.argChoices
+                function onModelReset(): void { resync.restart() }
+                function onDataChanged(): void { resync.restart() }
+                function onRowsInserted(): void { resync.restart() }
+                function onRowsRemoved(): void { resync.restart() }
             }
             onActivated: {
                 panel.controller.selectorText = editText
@@ -64,6 +113,27 @@ ColumnLayout {
             }
             ToolTip.text: qsTr("The song's voicegroup (-G). Changing it is undoable.")
             ToolTip.visible: hovered
+        }
+        ToolButton {
+            id: newVoicegroup
+            objectName: "vgNewVoicegroupButton"
+            enabled: panel.controller.selectorEnabled
+            Layout.preferredWidth: panel.baseFontPx * 2.08
+            Layout.preferredHeight: panel.baseFontPx * 1.83
+            Layout.minimumHeight: 0
+            contentItem: Item {
+                AppIcon {
+                    anchors.centerIn: parent
+                    width: Math.round(panel.baseFontPx)
+                    height: width
+                    icon: Icons.plus
+                    color: newVoicegroup.palette.buttonText
+                }
+            }
+            Accessible.name: qsTr("New voicegroup")
+            ToolTip.text: qsTr("New voicegroup")
+            ToolTip.visible: hovered
+            onClicked: panel.controller.requestNewVoicegroup()
         }
     }
 
@@ -120,6 +190,7 @@ ColumnLayout {
         }
         ListView {
             id: voiceList
+            acceptedButtons: Qt.NoButton
             objectName: "voicegroupRows"
             anchors.left: parent.left
             anchors.right: parent.right
@@ -146,6 +217,16 @@ ColumnLayout {
                 objectName: "voicegroupRow_" + slot
                 width: voiceList.width - Math.round(panel.baseFontPx * 0.67)
                 height: panel.rowHeight
+                activeFocusOnTab: true
+                Keys.onPressed: function(event: KeyEvent) {
+                    if ((event.key === Qt.Key_Menu
+                         || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier)))
+                            && panel.controller.slotIsKit(row.slot)) {
+                        panel.contextSlot = row.slot
+                        rowMenu.popup(row, row.width / 2, row.height / 2)
+                        event.accepted = true
+                    }
+                }
                 color: panel.controller.currentSlot === slot ? panel.colors.selectionRing
                        : used ? Qt.tint(panel.colors.windowBackground, "#22b4e4ee")
                               : panel.colors.windowBackground
@@ -201,12 +282,24 @@ ColumnLayout {
                 }
                 MouseArea {
                     anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onPressed: {
-                        panel.controller.selectSlot(row.slot)
-                        panel.controller.pressVoice(row.slot)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onPressed: function(mouse: MouseEvent) {
+                        row.forceActiveFocus()
+                        if (mouse.button === Qt.LeftButton) {
+                            panel.controller.selectSlot(row.slot)
+                            panel.controller.pressVoice(row.slot)
+                        }
                     }
-                    onReleased: panel.controller.releaseVoice()
+                    onClicked: function(mouse: MouseEvent) {
+                        if (mouse.button === Qt.RightButton && panel.controller.slotIsKit(row.slot)) {
+                            panel.contextSlot = row.slot
+                            rowMenu.popup(row, mouse.x, mouse.y)
+                        }
+                    }
+                    onReleased: function(mouse: MouseEvent) {
+                        if (mouse.button === Qt.LeftButton)
+                            panel.controller.releaseVoice()
+                    }
                     onCanceled: panel.controller.releaseVoice()
                 }
             }
@@ -221,6 +314,7 @@ ColumnLayout {
 
     Flickable {
         id: editorScroll
+        acceptedButtons: Qt.NoButton
         objectName: "voiceEditorScrollView"
         Layout.fillWidth: true
         Layout.fillHeight: true
