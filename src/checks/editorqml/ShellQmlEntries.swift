@@ -64,6 +64,9 @@ enum ShellQmlRegistry {
     static let entries =
         [
             Entry(
+                name: "shell-arpeggiator", inputFileName: "tst_ShellArpeggiator.qml",
+                fixtureFiles: songs("mus_route101")),
+            Entry(
                 name: "shell-startup", inputFileName: "tst_ShellStartup.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test"), windowing: "window-system"),
             Entry(

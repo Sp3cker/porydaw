@@ -31,15 +31,21 @@ def artifact(directory: Path, target: str) -> Path:
 def swift_bin_dir() -> Path | None:
     version = Path(".swift-version").read_text(encoding="utf-8").strip()
     if sys.platform == "darwin":
-        config = Path.home() / ".swiftly/config.json"
-        if config.exists():
-            selected = json.loads(config.read_text(encoding="utf-8")).get("inUse")
-            if selected is not None and selected != version:
-                raise RuntimeError(
-                    f"swiftly in-use toolchain {selected} differs from .swift-version {version}; run: swiftly use {version}"
-                )
         directory = Path.home() / ".swiftly/bin"
-        return directory if (directory / "swiftc").is_file() else None
+        if not (directory / "swiftc").is_file():
+            return None
+        selection = subprocess.run(
+            [str(directory / "swiftly"), "use", "--format", "json"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        selected = json.loads(selection.stdout)["version"]
+        if selected != version:
+            raise RuntimeError(
+                f"swiftly in-use toolchain {selected} differs from .swift-version {version}; run: swiftly use {version}"
+            )
+        return directory
     if sys.platform == "win32":
         return (
             Path(os.environ["LOCALAPPDATA"])

@@ -24,6 +24,10 @@ public final class AudioRenderEngine {
     private let main: UnsafeMutablePointer<M4AEngine>
     private let preview: UnsafeMutablePointer<M4AEngine>
     private var player = Sequencer()
+    private var patternPlayer = Sequencer()
+    // Cold-owned storage lets render borrow the timeline without copying its Array owners.
+    private var patternTimeline: UnsafeMutablePointer<PlaybackTimeline>?
+    private let patternPosition = Atomic<UInt64>(0)
     private let handoff = AudioTimelineHandoff()
     let transportState: AudioTransport
     private let telemetry = AudioTelemetry()
@@ -70,6 +74,10 @@ public final class AudioRenderEngine {
         m4a_engine_free(main)
         m4a_engine_free(preview)
         audition.reset()
+        if let timeline = patternTimeline {
+            timeline.deinitialize(count: 1)
+            timeline.deallocate()
+        }
         left.deinitialize(count: capacity)
         right.deinitialize(count: capacity)
         previewLeft.deinitialize(count: capacity)
@@ -89,6 +97,10 @@ public final class AudioRenderEngine {
     public var resonanceSuppression: Bool { suppression.enabled }
     public var polyDebugInvert: Bool { invert.load(ordering: .relaxed) }
     public var playheadSamples: UInt64 { telemetry.playhead.load(ordering: .relaxed) }
+    /// Control-thread snapshot; only cold start/stop changes pattern ownership.
+    public var isPatternAuditioning: Bool { patternTimeline != nil }
+    /// Absolute position in the temporary timeline, or zero when stopped.
+    public var patternAuditionPositionSamples: UInt64 { patternPosition.load(ordering: .relaxed) }
     public var activePcmChannels: Int { telemetry.activePcm.load(ordering: .relaxed) }
     public var activeCgbChannels: Int { telemetry.activeCgb.load(ordering: .relaxed) }
     public var pcmMixerMode: M4APcmMixerMode { settings.pcmMixer }
@@ -114,6 +126,36 @@ public final class AudioRenderEngine {
     public func resetPolyStats() { polyReset.wrappingAdd(1, ordering: .relaxed) }
     public func seek(_ sample: UInt64) {
         if songLoaded { transportState.pendingSeek.store(sample, ordering: .releasing) }
+    }
+
+    /// Cold only: pause the song at its current playhead and replace the isolated loop.
+    /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
+    public func startPatternAudition(_ timeline: PlaybackTimeline) {
+        guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return }
+        precondition(timeline.sampleRate == sampleRate, "Pattern timeline must use the device sample rate")
+        resetPreview()
+        // All-sound-off queues a FIFO reset but leaves the hardware frontend's old
+        // PCM16/blip samples pending. Clear them before parking the song engine.
+        _ = m4a_engine_reset(main)
+        Self.configure(main, voicegroup: voicegroup, settings: settings)
+        Sequencer.chase(engine: main, timeline: song.pointee, position: player.position)
+        Sequencer.primeVoices(engine: main, timeline: song.pointee, position: player.position)
+        audition.reset()
+        transportState.pauseImmediately()
+        suppression.reset()
+        metronome.silence()
+        let storage = UnsafeMutablePointer<PlaybackTimeline>.allocate(capacity: 1)
+        storage.initialize(to: timeline)
+        patternTimeline = storage
+        patternPlayer.seek(timeline.loopStartSample, timeline: timeline)
+        Sequencer.chase(engine: preview, timeline: timeline, position: timeline.loopStartSample)
+        Sequencer.primeVoices(engine: preview, timeline: timeline, position: timeline.loopStartSample)
+        patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
+    }
+
+    /// Cold only: release the isolated pattern, retaining the paused song and its playhead.
+    public func stopPatternAudition() {
+        if isPatternAuditioning { resetPreview() }
     }
 
     private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
@@ -199,6 +241,16 @@ public final class AudioRenderEngine {
     }
     private func resetPreview() {
         m4a_engine_destroy(preview)
+        if let timeline = patternTimeline {
+            patternTimeline = nil
+            timeline.deinitialize(count: 1)
+            timeline.deallocate()
+            patternPlayer.reset()
+            patternPosition.store(0, ordering: .relaxed)
+            audition.reset()
+            suppression.reset()
+            metronome.silence()
+        }
         _ = m4a_engine_init(preview, Float(sampleRate))
         Self.configure(preview, voicegroup: voicegroup, settings: settings)
         audition.resetPreview()
@@ -258,7 +310,56 @@ public final class AudioRenderEngine {
         }
     }
 
+    private func renderPattern(
+        _ timeline: borrowing PlaybackTimeline,
+        output: UnsafeMutablePointer<Float>, frames: UInt32
+    ) {
+        transportState.prepareVolume()
+        var done = 0
+        while done < Int(frames) {
+            if patternPlayer.position == timeline.loopEndSample {
+                // Restore pre-loop controller/program/tempo state before the next onset.
+                // Notes ending exactly at the boundary are released at this same sample.
+                for track in 0..<Int32(MAX_TRACKS) { m4a_engine_all_notes_off(preview, track) }
+                let start = timeline.loopStartSample
+                patternPlayer.seek(start, timeline: timeline)
+                Sequencer.chase(engine: preview, timeline: timeline, position: start)
+                Sequencer.primeVoices(engine: preview, timeline: timeline, position: start)
+            }
+            let remaining = timeline.loopEndSample - patternPlayer.position
+            let count = Int(min(UInt64(min(Int(frames) - done, capacity)), remaining))
+            patternPlayer.render(
+                engine: preview, timeline: timeline,
+                left: UnsafeMutableBufferPointer(start: previewLeft, count: count),
+                right: UnsafeMutableBufferPointer(start: previewRight, count: count),
+                looping: false, muteMask: 0)
+            let block = output + done * 2
+            for i in 0..<count {
+                block[i * 2] = previewLeft[i]
+                block[i * 2 + 1] = previewRight[i]
+            }
+            suppression.process(block, frames: UInt32(count))
+            for i in 0..<count {
+                // Start reset the transport's cut envelope; only volume advances here.
+                _ = transportState.advance()
+                let gain = transportState.outputGain
+                block[i * 2] *= gain
+                block[i * 2 + 1] *= gain
+            }
+            done += count
+        }
+        let position =
+            patternPlayer.position == timeline.loopEndSample
+            ? timeline.loopStartSample : patternPlayer.position
+        patternPosition.store(position, ordering: .relaxed)
+        telemetry.publish(engine: preview, position: player.position)
+    }
+
     public func render(_ output: UnsafeMutablePointer<Float>, frames: UInt32) {
+        if let timeline = patternTimeline {
+            renderPattern(timeline.pointee, output: output, frames: frames)
+            return
+        }
         transition()
         if let timeline = handoff.acquirePending() { adopt(timeline.pointee) }
         applySeek()

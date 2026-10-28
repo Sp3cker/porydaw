@@ -19,11 +19,9 @@ uv run --no-sync dev checks:backups                 # Foundation-only Swift pack
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
-Porydaw's Swift targets enable `-warnings-as-errors` in every build configuration;
-third-party targets retain warnings without promoting them to errors.
-Debug type-check timing diagnostics are also subject to this policy.
-Warnings emitted while importing third-party headers into a Porydaw Swift target
-still become errors, even when the dependency target itself is exempt.
+Swift compiler warnings remain visible without being promoted to errors.
+This applies to Porydaw and third-party targets, including imported Qt headers
+and Debug type-check timing diagnostics.
 
 Popup-menu presenters publish `QListModel<MenuRow>` in `PorydawApp`.
 `QuickMenuPanel` consumes typed required scalar roles and a `MenuRow` display handle.
@@ -41,6 +39,9 @@ some searchable field. Menu type-ahead stays prefix-based.
 
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 
+On macOS, the runner asks Swiftly for the effective project selection and checks
+it against `.swift-version`; Swiftly's global default may differ.
+
 On macOS, native targets use the selected Qt framework's non-system search
 path. This keeps an older `/usr/local/include/Qt*` installation from
 shadowing Homebrew or checkout-local Qt headers during QML AOT compilation.
@@ -55,13 +56,12 @@ The QtBridge patch uses `signal()` to attach NOTIFY signals and translates
 finalized slot indices back to builder-local callback indices on Qt 6.12+;
 the Qt 6.11 API path is preserved.
 
-Qt 6.12 smoke: app and check targets build with Swift warnings-as-errors
-temporarily disabled; the app reaches chrome/workspace frames and
-`uv run --no-sync dev checks:shell --filter shell-startup` passes.
-Strict compilation still fails on the Swift importer’s `QChar::fromUcs4`
-cycle diagnostic (`qchar.h:156`); warnings-as-errors remains enabled in source.
-This verification covers the Homebrew macOS kit; checkout-local provisioning
-and CI still select Qt 6.11.x.
+An earlier Homebrew Qt 6.12 smoke reached chrome/workspace frames and passed
+`uv run --no-sync dev checks:shell --filter shell-startup`.
+The Swift importer emits a `QChar::fromUcs4` cycle warning with both that kit
+(`qchar.h:156`) and checkout-local Qt 6.11.2 (`qstringview.h:533`).
+Warnings-as-errors previously blocked compilation on this diagnostic;
+warnings now remain warnings. Checkout-local provisioning and CI select Qt 6.11.x.
 
 Never call `cmake` or `ninja` directly; `tools/porydaw_dev/cli.py` →
 `build.py:run_build` does things a bare `cmake --build` does not:

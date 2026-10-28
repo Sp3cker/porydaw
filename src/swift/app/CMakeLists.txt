@@ -28,6 +28,7 @@ endfunction()
 
 add_library(PorydawApp STATIC
     DocumentWorkspace.swift
+    arpeggiator/ArpeggiatorPresenter.swift
     NativeAudio.swift
     export/WavExportJob.swift
     export/WavExportPresenter.swift

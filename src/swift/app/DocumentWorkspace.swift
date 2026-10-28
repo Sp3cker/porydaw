@@ -55,6 +55,7 @@ public final class DocumentWorkspace {
     public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
     public let headerVoicePicker: HeaderVoicePicker
+    public let arpeggiator: ArpeggiatorPresenter
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
@@ -127,6 +128,12 @@ public final class DocumentWorkspace {
         self.trackHeaders = headers
         let headerVoicePicker = HeaderVoicePicker(headers: headers, typography: typography)
         self.headerVoicePicker = headerVoicePicker
+        let arpeggiator = ArpeggiatorPresenter(
+            session: session, audio: audio, palette: grid.palette, typography: typography)
+        self.arpeggiator = arpeggiator
+        headers.onArpeggiatorRequested = { [weak arpeggiator] track in
+            arpeggiator?.open(track: track)
+        }
         headerVoicePicker.onOpenChanged = callbacks.headerVoicePickerOpenChanged
         headerVoicePicker.onComplete = callbacks.headerVoicePickerCompleted
         headerVoicePicker.onAuditionVoice = { [weak audio] program, key, velocity in
@@ -232,6 +239,7 @@ public final class DocumentWorkspace {
         }
         playhead.onPoll = { [weak self] elapsed, playing, presentationChanged in
             guard let self else { return }
+            self.arpeggiator.pollAudition()
             let previouslyPlaying = lastPolledPlaying
             lastPolledPlaying = playing
             if let previouslyPlaying, previouslyPlaying != playing {
@@ -267,6 +275,7 @@ public final class DocumentWorkspace {
         guard !isTornDown else { return }
         grid.reloadVisuals()
         trackHeaders.refreshAppearance()
+        arpeggiator.refreshAppearance()
         velocityPage.refreshPromptStyle()
         voiceChangesPage.refreshPromptStyle()
         automationPage.refreshPromptStyles()
@@ -287,6 +296,7 @@ public final class DocumentWorkspace {
             || reason == GridCancelReason.hidden.rawValue
         {
             pitchBend.settleAndClose()
+            arpeggiator.close()
         }
     }
 
@@ -297,6 +307,7 @@ public final class DocumentWorkspace {
     /// scene has already released. Idempotent with `teardown`, which clears
     /// the same closures.
     public func suspendCallbacks() {
+        arpeggiator.close()
         viewport.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
@@ -317,6 +328,7 @@ public final class DocumentWorkspace {
     public func deactivate() {
         guard isActive else { return }
         isActive = false
+        arpeggiator.close()
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
@@ -342,6 +354,7 @@ public final class DocumentWorkspace {
     public func teardown() {
         guard !isTornDown else { return }
         isTornDown = true
+        arpeggiator.close()
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
@@ -452,6 +465,9 @@ public final class DocumentWorkspace {
 
     private func sessionDidChange(_ change: SessionChange) {
         rulerMenu.sessionDidChange(change)
+        if change.domains.contains(.document) || change.domains.contains(.bank) {
+            arpeggiator.close()
+        }
         let documentChanged = change.domains.contains(.document)
         let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
         let moved = documentChanged ? moved(since: appliedRevisions) : Moved()

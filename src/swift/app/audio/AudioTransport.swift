@@ -57,6 +57,13 @@ final class AudioTransport {
         requested = .stopped
         applied = .stopped
     }
+    /// Cold only: park transport without rewinding the separately owned sequencer.
+    func pauseImmediately() {
+        resetCut()
+        pendingSeek.store(UInt64.max, ordering: .releasing)
+        requested = .paused
+        applied = .paused
+    }
 
     /// Returns true exactly when preview bookkeeping must be invalidated before the down-ramp.
     func transition() -> Bool {

@@ -25,6 +25,32 @@ song was opened or played. Shared `midi.cfg` or `songs.mk` changes do not affect
 this order; Git checkouts and external tools can change file timestamps.
 Songs with unavailable dates appear last; equal dates use song ID order.
 
+## Track arpeggiator
+
+Set the song's loop markers, then right-click a track header and choose
+**Arpeggiator...**. The tool reads that track's sounding notes inside the loop;
+you do not need to select the notes first.
+
+Choose Up, Down, Up / Down, Manual, Poly, or Custom ordering, then adjust the
+rate, octaves, transpose, velocity, accent, shuffle, gate, and Insert settings.
+The 32 pads define a 1–32-step pattern. Click or press Return to toggle a pad;
+right-click or Shift+Return toggles its accent.
+
+**Audition** loops the generated pattern alone through the source track's
+instrument. **Copy Notes** copies the entire loop, including leading and
+trailing rests. Close the tool and use normal Paste at the desired track and
+time. Audition and Copy Notes do not change the source notes or undo history;
+Paste is an ordinary undoable edit.
+
+Timing respects the game's sequencer clock: 24 clocks per quarter note, or 48
+with Extended timing. Rates must fit both the document's tick grid and that
+clock grid; unavailable rates are disabled. Shuffle and inserted notes use
+whole shared clock quanta, and gates use durations the exporter can reproduce.
+The timing readout shows the resulting clock values; incompatible loop markers
+or settings are explained rather than silently approximated.
+Source-note retriggers move to the next shared clock boundary, never before the
+source note begins.
+
 ## MIDI backups
 
 Porydaw snapshots changed, unsaved MIDI every 60 seconds, including songs in

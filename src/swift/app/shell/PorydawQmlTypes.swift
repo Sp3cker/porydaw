@@ -30,6 +30,7 @@ public enum PorydawQmlTypes {
     }
 
     private static let uncreatableTypes: [QmlUncreatable.Type] = [
+        ArpeggiatorPresenter.self,
         EngineSettingsStore.self,
         EventListPresenter.self,
         MidiImportController.self,
@@ -109,6 +110,7 @@ public enum PorydawQmlTypes {
     ]
 }
 
+extension ArpeggiatorPresenter: QmlUncreatable {}
 extension AutomationHoverDisplay: QmlUncreatable {}
 extension MenuRow: QmlUncreatable {}
 extension AutomationNodeHandle: QmlUncreatable {}

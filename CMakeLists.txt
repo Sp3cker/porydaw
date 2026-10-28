@@ -62,7 +62,6 @@ endfunction()
 # bodies at 2000 ms sit above lazy C++ import cost.
 function(porydaw_enable_swift_batch_mode target)
     target_compile_options(${target} PRIVATE
-        "$<$<COMPILE_LANGUAGE:Swift>:-warnings-as-errors>"
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:-enable-batch-mode>"
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-function-bodies=2000>"
         "$<$<AND:$<COMPILE_LANGUAGE:Swift>,$<CONFIG:Debug>>:SHELL:-Xfrontend -warn-long-expression-type-checking=50>")
@@ -270,6 +269,9 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/PromptButton.qml
         src/ui/songview/quick/PromptOverlay.qml
         src/ui/songview/quick/VelocityPrompt.qml
+        src/ui/songview/quick/ArpeggiatorPanel.qml
+        src/ui/songview/quick/ArpeggiatorStepPad.qml
+        src/ui/songview/quick/ArpeggiatorKnob.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/TimeSignaturePrompt.qml
         src/ui/songview/quick/EventListPage.qml

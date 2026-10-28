@@ -136,6 +136,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         COMPILE_OPTIONS ${core_check_swift_options} "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>"
         SOURCES
         lanes/SwiftCoreCheckLogicLane.swift
+        arpeggiator/ArpeggiatorChecks.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
         audio/resonancefixture.swift
@@ -652,6 +653,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellGridInputKeyboard.qml
         editorqml/tst_ShellGridInputAutomation.qml
         editorqml/ShellPitchBendSupport.qml
+        editorqml/tst_ShellArpeggiator.qml
         editorqml/tst_ShellPitchBendCancellation.qml
         editorqml/tst_ShellPitchBendControls.qml
         editorqml/tst_ShellPitchBendPointer.qml

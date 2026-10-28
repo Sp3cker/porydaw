@@ -9,6 +9,35 @@ from unittest.mock import patch
 from porydaw_dev import build, build_output, qt
 
 
+class SwiftSelectionTests(unittest.TestCase):
+    def test_project_selection_overrides_global_default_but_mismatch_is_rejected(self):
+        version = Path(".swift-version").read_text(encoding="utf-8").strip()
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            directory = home / ".swiftly/bin"
+            directory.mkdir(parents=True)
+            (directory / "swiftc").touch()
+            (home / ".swiftly/config.json").write_text('{"inUse":"global-default"}')
+            for selected in (version, "different-project-toolchain"):
+                with (
+                    self.subTest(selected=selected),
+                    patch.object(build.sys, "platform", "darwin"),
+                    patch.object(build.Path, "home", return_value=home),
+                    patch.object(
+                        build.subprocess,
+                        "run",
+                        return_value=subprocess.CompletedProcess(
+                            [], 0, stdout=json.dumps({"version": selected})
+                        ),
+                    ),
+                ):
+                    if selected == version:
+                        self.assertEqual(build.swift_bin_dir(), directory)
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "differs from"):
+                            build.swift_bin_dir()
+
+
 class ConfigureReuseTests(unittest.TestCase):
     def test_windows_path_spellings_reuse_cache_but_compiler_change_requires_fresh_configure(
         self,

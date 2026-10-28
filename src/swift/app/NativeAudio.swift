@@ -64,6 +64,9 @@ public final class NativeAudio {
     public var songLoaded: Bool { device.renderer.songLoaded }
     public var timeline: PlaybackTimeline? { device.renderer.timeline }
     public var playheadSamples: UInt64 { device.renderer.playheadSamples }
+    public var isPatternAuditioning: Bool { device.renderer.isPatternAuditioning }
+    /// Absolute sample position in the isolated pattern timeline, or zero when stopped.
+    public var patternAuditionPositionSamples: UInt64 { device.renderer.patternAuditionPositionSamples }
     public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
     public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
     public var outputVolume: Int { device.renderer.outputVolume }
@@ -96,6 +99,7 @@ public final class NativeAudio {
 
     public func publish(_ timeline: PlaybackTimeline) throws {
         guard device.renderer.songLoaded else { throw NativeAudioError.publishFailed }
+        stopPatternAudition()
         device.renderer.publish(timeline)
     }
 
@@ -116,7 +120,11 @@ public final class NativeAudio {
 
     public func setEngineSettings(_ engine: EngineSettings, config: SongConfig?) {
         engine.apply(to: &engineSettings)
-        if let config, songLoaded { updateSettings(config: config) }
+        if let config, songLoaded {
+            updateSettings(config: config)
+        } else {
+            stopPatternAudition()
+        }
     }
 
     public func updateVoicegroup(_ bank: ProjectBankLease) {
@@ -126,10 +134,22 @@ public final class NativeAudio {
         }
     }
 
-    public func play() { device.renderer.play() }
-    public func pause() { device.renderer.pause() }
-    public func stop() { device.renderer.stop() }
-    public func seek(sample: UInt64) { device.renderer.seek(sample) }
+    public func play() {
+        stopPatternAudition()
+        device.renderer.play()
+    }
+    public func pause() {
+        stopPatternAudition()
+        device.renderer.pause()
+    }
+    public func stop() {
+        stopPatternAudition()
+        device.renderer.stop()
+    }
+    public func seek(sample: UInt64) {
+        stopPatternAudition()
+        device.renderer.seek(sample)
+    }
     public func setLoopEnabled(_ enabled: Bool) { device.renderer.setLoopEnabled(enabled) }
     public func setMix(muted: Set<Int>, soloed: Set<Int>) {
         device.renderer.setMix(muted: muted, soloed: soloed)
@@ -144,6 +164,18 @@ public final class NativeAudio {
     public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] {
         device.renderer.consumeTrackActivityLevels()
+    }
+
+    /// Audition a complete immutable loop using the current bank, leaving the song paused.
+    /// - Parameter timeline: A loop timeline built at the device's sample rate.
+    public func startPatternAudition(_ timeline: PlaybackTimeline) {
+        device.withRenderingStopped { device.renderer.startPatternAudition(timeline) }
+    }
+
+    /// Silence and release the isolated loop without resuming or replacing the song.
+    public func stopPatternAudition() {
+        guard device.renderer.isPatternAuditioning else { return }
+        device.withRenderingStopped { device.renderer.stopPatternAudition() }
     }
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {

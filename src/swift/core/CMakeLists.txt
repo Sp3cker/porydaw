@@ -6,6 +6,7 @@ add_library(PorydawCore STATIC
     MidiSemantics.swift
     Meter.swift
     PlaybackTimeline.swift
+    Arpeggiator.swift
     SongDocument.swift
     DocumentChangeSet.swift
     DocumentRevisions.swift

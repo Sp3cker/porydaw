@@ -87,6 +87,7 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onAddTrackRequested: (() -> Void)?
     @QtIgnored public var onChangeTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
+    @QtIgnored public var onArpeggiatorRequested: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
     @QtIgnored var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
@@ -158,6 +159,7 @@ public final class TrackHeadersPresenter {
         onAddTrackRequested = nil
         onChangeTrackVoiceRequested = nil
         onRevealTrackVoiceRequested = nil
+        onArpeggiatorRequested = nil
         onContextMenuRequested = nil
     }
 
@@ -436,7 +438,7 @@ public final class TrackHeadersPresenter {
     }
 
     public func activateHeaderMenuAction(actionId: Int) {
-        guard let target = pendingMenu, (1...5).contains(actionId) else { return }
+        guard let target = pendingMenu, (1...6).contains(actionId) else { return }
         if actionId == 4, session?.document.canAddTrack != true { return }
         dismissHeaderMenu()
         guard let session, target.matches(session.document), validTrack(target.track) else { return }
@@ -450,6 +452,7 @@ public final class TrackHeadersPresenter {
         case 5:
             session.document.deleteTrack(target.track)
             refreshFromDocument()
+        case 6: onArpeggiatorRequested?(target.track)
         default: break
         }
     }
@@ -525,7 +528,7 @@ public final class TrackHeadersPresenter {
         dismissHeaderMenu()
         let labels = [
             "Change voice...", "Show voice in voicegroup", "Rename track...",
-            "Duplicate track", "Delete track",
+            "Duplicate track", "Delete track", "Arpeggiator...",
         ]
         menuItems.reset(
             to: labels.enumerated().map { (index: Int, text: String) -> MenuRow in

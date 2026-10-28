@@ -33,6 +33,7 @@ FocusScope {
     property bool velocityPromptRetainingRelease: false
     final readonly property App.OtherEventsBandPresenter otherEventsPresenter: applicationSession ? applicationSession.otherEventsBand() : null
     final readonly property App.PitchBendPresenter pitchBendPresenter: applicationSession ? applicationSession.pitchBendPresenter() : null
+    final readonly property App.ArpeggiatorPresenter arpeggiatorModel: applicationSession ? applicationSession.arpeggiatorPresenter() : null
     final readonly property App.EventListPresenter eventListPresenter: applicationSession ? applicationSession.eventListPresenter() : null
     final property bool showEvents: applicationSession.showsEvents
     onShowEventsChanged: {
@@ -77,6 +78,7 @@ FocusScope {
         || headersModel.menuOpen || gridModel.gridMenuKind !== 0 || rulerMenu.isOpen
         || applicationSession.headerVoicePickerOpen || applicationSession.timeSigPromptOpen
         || rulerMenu.insertTimePromptOpen || velocityModel.promptOpen || pitchBendPresenter.isOpen
+        || (arpeggiatorModel && arpeggiatorModel.isOpen)
     function refreshHintScope(): void {
         if (hintService && !hintScopeCovered && hintWindowActive)
             hintService.scopeRefresh()
@@ -156,7 +158,11 @@ FocusScope {
 
     onWidthChanged: configureViewport()
     onHeightChanged: configureViewport()
-    onBaseFontPxChanged: configureViewport()
+    onBaseFontPxChanged: {
+        configureViewport()
+        if (arpeggiatorModel)
+            arpeggiatorModel.configure(baseFontPx)
+    }
     onVisibleChanged: {
         // Cancellation reaches presenters even if this surface is already hidden.
         if (!visible && root.applicationSession)

@@ -401,6 +401,22 @@ ShellLaneSupport {
         tryCompare(editor, "isOpen", false)
     }
 
+    function auditArpeggiator(context) {
+        const surface = selectedSurface()
+        const model = surface.arpeggiatorModel
+        model.open(surface.gridModel.trackIndex)
+        tryCompare(model, "isOpen", true)
+        tryVerify(function() { return findChild(surface, "arpeggiatorPanel") !== null }, 5000)
+        const panel = findChild(surface, "arpeggiatorPanel")
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "arpeggiator controls submit before contrast capture")
+        const result = Audit.audit(panel, grab)
+        record(context + " arpeggiator", result)
+        auditPopups(context + " arpeggiator", result.popups)
+        model.close()
+        tryCompare(model, "isOpen", false)
+    }
+
     function auditUndoHistory(context) {
         const presenter = shell.shellPresenter
         const history = presenter.session.undoHistory
@@ -530,6 +546,7 @@ ShellLaneSupport {
         auditPopups(mode + " song", auditWindow(mode + " song"))
         auditClippedKeyboardLabel(mode)
         auditNoteAutomation(mode)
+        auditArpeggiator(mode)
 
         presenter.activate("view.polyphony_debugger")
         tryVerify(function() {

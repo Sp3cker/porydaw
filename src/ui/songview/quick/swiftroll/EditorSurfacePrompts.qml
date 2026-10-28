@@ -31,6 +31,22 @@ Item {
         }
     }
     Loader {
+        id: arpeggiatorLoader
+        objectName: "arpeggiatorLoader"
+        anchors.fill: parent
+        z: 15
+        active: promptHost.root.arpeggiatorModel !== null && promptHost.root.arpeggiatorModel.isOpen
+        sourceComponent: Component {
+            ArpeggiatorPanel {
+                anchors.fill: parent
+                model: promptHost.root.arpeggiatorModel
+                focusOrigin: promptHost.trackHeaders
+                hintService: promptHost.root.hintService
+                Component.onCompleted: model.configure(promptHost.root.baseFontPx)
+            }
+        }
+    }
+    Loader {
         id: headerVoicePickerLoader
         objectName: "headerVoicePickerLoader"
         anchors.fill: parent
