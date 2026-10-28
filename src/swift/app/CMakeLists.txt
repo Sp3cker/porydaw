@@ -1,5 +1,8 @@
 set(SWIFT_GRID_DIR "${CMAKE_SOURCE_DIR}/src/ui/songview/quick/swiftroll")
 set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
+# Snapshot declared includes; transitive generator queries recurse into Qt's
+# language-dependent compile options and can emit a bare -I.
+get_target_property(qt_core_include_dirs Qt6::Core INTERFACE_INCLUDE_DIRECTORIES)
 # New modules: add_library + porydaw_swift_module + porydaw_swift_qt_interop + extras.
 function(porydaw_swift_module target module_name)
     set_target_properties(${target} PROPERTIES
@@ -196,7 +199,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/m4a>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin/hw_audio>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:${qt_core_include_dirs}, -Xcc -I>>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
@@ -226,7 +229,7 @@ target_compile_options(PorydawAppCommands PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${PORYAAAA_DIR}/plugin>"
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:${qt_core_include_dirs}, -Xcc -I>>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 target_link_libraries(PorydawAppCommands PUBLIC PorydawCore QtBridgeCpp Qt6::Gui)
@@ -303,7 +306,7 @@ set_target_properties(PorydawAppPresentation PROPERTIES
 )
 porydaw_swift_qt_interop(PorydawAppPresentation)
 target_compile_options(PorydawAppPresentation PUBLIC
-    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:$<TARGET_PROPERTY:Qt6::Core,INTERFACE_INCLUDE_DIRECTORIES>, -Xcc -I>>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I$<JOIN:${qt_core_include_dirs}, -Xcc -I>>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/render/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"

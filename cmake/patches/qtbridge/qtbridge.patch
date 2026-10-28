@@ -1139,7 +1139,19 @@ index 6dd803f..74f6354 100644
  // BuilderImpl
  
  class SwiftMetaObjectBuilder::BuilderImpl : public QDynamicMetaObjectData
-@@ -232,10 +277,11 @@ public:
+@@ -102,7 +147,11 @@ public:
+         case QMetaMethod::Slot:
+         {
++#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
++            auto slotIt = m_slots.find(methodId - static_cast<int>(m_signalNameToId.size()));
++#else
+             auto slotIt = m_slots.find(methodId);
++#endif
+             if (slotIt == m_slots.end())
+                 return false;
+ 
+             if (auto& callback = slotIt->second.m_callback)
+@@ -232,10 +281,15 @@ public:
          bool hasSignal = it != m_signalNameToId.end();
  
          QMetaPropertyBuilder builder = m_metaObjectBuilder->addProperty(
@@ -1150,9 +1162,13 @@ index 6dd803f..74f6354 100644
          builder.setConstant(!isWritable && !hasSignal);
 +        builder.setFinal(true);
          if (hasSignal) {
++#if QT_VERSION >= QT_VERSION_CHECK(6, 12, 0)
++            builder.setNotifySignal(m_metaObjectBuilder->signal(it->second));
++#else
              builder.setNotifySignal(m_metaObjectBuilder->method(it->second));
++#endif
          }
-@@ -307,6 +353,23 @@ public:
+@@ -307,6 +361,23 @@ public:
              convertedArgs.push_back(std::move(v));
          }
  

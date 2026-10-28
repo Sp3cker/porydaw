@@ -623,8 +623,9 @@ private func checkBandLosslessPublication(_ report: CheckReport) {
     rig.expectHeld(report, id, [], "storm final departure is not dropped")
     m4a_engine_all_sound_off(rig.main)
     m4a_engine_reset_poly_stats(rig.main)
-    let largeChord = (0..<96).map {
-        BandAuditionNote(noteID: UInt64($0 + 2), track: 0, key: 60, velocity: UInt8($0 + 1), durationSamples: 480_000)
+    let largeChord = (0..<96).map { (index: Int) in
+        BandAuditionNote(
+            noteID: UInt64(index + 2), track: 0, key: 60, velocity: UInt8(index + 1), durationSamples: 480_000)
     }
     rig.cover(largeChord)
     report.expect(

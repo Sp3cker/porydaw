@@ -5,6 +5,26 @@ include_guard(GLOBAL)
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS CorePrivate)
 
+# Qt's framework include-order option belongs to Clang, not the Swift driver.
+# Preserve its ordering for native targets and forward it for Swift importers.
+if(APPLE)
+    get_target_property(qt_platform_options Qt6::Platform INTERFACE_COMPILE_OPTIONS)
+    if(qt_platform_options)
+        set(qt_platform_language_options "")
+        foreach(qt_platform_option IN LISTS qt_platform_options)
+            if(qt_platform_option MATCHES "^SHELL:-idirafter (.+)$")
+                list(APPEND qt_platform_language_options
+                    "$<$<NOT:$<COMPILE_LANGUAGE:Swift>>:${qt_platform_option}>"
+                    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -idirafter -Xcc ${CMAKE_MATCH_1}>")
+            else()
+                list(APPEND qt_platform_language_options "${qt_platform_option}")
+            endif()
+        endforeach()
+        set_property(TARGET Qt6::Platform PROPERTY
+            INTERFACE_COMPILE_OPTIONS "${qt_platform_language_options}")
+    endif()
+endif()
+
 include(FetchContent)
 set(QTBRIDGE_PATCH_DIR
     "${CMAKE_CURRENT_LIST_DIR}/patches/qtbridge")
