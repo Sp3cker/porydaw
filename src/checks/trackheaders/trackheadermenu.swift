@@ -15,8 +15,8 @@ func headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(
     fx.openMenu(report, cppID: id)
     report.expectEqual(expected: 0, actual: fx.session.selectedTrack, cppID: id, what: "right press selects target")
     report.expectEqual(
-        expected: [1, 2, 3, 4, 5], actual: (0..<h.menuItems.count).map { h.menuItems[$0].actionId },
-        cppID: id, what: "menu exposes all five typed actions in order")
+        expected: [1, 2, 3, 4, 5, 6], actual: (0..<h.menuItems.count).map { h.menuItems[$0].actionId },
+        cppID: id, what: "menu exposes all six typed actions in order")
     report.expect(
         (0..<h.menuItems.count).allSatisfy { h.menuItems[$0].enabled },
         cppID: id, message: "all actions are available below capacity")
@@ -231,7 +231,7 @@ func headerMenuStaleStructuralChangeCancelsWithoutWrite(
     report.expectEqual(expected: 0, actual: pickers, cppID: id, what: "late stale action cannot open picker")
     remapped.expectUnchanged(report, fx.document, cppID: id, phase: "stale menu action")
     fx.openMenu(report, cppID: id)
-    report.expectEqual(expected: 5, actual: h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
+    report.expectEqual(expected: 6, actual: h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
     h.dismissHeaderMenu()
 }
 

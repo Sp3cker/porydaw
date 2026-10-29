@@ -192,7 +192,7 @@ internal func runReusableTimelineBuilderChecks(_ report: CheckReport) {
             && original.timeSignatures == [PlaybackTimeSignature(tick: 0, numerator: 4, denominatorPowerOfTwo: 2)]
             && original.otherEvents.count == 1 && original.otherEvents[0].tick == 12
             && original.otherEvents[0].sample == 6_000 && original.otherEvents[0].track == 0
-            && original.otherEvents[0].label == "Lyric: end",
+            && original.otherEvents[0].kind == .text(type: 0x05, text: "end"),
         cppID: id, message: "later builds changed retained original track, tempo, signature or other-event storage")
     report.expect(
         original.hasLoop && original.loopStartSample == 0 && original.loopEndSample == 6_000
@@ -218,7 +218,7 @@ internal func runReusableTimelineBuilderChecks(_ report: CheckReport) {
             && replacement.timeSignatures == [PlaybackTimeSignature(tick: 4, numerator: 3, denominatorPowerOfTwo: 3)]
             && replacement.otherEvents.count == 1 && replacement.otherEvents[0].tick == 9
             && replacement.otherEvents[0].sample == 6_500 && replacement.otherEvents[0].track == 0
-            && replacement.otherEvents[0].label == "Channel pressure 40"
+            && replacement.otherEvents[0].kind == .channelPressure(40)
             && replacement.hasLoop && replacement.loopStartSample == 4_000 && replacement.loopEndSample == 6_000
             && replacement.lengthTicks == 9 && replacement.lengthSamples == 6_000 && replacement.settings == settings,
         cppID: id, message: "replacement retained stale projection data or lost authoritative timing")

@@ -21,6 +21,15 @@ public func runArpeggiatorChecks(_ report: CheckReport) {
     }
 
     do {
+        var cycleSettings = ArpeggiatorSettings()
+        cycleSettings.steps = 3
+        cycleSettings.rateDenominator = 8
+        cycleSettings.shuffle = 50
+        let cycle = try Arpeggiator.patternRange(
+            start: 1001, ticksPerBeat: 480, playbackSettings: playback, settings: cycleSettings)
+        report.expectEqual(
+            expected: [Tick(960), 1680], actual: [cycle.start, cycle.end],
+            cppID: "arpeggiator/cycle", what: "three eighth steps form a beat-anchored cycle without end-beat padding")
         let up = try generate(settings)
         report.expectEqual(
             expected: [UInt8(60), 64, 67, 60], actual: up.notes.map(\.pitch),
@@ -256,6 +265,11 @@ public func runArpeggiatorChecks(_ report: CheckReport) {
     expectArpeggiatorError(report, "zero-length pattern", expectedCase: .invalidSettings("")) {
         _ = try generate(invalid)
     }
+    expectArpeggiatorError(report, "cycle exceeds the document", expectedCase: .invalidRange("")) {
+        _ = try Arpeggiator.patternRange(
+            start: TimeDefaults.maxTick, ticksPerBeat: 24, playbackSettings: playback,
+            settings: ArpeggiatorSettings())
+    }
     report.expect(
         Arpeggiator.supportsTiming(ticksPerBeat: 24, playbackSettings: playback, settings: ArpeggiatorSettings()),
         cppID: "arpeggiator/availability", message: "the normal sixteenth-note rate is available")
@@ -336,9 +350,9 @@ private func checkArpeggiatorAudition(_ report: CheckReport) throws {
         chunks: [
             MidiChunk(
                 events: [
-                    .meta(tick: 24, type: 0x01, data: Array("[".utf8)),
-                    .meta(tick: 36, type: 0x01, data: Array("]".utf8)),
-                ], endTick: 36),
+                    .meta(type: 0x01, data: Array("[".utf8)),
+                    .meta(tick: 96, type: 0x01, data: Array("]".utf8)),
+                ], endTick: 96),
             MidiChunk(
                 events: [
                     .channel(status: 0xC0, data0: 0),
@@ -346,16 +360,18 @@ private func checkArpeggiatorAudition(_ report: CheckReport) throws {
                     .channel(tick: 30, status: 0x80, data0: 67),
                 ], endTick: 36),
         ])
-    let pattern = PlaybackTimeline.build(file: file, sampleRate: Double(rig.rate))
+    let pattern = PlaybackTimeline.build(
+        file: file, sampleRate: Double(rig.rate), loopRange: (start: 24, end: 36))
     audio.startPatternAudition(pattern)
-    let frames = Int(pattern.loopEndSample - pattern.loopStartSample) * 3 + 137
+    let frames = Int(rig.rate) / 4 * 3 + 137
     let sounding = rig.render(frames, chunk: 127)
     report.expect(
         audioControllerCheckPeak(sounding[...]) > 1 / 32768,
         cppID: "arpeggiator/audition", message: "the isolated pattern renders audible source-instrument samples")
     report.expectEqual(
-        expected: pattern.loopStartSample + 137, actual: audio.patternAuditionPositionSamples,
-        cppID: "arpeggiator/audition", what: "sample position wraps exactly through three loops and a partial callback")
+        expected: UInt64(rig.rate) / 2 + 137, actual: audio.patternAuditionPositionSamples,
+        cppID: "arpeggiator/audition",
+        what: "explicit audition range overrides song markers and wraps through three cycles")
     report.expectEqual(
         expected: songPosition, actual: audio.playheadSamples,
         cppID: "arpeggiator/audition", what: "pattern audition does not advance the original song")

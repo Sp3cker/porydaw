@@ -204,6 +204,10 @@ extension ApplicationSession {
     }
 
     func playPauseImpl() {
+        if let arpeggiator = workspace?.arpeggiator, arpeggiator.isOpen {
+            arpeggiator.toggleAudition()
+            return
+        }
         guard let audio, audio.songLoaded else { return }
         if audio.transport == SharedPlayheadPolicy.playingTransport {
             audio.pause()

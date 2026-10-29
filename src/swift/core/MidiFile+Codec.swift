@@ -94,7 +94,8 @@ internal func parseTrack(_ input: inout ParserSpan, index: Int) throws -> MidiCh
     return MidiChunk(events: events, endTick: endTick ?? Tick(tick))
 }
 
-internal func stableTickSort(_ events: [MidiEvent]) -> [MidiEvent] {
+/// Orders MIDI events by tick, preserving their original order at equal ticks.
+public func stableTickSort(_ events: [MidiEvent]) -> [MidiEvent] {
     events.enumerated().sorted {
         $0.element.tick == $1.element.tick ? $0.offset < $1.offset : $0.element.tick < $1.element.tick
     }.map(\.element)

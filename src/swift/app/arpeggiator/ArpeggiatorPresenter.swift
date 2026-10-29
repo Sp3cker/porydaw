@@ -11,7 +11,7 @@ import QtBridge
 public final class ArpeggiatorPresenter {
     public var isOpen: Bool = false
     public var sourceLabel: String = ""
-    public var loopLabel: String = ""
+    public var rangeLabel: String = ""
     public var status: String = ""
     public var timingLabel: String = ""
     public var canCopy: Bool = false
@@ -44,8 +44,15 @@ public final class ArpeggiatorPresenter {
     private let clipboard = GridClipboard()
     private var settings = ArpeggiatorSettings()
     private var sourceTrack = -1
-    private var result: ArpeggiatorResult?
-    private var auditionTimeline: PlaybackTimeline?
+    private struct Draft {
+        let range: (start: Tick, end: Tick)
+        let result: ArpeggiatorResult
+        var timeline: PlaybackTimeline?
+    }
+
+    private var draft: Draft? {
+        didSet { canCopy = draft.map { !$0.result.notes.isEmpty } ?? false }
+    }
     private static let rates: [(Int, Int)] = [
         (4, 1), (2, 1), (1, 1), (1, 2), (1, 3), (1, 4), (1, 6), (1, 8), (1, 12), (1, 16), (1, 24), (1, 32), (1, 48),
         (3, 16),
@@ -84,9 +91,7 @@ public final class ArpeggiatorPresenter {
     public func close() {
         stopAudition()
         isOpen = false
-        canCopy = false
-        result = nil
-        auditionTimeline = nil
+        draft = nil
     }
 
     public func setParameter(name: String, value: Int) {
@@ -181,7 +186,6 @@ public final class ArpeggiatorPresenter {
 
     private func timingAvailable(_ candidate: ArpeggiatorSettings) -> Bool {
         let timeline = session.timeline
-        guard timeline.hasLoop else { return false }
         return Arpeggiator.supportsTiming(
             ticksPerBeat: timeline.ticksPerBeat, playbackSettings: timeline.settings, settings: candidate)
     }
@@ -191,22 +195,27 @@ public final class ArpeggiatorPresenter {
             stopAudition()
             return
         }
-        guard canCopy, let auditionTimeline else { return }
-        audio.startPatternAudition(auditionTimeline)
+        guard canCopy, var draft else { return }
+        let timeline = draft.timeline ?? makeTimeline(draft.result, range: draft.range)
+        draft.timeline = timeline
+        self.draft = draft
+        audio.startPatternAudition(timeline)
         isAuditioning = true
         pollAudition()
     }
 
     public func copyNotes() {
-        guard canCopy, let result else { return }
+        guard canCopy, let draft else { return }
+        let result = draft.result
+        let sourceRange = draft.range
         let timeline = session.timeline
         let notes = result.notes.map { note in
             ClipNote(
-                relTick: note.tick - timeline.loopStartTick, key: note.pitch,
+                relTick: note.tick - sourceRange.start, key: note.pitch,
                 duration: note.duration, velocity: note.velocity)
         }
         let clip = PorydawClip(
-            span: timeline.loopEndTick - timeline.loopStartTick,
+            span: sourceRange.end - sourceRange.start,
             tracks: [ClipTrack(track: sourceTrack, notes: notes)], lanes: [], tempo: [])
         status =
             clipboard.write(clip, ticksPerBeat: timeline.ticksPerBeat)
@@ -214,17 +223,19 @@ public final class ArpeggiatorPresenter {
     }
 
     @QtIgnored
-    public func pollAudition() {
-        guard isAuditioning, let result, let auditionTimeline else {
+    @discardableResult
+    func pollAudition() -> SharedPlayheadPreview? {
+        guard isOpen, let draft else {
             currentStep = -1
-            return
+            return nil
         }
-        guard audio.isPatternAuditioning else {
+        guard isAuditioning, audio.isPatternAuditioning, let timeline = draft.timeline else {
             isAuditioning = false
             currentStep = -1
-            return
+            return SharedPlayheadPreview(start: draft.range.start, end: draft.range.end)
         }
-        let tick = auditionTimeline.tick(for: audio.patternAuditionPositionSamples)
+        let result = draft.result
+        let tick = timeline.tick(for: audio.patternAuditionPositionSamples)
         var lower = 0
         var upper = result.stepTicks.count
         while lower < upper {
@@ -236,6 +247,7 @@ public final class ArpeggiatorPresenter {
             }
         }
         currentStep = lower == 0 ? -1 : result.stepIndices[lower - 1]
+        return SharedPlayheadPreview(start: draft.range.start, end: draft.range.end, tick: tick)
     }
 
     private func stopAudition() {
@@ -244,31 +256,41 @@ public final class ArpeggiatorPresenter {
         currentStep = -1
     }
 
+    private func resolveSourceStart() -> (tick: Tick, selection: Bool)? {
+        if let selection = session.timeSelection, selection.isActive,
+            !selection.range.hasReservedEndpoint,
+            session.timeSelectionCoversTrack(sourceTrack)
+        {
+            return (selection.range.startTick, true)
+        }
+        guard let first = session.document.notes(in: sourceTrack).min(by: { $0.tick < $1.tick }) else { return nil }
+        return (first.tick, false)
+    }
+
     private func regenerate() {
         let resume = isAuditioning
         stopAudition()
-        result = nil
-        auditionTimeline = nil
-        canCopy = false
+        draft = nil
         timingLabel = ""
         stepRevision &+= 1
         guard isOpen else { return }
         let timeline = session.timeline
-        guard timeline.hasLoop else {
-            loopLabel = "No song loop"
-            status = "Set song loop markers to generate notes."
+        guard let source = resolveSourceStart() else {
+            rangeLabel = ""
+            status = "This track has no notes to arpeggiate."
             return
         }
-        loopLabel = "Loop \(timeline.loopStartTick)–\(timeline.loopEndTick)"
         do {
+            let range = try Arpeggiator.patternRange(
+                start: source.tick, ticksPerBeat: timeline.ticksPerBeat,
+                playbackSettings: timeline.settings, settings: settings)
+            rangeLabel = "\(source.selection ? "Selection" : "Track start") · ticks \(range.start)–\(range.end)"
             let generated = try Arpeggiator.generate(
                 notes: session.document.notes(in: sourceTrack),
-                track: sourceTrack, start: timeline.loopStartTick, end: timeline.loopEndTick,
+                track: sourceTrack, start: range.start, end: range.end,
                 ticksPerBeat: timeline.ticksPerBeat, playbackSettings: timeline.settings, settings: settings)
-            let isolated = makeTimeline(generated)
-            result = generated
-            auditionTimeline = isolated
-            canCopy = !generated.notes.isEmpty
+            let bounds = (start: range.start, end: range.end)
+            draft = Draft(range: bounds, result: generated, timeline: nil)
             let gates = Set(generated.gateClocks).sorted().map(String.init).joined(separator: ", ")
             timingLabel =
                 "\(timeline.settings.extendedClocks ? "Extended" : "Normal") clocks · quantum \(generated.quantumClocks) · step \(generated.stepClocks) · shuffle \(generated.shuffleClocks) · gate \(gates.isEmpty ? "—" : gates)"
@@ -282,11 +304,15 @@ public final class ArpeggiatorPresenter {
         }
     }
 
-    private func makeTimeline(_ generated: ArpeggiatorResult) -> PlaybackTimeline {
+    private func makeTimeline(
+        _ generated: ArpeggiatorResult, range: (start: Tick, end: Tick)
+    ) -> PlaybackTimeline {
         var file = session.document.state.file
         let mapping = session.document.engineTracks
         for chunk in file.chunks.indices {
-            file.chunks[chunk].events.removeAll { event in event.typeNibble == 0x8 || event.typeNibble == 0x9 }
+            file.chunks[chunk].events.removeAll { event in
+                event.typeNibble == 0x8 || event.typeNibble == 0x9 || event.tick > range.end
+            }
         }
         // Retain hardware track identities even for a channel that contained only notes.
         for track in 0..<mapping.usedTrackCount {
@@ -308,13 +334,10 @@ public final class ArpeggiatorPresenter {
                         tick: note.tick + note.duration, status: 0x80 | entry.channel,
                         data0: note.pitch))
             }
-            file.chunks[chunk].events = file.chunks[chunk].events.enumerated().sorted { left, right in
-                left.element.tick == right.element.tick
-                    ? left.offset < right.offset : left.element.tick < right.element.tick
-            }.map(\.element)
+            file.chunks[chunk].events = stableTickSort(file.chunks[chunk].events)
         }
         return PlaybackTimeline.build(
             file: file, tempo: session.document.state.tempo,
-            sampleRate: session.timeline.sampleRate, settings: session.timeline.settings)
+            sampleRate: session.timeline.sampleRate, settings: session.timeline.settings, loopRange: range)
     }
 }

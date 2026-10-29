@@ -116,7 +116,7 @@ PromptOverlay {
         height: implicitHeight
         Accessible.role: Accessible.Dialog
         Accessible.name: qsTr("Track arpeggiator")
-        Keys.onShortcutOverride: event => event.accepted = true
+        Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape)
                 root.model.close()
@@ -134,7 +134,7 @@ PromptOverlay {
                 Caption { text: qsTr("Arpeggiator"); font.bold: true }
                 Item { Layout.fillWidth: true }
                 Caption { text: root.model.sourceLabel }
-                Caption { text: root.model.loopLabel }
+                Caption { text: root.model.rangeLabel }
             }
 
             RowLayout {
@@ -280,6 +280,11 @@ PromptOverlay {
                         text: root.model.customPattern
                         maximumLength: 8
                         selectByMouse: true
+                        Keys.onSpacePressed: event => {
+                            if (!event.isAutoRepeat)
+                                root.model.toggleAudition()
+                            event.accepted = true
+                        }
                         Accessible.name: qsTr("Custom pattern")
                         Accessible.description: qsTr("Up to eight characters. 1–9 select pitches, R chooses randomly, and hyphen is unused padding.")
                         onTextEdited: root.model.setCustomPattern(text)

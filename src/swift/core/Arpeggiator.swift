@@ -12,7 +12,7 @@ public enum ArpeggiatorInsert: Int, Sendable {
     case lowest, highest
 }
 
-/// Pure, unsaved settings for one generated loop.
+/// Pure, unsaved settings for one generated pattern.
 public struct ArpeggiatorSettings: Equatable, Sendable {
     public var mode: ArpeggiatorMode = .up
     public var insert: ArpeggiatorInsert = .off
@@ -65,8 +65,27 @@ public enum ArpeggiatorError: Error, LocalizedError, Equatable {
 
 /// Deterministic generation on the document/GBA common integer clock lattice.
 public enum Arpeggiator {
-    /// Checks settings and rate/Insert clock compatibility without enumerating a loop.
-    /// Loop markers, retrigger boundaries, and emitted gate durations are checked by `generate`.
+    /// Resolves one Steps × Rate window, anchored at the beat containing `start`.
+    /// Throws when the configured cycle cannot fit the document tick range.
+    public static func patternRange(
+        start: Tick, ticksPerBeat: UInt32, playbackSettings: PlaybackSettings,
+        settings: ArpeggiatorSettings
+    ) throws -> (start: Tick, end: Tick) {
+        try validate(settings)
+        guard ticksPerBeat > 0, start != TimeDefaults.noTick else {
+            throw ArpeggiatorError.invalidRange("A valid start and positive PPQ are required.")
+        }
+        let timing = try Timing(division: ticksPerBeat, playback: playbackSettings, settings: settings)
+        let first = Int64(start / ticksPerBeat * ticksPerBeat)
+        let (length, overflow) = timing.stepTicks.multipliedReportingOverflow(by: Int64(settings.steps))
+        guard !overflow, length <= Int64(TimeDefaults.maxTick) - first else {
+            throw ArpeggiatorError.invalidRange("The arpeggiator cycle exceeds the document tick range.")
+        }
+        return (Tick(first), Tick(first + length))
+    }
+
+    /// Checks settings and rate/Insert clock compatibility without enumerating a range.
+    /// Range boundaries, retrigger boundaries, and emitted gate durations are checked by `generate`.
     public static func supportsTiming(
         ticksPerBeat: UInt32, playbackSettings: PlaybackSettings, settings: ArpeggiatorSettings
     ) -> Bool {
@@ -80,7 +99,7 @@ public enum Arpeggiator {
         }
     }
 
-    /// Generates one loop without changing source notes or document state.
+    /// Generates one pattern over `start..<end` without changing source notes or document state.
     /// - Throws: `ArpeggiatorError` for invalid settings, unsupported timing, or oversized output.
     public static func generate(
         notes: [Note], track: Int, start: Tick, end: Tick, ticksPerBeat: UInt32,
@@ -88,14 +107,14 @@ public enum Arpeggiator {
     ) throws -> ArpeggiatorResult {
         try validate(settings)
         guard track >= 0, start < end, ticksPerBeat > 0 else {
-            throw ArpeggiatorError.invalidRange("A nonnegative track, positive PPQ, and nonempty loop are required.")
+            throw ArpeggiatorError.invalidRange("A nonnegative track, positive PPQ, and nonempty range are required.")
         }
         let timing = try Timing(division: ticksPerBeat, playback: playbackSettings, settings: settings)
         let first = Int64(start)
         let last = Int64(end)
         guard first % timing.quantumTicks == 0, last % timing.quantumTicks == 0 else {
             throw ArpeggiatorError.invalidRange(
-                "Loop markers must lie on the shared \(timing.quantumTicks)-tick / \(timing.quantumClocks)-clock lattice."
+                "Source range boundaries must lie on the shared \(timing.quantumTicks)-tick / \(timing.quantumClocks)-clock lattice."
             )
         }
         var source = Source(notes: notes, track: track, start: first, end: last)
@@ -142,7 +161,7 @@ public enum Arpeggiator {
                     let quanta = (slotEnd - tick) / timing.quantumTicks
                     guard quanta >= 2 else {
                         throw ArpeggiatorError.unsupportedTiming(
-                            "Insert requires at least two shared clock quanta in every step, including retrigger and loop boundaries."
+                            "Insert requires at least two shared clock quanta in every step, including retrigger and range boundaries."
                         )
                     }
                     let middle = tick + (quanta / 2) * timing.quantumTicks

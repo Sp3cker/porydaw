@@ -87,6 +87,7 @@ Column {
         DragInput {
             id: editor
             appearance: control.appearance
+            inputObjectName: control.objectName + "Input"
             hintService: control.hintService
             value: control.value
             minimumValue: control.minimumValue

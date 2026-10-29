@@ -17,19 +17,42 @@ import QtBridge
 
 // MARK: - Authoritative observation
 
+/// A temporary playback window in document ticks; no tick means stopped preview.
+public struct SharedPlayheadPreview: Equatable, Sendable {
+    public let start: Tick
+    public let end: Tick
+    public let tick: Double?
+
+    public init(start: Tick, end: Tick, tick: Double? = nil) {
+        self.start = start
+        self.end = end
+        self.tick = tick
+    }
+}
+
 /// One authoritative transport observation: the sample position and raw
 /// transport value the native audio service reports. The presenter never
 /// derives either from a clock.
 public struct SharedPlayheadObservation: Equatable, Sendable {
     public var sample: UInt64
     public var transport: Int32
+    public var preview: SharedPlayheadPreview?
 
-    public init(sample: UInt64, transport: Int32) {
+    public init(sample: UInt64, transport: Int32, preview: SharedPlayheadPreview? = nil) {
         self.sample = sample
         self.transport = transport
+        self.preview = preview
     }
 
     public var playing: Bool { SharedPlayheadPolicy.isPlaying(transport: transport) }
+
+    public var displayTransport: Int32 {
+        preview?.tick == nil ? transport : SharedPlayheadPolicy.playingTransport
+    }
+
+    public func displayTick(in timeline: borrowing PlaybackTimeline) -> Double {
+        preview?.tick ?? timeline.tick(for: sample)
+    }
 }
 
 // MARK: - Aggregate interaction
@@ -66,6 +89,9 @@ public struct SharedPlayheadPresentation: Equatable, Sendable {
     public var timelineAttached: Bool = false
     public var visible: Bool = false
     public var playing: Bool = false
+    public var previewVisible: Bool = false
+    public var previewStartX: Double = 0
+    public var previewEndX: Double = 0
     public var glowLeft: Double =
         SharedPlayheadAppearance.glowLeftExtent(
             baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
@@ -129,19 +155,26 @@ public enum SharedPlayheadPolicy {
         tick: Double, transport: Int32,
         timelineAttached: Bool,
         camera: EditorCamera,
-        baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx
+        baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx,
+        preview: SharedPlayheadPreview? = nil
     )
         -> SharedPlayheadPresentation
     {
         let x = camera.contentX(tick: tick)
         let width = camera.snapshot.viewportWidth
-        return SharedPlayheadPresentation(
+        var result = SharedPlayheadPresentation(
             tick: tick,
             contentX: x,
             timelineAttached: timelineAttached,
             visible: timelineAttached && x >= 0 && x < width,
             playing: isPlaying(transport: transport),
             baseFontPx: baseFontPx)
+        if let preview {
+            result.previewStartX = min(max(camera.contentX(tick: Double(preview.start)), 0), width)
+            result.previewEndX = min(max(camera.contentX(tick: Double(preview.end)), 0), width)
+            result.previewVisible = timelineAttached && result.previewEndX > result.previewStartX
+        }
+        return result
     }
 
     /// The horizontal scroll follow asks for, or `nil` when the policy moves
@@ -178,8 +211,11 @@ public final class SharedPlayheadPresenter {
     public var timelineAttached: Bool = false
     /// `timelineAttached` and the projected x inside the camera viewport.
     public var visible: Bool = false
-    /// The transport raw value `ApplicationSession.playPause()` calls playing.
+    /// Whether the displayed playback source is running, including audition.
     public var playing: Bool = false
+    public var previewVisible: Bool = false
+    public var previewStartX: Double = 0
+    public var previewEndX: Double = 0
     /// Left bloom extent from the core to the outer edge.
     public var glowLeft: Double =
         SharedPlayheadAppearance.glowLeftExtent(
@@ -216,8 +252,7 @@ public final class SharedPlayheadPresenter {
     /// object. The QML-facing fields and signals below are unchanged, and this
     /// callback never changes what the presenter publishes.
     @QtIgnored public var onPresentation: ((SharedPlayheadPresentation) -> Void)?
-    /// Poll callback: elapsed seconds, transport state, and whether this poll
-    /// published a distinct playhead presentation.
+    /// Poll callback: elapsed seconds, song transport state, and changed presentation.
     @QtIgnored public var onPoll: ((Float, Bool, Bool) -> Void)?
 
     /// The polling lifecycle token: a new one per attach, and every observation
@@ -235,6 +270,7 @@ public final class SharedPlayheadPresenter {
     private weak var audio: NativeAudio?
     private weak var grid: PianoGrid?
     private weak var drawer: EditorDrawerPresenter?
+    private var readPreview: (() -> SharedPlayheadPreview?)?
     private var pollTask: Task<Void, Never>?
     private var retained: SharedPlayheadObservation?
     private var published: SharedPlayheadPresentation?
@@ -250,13 +286,15 @@ public final class SharedPlayheadPresenter {
     @QtIgnored
     public func attach(
         viewport: DocumentViewport, audio: NativeAudio?, grid: PianoGrid?,
-        drawer: EditorDrawerPresenter?
+        drawer: EditorDrawerPresenter?,
+        preview: (() -> SharedPlayheadPreview?)? = nil
     ) {
         lifecycleToken &+= 1
         self.viewport = viewport
         self.audio = audio
         self.grid = grid
         self.drawer = drawer
+        readPreview = preview
         retained = nil
         observeCurrent(token: lifecycleToken)
     }
@@ -275,6 +313,7 @@ public final class SharedPlayheadPresenter {
         audio = nil
         grid = nil
         drawer = nil
+        readPreview = nil
         retained = nil
         apply(SharedPlayheadPresentation())
     }
@@ -300,7 +339,7 @@ public final class SharedPlayheadPresenter {
                 previous = now
                 self.onPoll?(
                     Float(elapsed.seconds) + Float(elapsed.attoseconds) / 1e18,
-                    self.playing, presentationChanged)
+                    self.retained?.playing ?? false, presentationChanged)
             }
         }
     }
@@ -328,11 +367,11 @@ public final class SharedPlayheadPresenter {
     @QtIgnored
     public func refreshProjection() {
         guard let viewport, let retained else { return }
-        let tick = viewport.session.timeline.tick(for: retained.sample)
+        let tick = retained.displayTick(in: viewport.session.timeline)
         apply(
             SharedPlayheadPolicy.presentation(
-                tick: tick, transport: retained.transport, timelineAttached: true,
-                camera: viewport.camera, baseFontPx: currentBaseFontPx))
+                tick: tick, transport: retained.displayTransport, timelineAttached: true,
+                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: retained.preview))
     }
 
     /// Presents one injected observation for the current generation. This is the
@@ -355,9 +394,10 @@ public final class SharedPlayheadPresenter {
     public func observe(_ observation: SharedPlayheadObservation, token: UInt64) -> Bool {
         guard token == lifecycleToken, let viewport else { return false }
         retained = observation
-        let tick = viewport.session.timeline.tick(for: observation.sample)
+        let tick = observation.displayTick(in: viewport.session.timeline)
         if let target = SharedPlayheadPolicy.followTarget(
-            tick: tick, camera: viewport.camera, playing: observation.playing,
+            tick: tick, camera: viewport.camera,
+            playing: SharedPlayheadPolicy.isPlaying(transport: observation.displayTransport),
             followEnabled: followEnabled, interactions: interactions)
         {
             // The camera's own clamping and its callback publish; the
@@ -366,8 +406,8 @@ public final class SharedPlayheadPresenter {
         }
         return apply(
             SharedPlayheadPolicy.presentation(
-                tick: tick, transport: observation.transport, timelineAttached: true,
-                camera: viewport.camera, baseFontPx: currentBaseFontPx))
+                tick: tick, transport: observation.displayTransport, timelineAttached: true,
+                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: observation.preview))
     }
 
     /// Enables or disables follow. Default enabled; no QML command exists.
@@ -398,7 +438,7 @@ public final class SharedPlayheadPresenter {
     private func observeCurrent(token: UInt64) -> Bool {
         let observation = SharedPlayheadObservation(
             sample: audio?.playheadSamples ?? 0,
-            transport: audio?.transport ?? 0)
+            transport: audio?.transport ?? 0, preview: readPreview?())
         return observe(observation, token: token)
     }
 
@@ -416,6 +456,9 @@ public final class SharedPlayheadPresenter {
         }
         if visible != presentation.visible { visible = presentation.visible }
         if playing != presentation.playing { playing = presentation.playing }
+        if previewVisible != presentation.previewVisible { previewVisible = presentation.previewVisible }
+        if previewStartX != presentation.previewStartX { previewStartX = presentation.previewStartX }
+        if previewEndX != presentation.previewEndX { previewEndX = presentation.previewEndX }
         if glowLeft != presentation.glowLeft { glowLeft = presentation.glowLeft }
         if glowRight != presentation.glowRight { glowRight = presentation.glowRight }
         if peakAlpha != presentation.peakAlpha { peakAlpha = presentation.peakAlpha }

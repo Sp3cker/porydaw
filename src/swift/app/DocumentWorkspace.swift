@@ -239,7 +239,6 @@ public final class DocumentWorkspace {
         }
         playhead.onPoll = { [weak self] elapsed, playing, presentationChanged in
             guard let self else { return }
-            self.arpeggiator.pollAudition()
             let previouslyPlaying = lastPolledPlaying
             lastPolledPlaying = playing
             if let previouslyPlaying, previouslyPlaying != playing {
@@ -264,7 +263,9 @@ public final class DocumentWorkspace {
         let initialChunk =
             eventList.mappedChunk(for: session.selectedTrack, in: session.document) ?? 0
         eventList.attach(session: session, chunkIndex: initialChunk)
-        playhead.attach(viewport: viewport, audio: audio, grid: grid, drawer: drawer)
+        playhead.attach(
+            viewport: viewport, audio: audio, grid: grid, drawer: drawer,
+            preview: { [weak arpeggiator] in arpeggiator?.pollAudition() })
         lastPolledPlaying = nil
         playhead.startPolling()
     }

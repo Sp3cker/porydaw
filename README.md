@@ -27,18 +27,24 @@ Songs with unavailable dates appear last; equal dates use song ID order.
 
 ## Track arpeggiator
 
-Set the song's loop markers, then right-click a track header and choose
-**Arpeggiator...**. The tool reads that track's sounding notes inside the loop;
-you do not need to select the notes first.
+Right-click a track header and choose **Arpeggiator...**. The tool reads one
+cycle of that track's sounding notes. The cycle starts at the beat containing
+the active time selection's start when it covers the track, otherwise the
+track's earliest note. Its length is **Steps × Rate**, not the selection or
+song length. The header names the range; no song loop markers are required.
 
 Choose Up, Down, Up / Down, Manual, Poly, or Custom ordering, then adjust the
 rate, octaves, transpose, velocity, accent, shuffle, gate, and Insert settings.
 The 32 pads define a 1–32-step pattern. Click or press Return to toggle a pad;
 right-click or Shift+Return toggles its accent.
 
-**Audition** loops the generated pattern alone through the source track's
-instrument. **Copy Notes** copies the entire loop, including leading and
-trailing rests. Close the tool and use normal Paste at the desired track and
+**Audition** repeats that one cycle through the source track's instrument.
+The shared playhead follows the audition through the highlighted source window.
+Stopping or closing audition restores its display to the parked song position;
+the song's transport and clock do not advance during audition.
+**Space** starts or stops audition while the tool is open, without activating
+the focused pad or button. **Copy Notes** copies one cycle, including its
+leading and trailing rests. Close the tool and use normal Paste at the desired track and
 time. Audition and Copy Notes do not change the source notes or undo history;
 Paste is an ordinary undoable edit.
 
@@ -46,8 +52,8 @@ Timing respects the game's sequencer clock: 24 clocks per quarter note, or 48
 with Extended timing. Rates must fit both the document's tick grid and that
 clock grid; unavailable rates are disabled. Shuffle and inserted notes use
 whole shared clock quanta, and gates use durations the exporter can reproduce.
-The timing readout shows the resulting clock values; incompatible loop markers
-or settings are explained rather than silently approximated.
+The timing readout shows the resulting clock values; incompatible settings
+are explained rather than silently approximated.
 Source-note retriggers move to the next shared clock boundary, never before the
 source note begins.
 

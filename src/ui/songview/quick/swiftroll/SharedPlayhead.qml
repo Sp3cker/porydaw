@@ -60,6 +60,30 @@ Item {
         (Math.round((plotOrigin + contentX) * devicePixelRatio - 0.5)
          + 0.5) / devicePixelRatio - plotOrigin
 
+    component PreviewSegment: Item {
+        id: preview
+
+        required property rect clipRect
+        required property bool available
+
+        x: clipRect.x
+        y: clipRect.y
+        width: Math.max(clipRect.width, 0)
+        height: Math.max(clipRect.height, 0)
+        clip: true
+        visible: root.presenter !== null && root.presenter.timelineAttached
+                 && root.presenter.previewVisible && available && width > 0 && height > 0
+        Accessible.ignored: true
+
+        Rectangle {
+            objectName: "sharedPlayheadPreviewFill"
+            x: root.presenter.previewStartX
+            width: Math.max(0, root.presenter.previewEndX - root.presenter.previewStartX)
+            height: preview.height
+            color: root.glowColor(0.12)
+        }
+    }
+
     // Only the ruler triangle extends beyond the shared plot clip.
     component PlayheadSegment: Item {
         id: segment
@@ -286,6 +310,30 @@ Item {
                 }
             }
         }
+    }
+
+    PreviewSegment {
+        objectName: "sharedPlayheadRollPreview"
+        clipRect: root.rollPlotRect
+        available: root.rollBodyVisible
+    }
+
+    PreviewSegment {
+        objectName: "sharedPlayheadVelocityPreview"
+        clipRect: root.velocityBodyRect
+        available: root.velocityAvailable
+    }
+
+    PreviewSegment {
+        objectName: "sharedPlayheadVoiceChangesPreview"
+        clipRect: root.voiceChangesBodyRect
+        available: root.voiceChangesAvailable
+    }
+
+    PreviewSegment {
+        objectName: "sharedPlayheadAutomationPreview"
+        clipRect: root.automationBodyRect
+        available: root.automationAvailable
     }
 
     PlayheadSegment {

@@ -85,7 +85,7 @@ public enum OtherEventsStrip {
             result.append(
                 OtherEventsStripItem(
                     tick: other.tick, sample: other.sample,
-                    track: other.track, label: other.label))
+                    track: other.track, label: label(for: other.kind)))
         }
         let items = result.enumerated().sorted {
             $0.element.tick == $1.element.tick
@@ -95,6 +95,33 @@ public enum OtherEventsStrip {
         return Classification(
             items: items, orphanNoteOffs: orphanNoteOffs,
             unpairedNoteOns: open.reduce(0, +))
+    }
+
+    /// Display text for one timeline other-event, formatted only when the strip
+    /// classifies events for presentation.
+    public static func label(for kind: PlaybackOtherEvent.Kind) -> String {
+        switch kind {
+        case let .polyAftertouch(key, pressure): return "Poly aftertouch key \(key) = \(pressure)"
+        case let .channelPressure(value): return "Channel pressure \(value)"
+        case let .systemExclusive(byteCount): return "SysEx (\(byteCount) bytes)"
+        case let .text(type, text): return "\(textName(for: type)): \(text)"
+        case let .meta(type, byteCount):
+            let hex = String(type, radix: 16)
+            return "Meta 0x\(type < 16 ? "0" : "")\(hex) (\(byteCount) bytes)"
+        }
+    }
+
+    private static func textName(for type: UInt8) -> String {
+        switch type {
+        case 0x01: return "Text"
+        case 0x02: return "Copyright"
+        case 0x03: return "Track name"
+        case 0x04: return "Instrument"
+        case 0x05: return "Lyric"
+        case 0x06: return "Marker"
+        case 0x07: return "Cue point"
+        default: preconditionFailure("Not a MIDI text event")
+        }
     }
 
     @MainActor

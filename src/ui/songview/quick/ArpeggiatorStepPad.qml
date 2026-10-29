@@ -30,7 +30,6 @@ Fusion.AbstractButton {
     onClicked: pad.edited(false)
     Keys.onReturnPressed: event => { pad.edited((event.modifiers & Qt.ShiftModifier) !== 0); event.accepted = true }
     Keys.onEnterPressed: event => { pad.edited((event.modifiers & Qt.ShiftModifier) !== 0); event.accepted = true }
-    Keys.onSpacePressed: event => { pad.edited((event.modifiers & Qt.ShiftModifier) !== 0); event.accepted = true }
 
     background: Rectangle {
         radius: pad.appearance.radius

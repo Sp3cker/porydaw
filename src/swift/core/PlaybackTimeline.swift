@@ -130,10 +130,19 @@ public func playbackHasLoop(startSample: UInt64, endSample: UInt64) -> Bool {
 }
 
 public struct PlaybackOtherEvent: Equatable, Sendable {
+    /// Raw event identity; display text is formatted by the presenting surface.
+    public enum Kind: Equatable, Sendable {
+        case polyAftertouch(key: UInt8, pressure: UInt8)
+        case channelPressure(UInt8)
+        case systemExclusive(byteCount: Int)
+        case text(type: UInt8, text: String)
+        case meta(type: UInt8, byteCount: Int)
+    }
+
     public let tick: Tick
     public let sample: UInt64
     public let track: Int
-    public let label: String
+    public let kind: Kind
 }
 
 /// An immutable, contiguous projection of a canonical MIDI file for playback.
@@ -159,10 +168,12 @@ public struct PlaybackTimeline: Sendable {
     public static func build(
         file: borrowing MidiFile, tempo: [TempoPoint]? = nil,
         sampleRate: Double,
-        settings: PlaybackSettings = PlaybackSettings()
+        settings: PlaybackSettings = PlaybackSettings(),
+        loopRange: (start: Tick, end: Tick)? = nil
     ) -> PlaybackTimeline {
         var builder = PlaybackTimelineBuilder()
-        return builder.build(file: file, tempo: tempo, sampleRate: sampleRate, settings: settings)
+        return builder.build(
+            file: file, tempo: tempo, sampleRate: sampleRate, settings: settings, loopRange: loopRange)
     }
     /// Cold convenience factory using authoritative state tempo and decoded settings.
     public static func build(state: borrowing SongState, sampleRate: Double) -> PlaybackTimeline {
@@ -212,7 +223,7 @@ private struct RawPlaybackEvent {
 private struct RawOtherEvent {
     let tick: Tick
     let midiChunk: Int
-    let label: String
+    let kind: PlaybackOtherEvent.Kind
     let order: Int
 }
 
@@ -268,10 +279,12 @@ public struct PlaybackTimelineBuilder {
     ///   - tempo: Authoritative tempo, or nil to extract file tempo metas.
     ///   - sampleRate: Output samples per second.
     ///   - settings: Hardware clock and gate scheduling policy.
+    ///   - loopRange: Overrides file loop markers when supplied; nil uses the file's markers.
     /// - Returns: A timeline with no array-storage aliases retained by this builder.
     public mutating func build(
         file: borrowing MidiFile, tempo: borrowing [TempoPoint]? = nil,
-        sampleRate: Double, settings: PlaybackSettings = PlaybackSettings()
+        sampleRate: Double, settings: PlaybackSettings = PlaybackSettings(),
+        loopRange: (start: Tick, end: Tick)? = nil
     ) -> PlaybackTimeline {
         orderedTempo.removeAll(keepingCapacity: true)
         if let tempo = copy tempo {
@@ -341,12 +354,12 @@ public struct PlaybackTimelineBuilder {
                         rawOthers.append(
                             RawOtherEvent(
                                 tick: event.tick, midiChunk: chunkIndex,
-                                label: "Poly aftertouch key \(data0) = \(data1)", order: rawOthers.count))
+                                kind: .polyAftertouch(key: data0, pressure: data1), order: rawOthers.count))
                     case 0xD:
                         rawOthers.append(
                             RawOtherEvent(
                                 tick: event.tick, midiChunk: chunkIndex,
-                                label: "Channel pressure \(data0)", order: rawOthers.count))
+                                kind: .channelPressure(data0), order: rawOthers.count))
                     default:
                         break
                     }
@@ -355,7 +368,7 @@ public struct PlaybackTimelineBuilder {
                     rawOthers.append(
                         RawOtherEvent(
                             tick: event.tick, midiChunk: chunkIndex,
-                            label: "SysEx (\(data.count) bytes)", order: rawOthers.count))
+                            kind: .systemExclusive(byteCount: data.count), order: rawOthers.count))
 
                 case .meta(let type, let data):
                     if type == 0x51 && data.count == 3 {
@@ -386,21 +399,17 @@ public struct PlaybackTimelineBuilder {
                         } else {
                             let text = latin1(markerBytes).trimmingCharacters(in: .whitespacesAndNewlines)
                             if !text.isEmpty {
-                                let names = [
-                                    "Text", "Copyright", "Track name", "Instrument",
-                                    "Lyric", "Marker", "Cue point",
-                                ]
                                 rawOthers.append(
                                     RawOtherEvent(
                                         tick: event.tick, midiChunk: chunkIndex,
-                                        label: "\(names[Int(type) - 1]): \(text)", order: rawOthers.count))
+                                        kind: .text(type: type, text: text), order: rawOthers.count))
                             }
                         }
                     } else {
                         rawOthers.append(
                             RawOtherEvent(
                                 tick: event.tick, midiChunk: chunkIndex,
-                                label: String(format: "Meta 0x%02x (%d bytes)", type, data.count),
+                                kind: .meta(type: type, byteCount: data.count),
                                 order: rawOthers.count))
                     }
                 }
@@ -493,6 +502,13 @@ public struct PlaybackTimelineBuilder {
             lengthTicks = max(lengthTicks, event.tick)
         }
 
+        // An explicit loop range (e.g. an audition window) replaces any loop
+        // markers scanned from the file.
+        if let loopRange {
+            loopStartTick = loopRange.start
+            loopEndTick = loopRange.end
+        }
+
         let loopStartSample =
             loopStartTick == TimeDefaults.noTick
             ? UInt64.max
@@ -526,7 +542,7 @@ public struct PlaybackTimelineBuilder {
                     sample: otherTempo.sample(
                         for: UInt64(raw.tick), tempoMap: tempoMap,
                         ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
-                    track: track, label: raw.label))
+                    track: track, kind: raw.kind))
             lengthTicks = max(lengthTicks, raw.tick)
         }
 
