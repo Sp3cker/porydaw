@@ -112,7 +112,7 @@ endif()
 if(APPLE)
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 endif()
-find_package(Qt6 6.11 REQUIRED COMPONENTS Qml Quick QuickControls2 Widgets)
+find_package(Qt6 6.12 REQUIRED COMPONENTS Qml Quick QuickControls2 Widgets)
 qt_standard_project_setup()
 qt_policy(SET QTP0004 NEW)
 

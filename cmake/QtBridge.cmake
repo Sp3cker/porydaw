@@ -3,7 +3,7 @@ include_guard(GLOBAL)
 # Acknowledge QtBridge's private Qt dependency in the host scope,
 # where Qt finalizes the application and check executables.
 set(QT_NO_PRIVATE_MODULE_WARNING ON)
-find_package(Qt6 6.10 REQUIRED COMPONENTS CorePrivate)
+find_package(Qt6 6.12 REQUIRED COMPONENTS CorePrivate)
 
 # Qt's framework include-order option belongs to Clang, not the Swift driver.
 # Preserve its ordering for native targets and forward it for Swift importers.

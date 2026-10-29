@@ -5,7 +5,7 @@ import re
 import sys
 from pathlib import Path
 
-QT_MINOR = "6.11"
+QT_MINOR = "6.12"
 
 
 def installation() -> tuple[str, str, str]:
@@ -38,7 +38,7 @@ def local_prefix(
     _, _, kit = installation()
     prefixes = []
     for entry in root.iterdir():
-        if not re.fullmatch(r"6\.11\.\d+", entry.name):
+        if not re.fullmatch(r"6\.12\.\d+", entry.name):
             continue
         if version is not None and entry.name != version:
             continue

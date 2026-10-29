@@ -23,8 +23,8 @@ def _config(parser: argparse.ArgumentParser) -> None:
 
 
 def _qt_version(value: str) -> str:
-    if not re.fullmatch(r"6\.11\.\d+", value):
-        raise argparse.ArgumentTypeError("Qt version must be 6.11.<patch>")
+    if not re.fullmatch(r"6\.12\.\d+", value):
+        raise argparse.ArgumentTypeError("Qt version must be 6.12.<patch>")
     return value
 
 

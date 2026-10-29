@@ -53,15 +53,15 @@ directories to avoid recursive transitive generator queries emitting a bare `-I`
 
 Qt 6.12 separates `QMetaObjectBuilder` signal indices from slot/method indices.
 The QtBridge patch uses `signal()` to attach NOTIFY signals and translates
-finalized slot indices back to builder-local callback indices on Qt 6.12+;
-the Qt 6.11 API path is preserved.
+finalized slot indices back to builder-local callback indices; Qt 6.12 is the
+required floor.
 
 An earlier Homebrew Qt 6.12 smoke reached chrome/workspace frames and passed
 `uv run --no-sync dev checks:shell --filter shell-startup`.
 The Swift importer emits a `QChar::fromUcs4` cycle warning with both that kit
 (`qchar.h:156`) and checkout-local Qt 6.11.2 (`qstringview.h:533`).
 Warnings-as-errors previously blocked compilation on this diagnostic;
-warnings now remain warnings. Checkout-local provisioning and CI select Qt 6.11.x.
+warnings now remain warnings. Checkout-local provisioning and CI select Qt 6.12.x.
 
 Never call `cmake` or `ninja` directly; `tools/porydaw_dev/cli.py` →
 `build.py:run_build` does things a bare `cmake --build` does not:
@@ -86,7 +86,7 @@ Bootstrap observation: uv 0.13.0 ARM64 archive 14,692,549 bytes in 0.778 s; mana
 
 The `Build` and `All checks` workflows run only on pushes to `fork-main`.
 Linux artifact builds and ASAN checks run on GitHub-hosted `ubuntu-latest`
-runners, installing Qt 6.11 and native dependencies explicitly. ASAN uses a fresh
+runners, installing Qt 6.12 and native dependencies explicitly. ASAN uses a fresh
 `build-asan` tree with two build jobs, two Swift threads and check pool four.
 It runs Python harness tests before the native sweep, excluding windowing checks
 and QML lanes; those run in the GitHub-hosted macOS `All checks` job.

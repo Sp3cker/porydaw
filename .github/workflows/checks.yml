@@ -38,7 +38,7 @@ jobs:
         run: uv run --no-sync dev checks:backups
       - uses: jurplel/install-qt-action@v4
         with:
-          version: "6.11.*"
+          version: "6.12.*"
           cache: true
       # Build with the .swift-version toolchain, as local builds do; Xcode's Debug codegen differs.
       - name: Install pinned Swift toolchain

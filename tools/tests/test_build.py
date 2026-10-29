@@ -77,7 +77,7 @@ class ConfigureReuseTests(unittest.TestCase):
             directory.mkdir()
             (directory / "build.ninja").touch()
             _, _, kit = qt.installation()
-            prefix = qt.install_root(repo) / "6.11.10" / kit
+            prefix = qt.install_root(repo) / "6.12.10" / kit
             (prefix / "lib/cmake/Qt6").mkdir(parents=True)
             (prefix / "lib/cmake/Qt6/Qt6Config.cmake").write_text("# installed\n")
             package = repo / "poryaaaa"

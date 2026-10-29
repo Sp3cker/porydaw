@@ -514,7 +514,7 @@ endif()
 # Qt import/plugin paths come from this configure's pinned Qt installation.
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Locate qmake through the Qt package this configure selected, so the query
-    # answers for that same Qt (verified against the pinned Qt 6.11).
+    # answers for that same Qt (verified against the pinned Qt 6.12).
     set(PORYDAW_QMAKE_EXECUTABLE "")
     if(TARGET Qt6::qmake)
         get_target_property(PORYDAW_QMAKE_EXECUTABLE Qt6::qmake IMPORTED_LOCATION)
