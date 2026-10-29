@@ -122,7 +122,7 @@ Agents use `uv run --no-sync dev` only; never `cmake`/`ninja` directly. Run `uv 
 | `checks:qml-aot` | builds app + `all_aotstats`, runs the AOT ratchet | after `src/ui/**` or exposed-type edits |
 | `qml-aot:baseline` | rewrites the AOT baseline | only when a surface change is intended |
 | `format [--check] [--base <ref>] [--whole] [files...]` | Swift driver formatting on changed lines; Ruff on Python; whole Swift formatting requires named files | before handoff; `--check` for CI |
-| `setup [--qt-version 6.11.<patch>]` | validates host tools, provisions local Qt, builds Release | fresh checkouts; host prerequisites must already exist |
+| `setup [--qt-version 6.12.<patch>]` | validates host tools, provisions local Qt, builds Release | fresh checkouts; host prerequisites must already exist |
 | `qt:patch <prefix>` | patches a Windows Qt kit for Swift's importer | Windows CI's externally installed Qt |
 | `tools:check` | Ruff lint/format check and Python behavioral tests | after `tools/**` edits |
 | `lsp:swift` | rebuilds the sourcekit index | after CMake reconfigure / Swift edits |
