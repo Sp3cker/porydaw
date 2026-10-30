@@ -259,12 +259,9 @@ ShellMenusSupport {
         waitForPosition(presenter, 0)
         verify(draft.release === changed && !voice.bankDirty,
                "standard Redo restores the saved voicegroup without editing the song")
-        const selector = child("vgArgCombo")
+        const selector = child("voicegroupSelector")
         selector.forceActiveFocus()
         tryCompare(selector, "activeFocus", true)
-        tryCompare(session, "editingVoicegroup", false)
-        selector.contentItem.forceActiveFocus()
-        tryCompare(selector.contentItem, "activeFocus", true)
         tryCompare(session, "editingVoicegroup", false)
         waitForCount(1)
         verify(historyRow(0).step.isBase && historyRow(0).step.isSaved,

@@ -100,13 +100,16 @@ extension SongDocument {
                     return nil
                 })
         case .insertBlank:
-            return normalizedTempo(
-                points.map { point in
+            var result = points.map { point in
                     point.tick >= range.startTick
                         ? TempoPoint(
                             tick: point.tick + range.span,
                             microsecondsPerQuarterNote: point.microsecondsPerQuarterNote) : point
-                })
+            }
+            if range.startTick == 0, let initial = points.last(where: { $0.tick == 0 }) {
+                result.append(initial)
+            }
+            return normalizedTempo(result)
         case .duplicate:
             var result = points.map { point in
                 point.tick >= range.endTick

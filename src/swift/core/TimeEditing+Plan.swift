@@ -215,9 +215,13 @@ extension SongDocument {
             }
         }
         for ref in plan.events where !taken[ref.chunk][ref.index] && ref.tick >= s {
-            actions.move(
-                chunk: ref.chunk, index: ref.index, to: ref.tick + span,
-                preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
+            if s == 0 && ref.tick == 0 && ref.kind == .value {
+                actions.values[ref.chunk][ref.index] = .copy(span)
+            } else {
+                actions.move(
+                    chunk: ref.chunk, index: ref.index, to: ref.tick + span,
+                    preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
+            }
             if ref.kind == .signature && ref.tick == s {
                 var copy = state.file.chunks[ref.chunk].events[ref.index]; copy.tick = s
                 extra[ref.chunk].append(copy)

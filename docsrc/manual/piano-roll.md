@@ -94,6 +94,11 @@ Covered notes and automation nodes use the normal selection highlight without be
 - **With an active time selection**: inserts a silent gap exactly the duration of the selection, immediately and without prompting. The selection's resolved scope (track, multi-track, whole-song, or lane-only, as described above) determines what shifts right; notes crossing the start seam are split cleanly so the inserted interval stays completely silent. The time selection remains over the newly created blank space, and the edit cursor is placed at the start seam. An active selection whose scope cannot be resolved rejects the command silently, without opening the prompt.
 - **Without a selection**: opens three draggable number fields for bars, beats, and quarter-beat fractions, then inserts that duration across the whole song at the edit cursor — even while playing. The cursor position and meter are captured when the form opens, so accepting after playback has advanced still inserts at that captured edit cursor, never at the moving playhead.
 
+Inserting at the beginning preserves scoped tick-zero tempo and controller
+values throughout the new lead-in instead of reverting to defaults. Later
+changes shift right normally; lanes without a tick-zero event keep their
+implicit starting defaults.
+
 **Delete Time (Shift Left)** is available from the Edit menu and both time-selection context menus. It removes the active time selection's whole time span — contents plus duration — and shifts all later scoped notes and automation left by that amount. Afterward the selection clears and the edit cursor is parked at the start seam. Without an active selection, or with a selection whose scope cannot be resolved, the command does nothing (no prompt, no edit). **No confirmation prompt is shown**; undo (`Ctrl+Z`) restores the previous song in one step. There is also no default destructive keyboard shortcut for it.
 
 If a shifted note would overlap an earlier same-pitch note on the same track,

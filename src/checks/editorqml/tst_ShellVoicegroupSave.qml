@@ -46,10 +46,9 @@ ShellVoicegroupSupport {
         compare(fileProbe.fileFingerprint(midiPath), midiBefore)
         compare(fileProbe.fileFingerprint(cfgPath), cfgBefore)
 
-        const selector = findChild(shell, "vgArgCombo")
+        const selector = findChild(shell, "voicegroupSelector")
         selector.forceActiveFocus()
-        selector.editText = "fixture_alt"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "fixture_alt"
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() { return voice.bankLoadName === "fixture_alt" }, 15000))
         tryCompare(session, "editingVoicegroup", false)
@@ -167,9 +166,9 @@ ShellVoicegroupSupport {
                 "restoration Save retains the MIDI encoding established by explicit Song Save")
         compare(fileProbe.fileFingerprint(bankPath), initialBank,
                 "restoration Save writes the original bank")
-        const selector = findChild(shell, "vgArgCombo")
-        selector.editText = "_porydaw_missing_voicegroup"
-        selector.contentItem.forceActiveFocus()
+        const selector = findChild(shell, "voicegroupSelector")
+        selector.text = "_porydaw_missing_voicegroup"
+        selector.forceActiveFocus()
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return session.lastSaveError.indexOf("_porydaw_missing_voicegroup") >= 0

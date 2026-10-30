@@ -16,7 +16,7 @@ ShellVoicegroupSupport {
         verify(first !== null, "bank row zero is mounted")
         tryVerify(function() { return first.title.indexOf("fixture_loop") >= 0 }, 5000,
                   "row zero publishes fixture_loop after the bank model update; got: " + first.title)
-        compareRole(findChild(panel, "vgArgCombo"), "body", "voicegroup selector")
+        compareRole(findChild(panel, "voicegroupSelector"), "body", "voicegroup selector")
         compareRole(findChild(panel, "voicegroupEditorNotice"), "body", "voice editor notice")
         compareRole(findChild(panel, "voicegroupVoiceHeader"),
                     "body", "voicegroup Voice header")
@@ -46,6 +46,155 @@ ShellVoicegroupSupport {
         compare(controller.soundingVoice, -1)
         controller.revealSlot(12)
         compare(controller.currentSlot, 12)
+    }
+
+    function test_zzzzLongVoicegroupDropdownStaysBelowField() {
+        const shell = createFullShell()
+        const session = shell.shellPresenter.session
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return session.songOpen }, 30000))
+        const originalBank = session.voiceListController().bankLoadName
+        const originalText = session.voiceListController().selectorText
+        const dock = findChild(shell, "voicegroupPanel")
+        const selector = findChild(dock, "voicegroupSelector")
+        verify(dock && selector)
+        const popup = findChild(selector, "voicegroupChoicesPopup")
+        const list = findChild(selector, "voicegroupChoicesList")
+        const dropdown = findChild(selector, "voicegroupDropdownButton")
+        verify(popup && list && dropdown)
+        const choices = []
+        for (let index = 0; index < 160; ++index)
+            choices.push({ name: "group_" + index })
+        list.model = choices
+        mouseClick(dropdown)
+        tryCompare(popup, "opened", true)
+        tryCompare(list, "count", choices.length)
+
+        for (const windowHeight of [680, 560, 760]) {
+            shell.height = windowHeight
+            verify(waitForPolish(shell))
+            tryVerify(function() {
+                const fieldBottom = selector.mapToItem(null, 0, selector.height).y
+                const popupTop = popup.background.mapToItem(null, 0, 0).y
+                const dockBottom = dock.mapToItem(null, 0, dock.height).y
+                return popup.opened && Math.abs(popupTop - fieldBottom) <= 1
+                    && popupTop + popup.height <= dockBottom + 1
+            }, 5000, "a long dropdown stays below its field and inside the dock after resizing")
+        }
+
+        verify(list.contentHeight > list.height, "the long catalog requires scrolling")
+        list.positionViewAtEnd()
+        tryCompare(list, "atYEnd", true)
+        mouseClick(selector, selector.width / 4, selector.height / 2)
+        tryCompare(popup, "opened", true)
+        tryCompare(selector, "activeFocus", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(popup, "visible", false)
+        compare(selector.text, originalText)
+        compare(session.voiceListController().bankLoadName, originalBank,
+                "canceling the long-list popup leaves the song assignment unchanged")
+    }
+
+    function test_searchVoicegroupWithDropdownOpen() {
+        const controller = app.voiceListController()
+        const selector = findChild(panel, "voicegroupSelector")
+        verify(!!selector, "Object exists")
+        const popup = findChild(selector, "voicegroupChoicesPopup")
+        const list = findChild(selector, "voicegroupChoicesList")
+        const dropdown = findChild(selector, "voicegroupDropdownButton")
+        verify(popup && list && dropdown)
+        const originalText = controller.selectorText
+        const originalDirty = app.documentDirty
+        const fullNames = ["fixture_alt", "fixture_bass", "fixture_drums_a",
+                           "fixture_drums_b", "fixture_keys", "fixture_rich"]
+        function compareChoices(names) {
+            tryCompare(list, "count", names.length)
+            for (let index = 0; index < names.length; ++index) {
+                list.positionViewAtIndex(index, ListView.Contain)
+                tryVerify(function() { return list.itemAtIndex(index) !== null })
+                compare(list.itemAtIndex(index).text, names[index])
+            }
+        }
+        function typeQuery(query) {
+            selector.forceActiveFocus()
+            selector.selectAll()
+            for (const character of query)
+                keyClick(character)
+            compare(selector.text, query)
+            compare(controller.selectorText, originalText)
+            compare(controller.bankLoadName, "fixture_rich")
+            compare(app.documentDirty, originalDirty)
+            tryCompare(popup, "opened", true)
+        }
+
+        compare(controller.bankLoadName, "fixture_rich")
+        mouseClick(dropdown)
+        tryCompare(popup, "opened", true)
+        compareChoices(fullNames)
+        const fieldBottom = selector.mapToItem(null, 0, selector.height).y
+        const popupTop = popup.background.mapToItem(null, 0, 0).y
+        verify(popupTop >= fieldBottom,
+               "the open list never covers the editable voicegroup name")
+        typeQuery("DrUmS")
+        compareChoices(["fixture_drums_a", "fixture_drums_b"])
+        mouseClick(selector, selector.width / 4, selector.height / 2)
+        tryCompare(popup, "opened", true)
+        tryCompare(selector, "text", "DrUmS")
+        tryCompare(selector, "activeFocus", true)
+
+        selector.selectAll()
+        keyClick(Qt.Key_Backspace)
+        compare(selector.text, "")
+        compareChoices(fullNames)
+        compare(controller.bankLoadName, "fixture_rich")
+        compare(app.documentDirty, originalDirty)
+        typeQuery("no_such_voicegroup")
+        compareChoices([])
+        keyClick(Qt.Key_Escape)
+        tryCompare(popup, "visible", false)
+        compare(selector.text, originalText)
+        compare(controller.selectorText, originalText)
+        compare(controller.bankLoadName, "fixture_rich")
+        compare(list.count, fullNames.length)
+        compare(app.documentDirty, originalDirty)
+
+        mouseClick(dropdown)
+        tryCompare(popup, "opened", true)
+        compareChoices(fullNames)
+        typeQuery("aLt")
+        compareChoices(["fixture_alt"])
+        mouseClick(list.itemAtIndex(0))
+        tryCompare(popup, "visible", false)
+        verify(waitForNative(function() { return controller.bankLoadName === "fixture_alt" }, 15000),
+               "clicking the filtered result assigns the chosen group")
+        tryCompare(selector, "text", "fixture_alt")
+        app.setEditingVoicegroup(false)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich"
+                && controller.selectorText === originalText
+        }, 15000), "the pointer assignment remains undoable")
+        tryCompare(selector, "text", originalText)
+        compare(app.documentDirty, originalDirty)
+
+        typeQuery("AlT")
+        compareChoices(["fixture_alt"])
+        keyClick(Qt.Key_Down)
+        compare(selector.activeFocus, true)
+        compare(selector.text, "AlT")
+        compare(list.currentItem.text, "fixture_alt")
+        keyClick(Qt.Key_Return)
+        tryCompare(popup, "visible", false)
+        verify(waitForNative(function() { return controller.bankLoadName === "fixture_alt" }, 15000),
+               "Enter assigns the highlighted filtered result")
+        app.setEditingVoicegroup(false)
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return controller.bankLoadName === "fixture_rich"
+                && controller.selectorText === originalText
+        }, 15000), "the keyboard assignment remains undoable")
+        tryCompare(selector, "text", originalText)
+        compare(app.documentDirty, originalDirty)
     }
 
     function test_trackHeaderRevealRoutesToMountedDock() {
@@ -117,16 +266,15 @@ ShellVoicegroupSupport {
         const headerY = headers.rowHeight / 2
         verify(headers.beginPointer(headerX, headerY, Qt.LeftButton, Qt.NoModifier),
                "the header press remains active while the voicegroup changes")
-        const selector = findChild(panel, "vgArgCombo")
+        const selector = findChild(panel, "voicegroupSelector")
         selector.forceActiveFocus()
-        selector.editText = "fixture_alt"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "fixture_alt"
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_alt"
                    || app.lastSaveError.length > 0
         }, 15000), "a typed alternate group commits while a header press lands: "
-                   + app.lastSaveError + " edit=" + selector.editText
+                   + app.lastSaveError + " edit=" + selector.text
                    + " selector=" + controller.selectorText
                    + " load=" + controller.bankLoadName)
         compare(app.lastSaveError, "")
@@ -206,7 +354,7 @@ ShellVoicegroupSupport {
         statusSpy.clear()
         const button = findChild(panel, "vgNewVoicegroupButton")
         verify(button !== null, "the mounted dock exposes its New voicegroup button")
-        const selector = findChild(panel, "vgArgCombo")
+        const selector = findChild(panel, "voicegroupSelector")
         const besideName = button.mapToItem(selector, 0, button.height / 2)
         verify(besideName.x >= selector.width && besideName.y >= 0
                && besideName.y <= selector.height
@@ -251,8 +399,8 @@ ShellVoicegroupSupport {
         verify(shellPresenter.statusText.indexOf("vgsave_created") >= 0
                && shellPresenter.statusText.indexOf("mus_route101") >= 0,
                "the status line names the created file and song: " + shellPresenter.statusText)
-        // The choices model updates after the bind; the editable combo must still show it.
-        tryCompare(findChild(panel, "vgArgCombo"), "editText", "vgsave_created")
+        // The choices model updates after the bind; the name field must still show it.
+        tryCompare(findChild(panel, "voicegroupSelector"), "text", "vgsave_created")
         app.setEditingVoicegroup(false)
         app.requestUndo()
         verify(waitForNative(function() {
@@ -328,11 +476,10 @@ ShellVoicegroupSupport {
                    && first.title.indexOf("fixture_loop") >= 0
         }, 5000, "A059: the opened bank presents the fixture loop voice in slot zero")
 
-        const selector = findChild(dock, "vgArgCombo")
+        const selector = findChild(dock, "voicegroupSelector")
         verify(selector !== null, "the mounted dock exposes its voicegroup selector")
         selector.forceActiveFocus()
-        selector.editText = "fixture_alt"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "fixture_alt"
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return voice.bankLoadName === "fixture_alt" || session.lastSaveError.length > 0

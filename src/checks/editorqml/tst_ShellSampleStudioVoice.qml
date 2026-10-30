@@ -89,13 +89,12 @@ ShellLaneSupport {
     function selectSongVoicegroup(app, name) {
         const panel = findChild(shell, "voicegroupPanel")
         verify(!!panel, "Object exists")
-        const selector = findChild(panel, "vgArgCombo")
+        const selector = findChild(panel, "voicegroupSelector")
         verify(!!selector, "Object exists")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         selector.forceActiveFocus()
-        selector.editText = name
-        selector.contentItem.forceActiveFocus()
+        selector.text = name
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             const controller = app.voiceListController()

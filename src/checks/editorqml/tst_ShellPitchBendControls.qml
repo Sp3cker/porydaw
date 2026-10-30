@@ -5,6 +5,25 @@ import ShellQmlCheck 1.0
 import Porydaw.Ui
 
 ShellPitchBendSupport {
+    function test_modWheelTopIs32() {
+        const opened = openViaG(true)
+        const mod = findChild(opened.view, "modWheelGraph")
+        const lfo = findChild(opened.view, "lfoSpeedGraph")
+        compare(mod.upperValueText, "32")
+        compare(lfo.upperValueText, "127", "LFO speed retains its independent range")
+        const canvas = mod.canvasRect
+        const x = canvas.x + canvas.width * 0.5
+        const before = opened.grid.appliedRevisionText
+        mousePress(mod, x, canvas.y, Qt.LeftButton)
+        mouseRelease(mod, x, canvas.y, Qt.LeftButton)
+        verify(waitForNative(function() { return opened.grid.appliedRevisionText !== before }, 5000),
+               "drawing at the modulation ceiling commits the curve")
+        compare(mod.liveValueText, "32", "the top of the modulation canvas writes 32")
+        app.requestUndo()
+        verify(waitForNative(function() { return app.canRedo }, 5000),
+               "the modulation boundary edit remains undoable")
+    }
+
     function test_modulationAndLfoSurviveOutsideDismissal() {
         const opened = openViaG(true)
         const pitch = findChild(opened.view, "pitchBendGraph")

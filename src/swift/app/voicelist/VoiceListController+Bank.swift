@@ -12,6 +12,7 @@ extension VoiceListController {
         self.session = session
         publish(\.hasSongContext, true)
         bindVoicegroup(session.voicegroup)
+        updateSelectorEnabled()
     }
 
     @QtIgnored
@@ -165,10 +166,27 @@ extension VoiceListController {
     public func setVoicegroupChoices(_ args: [String]) {
         guard args != knownArgs else { return }
         knownArgs = args
-        argChoices.reset(
-            to: args.map {
-                VoiceListArgChoice(name: VoiceListSemantics.voicegroupDisplayName($0), arg: $0)
-            })
+        voicegroupChoiceRows = args.map { (arg: String) -> VoiceListArgChoice in
+            VoiceListArgChoice(name: VoiceListSemantics.voicegroupDisplayName(arg), arg: arg)
+        }
+        refreshVoicegroupChoices()
+    }
+
+    @QtIgnored
+    func refreshVoicegroupChoices() {
+        let query = SearchQuery(voicegroupChoiceFilter)
+        let visible =
+            query.isEmpty
+            ? voicegroupChoiceRows
+            : voicegroupChoiceRows.filter {
+                (choice: VoiceListArgChoice) -> Bool in query.matches(choice.name)
+            }
+        if visible.count == argChoices.count,
+            visible.indices.allSatisfy({ (index: Int) -> Bool in visible[index] === argChoices[index] })
+        {
+            return
+        }
+        argChoices.reset(to: visible)
     }
 
     /// Reflects the current voicegroup arg without emitting a change intent.

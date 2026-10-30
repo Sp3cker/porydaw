@@ -5,6 +5,51 @@ import PorydawCoreCheckNative
 @MainActor
 func insertionAndBoundaries(_ report: CheckReport) {
     do {
+        let id = "editcheck/SwiftTimeEdits::insertLeadInPreservesInitialState"
+        let lanes: [Lane] = [.controller(7), .controller(10), .pitchBend, .controller(Xcmd.echoVolumeLane)]
+        for scope in [TimeScope(wholeSong: true), TimeScope(tracks: [0]), TimeScope(tempo: true)] {
+            let document = try timeRangeDocument()
+            for track in 0..<2 {
+                for lane in lanes {
+                    document.writeLane(
+                        track: track, lane: lane, from: 0, through: 24,
+                        points: [LaneWrite(tick: 0, value: 80 - track), LaneWrite(tick: 24, value: 40 - track)])
+                }
+            }
+            document.writeLane(
+                track: 0, lane: .controller(1), from: 24, through: 24, points: [LaneWrite(tick: 24, value: 32)])
+            let initial = TempoPoint(tick: 0, microsecondsPerQuarterNote: 666_667)
+            document.editTempo(TempoEdit(add: [initial]))
+            let before = document.state
+            _ = document.insertBlankTime(TimeRange(startTick: 0, endTick: 48), scope: scope)
+            for track in 0..<2 {
+                for lane in lanes {
+                    report.expectEqual(
+                        expected: scope.coversLane(track: track, lane: lane)
+                            ? ["0:\(80 - track)", "48:\(80 - track)", "72:\(40 - track)"]
+                            : ["0:\(80 - track)", "24:\(40 - track)"],
+                        actual: document.lanePoints(track: track, lane: lane).map(coreTimePointShape),
+                        cppID: id, what: "initial values extend backward only in covered lanes")
+                }
+            }
+            report.expectEqual(
+                expected: scope.coversLane(track: 0, lane: .controller(1)) ? ["72:32"] : ["24:32"],
+                actual: document.lanePoints(track: 0, lane: .controller(1)).map(coreTimePointShape),
+                cppID: id, what: "later-only lanes retain their implicit starting default")
+            report.expectEqual(
+                expected: scope.coversTempo
+                    ? [initial, TempoPoint(tick: 48, microsecondsPerQuarterNote: 666_667)] : before.tempo,
+                actual: document.state.tempo, cppID: id, what: "covered tempo extends through the lead-in")
+            let after = document.state
+            let undone = document.history.undoDocument() && document.state == before
+            let redone = document.history.redoDocument() && document.state == after
+            report.expect(undone && redone, cppID: id, message: "undo and redo restore exact state")
+        }
+    } catch {
+        report.fail("editcheck/SwiftTimeEdits::insertLeadInPreservesInitialState", "\(error)")
+    }
+
+    do {
         let document = try timeRangeDocument()
         let splitID = "editcheck/EditCheckTest::timeRangeInsertScopeAndSplit"
         report.expectEqual(

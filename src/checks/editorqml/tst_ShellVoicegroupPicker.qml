@@ -393,10 +393,9 @@ ShellVoicegroupSupport {
 
     function test_zySelectorFailurePreservesBinding() {
         const controller = app.voiceListController()
-        const selector = findChild(panel, "vgArgCombo")
+        const selector = findChild(panel, "voicegroupSelector")
         selector.forceActiveFocus()
-        selector.editText = "fixture_alt"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "fixture_alt"
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return controller.bankLoadName === "fixture_alt" || app.lastSaveError.length > 0
@@ -405,8 +404,8 @@ ShellVoicegroupSupport {
         compare(selector.enabled, true,
                 "mounted selector stays available after a successful activation")
         const retainedRow = findChild(panel, "voicegroupRow_0").title
-        selector.editText = "_porydaw_missing_voicegroup"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "_porydaw_missing_voicegroup"
+        selector.forceActiveFocus()
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() {
             return app.lastSaveError.indexOf("_porydaw_missing_voicegroup") >= 0
@@ -434,7 +433,7 @@ ShellVoicegroupSupport {
             return controller.bankLoadName === "fixture_rich"
                    && controller.selectorText === "fixture_rich"
         }, 15000), "undo after a failed rebind restores the home voicegroup")
-        tryCompare(selector, "editText", "fixture_rich", 5000,
+        tryCompare(selector, "text", "fixture_rich", 5000,
                    "selector undo displays the home voicegroup again")
     }
     function test_zzCatalogOutageRetainsLastValid() {
@@ -448,7 +447,7 @@ ShellVoicegroupSupport {
         const voice = session.voiceListController()
         tryCompare(voice, "isBound", true, 5000)
         voice.selectSlot(0)
-        const selector = findChild(shell, "vgArgCombo")
+        const selector = findChild(shell, "voicegroupSelector")
         const editor = findChild(shell, "voicegroupEditorSurface")
         const scroll = findChild(shell, "voiceEditorScrollView")
         verify(selector !== null && editor !== null && scroll !== null,

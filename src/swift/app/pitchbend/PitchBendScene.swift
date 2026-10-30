@@ -277,7 +277,7 @@ public final class PitchBendLane {
         syncRetained(vertices, vertexValues, make: PitchBendVertex.init, update: { $0.update($1) })
         if k.lane != .pitch {
             liveValueText = String(k.liveValue)
-            upperValueText = "127"
+            upperValueText = String(k.maximumValue)
             lowerValueText = "0"
         } else {
             let semitones =

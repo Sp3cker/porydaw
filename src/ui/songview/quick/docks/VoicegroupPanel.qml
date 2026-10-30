@@ -3,6 +3,9 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import PorydawStyle
 import QtQuick.Layouts
+import QtQuick.Templates as T
+import QtQuick.Controls.Fusion as Fusion
+import QtQuick.Controls.Fusion.impl as FusionImpl
 import Porydaw.Ui
 import Porydaw.Icons
 import PorydawApp
@@ -57,6 +60,7 @@ ColumnLayout {
     }
 
     RowLayout {
+        id: assignmentRow
         Layout.fillWidth: true
         Layout.preferredHeight: panel.baseFontPx * 2.17
         Layout.leftMargin: Math.round(panel.baseFontPx * 0.33)
@@ -69,47 +73,172 @@ ColumnLayout {
             elide: Text.ElideMiddle
             color: panel.colors.primaryText
         }
-        ComboBox {
+        Fusion.TextField {
             id: selector
-            objectName: "vgArgCombo"
+            objectName: "voicegroupSelector"
             Layout.fillWidth: true
             Layout.preferredHeight: panel.baseFontPx * 1.83
-            editable: true
             enabled: panel.controller.selectorEnabled
-            model: panel.controller.argChoices
-            textRole: "name"
-            // Qt re-derives the current row from this value on every model update; a bare
-            // editText would be overwritten when the catalog resets the choices.
-            valueRole: "name"
-            currentValue: panel.controller.selectorText
-            editText: panel.controller.selectorText
-            // An editable ComboBox rewrites editText from currentText on every model
-            // update; re-apply the controller's text once the synchronous update is over.
-            Timer {
-                id: resync
-                interval: 0
-                onTriggered: selector.editText = panel.controller.selectorText
+            text: panel.controller.selectorText
+            selectByMouse: true
+            rightPadding: dropdownButton.width + leftPadding
+            Accessible.name: qsTr("Voicegroup")
+            background: FusionImpl.ButtonPanel {
+                id: selectorBackground
+                readonly property int edge: Math.max(1, Math.round(panel.baseFontPx * 0.08))
+                control: dropdownButton
+                visible: true
+                highlighted: selector.activeFocus
+                Rectangle {
+                    x: selectorBackground.edge
+                    y: selectorBackground.edge
+                    width: selector.width - dropdownButton.width - x
+                    height: selector.height - 2 * y
+                    radius: panel.baseFontPx * 0.16
+                    color: selector.palette.base
+                    Rectangle {
+                        anchors.right: parent.right
+                        width: selectorBackground.edge
+                        height: parent.height
+                        color: selectorBackground.border.color
+                    }
+                    Rectangle {
+                        anchors.top: parent.top
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: selectorBackground.edge
+                        color: Fusion.Fusion.topShadow
+                    }
+                }
+            }
+
+            function commitSelection(name: string): void {
+                panel.controller.selectorText = name
+                panel.controller.commitVoicegroupSelection()
+                choicesPopup.close()
+            }
+            onTextEdited: {
+                choicesList.currentIndex = panel.controller.filterVoicegroupChoices(text)
+                choicesPopup.open()
+                choicesList.positionViewAtBeginning()
+            }
+            onAccepted: {
+                const choice = choicesList.currentItem as T.MenuItem
+                commitSelection(choicesPopup.visible && choice ? choice.text : text)
+            }
+            onActiveFocusChanged: {
+                if (!activeFocus)
+                    choicesPopup.close()
+            }
+            onEnabledChanged: {
+                if (!enabled)
+                    choicesPopup.close()
+            }
+            Keys.onEscapePressed: event => {
+                if (choicesPopup.visible) {
+                    choicesPopup.close()
+                    event.accepted = true
+                } else {
+                    event.accepted = false
+                }
+            }
+            Keys.onDownPressed: {
+                choicesPopup.open()
+                choicesList.incrementCurrentIndex()
+                choicesList.positionViewAtIndex(choicesList.currentIndex, ListView.Contain)
+            }
+            Keys.onUpPressed: {
+                choicesPopup.open()
+                choicesList.decrementCurrentIndex()
+                choicesList.positionViewAtIndex(choicesList.currentIndex, ListView.Contain)
             }
             Connections {
                 target: panel.controller
                 function onSelectorTextChanged(): void {
-                    selector.editText = panel.controller.selectorText
+                    choicesPopup.close()
+                    selector.text = panel.controller.selectorText
                 }
             }
-            Connections {
-                target: panel.controller.argChoices
-                function onModelReset(): void { resync.restart() }
-                function onDataChanged(): void { resync.restart() }
-                function onRowsInserted(): void { resync.restart() }
-                function onRowsRemoved(): void { resync.restart() }
+            ToolButton {
+                id: dropdownButton
+                objectName: "voicegroupDropdownButton"
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: selector.height
+                focusPolicy: Qt.NoFocus
+                Accessible.name: qsTr("Show voicegroups")
+                down: pressed || choicesPopup.visible
+                padding: 0
+                background: null
+                contentItem: Item {
+                    AppIcon {
+                        anchors.centerIn: parent
+                        width: Math.round(selector.font.pixelSize * 1.5)
+                        height: selector.font.pixelSize
+                        icon: Icons.comboArrow
+                        color: selector.palette.text
+                    }
+                }
+                onClicked: {
+                    if (choicesPopup.visible) {
+                        choicesPopup.close()
+                    } else {
+                        choicesList.currentIndex = panel.controller.filterVoicegroupChoices("")
+                        choicesPopup.open()
+                        choicesList.positionViewAtIndex(choicesList.currentIndex, ListView.Contain)
+                        selector.forceActiveFocus()
+                        selector.selectAll()
+                    }
+                }
             }
-            onActivated: {
-                panel.controller.selectorText = editText
-                panel.controller.commitVoicegroupSelection()
-            }
-            onAccepted: {
-                panel.controller.selectorText = editText
-                panel.controller.commitVoicegroupSelection()
+            Fusion.Popup {
+                id: choicesPopup
+                objectName: "voicegroupChoicesPopup"
+                popupType: T.Popup.Item
+                y: selector.height
+                width: selector.width
+                height: Math.min(Math.max(choicesList.contentHeight, selector.height) + topPadding + bottomPadding,
+                                 Math.max(0, panel.height - assignmentRow.y - selector.y
+                                          - selector.height - bottomMargin))
+                margins: Math.round(panel.baseFontPx * 0.5)
+                padding: Math.round(panel.baseFontPx * 0.08)
+                focus: false
+                modal: false
+                closePolicy: T.Popup.CloseOnEscape | T.Popup.CloseOnPressOutsideParent
+                onClosed: {
+                    panel.controller.filterVoicegroupChoices("")
+                    selector.text = panel.controller.selectorText
+                    choicesList.currentIndex = -1
+                }
+                contentItem: ListView {
+                    id: choicesList
+                    objectName: "voicegroupChoicesList"
+                    clip: true
+                    acceptedButtons: Qt.NoButton
+                    model: panel.controller.argChoices
+                    currentIndex: -1
+                    delegate: MenuItem {
+                        required property string name
+                        required property int index
+                        width: choicesList.width
+                        text: name
+                        focusPolicy: Qt.NoFocus
+                        highlighted: choicesList.currentIndex === index
+                        onHoveredChanged: {
+                            if (hovered)
+                                choicesList.currentIndex = index
+                        }
+                        onClicked: selector.commitSelection(text)
+                    }
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                    Label {
+                        anchors.centerIn: parent
+                        visible: choicesList.count === 0
+                        text: qsTr("No matching voicegroups")
+                        color: selector.palette.windowText
+                    }
+                }
             }
             ToolTip.text: qsTr("The song's voicegroup (-G). Changing it is undoable.")
             ToolTip.visible: hovered

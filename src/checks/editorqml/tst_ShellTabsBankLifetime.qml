@@ -297,6 +297,27 @@ ShellTabsSupport {
         compare(session().lastSaveError, "")
         compare(fileProbe.fileFingerprint(bankPath()), bankBefore,
                 "Save All persists the restored original group without songs")
+
+        var newGroup = findChild(shell, "vgNewVoicegroupButton")
+        var selector = findChild(shell, "voicegroupSelector")
+        verify(newGroup && selector)
+        verify(!newGroup.enabled && !selector.enabled,
+               "song assignment controls remain disabled without a song")
+        session().openSong("mus_route101")
+        verify(waitForNative(function() { return tabs().tabCount === 1 }, 30000),
+               "the song reopens against its retained bank")
+        waitForPage(tabs().selectedId)
+        verify(waitForNative(function() { return newGroup.enabled && selector.enabled }, 5000),
+               "reopening the same bank restores voicegroup assignment and creation")
+        mouseClick(newGroup, newGroup.width / 2, newGroup.height / 2)
+        verify(waitForNative(function() { return controller.newVoicegroupPrompt }, 5000),
+               "the restored New voicegroup button opens its creation prompt")
+        verify(waitForNative(function() {
+            const field = findChild(shell, "voicegroupNewName")
+            return field !== null && field.activeFocus
+        }, 5000), "the restored creation prompt is ready for keyboard input")
+        keyClick(Qt.Key_Escape)
+        verify(waitForNative(function() { return !controller.newVoicegroupPrompt }, 5000))
     }
 
     function test_vBankSaveAndDiscardFailuresKeepClosePending() {
@@ -359,10 +380,9 @@ ShellTabsSupport {
         var id = openShell(["mus_route101"])[0]
         var controller = dirtyOpenBank()
         var richRelease = controller.editorModel().release
-        var selector = findChild(shell, "vgArgCombo")
+        var selector = findChild(shell, "voicegroupSelector")
         selector.forceActiveFocus()
-        selector.editText = "fixture_alt"
-        selector.contentItem.forceActiveFocus()
+        selector.text = "fixture_alt"
         keyClick(Qt.Key_Return)
         verify(waitForNative(function() { return controller.bankLoadName === "fixture_alt" }, 15000))
         controller.selectSlot(2)

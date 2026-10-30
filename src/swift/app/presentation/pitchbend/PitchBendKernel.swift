@@ -2,7 +2,17 @@ import Foundation
 
 /// Note-span curve editor. The document never sees a draft until the gesture ends.
 public struct PitchBendKernel {
-    public enum Lane { case pitch, modulation, lfoSpeed }
+    public enum Lane {
+        case pitch, modulation, lfoSpeed
+
+        var maximumValue: Int {
+            switch self {
+            case .pitch: 8191
+            case .modulation: 32
+            case .lfoSpeed: 127
+            }
+        }
+    }
     public struct Point: Equatable {
         public var tick: Int
         public var value: Int
@@ -59,7 +69,7 @@ public struct PitchBendKernel {
         self.points = points
         self.endValue = min(
             max(endValue, lane == .pitch ? -8192 : 0),
-            lane == .pitch ? 8191 : 127)
+            lane.maximumValue)
         self.points[endTick] = self.endValue
         keyboardTick = startTick
         liveValue = points[startTick] ?? Self.defaultValue(for: lane)
@@ -71,7 +81,7 @@ public struct PitchBendKernel {
         return stroke.sampled
     }
     public var minimumValue: Int { lane == .pitch ? -8192 : 0 }
-    public var maximumValue: Int { lane == .pitch ? 8191 : 127 }
+    public var maximumValue: Int { lane.maximumValue }
 
     /// Note-start value when the lane carries no point: the engine default
     /// (TimeDefaults.controllerDefault(for: 0x15) == 22) for LFO speed, silence otherwise.
@@ -143,8 +153,8 @@ public struct PitchBendKernel {
     public func y(at value: Int) -> Double {
         let bottom = geometry.canvasY + geometry.canvasHeight - 1
         if lane != .pitch {
-            let span = geometry.canvasHeight - (lane == .lfoSpeed ? 1 : 0)
-            return bottom - (Double(min(127, max(0, value))) * span / 127).rounded()
+            let span = geometry.canvasHeight - 1
+            return bottom - (Double(min(maximumValue, max(0, value))) * span / Double(maximumValue)).rounded()
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
         if value >= 0 {
@@ -157,8 +167,8 @@ public struct PitchBendKernel {
         let bottom = geometry.canvasY + geometry.canvasHeight - 1
         let clamped = min(bottom, max(geometry.canvasY, y.rounded()))
         if lane != .pitch {
-            let span = geometry.canvasHeight - (lane == .lfoSpeed ? 1 : 0)
-            return min(127, max(0, Int(((bottom - clamped) * 127 / max(1, span)).rounded())))
+            let span = geometry.canvasHeight - 1
+            return min(maximumValue, max(0, Int(((bottom - clamped) * Double(maximumValue) / max(1, span)).rounded())))
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
         if abs(clamped - center) <= geometry.zeroDetent { return 0 }

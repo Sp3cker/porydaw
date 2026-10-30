@@ -341,6 +341,7 @@ enum ShellQmlRegistry {
                 testFunctions: [
                     "ShellExport::test_menuRow",
                     "ShellExport::test_loopOptions",
+                    "ShellExport::test_loopCountAcceptsTypedNumber",
                     "ShellExport::test_tailOptions",
                     "ShellExport::test_fileDialogMemory",
                     "ShellExport::test_formatSelectionSurvivesCancelAndNewWindow",

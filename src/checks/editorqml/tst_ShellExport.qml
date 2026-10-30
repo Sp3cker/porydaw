@@ -203,6 +203,33 @@ ShellLaneSupport {
         tryCompare(model, "active", false)
     }
 
+    function test_loopCountAcceptsTypedNumber() {
+        openShell("mus_route101")
+        const model = openOptions()
+        const loops = child("wavExportLoopCount")
+        const field = loops.contentItem
+        mouseClick(field)
+        field.selectAll()
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_2)
+        compare(field.text, "12", "typing replaces the selected loop amount")
+        keyClick(Qt.Key_X)
+        compare(field.text, "12", "the integer validator rejects non-numeric typing")
+        keyClick(Qt.Key_Return)
+        compare(model.loopCount, 12, "Enter commits the typed loop amount")
+        keyClick(Qt.Key_Up)
+        compare(model.loopCount, 13, "arrow adjustment still works after typing")
+        field.forceActiveFocus()
+        field.selectAll()
+        keyClick(Qt.Key_4)
+        child("wavExportRate").forceActiveFocus()
+        compare(model.loopCount, 4, "leaving the field commits its typed amount")
+        keyClick(Qt.Key_Escape)
+        tryCompare(model, "active", false)
+        compare(child("shellWavExportFileDialog").visible, false,
+                "canceling after typed edits never opens the output picker")
+    }
+
     function test_tailOptions() {
         openShell("mus_route102")
         const model = openOptions()

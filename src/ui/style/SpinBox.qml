@@ -10,6 +10,8 @@ import PorydawApp
 Fusion.SpinBox {
     id: control
 
+    editable: true
+
     property NumberFieldFormat numberFormat: NumberFieldFormat {}
     textFromValue: function(value: int, locale: var): string {
         return control.numberFormat.text(value)

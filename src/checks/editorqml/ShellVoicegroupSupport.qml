@@ -110,7 +110,7 @@ ShellLaneSupport {
     function initTestCase() {
         compare(panel.baseFontPx, app.baseFontPx,
                 "voicegroup pane derives its base before a song opens")
-        compareRole(findChild(panel, "vgArgCombo"), "body", "voicegroup selector before song open")
+        compareRole(findChild(panel, "voicegroupSelector"), "body", "voicegroup selector before song open")
         compare(findChild(panel, "voicegroupTreeHeader").height,
                 Math.round(app.baseFontPx * 1.83),
                 "voicegroup header follows the session base before song open")

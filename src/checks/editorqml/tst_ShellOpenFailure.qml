@@ -204,20 +204,35 @@ ShellLaneSupport {
                 && tabs.selectedPage !== null && tabs.selectedPage.title === "mus_route101"
                 && session.songOpen
         }, 30000), "reopening releases the old pages and mounts a new ready song")
-        var selector = findChild(shell, "vgArgCombo")
+        var selector = findChild(shell, "voicegroupSelector")
         verify(selector !== null, "the reopened project's voicegroup selector is mounted")
-        verify(waitForNative(function() { return selector.count === 5 }, 5000),
+        const choices = findChild(selector, "voicegroupChoicesList")
+        const popup = findChild(selector, "voicegroupChoicesPopup")
+        const dropdown = findChild(selector, "voicegroupDropdownButton")
+        verify(choices && popup && dropdown)
+        verify(waitForNative(function() { return choices.count === 5 }, 5000),
                "the reopened project's five staged fixture voicegroups reach the selector")
-        tryCompare(selector, "editText", "fixture_rich", 3000,
+        tryCompare(selector, "text", "fixture_rich", 3000,
                    "the selector still shows the song's voicegroup after the catalog resets its choices")
-        compare(selector.currentIndex, 4, "the popup marks the active voicegroup")
-        verify(session.projectOpen && session.songOpen
-               && selector.textAt(0) === "fixture_bass"
-               && selector.textAt(1) === "fixture_drums_a"
-               && selector.textAt(2) === "fixture_drums_b"
-               && selector.textAt(3) === "fixture_keys"
-               && selector.textAt(4) === "fixture_rich",
+        shell.requestActivate()
+        tryCompare(shell, "active", true, 3000)
+        mouseClick(dropdown)
+        tryCompare(popup, "opened", true)
+        tryVerify(function() { return choices.currentItem !== null })
+        tryCompare(choices.currentItem, "text", "fixture_rich")
+        const expected = ["fixture_bass", "fixture_drums_a", "fixture_drums_b",
+                          "fixture_keys", "fixture_rich"]
+        for (let index = 0; index < expected.length; ++index) {
+            choices.positionViewAtIndex(index, ListView.Contain)
+            tryVerify(function() { return choices.itemAtIndex(index) !== null })
+            compare(choices.itemAtIndex(index).text, expected[index])
+        }
+        verify(session.projectOpen && session.songOpen && choices.count === expected.length,
                "A016 recovered project is ready with its exact nonempty staged voicegroup catalog")
+        selector.forceActiveFocus()
+        tryCompare(selector, "activeFocus", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(popup, "visible", false)
         settings.synchronize()
         verify(settings.string("lastProjectDir", "") === bootstrap.projectRoot
                && settings.string("lastSongLabel", "") === "mus_route101"

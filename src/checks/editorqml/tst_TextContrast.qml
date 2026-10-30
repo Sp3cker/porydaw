@@ -127,6 +127,25 @@ ShellLaneSupport {
         }
     }
 
+    function auditVoicegroupSearch(context) {
+        const field = findChild(shell, "voicegroupSelector")
+        const popup = findChild(field, "voicegroupChoicesPopup")
+        const list = findChild(field, "voicegroupChoicesList")
+        shell.requestActivate()
+        tryCompare(shell, "active", true)
+        waitForRendering(field)
+        field.forceActiveFocus()
+        tryCompare(field, "activeFocus", true)
+        field.selectAll()
+        for (const character of "no_matching_voicegroup")
+            keyClick(character)
+        tryCompare(list, "count", 0)
+        tryCompare(popup, "opened", true)
+        record(context + " empty voicegroup search", Audit.audit(popupItem(popup), grab))
+        popup.close()
+        tryCompare(popup, "visible", false)
+    }
+
     function auditSettings(context) {
         findChild(shell, "shellSettingsLoader").active = true
         const dialog = findChild(shell, "shellSettingsDialog")
@@ -544,6 +563,7 @@ ShellLaneSupport {
             auditSplitStudio(mode)
         session.voiceListController().selectSlot(0)
         auditPopups(mode + " song", auditWindow(mode + " song"))
+        auditVoicegroupSearch(mode)
         auditClippedKeyboardLabel(mode)
         auditNoteAutomation(mode)
         auditArpeggiator(mode)

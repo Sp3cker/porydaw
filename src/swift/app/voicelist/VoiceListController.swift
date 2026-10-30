@@ -72,7 +72,7 @@ public final class VoiceListController: QmlUncreatable {
 
     /// The 128 stable row handles, always present; content rewrites in place.
     public var rows: QListModel<VoiceListRowHandle> = QListModel()
-    /// The selector's -G choices (display name + raw arg per entry).
+    /// The selector's filtered -G choices (display name + raw arg per entry).
     public var argChoices: QListModel<VoiceListArgChoice> = QListModel()
     public var samplePickerRows: QListModel<SamplePickerRow> = QListModel()
     public var samplePickerCount: Int = 0
@@ -91,8 +91,8 @@ public final class VoiceListController: QmlUncreatable {
     @QtTracked public var bankLoadName = ""
     /// The dock title: the native "Voicegroup" caption with the dirty star.
     @QtTracked public var panelTitle = "Voicegroup:"
-    /// The selector's editable text (the combo's currentText): the standing
-    /// arg's display name, the user's in-progress text, or "Loading...".
+    /// The assigned arg's display name, accepted selection, or loading caption.
+    /// Search drafts stay in the field until accepted.
     @QtTracked public var selectorText = ""
     @QtTracked public var selectorPlaceholder = "No song loaded"
     /// Whether user commits are live (bound and not loading).
@@ -164,6 +164,8 @@ public final class VoiceListController: QmlUncreatable {
     @QtIgnored var currentArg = ""
     /// Last list handed to setVoicegroupChoices (native m_vgChoices).
     @QtIgnored var knownArgs: [String] = []
+    @QtIgnored var voicegroupChoiceRows: [VoiceListArgChoice] = []
+    @QtIgnored var voicegroupChoiceFilter = ""
 
     /// Project-scoped catalogs are injected by ApplicationSession, which owns writes.
     /// QML observes the published synth and drumkit choices without mutating them.
@@ -261,10 +263,8 @@ public final class VoiceListController: QmlUncreatable {
 
     // MARK: Selector
 
-    /// A user commit of the selector text (activation or editing-finished):
-    /// resolves the display text back to an arg and emits the change
-    /// request. Suppressed while loading or unbound, and a no-op when the
-    /// resolved arg already stands.
+    /// Resolves accepted selector text into an undoable assignment intent.
+    /// Suppressed while loading or unbound; unchanged args are a no-op.
     public func commitVoicegroupSelection() {
         guard !isLoading, selectorEnabled else { return }
         let arg = VoiceListSemantics.voicegroupArg(
@@ -273,6 +273,21 @@ public final class VoiceListController: QmlUncreatable {
         guard arg != currentArg else { return }
         currentArg = arg
         onVoicegroupChangeRequested?(arg)
+    }
+
+    /// Filters display names without assigning; returns the initial highlighted row.
+    public func filterVoicegroupChoices(query: String) -> Int {
+        if query != voicegroupChoiceFilter {
+            voicegroupChoiceFilter = query
+            refreshVoicegroupChoices()
+        }
+        if query.isEmpty {
+            for index in 0..<argChoices.count where argChoices[index].arg == currentArg {
+                return index
+            }
+            return -1
+        }
+        return argChoices.count > 0 ? 0 : -1
     }
 
     // MARK: Selection and reveal

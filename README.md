@@ -56,6 +56,19 @@ The timing readout shows the resulting clock values; incompatible settings
 are explained rather than silently approximated.
 Source-note retriggers move to the next shared clock boundary, never before the
 source note begins.
+Voicegroups remain editable after closing every song tab. Reopening a song using
+the retained voicegroup re-enables its voicegroup selector and **New voicegroup**
+button; those song-assignment controls are disabled while no song is open.
+The selector's dropdown stays below the name field. Type a name while the list is
+open to use name completion, then press Enter to assign it or Escape to dismiss
+the list without assigning it.
+
+In the note pitch-bend editor, the mod-wheel graph edits CC1 over **0–32**.
+LFO speed retains its **0–127** range.
+
+Numeric spin fields accept direct typing as well as their step controls.
+Press Enter or leave the field to commit a typed value; this includes export
+loop count, voice parameters, import options, and sample controls.
 
 ## MIDI backups
 
