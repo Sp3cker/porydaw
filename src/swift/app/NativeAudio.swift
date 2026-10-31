@@ -65,7 +65,8 @@ public final class NativeAudio {
     public var timeline: PlaybackTimeline? { device.renderer.timeline }
     public var playheadSamples: UInt64 { device.renderer.playheadSamples }
     public var isPatternAuditioning: Bool { device.renderer.isPatternAuditioning }
-    /// Absolute sample position in the isolated pattern timeline, or zero when stopped.
+    /// Absolute sample position in the applied loop timeline, or zero when stopped. Until the
+    /// callback adopts a replacement, it still describes the previous loop.
     public var patternAuditionPositionSamples: UInt64 { device.renderer.patternAuditionPositionSamples }
     public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
     public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
@@ -79,6 +80,7 @@ public final class NativeAudio {
     public var pcmMixRate: Float { device.renderer.pcmMixRate }
     public var analogFilter: Bool { device.renderer.analogFilter }
     public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
+    public func setCpuTrackBudget(_ count: Int) { device.renderer.setCpuTrackBudget(count) }
 
     public func bind(
         timeline: PlaybackTimeline, bank: ProjectBankLease,
@@ -91,6 +93,7 @@ public final class NativeAudio {
         timeline: PlaybackTimeline, bank: ProjectBankLease,
         settings: AudioSettings
     ) {
+        mainPreviewsCut()
         device.withRenderingStopped {
             device.renderer.bind(timeline: timeline, voicegroup: bank.engineVoices, settings: settings)
             bankLease = bank
@@ -104,6 +107,7 @@ public final class NativeAudio {
     }
 
     public func unload() {
+        mainPreviewsCut()
         device.withRenderingStopped {
             device.renderer.unload()
             bankLease = nil
@@ -128,6 +132,7 @@ public final class NativeAudio {
     }
 
     public func updateVoicegroup(_ bank: ProjectBankLease) {
+        mainPreviewsCut()
         device.withRenderingStopped {
             device.renderer.updateVoicegroup(bank.engineVoices)
             bankLease = bank
@@ -136,20 +141,29 @@ public final class NativeAudio {
 
     public func play() {
         stopPatternAudition()
+        mainPreviewsCut()
         device.renderer.play()
     }
     public func pause() {
         stopPatternAudition()
+        mainPreviewsCut()
         device.renderer.pause()
     }
     public func stop() {
         stopPatternAudition()
+        mainPreviewsCut()
         device.renderer.stop()
     }
     public func seek(sample: UInt64) {
         stopPatternAudition()
+        mainPreviewsCut()
         device.renderer.seek(sample)
     }
+
+    /// Told before every call that cuts held main-engine previews (transport, rebind,
+    /// bank swap), so their owners stop treating those notes as sounding.
+    public var onMainPreviewsCut: (() -> Void)?
+    private func mainPreviewsCut() { onMainPreviewsCut?() }
     public func setLoopEnabled(_ enabled: Bool) { device.renderer.setLoopEnabled(enabled) }
     public func setMix(muted: Set<Int>, soloed: Set<Int>) {
         device.renderer.setMix(muted: muted, soloed: soloed)
@@ -161,6 +175,8 @@ public final class NativeAudio {
     public func setMetronomeEnabled(_ enabled: Bool) { device.renderer.setMetronomeEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { device.renderer.setPolyDebugInvert(enabled) }
     public func resetPolyStats() { device.renderer.resetPolyStats() }
+    public func resetCpuPeak() { device.renderer.resetCpuPeak() }
+    public func consumeCpuFrames() -> AudioCpuBatch { device.renderer.consumeCpuFrames() }
     public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] {
         device.renderer.consumeTrackActivityLevels()
@@ -170,6 +186,13 @@ public final class NativeAudio {
     /// - Parameter timeline: A loop timeline built at the device's sample rate.
     public func startPatternAudition(_ timeline: PlaybackTimeline) {
         device.withRenderingStopped { device.renderer.startPatternAudition(timeline) }
+    }
+
+    /// Replace the sounding loop without stopping rendering; ignored unless auditioning.
+    /// The next callback adopts the newest replacement at its loop start.
+    /// - Parameter timeline: A loop timeline built at the device's sample rate.
+    public func replacePatternAudition(_ timeline: PlaybackTimeline) {
+        device.renderer.replacePatternAudition(timeline)
     }
 
     /// Silence and release the isolated loop without resuming or replacing the song.
@@ -185,6 +208,11 @@ public final class NativeAudio {
     /// Update the covered document-note identities without retriggering held members.
     public func updateBandAudition(_ notes: [BandAuditionNote]) {
         device.renderer.audition.updateBandAudition(notes)
+    }
+
+    /// Publish the virtual keyboard's held keys; held members never retrigger.
+    public func updateKeyboardAudition(_ notes: [BandAuditionNote]) {
+        device.renderer.audition.updateKeyboardAudition(notes)
     }
 
     public func previewNoteTimed(

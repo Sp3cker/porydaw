@@ -40,6 +40,7 @@ Item {
         mixer.currentIndex = page.store.mixer === "sappy" ? 1 : 0
         rate.currentIndex = page.rateChoices().indexOf(page.store.mixRate)
         analog.checked = page.store.analogFilter
+        cpuBudget.value = page.store.cpuBudgetCycles
     }
 
     Binding {
@@ -122,6 +123,36 @@ Item {
             onClicked: {
                 page.store.restoreDefaults()
                 page.reset()
+            }
+        }
+        SettingsFieldRow {
+            width: page.width; unit: page.unit; labelWidth: page.labelWidth
+            colors: page.colors; typography: page.typography
+            label: qsTr("CPU budget:")
+            Row {
+                anchors.fill: parent
+                spacing: 6 * page.unit
+                SpinBox {
+                    id: cpuBudget
+                    objectName: "engine.cpu-budget"
+                    width: 150 * page.unit
+                    height: parent.height
+                    from: 1000; to: 280896; stepSize: 1000
+                    editable: true
+                    value: page.store.cpuBudgetCycles
+                    font: page.typography.body
+                    onValueModified: page.store.changeCpuBudgetCycles(value)
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Estimated GBA sound-driver cycles per frame before the CPU meter turns amber. Past VBlank the meter turns red regardless of the budget.")
+                }
+                Text {
+                    objectName: "engine.cpu-budget-percent"
+                    height: parent.height
+                    text: qsTr("%1% of the VBlank window").arg(page.store.cpuBudgetPercent)
+                    color: page.colors.windowText
+                    font: page.typography.body
+                    verticalAlignment: Text.AlignVCenter
+                }
             }
         }
     }

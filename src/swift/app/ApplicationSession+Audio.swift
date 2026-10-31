@@ -60,6 +60,9 @@ extension ApplicationSession {
         audioReadiness = .ready(owner)
         transportBar.audioBecameReady(owner)
         polyphony.attach(audio: owner)
+        virtualKeyboard.attach(audio: owner)
+        // Transport, rebind and bank swaps cut keyboard voices; its keys let go with them.
+        owner.onMainPreviewsCut = { [weak keyboard = virtualKeyboard] in keyboard?.releaseAll() }
     }
 
     func connectPolyphonyJump() {

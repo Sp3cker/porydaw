@@ -71,7 +71,7 @@ extension ShellPresenter {
         switch id {
         case "view.event_list", "view.automation_drawer", "view.velocity_drawer",
             "view.voice_changes_drawer", "view.polyphony_debugger", "view.undo_history",
-            "view.note_names", "transport.loop",
+            "view.virtual_keyboard", "view.note_names", "view.cpu_meter", "view.cpu_profile", "transport.loop",
             "transport.follow_playhead", "transport.resonance", "transport.metronome":
             return true
         default: return false
@@ -89,7 +89,10 @@ extension ShellPresenter {
             return session.songTabs.selectedPage?.drawerPresenter().voiceChangesSection.visible ?? false
         case "view.polyphony_debugger": return polyphonyVisible
         case "view.undo_history": return undoHistoryVisible
+        case "view.virtual_keyboard": return session.virtualKeyboard.visible
         case "view.note_names": return session.noteNameMode
+        case "view.cpu_meter": return cpuMeterVisible
+        case "view.cpu_profile": return cpuProfileVisible
         case "transport.loop": return session.transportBarPresenter().loopEnabled
         case "transport.follow_playhead": return session.transportBarPresenter().followPlayhead
         case "transport.resonance": return session.transportBarPresenter().resonanceSuppression

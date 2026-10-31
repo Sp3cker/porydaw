@@ -69,6 +69,7 @@ public func pdcSuiteRun(
             runThemeColorChecks($0)
             runPolyphonyPanelChecks($0)
             runEngineSettingsChecks($0)
+            runVirtualKeyboardChecks($0)
         }
     case PDC_SUITE_DISPLAY_LIST: runDisplayListChecks(report)
     case PDC_SUITE_SAMPLE: onMain(report, runSampleChecks)

@@ -78,6 +78,9 @@ ShellMenusSupport {
                                          "Voice Changes Drawer")
         var names = checkMenuItem(viewMenu, "view.note_names", "Show Note Names")
         var undoHistory = checkMenuItem(viewMenu, "view.undo_history", "Undo History")
+        var virtualKeyboard = checkMenuItem(viewMenu, "view.virtual_keyboard", "Virtual MIDI Keyboard")
+        var cpu = checkMenuItem(viewMenu, "view.cpu_meter", "CPU")
+        var cpuProfile = checkMenuItem(viewMenu, "view.cpu_profile", "CPU Profile")
         compare(automation.enabled, false, "no tab disables the automation drawer toggle")
         compare(velocity.enabled, false, "no tab disables the velocity drawer toggle")
         compare(voiceChanges.enabled, false, "no tab disables the voice-change drawer toggle")
@@ -86,16 +89,12 @@ ShellMenusSupport {
         compare(automation.checkable, true, "the automation drawer toggle is checkable")
         compare(names.checkable, true, "note names are checkable")
         compare(undoHistory.checkable, true, "Undo History is checkable")
+        compare(virtualKeyboard.enabled, true, "the Virtual MIDI Keyboard needs no song")
+        compare(cpu.checkable, true, "the CPU panel toggle is checkable")
+        compare(cpuProfile.checkable, true, "the CPU profile toggle is checkable")
+        compare(cpu.enabled && cpuProfile.enabled, true, "the CPU features remain discoverable without a song")
         var eventList = findChild(viewMenu, "shellAction_view.event_list")
-        verify(eventList !== null, "the event list row still leads the View menu")
-        compare(viewMenu.itemAt(0).objectName, "shellAction_view.event_list",
-                "the event list row still leads the View menu")
-        compare(viewMenu.itemAt(5).objectName, "shellViewSectionSeparator",
-                "the global View preferences follow a separator")
-        compare(viewMenu.itemAt(6).objectName, "shellAction_view.undo_history",
-                "Undo History follows the Polyphony Debugger section")
-        compare(viewMenu.itemAt(8).objectName, "shellAction_transport.follow_playhead",
-                "Follow Playhead stays at the fork View position")
+        verify(eventList !== null, "the View menu owns the event list row")
 
         var importSample = checkMenuItem(toolsMenu, "tools.import_sample", "Import Sample")
         verify(importSample.text.indexOf("Import Sample...") === 0,

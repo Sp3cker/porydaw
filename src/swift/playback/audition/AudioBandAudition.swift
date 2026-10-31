@@ -21,6 +21,7 @@ public struct BandAuditionNote: Equatable, Sendable {
 
 /// Single-producer membership and lossless immutable batches. Only the producer
 /// allocates and reclaims batches; owner teardown requires a parked callback.
+/// Each instance owns one voice source, so serials never collide across producers.
 final class AudioBandAudition {
     private struct Member {
         let noteID: UInt64
@@ -64,6 +65,7 @@ final class AudioBandAudition {
         }
     }
 
+    private let source: AudioAuditionVoices.Source
     private var members: [Member] = []
     private var memberIndex: [UInt64: Int] = [:]
     private var generation: UInt64 = 0
@@ -76,7 +78,8 @@ final class AudioBandAudition {
     private let publishedSequence = Atomic<UInt64>(0)
     private let acknowledgedSequence = Atomic<UInt64>(0)
 
-    init() {
+    init(source: AudioAuditionVoices.Source) {
+        self.source = source
         let dummy = Batch(commands: Commands(), sequence: 0)
         producerHead = dummy
         producerTail = dummy
@@ -152,10 +155,14 @@ final class AudioBandAudition {
                 preconditionFailure("Published sequence must be reachable from the consumer cursor")
             }
             if batch.commands.count <= batch.commands.inline.count {
-                Self.apply(batch.commands.inline.span, count: batch.commands.count, engine: engine, voices: voices)
+                Self.apply(
+                    batch.commands.inline.span, count: batch.commands.count, source: source,
+                    engine: engine, voices: voices)
             } else {
                 let payload = batch.commands.overflow
-                Self.apply(payload.span, count: batch.commands.count, engine: engine, voices: voices)
+                Self.apply(
+                    payload.span, count: batch.commands.count, source: source, engine: engine,
+                    voices: voices)
             }
             consumerCursor = batch
             acknowledgedSequence.store(batch.sequence, ordering: .releasing)
@@ -163,7 +170,7 @@ final class AudioBandAudition {
     }
 
     private static func apply(
-        _ commands: borrowing Span<Command>, count: Int,
+        _ commands: borrowing Span<Command>, count: Int, source: AudioAuditionVoices.Source,
         engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices
     ) {
         for index in 0..<count {
@@ -173,9 +180,9 @@ final class AudioBandAudition {
                 engine.pointee.polyEventClock = UInt32.max
                 voices.start(
                     engine: engine, track: Int32(track), key: key, velocity: velocity,
-                    source: .band, serial: serial, durationSamples: durationSamples)
+                    source: source, serial: serial, durationSamples: durationSamples)
             case .release(let serial):
-                voices.release(engine: engine, source: .band, serial: serial)
+                voices.release(engine: engine, source: source, serial: serial)
             }
         }
     }

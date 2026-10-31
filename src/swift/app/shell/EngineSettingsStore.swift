@@ -50,6 +50,8 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     @QtTracked public var maxPcmChannels = 5
     @QtTracked public var mixRate = 13_379
     @QtTracked public var analogFilter = false
+    @QtTracked public var cpuBudgetCycles = 60_000
+    @QtTracked public var cpuBudgetPercent = 72
     @QtTracked public var songAvailable = false
     @QtTracked public var songLabel = ""
     @QtTracked public var voicegroup = ""
@@ -77,6 +79,20 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
 
     public func restoreFromPreferences() {
         let store = PreferencesStore()
+        let legacyBudgetKey = "engine.cpuBudgetPercent"
+        let budgetKey = "engine.cpuBudgetCycles"
+        if !store.hasValue(key: budgetKey), store.hasValue(key: legacyBudgetKey) {
+            let percent = store.int(key: legacyBudgetKey, fallback: 100)
+            if percent != 100 {
+                let cycles = (Double(percent) * 837.76).rounded()
+                store.setInt(key: budgetKey, value: Int(min(280_896, max(1_000, cycles))))
+            }
+            store.remove(key: legacyBudgetKey)
+            store.synchronize()
+        }
+        let budget = min(280_896, max(1_000, store.int(key: budgetKey, fallback: 60_000)))
+        cpuBudgetCycles = budget
+        cpuBudgetPercent = Int((Double(budget) * 100 / 83_776).rounded())
         committed = EngineSettings(
             mixer: store.string(key: "engine.pcmMixer", fallback: "ipatix"),
             maxPcmChannels: store.int(key: "engine.maxPcmChannels", fallback: 5),
@@ -114,12 +130,23 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
         maxPcmChannels = defaults.maxPcmChannels
         mixRate = defaults.mixRate
         analogFilter = defaults.analogFilter
+        changeCpuBudgetCycles(value: 60_000)
     }
 
     public func changeMixer(value: String) { mixer = value }
     public func changeMaxPcmChannels(value: Int) { maxPcmChannels = value }
     public func changeMixRate(value: Int) { mixRate = value }
     public func changeAnalogFilter(value: Bool) { analogFilter = value }
+    public func changeCpuBudgetCycles(value: Int) {
+        let budget = min(280_896, max(1_000, value))
+        guard budget != cpuBudgetCycles else { return }
+        cpuBudgetCycles = budget
+        cpuBudgetPercent = Int((Double(budget) * 100 / 83_776).rounded())
+        let store = PreferencesStore()
+        store.setInt(key: "engine.cpuBudgetCycles", value: budget)
+        store.remove(key: "engine.cpuBudgetPercent")
+        store.synchronize()
+    }
     public func changeVoicegroup(value: String) { voicegroup = value }
     public func changeMasterVolume(value: Int) { masterVolume = value }
     public func changeReverb(value: Int) { reverb = value }

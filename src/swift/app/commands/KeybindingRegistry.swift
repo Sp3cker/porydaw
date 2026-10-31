@@ -141,6 +141,7 @@ public struct KeybindingRegistry {
         .init("view.voice_changes_drawer", .window, "Voice Changes Drawer", keys: "P"),
         .init("view.polyphony_debugger", .window, "Polyphony Debugger", keys: "Ctrl+Shift+P"),
         .init("view.undo_history", .window, "Undo History"),
+        .init("view.virtual_keyboard", .window, "Virtual MIDI Keyboard", keys: "Alt+B"),
         .init("tools.import_sample", .window, "Import Sample"),
         .init("tools.split_studio", .window, "Split Studio"),
         .init("transport.go_to_start", .window, "Go to Start", keys: "Home"),

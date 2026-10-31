@@ -16,6 +16,8 @@ Item {
     final property alias eventListHost: eventListHost
     final property alias eventPage: eventPage
     final property alias rulerInput: rulerModule.rulerInput
+    readonly property real profileHeight: !root.showEvents && root.shellRouter && root.shellRouter.cpuProfileVisible
+        ? Math.ceil(root.baseFontPx * 1.4) : 0
     objectName: "swiftRollBand"
     width: rollBandContent.root.width
     height: Math.max(rollBandContent.root.height - editorDrawer.height - otherEventsBand.height
@@ -25,7 +27,7 @@ Item {
         TrackHeaderBand {
             id: trackHeaders
             x: 0
-            y: rollBandContent.root.gridModel.rulerHeight
+            y: rollBandContent.root.gridModel.rulerHeight + rollBandContent.profileHeight
             width: rollBandContent.root.headersModel.trackHeaderWidth
             height: Math.max(parent.height - y, 0)
             onWidthChanged: rollBandContent.root.configureViewport()
@@ -46,11 +48,20 @@ Item {
             height: parent.height
             clip: true
 
+            CpuProfileStrip {
+                root: rollBandContent.root
+                x: 0
+                y: rollBandContent.root.gridModel.rulerHeight
+                width: parent.width
+                height: rollBandContent.profileHeight
+                visible: height > 0
+                z: 5
+            }
 
             Item {
                 id: rollGutterSide
                 objectName: "timelineQuickRollGutter"
-                y: rollBandContent.root.gridModel.rulerHeight
+                y: rollBandContent.root.gridModel.rulerHeight + rollBandContent.profileHeight
                 width: rollBandContent.root.gridModel.keyboardWidth
                 visible: !rollBandContent.root.showEvents
                 height: Math.max(parent.height - y, 0)
@@ -103,7 +114,7 @@ Item {
                 id: rollPlot
                 objectName: "timelineQuickRollPlot"
                 x: rollBandContent.root.gridModel.keyboardWidth
-                y: rollBandContent.root.gridModel.rulerHeight
+                y: rollBandContent.root.gridModel.rulerHeight + rollBandContent.profileHeight
                 visible: !rollBandContent.root.showEvents
                 width: Math.max(parent.width - x, 0)
                 height: Math.max(parent.height - y, 0)
@@ -257,7 +268,7 @@ Item {
             Item {
                 id: rollContentBand
                 objectName: "rollContentBand"
-                y: rollBandContent.root.gridModel.rulerHeight
+                y: rollBandContent.root.gridModel.rulerHeight + rollBandContent.profileHeight
                 visible: !rollBandContent.root.showEvents
                 width: parent.width
                 height: Math.max(parent.height - y, 0)

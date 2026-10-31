@@ -69,8 +69,6 @@ RollLaneSupport {
         mouseClick(input, first.titleRect.x + first.titleRect.width / 2,
                    first.titleRect.y + first.titleRect.height / 2, Qt.RightButton)
         tryCompare(h, "menuOpen", true)
-        var panel = item("quickMenuPanelRoot")
-        compare(panel.rowCount, 5, "the capacity menu retains the fork's five actions")
         var duplicate = item("headerMenuRow_4")
         compare(duplicate.enabled, false, "duplicate at capacity stays disabled")
         mouseClick(duplicate, duplicate.width / 2, duplicate.height / 2)

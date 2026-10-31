@@ -5,6 +5,52 @@ import PorydawPlaybackNative
 /// `init` and released by `deinit`; render never grows a collection.
 public struct Sequencer: ~Copyable {
     public private(set) var position: UInt64 = 0
+    private var costHooks = false
+    private var costMark = 0
+    private var costLoopStartPassed = false
+    private var costEndMark = 0
+    private var costTrackCount = 1
+
+    /// Start a new estimated game sequence, or rebase it after pause or seek.
+    /// Calls happen on the same thread as the engine's audio processing.
+    public mutating func startCpuCost(
+        driver: UnsafeMutablePointer<M4ADriver>, timeline: borrowing PlaybackTimeline,
+        trackBudget: Int, continuing: Bool
+    ) {
+        var trackMask: UInt32 = 0
+        var modeledTracks = min(16, max(1, trackBudget))
+        for (index, track) in timeline.tracks.prefix(16).enumerated() where track.noteCount > 0 {
+            trackMask |= UInt32(1) << UInt32(index)
+            modeledTracks = max(modeledTracks, index + 1)
+        }
+        if continuing {
+            m4a_driver_cpu_song_continue(driver, trackMask, 0, UInt32(modeledTracks))
+        } else {
+            m4a_driver_cpu_song_start(driver, trackMask, 0, UInt32(modeledTracks))
+        }
+        costHooks = true
+        costEndMark = 0
+        costTrackCount = modeledTracks
+        withSwiftSource(timeline) { source in
+            seekCpuMeterMarks(source)
+            costLoopStartPassed = source.hasLoop && position > source.loopStartSample
+            if let meter = cpuMeter(at: position, timeline: timeline, source: source) {
+                if source.sample(for: meter.signature.tick) == position {
+                    costMark -= 1
+                } else {
+                    m4a_driver_cpu_time_signature_phase(driver, meter.clocksPerBar, meter.phase)
+                }
+            }
+            if costLoopStartPassed,
+                let meter = cpuMeter(at: source.loopStartSample, timeline: timeline, source: source)
+            {
+                m4a_driver_cpu_loop_start_meter(driver, meter.clocksPerBar, meter.phase)
+            }
+        }
+    }
+
+    /// Suspend event hooks while stopped or while reconstructing a seek.
+    public mutating func stopCpuCost() { costHooks = false }
 
     public init() {
         precondition(
@@ -78,6 +124,11 @@ public struct Sequencer: ~Copyable {
         guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else {
             return
         }
+        if costHooks && looping && timeline.hasLoop && costEndMark > 0,
+            let driver = engine.pointee.driver
+        {
+            startCpuCost(driver: driver, timeline: timeline, trackBudget: costTrackCount, continuing: true)
+        }
         withSwiftSource(timeline) { source in
             render(
                 engine: engine, source: source, left: leftBase, right: rightBase,
@@ -133,6 +184,10 @@ private protocol TimelineSource: EventBuffer {
     var usedTrackCount: Int { get }
     var extendedClocks: Bool { get }
     func sample(for tick: Tick) -> UInt64
+    var meterCount: Int { get }
+    func meter(at index: Int) -> PlaybackTimeSignature
+    var trackEndCount: Int { get }
+    func trackEnd(at index: Int) -> PlaybackTrackEnd
 }
 
 extension TimelineSource {
@@ -163,6 +218,8 @@ private struct SwiftEventBuffer: EventBuffer {
 private struct SwiftTimelineSource: TimelineSource {
     let events: UnsafeBufferPointer<PlaybackEvent>
     let tempos: UnsafeBufferPointer<PlaybackTempoPoint>
+    let signatures: UnsafeBufferPointer<PlaybackTimeSignature>
+    let trackEnds: UnsafeBufferPointer<PlaybackTrackEnd>
     let sampleRate: Double
     let ticksPerBeat: UInt32
     let loopStartSample: UInt64
@@ -171,7 +228,19 @@ private struct SwiftTimelineSource: TimelineSource {
     let loopEndTick: Tick
     let usedTrackCount: Int
     let extendedClocks: Bool
+    var trackEndCount: Int { trackEnds.count }
+    func trackEnd(at index: Int) -> PlaybackTrackEnd { trackEnds[index] }
 
+    var hasDefaultMeter: Bool { signatures.first?.tick != 0 }
+    var meterCount: Int { signatures.count + (hasDefaultMeter ? 1 : 0) }
+
+    func meter(at index: Int) -> PlaybackTimeSignature {
+        if hasDefaultMeter {
+            if index == 0 { return PlaybackTimeSignature(tick: 0, numerator: 4, denominatorPowerOfTwo: 2) }
+            return signatures[index - 1]
+        }
+        return signatures[index]
+    }
     var count: Int { events.count }
 
     subscript(index: Int) -> SequencedEvent {
@@ -199,6 +268,10 @@ private struct NativeTimelineSource: TimelineSource {
     var loopEndTick: Tick { data.pointee.loopEndTick }
     var usedTrackCount: Int { Int(data.pointee.usedTrackCount) }
     var extendedClocks: Bool { data.pointee.extendedClocks }
+    var meterCount: Int { 0 }
+    func meter(at index: Int) -> PlaybackTimeSignature { preconditionFailure("No native meter marks") }
+    var trackEndCount: Int { 0 }
+    func trackEnd(at index: Int) -> PlaybackTrackEnd { preconditionFailure("No native track-end marks") }
 
     subscript(index: Int) -> SequencedEvent {
         let event = data.pointee.events![index]
@@ -234,15 +307,19 @@ private func withSwiftSource<Result>(
 ) -> Result {
     timeline.events.withUnsafeBufferPointer { events in
         timeline.tempoMap.withUnsafeBufferPointer { tempos in
-            body(
-                SwiftTimelineSource(
-                    events: events, tempos: tempos, sampleRate: timeline.sampleRate,
-                    ticksPerBeat: timeline.ticksPerBeat,
-                    loopStartSample: timeline.loopStartSample,
-                    loopEndSample: timeline.loopEndSample,
-                    loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
-                    usedTrackCount: timeline.usedTrackCount,
-                    extendedClocks: timeline.settings.extendedClocks))
+            timeline.timeSignatures.withUnsafeBufferPointer { signatures in
+                timeline.trackEnds.withUnsafeBufferPointer { trackEnds in
+                    body(
+                        SwiftTimelineSource(
+                            events: events, tempos: tempos, signatures: signatures, trackEnds: trackEnds,
+                            sampleRate: timeline.sampleRate, ticksPerBeat: timeline.ticksPerBeat,
+                            loopStartSample: timeline.loopStartSample,
+                            loopEndSample: timeline.loopEndSample,
+                            loopStartTick: timeline.loopStartTick, loopEndTick: timeline.loopEndTick,
+                            usedTrackCount: timeline.usedTrackCount,
+                            extendedClocks: timeline.settings.extendedClocks))
+                }
+            }
         }
     }
 }
@@ -404,6 +481,72 @@ extension Sequencer {
         }
     }
 
+    private mutating func seekCpuMeterMarks<Source: TimelineSource>(_ source: Source) {
+        costMark = 0
+        while costMark < source.meterCount && source.sample(for: source.meter(at: costMark).tick) <= position {
+            costMark += 1
+        }
+        costLoopStartPassed = source.hasLoop && position >= source.loopStartSample
+    }
+
+    private func cpuMeter<Source: TimelineSource>(
+        at sample: UInt64, timeline: borrowing PlaybackTimeline, source: Source
+    ) -> (signature: PlaybackTimeSignature, clocksPerBar: UInt32, phase: UInt32)? {
+        var index = 0
+        while index < source.meterCount && source.sample(for: source.meter(at: index).tick) <= sample {
+            index += 1
+        }
+        guard index > 0 else { return nil }
+        let signature = source.meter(at: index - 1)
+        let clocks = UInt32(
+            min(65_535, (UInt64(96) * UInt64(signature.numerator)) >> min(Int(signature.denominatorPowerOfTwo), 31)))
+        let barTicks =
+            UInt64(
+                signatureBeatTicks(
+                    ticksPerBeat: timeline.ticksPerBeat, denominatorPowerOfTwo: signature.denominatorPowerOfTwo))
+            * UInt64(max(1, signature.numerator))
+        guard clocks > 0, barTicks > 0, sample > source.sample(for: signature.tick) else {
+            return (signature, clocks, 0)
+        }
+        let tick = timeline.tick(for: sample)
+        let bars = (max(0, tick - Double(signature.tick)) / Double(barTicks)).rounded(.down)
+        let line = UInt64(signature.tick) + UInt64(bars) * barTicks
+        func near(_ tick: UInt64) -> Bool {
+            guard tick <= UInt64(Tick.max) else { return false }
+            let at = source.sample(for: Tick(tick))
+            return (at > sample ? at - sample : sample - at) <= 1
+        }
+        if near(line) || near(line + barTicks) { return (signature, clocks, 0) }
+        let into = max(0, tick - Double(line)) * 24 / Double(max(1, timeline.ticksPerBeat))
+        return (signature, clocks, UInt32(into.rounded()) % clocks)
+    }
+
+    private mutating func dispatchCpuMarks<Source: TimelineSource>(
+        _ source: Source, driver: UnsafeMutablePointer<M4ADriver>
+    ) {
+        while costMark < source.meterCount && source.sample(for: source.meter(at: costMark).tick) <= position {
+            let meter = source.meter(at: costMark)
+            let clocks = UInt32(
+                min(65_535, (UInt64(96) * UInt64(meter.numerator)) >> min(Int(meter.denominatorPowerOfTwo), 31)))
+            m4a_driver_cpu_time_signature(driver, clocks)
+            costMark += 1
+        }
+        if !costLoopStartPassed && source.hasLoop && position >= source.loopStartSample {
+            m4a_driver_cpu_loop_point(driver, false)
+            costLoopStartPassed = true
+        }
+    }
+
+    private mutating func dispatchCpuTrackEnds<Source: TimelineSource>(
+        _ source: Source, driver: UnsafeMutablePointer<M4ADriver>
+    ) {
+        while costEndMark < source.trackEndCount && source.trackEnd(at: costEndMark).sample <= position {
+            let end = source.trackEnd(at: costEndMark)
+            m4a_driver_cpu_track_end(driver, Int32(end.track))
+            costEndMark += 1
+        }
+    }
+
     private mutating func render<Source: TimelineSource>(
         engine: UnsafeMutablePointer<M4AEngine>, source: Source,
         left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>,
@@ -413,6 +556,9 @@ extension Sequencer {
         var done = 0
         while done < frames {
             while true {
+                if costHooks, let driver = engine.pointee.driver {
+                    dispatchCpuMarks(source, driver: driver)
+                }
                 var pendingIndex = 0
                 while pendingIndex < pendingReleaseCount {
                     let pending = pendingReleases[pendingIndex]
@@ -443,11 +589,20 @@ extension Sequencer {
                     }
                     Self.dispatch(engine: engine, event: event, muteMask: muteMask, audition: audition)
                 }
+                // EOF follows same-sample commands at existing boundaries, never partitioning audio.
+                // A compiled loop's GOTO precedes FINE, even when its MIDI chunk ends earlier.
+                if costHooks && !loop, let driver = engine.pointee.driver {
+                    dispatchCpuTrackEnds(source, driver: driver)
+                }
 
                 if loop && position >= source.loopEndSample {
+                    if costHooks, let driver = engine.pointee.driver {
+                        m4a_driver_cpu_loop_point(driver, true)
+                    }
                     wrapNotes(engine: engine, source: source, audition: audition)
                     position = source.loopStartSample
                     cursor = lowerBound(in: source, sample: position)
+                    if costHooks { seekCpuMeterMarks(source) }
                     continue
                 }
                 break
@@ -459,6 +614,12 @@ extension Sequencer {
                 next = min(next, pendingReleases[index].sample)
             }
             if loop { next = min(next, source.loopEndSample) }
+            if costHooks {
+                if costMark < source.meterCount {
+                    next = min(next, source.sample(for: source.meter(at: costMark).tick))
+                }
+                if !costLoopStartPassed && source.hasLoop { next = min(next, source.loopStartSample) }
+            }
 
             var count = frames - done
             if next != .max {
@@ -475,6 +636,13 @@ extension Sequencer {
             }
             position += UInt64(count)
             done += count
+        }
+        // Retire a due EOF at the callback end unless same-sample audio commands still need dispatch.
+        if costHooks && !loop && pendingReleaseCount == 0
+            && (cursor >= source.count || source[cursor].sample > position),
+            let driver = engine.pointee.driver
+        {
+            dispatchCpuTrackEnds(source, driver: driver)
         }
     }
 

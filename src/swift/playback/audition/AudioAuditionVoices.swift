@@ -3,7 +3,7 @@ import PorydawPlaybackNative
 /// Callback-owned metadata for the original engine's three physical voice pools.
 /// Native allocation, portamento, shadow cloning and DSP remain authoritative.
 final class AudioAuditionVoices {
-    enum Source { case sequenced, held, timed, band }
+    enum Source { case sequenced, held, timed, band, keyboard }
 
     private struct Voice {
         var source: Source = .sequenced
@@ -324,6 +324,7 @@ final class AudioAuditionVoices {
             m4a_engine_note_off(engine, track, key)
             return
         }
+        if let driver = engine.pointee.driver { m4a_driver_cpu_note_off(driver, track, key) }
         for pool in 0..<3 {
             guard let driver = Self.driver(engine, pool) else { continue }
             let base = pool * Self.poolCount

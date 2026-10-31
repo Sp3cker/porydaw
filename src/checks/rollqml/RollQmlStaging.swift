@@ -138,10 +138,7 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
 
     public func releasePresentedPage() -> Bool {
         guard let session, releasingTabId >= 0 else { return false }
-        session.songTabs.requestClose(tabId: releasingTabId)
-        if session.songTabs.pendingCloseId == releasingTabId {
-            session.songTabs.confirmDiscard()
-        }
+        session.songTabs.releaseAll()
         return session.songTabs.tabCount == 0
     }
 

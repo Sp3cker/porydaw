@@ -299,8 +299,10 @@ public func runArpeggiatorChecks(_ report: CheckReport) {
     expectArpeggiatorError(report, "excessive emitted notes", expectedCase: .outputTooLarge) {
         _ = try generate(invalid, end: 43_700, document: longChord)
     }
+    checkArpeggiatorProjection(report)
     do {
         try checkArpeggiatorAudition(report)
+        try checkArpeggiatorReplacement(report)
     } catch {
         report.fail("arpeggiator/audition", "unexpected renderer error: \(error)")
     }
@@ -402,6 +404,275 @@ private func checkArpeggiatorAudition(_ report: CheckReport) throws {
     report.expectEqual(
         expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "arpeggiator/audition", what: "normal Stop still rewinds the retained song after audition")
+}
+
+private func checkArpeggiatorProjection(_ report: CheckReport) {
+    let rate = 48_000.0
+    let file = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .meta(type: 0x51, data: [0x07, 0xA1, 0x20]),
+                    .meta(type: 0x58, data: [0x04, 0x02, 0x18, 0x08]),
+                    .meta(tick: 6, type: 0x01, data: Array("verse".utf8)),
+                    .meta(tick: 12, type: 0x51, data: [0x0F, 0x42, 0x40]),
+                    .meta(tick: 36, type: 0x58, data: [0x03, 0x02, 0x18, 0x08]),
+                    .meta(tick: 40, type: 0x01, data: Array("outro".utf8)),
+                ], endTick: 48),
+            MidiChunk(
+                events: [
+                    .channel(status: 0xC0, data0: 5),
+                    .channel(status: 0x90, data0: 60, data1: 100),
+                    .channel(tick: 6, status: 0xB0, data0: 7, data1: 90),
+                    .channel(tick: 12, status: 0xE0, data0: 0, data1: 0x50),
+                    .channel(tick: 24, status: 0x80, data0: 60),
+                    .channel(tick: 30, status: 0xB0, data0: 10, data1: 20),
+                    .channel(tick: 40, status: 0xC0, data0: 9),
+                ], endTick: 48),
+            // Note-only, then notes plus a controller after the loop: neither keeps channel state.
+            MidiChunk(
+                events: [
+                    .channel(status: 0x91, data0: 48, data1: 100),
+                    .channel(tick: 24, status: 0x81, data0: 48),
+                ], endTick: 48),
+            MidiChunk(
+                events: [
+                    .channel(status: 0x92, data0: 50, data1: 100),
+                    .channel(tick: 6, status: 0x82, data0: 50),
+                    .channel(tick: 30, status: 0xB2, data0: 7, data1: 64),
+                ], endTick: 48),
+        ])
+    let source = PlaybackTimeline.build(
+        file: file, sampleRate: rate, settings: PlaybackSettings(exactGate: true))
+    let range = (start: Tick(12), end: Tick(24))
+    func eventFacts(_ event: PlaybackEvent) -> String {
+        "\(event.tick):\(event.type):\(event.track):\(event.data0):\(event.data1)@\(event.sample)"
+    }
+    func trackFacts(_ track: PlaybackTrack) -> String { "\(track.used):\(track.noteCount):\(track.firstProgram)" }
+
+    let pattern = PlaybackTimeline.pattern(
+        source: source,
+        notes: [
+            NewNote(track: 0, tick: 12, pitch: 64, duration: 3, velocity: 100),
+            NewNote(track: 0, tick: 18, pitch: 67, duration: 3, velocity: 100),
+        ], track: 0, range: range)
+    // 120 BPM is 1000 samples per tick at 24 PPQ; 60 BPM from tick 12 is 2000.
+    report.expectEqual(
+        expected: [
+            "0:1:0:120:0@0", "0:12:0:5:0@0", "0:12:1:0:0@0", "0:12:2:0:0@0", "6:11:0:7:90@6000",
+            "12:1:0:60:0@12000", "12:14:0:0:80@12000", "12:9:0:64:100@12000", "15:8:0:64:0@18000",
+            "18:9:0:67:100@24000", "21:8:0:67:0@30000",
+        ],
+        actual: pattern.events.map(eventFacts),
+        cppID: "arpeggiator/projection",
+        what: "pattern keeps source tempo and controls through the loop end, drops source notes, "
+            + "gives channel-less tracks program 0 and orders same-tick controls before generated notes")
+    report.expectEqual(
+        expected: ["true:2:5", "true:0:0", "true:0:0", "false:0:-1"],
+        actual: pattern.tracks.prefix(4).map(trackFacts),
+        cppID: "arpeggiator/projection", what: "track metadata counts generated notes and surviving programs")
+    report.expectEqual(
+        expected: source.tempoMap, actual: pattern.tempoMap,
+        cppID: "arpeggiator/projection", what: "the full source tempo map remains authoritative")
+    report.expectEqual(
+        expected: [UInt64(12_000), 36_000, 30_000],
+        actual: [pattern.loopStartSample, pattern.loopEndSample, pattern.lengthSamples],
+        cppID: "arpeggiator/projection",
+        what: "loop samples cross the tempo change and length follows scheduled events")
+    let meters = pattern.timeSignatures.map(\.tick)
+    let texts = pattern.otherEvents.map(\.tick)
+    report.expectEqual(
+        expected: [Tick(24), 0, 6], actual: [pattern.lengthTicks] + meters + texts,
+        cppID: "arpeggiator/projection", what: "meters and text after the loop end are trimmed")
+    report.expect(
+        pattern.usedTrackCount == 3 && pattern.settings == source.settings && pattern.sampleRate == rate,
+        cppID: "arpeggiator/projection",
+        message: "pattern keeps the source track count, gate policy and sample rate")
+
+    let noteOnly = PlaybackTimeline.pattern(
+        source: source, notes: [NewNote(track: 1, tick: 12, pitch: 50, duration: 6, velocity: 90)],
+        track: 1, range: range)
+    report.expectEqual(
+        expected: ["0:12:1:0:0@0", "12:9:1:50:90@12000", "18:8:1:50:0@24000"],
+        actual: noteOnly.events.filter { (event: PlaybackEvent) -> Bool in event.track == 1 }.map(eventFacts),
+        cppID: "arpeggiator/projection", what: "a note-only source track keeps its hardware identity and program 0")
+    report.expectEqual(
+        expected: ["true:0:5", "true:1:0"], actual: noteOnly.tracks.prefix(2).map(trackFacts),
+        cppID: "arpeggiator/projection", what: "only the selected track counts generated notes")
+
+    // The program-0 fallback follows the primary MIDI channel, not other channels sharing its track.
+    let channels = PlaybackTimeline.build(
+        file: MidiFile(
+            division: 24,
+            chunks: [
+                MidiChunk(
+                    events: [
+                        .channel(status: 0x90, data0: 60, data1: 100),
+                        .channel(status: 0xB1, data0: 7, data1: 90),
+                        .channel(status: 0xD1, data0: 40),
+                        .channel(tick: 24, status: 0x80, data0: 60),
+                        .channel(tick: 30, status: 0xC0, data0: 9),
+                    ], endTick: 48)
+            ]),
+        sampleRate: rate, settings: PlaybackSettings(exactGate: true))
+    let leadNotes = [NewNote(track: 0, tick: 0, pitch: 64, duration: 6, velocity: 100)]
+    let lead = PlaybackTimeline.pattern(source: channels, notes: leadNotes, track: 0, range: (start: 0, end: 24))
+    report.expectEqual(
+        expected: ["0:12:0:0:0@0", "0:11:0:7:90@0", "0:9:0:64:100@0", "6:8:0:64:0@6000"],
+        actual: lead.events.filter { (event: PlaybackEvent) -> Bool in event.type != playbackTempoEventType }
+            .map(eventFacts),
+        cppID: "arpeggiator/projection",
+        what: "a primary channel left with only notes gets program 0 even when another channel keeps controls")
+    report.expectEqual(
+        expected: ["true:1:0"], actual: lead.tracks.prefix(1).map(trackFacts),
+        cppID: "arpeggiator/projection", what: "the fallback program is the multi-channel track's first program")
+    let reprojected = PlaybackTimeline.pattern(
+        source: lead, notes: leadNotes, track: 0, range: (start: 0, end: 24))
+    report.expectEqual(
+        expected: lead.events.map(eventFacts), actual: reprojected.events.map(eventFacts),
+        cppID: "arpeggiator/projection",
+        what: "a projected pattern is a valid source whose program-0 fallback is not added twice")
+
+    // 240 BPM at 30000 PPQ is 0.4 samples per tick, so ticks 30000 and 30001 share sample 12000
+    // and the earlier chunk's post-range controller precedes the later chunk's in-range one.
+    let rounded = PlaybackTimeline.build(
+        file: MidiFile(
+            division: 30_000,
+            chunks: [
+                MidiChunk(events: [.meta(type: 0x51, data: [0x03, 0xD0, 0x90])], endTick: 30_001),
+                MidiChunk(
+                    events: [
+                        .channel(status: 0x90, data0: 60, data1: 100),
+                        .channel(tick: 15_000, status: 0x80, data0: 60),
+                        .channel(tick: 30_001, status: 0xB0, data0: 7, data1: 11),
+                    ], endTick: 30_001),
+                MidiChunk(
+                    events: [
+                        .channel(status: 0x91, data0: 48, data1: 100),
+                        .channel(tick: 15_000, status: 0x81, data0: 48),
+                        .channel(tick: 30_000, status: 0xB1, data0: 7, data1: 22),
+                    ], endTick: 30_001),
+            ]),
+        sampleRate: rate, settings: PlaybackSettings(exactGate: true))
+    report.expectEqual(
+        expected: [UInt64(12_000), 12_000], actual: [rounded.sample(for: 30_000), rounded.sample(for: 30_001)],
+        cppID: "arpeggiator/projection", what: "the boundary controllers round to one sample")
+    let roundedPattern = PlaybackTimeline.pattern(
+        source: rounded, notes: [NewNote(track: 0, tick: 0, pitch: 64, duration: 3_000, velocity: 100)],
+        track: 0, range: (start: 0, end: 30_000))
+    report.expectEqual(
+        expected: ["0:12:0:0:0@0", "30000:11:1:7:22@12000"],
+        actual: roundedPattern.events.filter { (event: PlaybackEvent) -> Bool in
+            event.type == 0xB || event.type == 0xC || event.type == 0xE
+        }.map(eventFacts),
+        cppID: "arpeggiator/projection",
+        what: "a post-range controller sharing a sample with a later track's in-range controller "
+            + "is dropped without hiding the in-range one")
+
+    let steady = MidiFile(
+        division: 24,
+        chunks: [
+            MidiChunk(
+                events: [
+                    .channel(status: 0xC0, data0: 0),
+                    .channel(status: 0x90, data0: 60, data1: 100),
+                    .channel(tick: 48, status: 0x80, data0: 60),
+                ], endTick: 48)
+        ])
+    let gated = [
+        NewNote(track: 0, tick: 0, pitch: 60, duration: 27, velocity: 100),
+        NewNote(track: 0, tick: 0, pitch: 64, duration: 13, velocity: 100),
+    ]
+    func releases(_ settings: PlaybackSettings) -> [String] {
+        let source = PlaybackTimeline.build(file: steady, sampleRate: rate, settings: settings)
+        let pattern = PlaybackTimeline.pattern(source: source, notes: gated, track: 0, range: (start: 0, end: 48))
+        return pattern.events.filter { (event: PlaybackEvent) -> Bool in event.type == 0x8 }
+            .map { (event: PlaybackEvent) -> String in "\(event.data0):\(event.tick)@\(event.sample)" }
+    }
+    report.expectEqual(
+        expected: ["64:13@13000", "60:27@24000"], actual: releases(PlaybackSettings()),
+        cppID: "arpeggiator/projection", what: "table gates shorten a 27-clock release to 24 clocks")
+    report.expectEqual(
+        expected: ["64:13@13000", "60:27@27000"], actual: releases(PlaybackSettings(exactGate: true)),
+        cppID: "arpeggiator/projection", what: "exact gates release at the generated note end")
+    report.expectEqual(
+        expected: ["64:13@12000", "60:27@27000"], actual: releases(PlaybackSettings(extendedClocks: true)),
+        cppID: "arpeggiator/projection", what: "extended clocks apply the gate table to 48-clock durations")
+    report.expectEqual(
+        expected: ["64:13@13000", "60:27@27000"],
+        actual: releases(PlaybackSettings(exactGate: true, extendedClocks: true)),
+        cppID: "arpeggiator/projection", what: "exact extended gates keep both generated releases")
+}
+
+private func checkArpeggiatorReplacement(_ report: CheckReport) throws {
+    let rig = try AudioControllerCheckFixture()
+    let audio = rig.renderer
+    let song = rig.timeline(retriggerAt: 48)
+    audio.bind(timeline: song, voicegroup: rig.voices, settings: AudioSettings())
+    audio.play()
+    _ = rig.render(24_000)
+    let songPosition = audio.playheadSamples
+    func loop(_ pitch: UInt8, at tick: Tick, duration: Tick) -> PlaybackTimeline {
+        PlaybackTimeline.pattern(
+            source: song, notes: [NewNote(track: 0, tick: tick, pitch: pitch, duration: duration, velocity: 100)],
+            track: 0, range: (start: 24, end: 48))
+    }
+    let sustained = loop(72, at: 24, duration: 20)
+    let superseded = loop(48, at: 30, duration: 12)
+    let latest = loop(60, at: 24, duration: 6)
+    audio.startPatternAudition(sustained)
+    _ = rig.render(6_000)
+    audio.replacePatternAudition(superseded)
+    audio.replacePatternAudition(latest)
+    report.expect(
+        audio.isPatternAuditioning, cppID: "arpeggiator/replacement",
+        message: "a published replacement keeps audition active before the callback adopts it")
+    let adopted = rig.render(512)
+    report.expectEqual(
+        expected: latest.loopStartSample + 512, actual: audio.patternAuditionPositionSamples,
+        cppID: "arpeggiator/replacement", what: "the next callback adopts the newest replacement at its loop start")
+    // Through one wrap at the 24000-sample loop length, with the same callback boundaries as the reference.
+    let hot = adopted + rig.render(29_488)
+    let reference = try AudioControllerCheckFixture()
+    reference.renderer.startPatternAudition(latest)
+    let cold = reference.render(30_000)
+    let difference = zip(hot, cold).reduce(Float(0)) { (worst: Float, pair: (Float, Float)) -> Float in
+        max(worst, abs(pair.0 - pair.1))
+    }
+    report.expect(
+        audioControllerCheckPeak(hot[...]) > 1 / 32768, cppID: "arpeggiator/replacement",
+        message: "the replacement renders audible source-instrument notes")
+    report.expect(
+        difference <= 1 / 32768, cppID: "arpeggiator/replacement",
+        message: "hot replacement matches a cold start of the newest loop without superseded pitches or buffered audio")
+    report.expectEqual(
+        expected: songPosition, actual: audio.playheadSamples,
+        cppID: "arpeggiator/replacement", what: "replacement does not advance the original song")
+    report.expectEqual(
+        expected: song.events, actual: audio.timeline?.events,
+        cppID: "arpeggiator/replacement", what: "replacement retains the original song timeline")
+    report.expect(
+        audio.transport == .paused, cppID: "arpeggiator/replacement",
+        message: "replacement leaves the song transport paused")
+
+    func expectCancelled(_ scenario: String, _ cancel: () -> Void) {
+        audio.startPatternAudition(sustained)
+        _ = rig.render(2_048)
+        audio.replacePatternAudition(latest)
+        cancel()
+        audio.replacePatternAudition(superseded)
+        report.expect(
+            !audio.isPatternAuditioning, cppID: "arpeggiator/replacement",
+            message: "\(scenario) clears a pending replacement and refuses later ones")
+        report.expect(
+            audioControllerCheckPeak(rig.render(4_096)[...]) <= 1 / 32768, cppID: "arpeggiator/replacement",
+            message: "\(scenario) cannot resurrect a replaced pattern")
+    }
+    expectCancelled("stop") { audio.stopPatternAudition() }
+    expectCancelled("settings replacement") { audio.updateSettings(AudioSettings()) }
+    expectCancelled("bank replacement") { audio.updateVoicegroup(rig.voices) }
+    expectCancelled("unload") { audio.unload() }
 }
 
 private func expectArpeggiatorError(

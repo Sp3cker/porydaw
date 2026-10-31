@@ -208,4 +208,21 @@ public func runKeybindingRegistryChecks(
             "roll.velocity_drag"),
         modifierChords,
         "Control plus Shift does not arm velocity drag")
+
+    let virtualKeyboard = "KeymapCheckTest::virtualKeyboardToggle"
+    onAssertion(
+        registry.scope("view.virtual_keyboard") == .window
+            && registry.label("view.virtual_keyboard") == "Virtual MIDI Keyboard",
+        virtualKeyboard, "the keyboard toggle is a window command")
+    onAssertion(
+        registry.sequences("view.virtual_keyboard").map(\.strokes) == [
+            [QtKeyCode.b.rawValue | QtKeyboardModifier.alt.rawValue]
+        ],
+        virtualKeyboard, "the keyboard toggle defaults to Alt+B")
+    onAssertion(
+        !registry.ids.contains { id in
+            id != "view.virtual_keyboard"
+                && registry.matches(QtKeyCode.b.rawValue, QtKeyboardModifier.alt.rawValue, id)
+        },
+        virtualKeyboard, "no other shipped command claims Alt+B")
 }

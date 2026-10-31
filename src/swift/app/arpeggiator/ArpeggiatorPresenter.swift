@@ -195,10 +195,7 @@ public final class ArpeggiatorPresenter {
             stopAudition()
             return
         }
-        guard canCopy, var draft else { return }
-        let timeline = draft.timeline ?? makeTimeline(draft.result, range: draft.range)
-        draft.timeline = timeline
-        self.draft = draft
+        guard let timeline = auditionTimeline() else { return }
         audio.startPatternAudition(timeline)
         isAuditioning = true
         pollAudition()
@@ -236,6 +233,12 @@ public final class ArpeggiatorPresenter {
         }
         let result = draft.result
         let tick = timeline.tick(for: audio.patternAuditionPositionSamples)
+        guard tick >= Double(draft.range.start), tick < Double(draft.range.end) else {
+            // The callback has not adopted the replacement yet; it restarts at the loop start.
+            currentStep = -1
+            return SharedPlayheadPreview(
+                start: draft.range.start, end: draft.range.end, tick: Double(draft.range.start))
+        }
         var lower = 0
         var upper = result.stepTicks.count
         while lower < upper {
@@ -268,12 +271,21 @@ public final class ArpeggiatorPresenter {
     }
 
     private func regenerate() {
-        let resume = isAuditioning
-        stopAudition()
         draft = nil
         timingLabel = ""
         stepRevision &+= 1
-        guard isOpen else { return }
+        if isOpen { generateDraft() }
+        guard isAuditioning else { return }
+        // Replace the sounding loop in place; empty or failed drafts stop audition.
+        guard audio.isPatternAuditioning, let timeline = auditionTimeline() else {
+            stopAudition()
+            return
+        }
+        audio.replacePatternAudition(timeline)
+        pollAudition()
+    }
+
+    private func generateDraft() {
         let timeline = session.timeline
         guard let source = resolveSourceStart() else {
             rangeLabel = ""
@@ -298,46 +310,19 @@ public final class ArpeggiatorPresenter {
                 canCopy
                 ? "\(generated.notes.count) notes · \(generated.droppedPitchCount) pitches omitted"
                 : "No sounding generated notes."
-            if resume, canCopy { toggleAudition() }
         } catch {
             status = error.localizedDescription
         }
     }
 
-    private func makeTimeline(
-        _ generated: ArpeggiatorResult, range: (start: Tick, end: Tick)
-    ) -> PlaybackTimeline {
-        var file = session.document.state.file
-        let mapping = session.document.engineTracks
-        for chunk in file.chunks.indices {
-            file.chunks[chunk].events.removeAll { event in
-                event.typeNibble == 0x8 || event.typeNibble == 0x9 || event.tick > range.end
-            }
-        }
-        // Retain hardware track identities even for a channel that contained only notes.
-        for track in 0..<mapping.usedTrackCount {
-            let entry = mapping.tracks[track]
-            guard let chunk = entry.midiChunk else { continue }
-            if !file.chunks[chunk].events.contains(where: { $0.isChannel && $0.channel == entry.channel }) {
-                file.chunks[chunk].events.insert(.channel(status: 0xC0 | entry.channel, data0: 0), at: 0)
-            }
-        }
-        let entry = mapping.tracks[sourceTrack]
-        if let chunk = entry.midiChunk {
-            for note in generated.notes {
-                file.chunks[chunk].events.append(
-                    .channel(
-                        tick: note.tick, status: 0x90 | entry.channel,
-                        data0: note.pitch, data1: note.velocity))
-                file.chunks[chunk].events.append(
-                    .channel(
-                        tick: note.tick + note.duration, status: 0x80 | entry.channel,
-                        data0: note.pitch))
-            }
-            file.chunks[chunk].events = stableTickSort(file.chunks[chunk].events)
-        }
-        return PlaybackTimeline.build(
-            file: file, tempo: session.document.state.tempo,
-            sampleRate: session.timeline.sampleRate, settings: session.timeline.settings, loopRange: range)
+    /// Lazily projects the sounding draft, retaining it for playhead mapping.
+    private func auditionTimeline() -> PlaybackTimeline? {
+        guard canCopy, var draft else { return nil }
+        if let timeline = draft.timeline { return timeline }
+        let timeline = PlaybackTimeline.pattern(
+            source: session.timeline, notes: draft.result.notes, track: sourceTrack, range: draft.range)
+        draft.timeline = timeline
+        self.draft = draft
+        return timeline
     }
 }

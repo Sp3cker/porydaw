@@ -22,7 +22,10 @@ Item {
 
     Connections {
         target: body.shell.session
-        function onSongOpenChanged(): void { gridContextMenu.menu.close() }
+        function onSongOpenChanged(): void {
+            gridContextMenu.menu.close()
+            body.shell.cpuMeter.poll()
+        }
     }
     Connections {
         target: body.shell.session.songTabs
@@ -68,7 +71,7 @@ Item {
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
-                anchors.right: polyDock.visible ? polyDock.left : parent.right
+                anchors.right: polyDock.visible ? polyDock.left : cpuDock.visible ? cpuDock.left : parent.right
                 focus: true
                 controller: body.shell.session.songTabs
                 layoutSpaces: body.shell.session.layoutSpaces
@@ -95,9 +98,9 @@ Item {
                 visible: body.shell.polyphonyVisible
                 anchors.top: parent.top
                 anchors.bottom: parent.bottom
-                anchors.right: parent.right
+                anchors.right: cpuDock.visible ? cpuDock.left : parent.right
                 width: Math.min(body.root.chromeBaseFontPx * 32,
-                                body.width * (historyDock.visible ? 0.32 : 0.48))
+                                body.width * (historyDock.visible || cpuDock.visible ? 0.25 : 0.48))
                 z: 2
                 Rectangle {
                     anchors.fill: parent
@@ -147,6 +150,58 @@ Item {
                     onTriggered: body.shell.session.polyphony.poll()
                 }
             }
+            Item {
+                id: cpuDock
+                objectName: "shellCpuDock"
+                visible: body.shell.cpuMeterVisible
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.right: parent.right
+                width: Math.min(body.root.chromeBaseFontPx * 32,
+                                body.width * (polyDock.visible || historyDock.visible ? 0.25 : 0.48))
+                z: 2
+                Rectangle {
+                    anchors.fill: parent
+                    color: body.root.colors.windowBackground
+                    border.color: body.root.colors.outline
+                }
+                Row {
+                    id: cpuTitle
+                    width: parent.width
+                    height: Math.max(bodyMetrics.height, body.transportToolExtent)
+                            + 2 * body.root.chromeSpacing.half + 2
+                    Text {
+                        width: parent.width - cpuClose.width; height: parent.height
+                        leftPadding: body.root.chromeSpacing.two
+                        text: qsTr("CPU")
+                        font: body.root.chromeTypography.body
+                        color: body.root.colors.windowText
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    Button {
+                        id: cpuClose
+                        objectName: "shellCpuClose"
+                        height: parent.height
+                        text: qsTr("×")
+                        font: body.root.chromeTypography.body
+                        onClicked: body.shell.activate("view.cpu_meter")
+                    }
+                }
+                Loader {
+                    anchors.top: cpuTitle.bottom
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    active: cpuDock.visible
+                    sourceComponent: CpuPanel {
+                        presenter: body.shell.cpuMeter
+                        colors: body.root.colors
+                        typography: body.root.chromeTypography
+                        layoutSpaces: body.root.chromeSpacing
+                        baseFontPx: body.root.chromeBaseFontPx
+                    }
+                }
+            }
         }
         Item {
             id: historyDock
@@ -154,7 +209,7 @@ Item {
             visible: body.shell.undoHistoryVisible
             SplitView.fillHeight: true
             SplitView.minimumWidth: Math.min(body.shell.dockColumnMinWidth, SplitView.maximumWidth)
-            SplitView.maximumWidth: body.width * (polyDock.visible ? 0.32 : 0.48)
+            SplitView.maximumWidth: body.width * (polyDock.visible || cpuDock.visible ? 0.32 : 0.48)
             SplitView.preferredWidth: body.root.chromeBaseFontPx * 32
             Keys.onEscapePressed: body.shell.activate("view.undo_history")
             Rectangle {

@@ -330,6 +330,9 @@ enum ShellQmlRegistry {
                 name: "shell-undo-history", inputFileName: "tst_ShellUndoHistory.qml",
                 fixtureFiles: songs("mus_route101")),
             Entry(
+                name: "shell-virtual-keyboard", inputFileName: "tst_ShellVirtualKeyboard.qml",
+                fixtureFiles: songs("mus_route101")),
+            Entry(
                 name: "shell-voicegroup", inputFileName: "tst_ShellVoicegroup.qml",
                 fixtureFiles: songs("mus_route101", "mus_route102") + [
                     "asm/macros/synth_test.inc", "data/sound_data.s",
@@ -406,6 +409,7 @@ enum ShellQmlRegistry {
                 fixtureFiles: songs("mus_route101"),
                 testFunctions: [
                     "ShellSettings::test_engineRoundTripAndInvalidMixer",
+                    "ShellSettings::test_cpuBudgetPersistsWithoutRestartOrApply",
                     "ShellSettings::test_reopeningDiscardsCancelledDraft",
                     "ShellSettings::test_gridContrastPreviewApplyAndRevert",
                     "ShellSettings::test_themeModePreviewCommitAndRevert",

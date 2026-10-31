@@ -81,7 +81,10 @@ enum ShellActionCatalog {
         Action("view.voice_changes_drawer"),
         Action("view.polyphony_debugger"),
         Action("view.undo_history"),
+        Action("view.virtual_keyboard"),
         Action("view.note_names"),
+        Action("view.cpu_meter"),
+        Action("view.cpu_profile"),
         Action("tools.import_sample"),
         Action("tools.split_studio"),
         Action("help.about"),
@@ -138,6 +141,8 @@ enum ShellActionCatalog {
         "edit.preferences": "Preferences...",
         "edit.song_settings": "Song Settings...",
         "edit.engine_settings": "Engine Settings...",
+        "view.cpu_meter": "CPU",
+        "view.cpu_profile": "CPU Profile",
         "view.voice_changes_drawer": "Voice-change Drawer",
     ]
 

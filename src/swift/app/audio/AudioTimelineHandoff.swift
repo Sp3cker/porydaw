@@ -12,6 +12,9 @@ final class AudioTimelineHandoff {
     /// Borrowed until the consumer's next acquisition, or a quiescent reset.
     /// Reading a value for UI use must stay on the single producer thread.
     var active: UnsafeMutablePointer<PlaybackTimeline>? { adopted.load(ordering: .acquiring) }
+    /// Producer-owned: whether a timeline has been published since the last empty reset,
+    /// including one the consumer has not yet acquired.
+    var isPublished: Bool { current != nil }
 
     func publish(_ timeline: PlaybackTimeline) {
         let publication = Self.allocate(timeline)

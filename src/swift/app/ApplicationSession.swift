@@ -55,6 +55,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var songTabs: SongTabsController
     @QtTracked public var polyphony: PolyphonyPanelPresenter
     @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
+    @QtTracked public let virtualKeyboard: VirtualKeyboardPresenter = VirtualKeyboardPresenter()
     private var undoHistoryVisible = false
 
     @QtIgnored

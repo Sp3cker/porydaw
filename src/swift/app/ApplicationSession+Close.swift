@@ -243,6 +243,7 @@ extension ApplicationSession {
         }
         discardPrefetchedProject()
         mouseHints.setWindowActive(active: false)
+        virtualKeyboard.dispose()
         activeReplacementTask?.cancel()
         // Cancel while the scene exists: every tab's resize session and every
         // attached page's interaction end in the same call, whether the tab is

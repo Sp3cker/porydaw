@@ -205,7 +205,7 @@ extension TrackHeadersPresenter {
         scrollY = min(maximumScrollY, max(0, scrollY))
     }
 
-    func resolvedProgramSpan(
+    static func resolvedProgramSpan(
         track: Int, session: DocumentSession, tick: Tick
     )
         -> (program: Int, start: Tick, end: Tick)
@@ -227,7 +227,24 @@ extension TrackHeadersPresenter {
     }
 
     func resolvedProgram(track: Int, session: DocumentSession, tick: Tick) -> Int {
-        resolvedProgramSpan(track: track, session: session, tick: tick).program
+        Self.resolvedProgramSpan(track: track, session: session, tick: tick).program
+    }
+
+    /// A header's title line: its number and name, or "Track N" when unnamed.
+    static func title(track: Int, session: DocumentSession) -> String {
+        let name = session.document.trackName(track)
+        return "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)"
+    }
+
+    /// A header's voice line for the program in effect.
+    static func voiceLabel(program: Int, session: DocumentSession) -> String {
+        if program < 0 { return "(no voice set)" }
+        if session.bankSlots.indices.contains(program),
+            session.bankSlots[program].voice != nil || session.bankSlots[program].tone != nil
+        {
+            return VoiceLanePolicy.label(slot: program, view: session.bankSlots[program])
+        }
+        return String(format: "%03d Voice", program)
     }
 
     func makeSnapshot(
@@ -235,11 +252,10 @@ extension TrackHeadersPresenter {
     )
         -> TrackHeaderSnapshot
     {
-        let name = session.document.trackName(track)
         let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
         var row = TrackHeaderSnapshot(
-            track: track, title: "\(track + 1) · \(name.isEmpty ? "Track \(track + 1)" : name)",
+            track: track, title: Self.title(track: track, session: session),
             titleFont: primary ? boldTitleFont : normalTitleFont,
             subtitleFont: subtitleFont)
         row.titleBold = primary
@@ -283,18 +299,7 @@ extension TrackHeadersPresenter {
             ?? resolvedProgram(
                 track: track, session: session,
                 tick: playing ? playheadTick : session.editCursor)
-        if program < 0 {
-            row.subtitle = "(no voice set)"
-        } else if session.bankSlots.indices.contains(program),
-            session.bankSlots[program].voice != nil
-                || session.bankSlots[program].tone != nil
-        {
-            row.subtitle = VoiceLanePolicy.label(
-                slot: program,
-                view: session.bankSlots[program])
-        } else {
-            row.subtitle = String(format: "%03d Voice", program)
-        }
+        row.subtitle = Self.voiceLabel(program: program, session: session)
         row.activityActiveColor = TrackHeadersGeometry.activityActiveColors[PaletteMath.trackIdentityIndex(track)]
         row.activityDimColor = TrackHeadersGeometry.activityDimColors[PaletteMath.trackIdentityIndex(track)]
         let intensity = activity.intensity(track: track)

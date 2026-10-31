@@ -211,6 +211,41 @@ ShellClipboardSupport {
                "one normal Undo removes the pasted pattern and preserves original chords")
     }
 
+    function test_editWhileAuditioningReplacesTheSoundingDraft() {
+        const p = prepareSource()
+        const original = noteFacts(p.grid, 0)
+        const revision = p.grid.appliedRevisionText
+        const undoRow = p.app.undoHistory.currentRow
+        const model = openFromTrackHeader(p)
+        model.toggleAudition()
+        tryCompare(model, "isAuditioning", true)
+        verify(waitForNative(function() { return model.currentStep >= 1 }, 3000),
+               "the original sixteen-step draft is sounding before the edit")
+        model.setParameter("steps", 4)
+        compare(model.isAuditioning, true, "shortening the cycle replaces audition instead of stopping it")
+        verify(model.currentStep < 4, "the pad highlight never names a pad outside the replacement cycle")
+        model.setParameter("transpose", 12)
+        compare(model.isAuditioning, true, "transposing replaces audition instead of stopping it")
+        verify(waitForNative(function() {
+            return model.isAuditioning && model.currentStep >= 1 && model.currentStep < 4
+        }, 3000), "the replacement cycle advances through its own pads")
+        model.copyNotes()
+        const copied = JSON.parse(clipProbe.readClipJson())
+        const notes = copied.tracks[0].notes
+        compare(copied.span, p.ppq, "Copy Notes uses the edited four-step cycle")
+        compare(JSON.stringify(notes.map(function(n) { return n.key })), JSON.stringify([72, 76, 79, 72]),
+                "Copy Notes copies the transposed draft that is sounding")
+        compare(JSON.stringify(notes.map(function(n) { return n.relTick })),
+                JSON.stringify([0, p.ppq / 4, p.ppq / 2, p.ppq * 3 / 4]))
+        compare(noteFacts(p.grid, 0), original, "live replacements leave source notes unchanged")
+        compare(p.grid.appliedRevisionText, revision, "live replacements do not mutate the document")
+        compare(p.app.undoHistory.currentRow, undoRow, "live replacements create no undo entries")
+        model.toggleAudition()
+        tryCompare(model, "isAuditioning", false)
+        compare(model.currentStep, -1)
+        model.close()
+    }
+
     function test_selectionAuditionUsesSharedPlayheadAndRestoresSong() {
         const p = prepareSource()
         const transport = p.app.transportBarPresenter()
@@ -364,10 +399,14 @@ ShellClipboardSupport {
                "the visible cursor wraps with the source tick")
 
         mouseClick(audition, audition.width / 2, audition.height / 2)
-        verify(waitForNative(function() {
+        const restored = waitForNative(function() {
             return !model.isAuditioning && !playhead.playing && playhead.tick === parkedTick
                 && playhead.previewVisible
-        }, 3000), "stopping audition restores the exact parked song tick but keeps the window")
+        }, 3000)
+        verify(restored, "stopping audition restores the exact parked song tick but keeps the window"
+               + " (isAuditioning=" + model.isAuditioning + ", playing=" + playhead.playing
+               + ", tick=" + playhead.tick + ", parkedTick=" + parkedTick
+               + ", previewVisible=" + playhead.previewVisible + ")")
         verifyPlayheadLine(shared)
         verifyPreviewGeometry(p, sourceStart, sourceEnd)
         transport.refresh()

@@ -18,6 +18,7 @@ extension ApplicationSession {
         let pickerOpen = workspace?.headerVoicePicker.pickerOpen ?? false
         publish(\.headerVoicePickerOpen, pickerOpen)
         polyphony.setContext(session: workspace?.session)
+        virtualKeyboard.setContext(session: workspace?.session)
         transportBar.refresh()
         refreshDocumentState()
         refreshVoicegroupDock()
@@ -325,7 +326,13 @@ extension ApplicationSession {
                 self?.invalidateTimeSigPrompt(session: session, revision: revision)
             },
             transportPlayingChanged: { [weak self] _ in
+                // The engine's own transitions (the song's end) cut held previews too.
+                self?.virtualKeyboard.releaseAll()
                 self?.resyncTransportAfterEngineTransition()
+            },
+            liveTargetChanged: { [weak self, weak session] in
+                guard let self, let session, self.selectedDocument === session else { return }
+                self.virtualKeyboard.refreshTarget()
             })
     }
 

@@ -206,6 +206,8 @@ qt_add_library(porydaw_native_host STATIC
 qt_add_library(porydaw_app STATIC
     src/app/item_cursor.h
     src/app/item_cursor.cpp
+    src/app/native_key_codes.h
+    src/app/native_key_codes.cpp
     src/render/display_list_item.h
     src/render/display_list_item.cpp
 )
@@ -294,6 +296,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/swiftroll/EditorSurface.qml
         src/ui/songview/quick/swiftroll/EditorRollBand.qml
         src/ui/songview/quick/swiftroll/EditorRulerBand.qml
+        src/ui/songview/quick/swiftroll/CpuProfileStrip.qml
         src/ui/songview/quick/swiftroll/EditorSurfaceMenus.qml
         src/ui/songview/quick/swiftroll/EditorSurfacePrompts.qml
         src/ui/songview/quick/swiftroll/SongTabs.qml
@@ -343,7 +346,12 @@ qt_add_qml_module(porydaw_app
         src/ui/shell/TransportOutputDial.qml
         src/ui/shell/PolyphonyPanel.qml
         src/ui/shell/PolyphonyChannelGroup.qml
+        src/ui/shell/CpuPanel.qml
         src/ui/shell/UndoHistoryDock.qml
+        src/ui/shell/VirtualKeyboardHost.qml
+        src/ui/shell/VirtualKeyboardWindow.qml
+        src/ui/shell/VirtualKeyboardPiano.qml
+        src/ui/shell/WindowActionShortcuts.qml
         src/ui/shell/settings/SettingsFieldRow.qml
         src/ui/shell/settings/SettingsDialog.qml
         src/ui/shell/settings/EngineSettingsPage.qml

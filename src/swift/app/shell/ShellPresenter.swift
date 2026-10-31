@@ -22,6 +22,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var session: ApplicationSession
     @QtTracked public var settingsStore: EngineSettingsStore
     @QtTracked public var mouseHints: MouseHints
+    @QtTracked public var cpuMeter = CpuMeterPresenter()
     public var actionIds: [String] = ShellActionCatalog.allActionIds
     public var fileActionIds: [String] = ShellActionCatalog.fileIds
     public var fileExportActionIds: [String] = ShellActionCatalog.fileExportIds
@@ -61,6 +62,8 @@ public final class ShellPresenter: QmlInstantiableStatus {
     @QtTracked public var dockSongsRatio = 0.5
     @QtTracked public var polyphonyVisible = false
     @QtTracked public var undoHistoryVisible = false
+    @QtTracked public var cpuMeterVisible = false
+    @QtTracked public var cpuProfileVisible = true
     @QtTracked public var windowX = -1
     @QtTracked public var windowY = -1
     @QtTracked public var windowWidth = -1
@@ -80,6 +83,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         let settingsStore = EngineSettingsStore()
         self.settingsStore = settingsStore
         settingsStore.attach(session: session)
+        cpuMeter.attach(session: session, settings: settingsStore, shell: self)
         session.onVoicegroupCatalogChanged = { [weak settingsStore] in
             settingsStore?.refreshVoicegroups()
         }
@@ -96,6 +100,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
         session.eventListPresenter().onAvailabilityChanged = { [weak self] in self?.refreshActionStates() }
         session.sampleStudio().onEditorOpenChanged = { [weak self] in self?.refreshActionStates() }
         session.songDockController().onSongsChanged = { [weak self] in self?.refreshActionStates() }
+        session.virtualKeyboard.onVisibilityChanged = { [weak self] in self?.refreshActionStates() }
         let transport = session.transportBarPresenter()
         transport.onAvailabilityChanged = { [weak self] in
             self?.refreshActionStates()
@@ -232,6 +237,18 @@ public final class ShellPresenter: QmlInstantiableStatus {
         case "view.undo_history":
             undoHistoryVisible.toggle()
             session.setUndoHistoryVisible(undoHistoryVisible)
+        case "view.virtual_keyboard": session.virtualKeyboard.toggle()
+        case "view.cpu_meter":
+            cpuMeterVisible.toggle()
+            let store = PreferencesStore()
+            store.setBool(key: "cpuMeter.visible", value: cpuMeterVisible)
+            store.synchronize()
+            cpuMeter.poll()
+        case "view.cpu_profile":
+            cpuProfileVisible.toggle()
+            let store = PreferencesStore()
+            store.setBool(key: "cpuProfileStrip", value: cpuProfileVisible)
+            store.synchronize()
         case "help.about": aboutRequested()
         default: break
         }
@@ -503,6 +520,9 @@ public final class ShellPresenter: QmlInstantiableStatus {
         windowMaximized = state.contains("maximized")
         polyphonyVisible = state.contains("debugger")
         session.polyphony.setVisible(showing: polyphonyVisible)
+        cpuMeterVisible = store.bool(key: "cpuMeter.visible", fallback: false)
+        cpuProfileVisible = store.bool(key: "cpuProfileStrip", fallback: true)
+        session.virtualKeyboard.restoreFromPreferences()
         session.songDockController().presenter.restoreFromPreferences()
         refreshActionStates()
     }

@@ -100,6 +100,230 @@ ShellLaneSupport {
         compare(label.font.weight, caption.weight, "channel cell label keeps caption weight")
     }
 
+    function verifyProfilePixels(surface, strip) {
+        const heat = findChild(strip, "cpuProfileHeat")
+        const palette = surface.gridModel.palette
+        const meter = strip.meter
+        const capture = shell.contentItem
+        verify(waitForRendering(capture, 5000), "the shell submits the profile frame")
+        const image = grabImage(capture)
+        let nearest = 256
+        let detail = "no visible cost-bearing span"
+        for (let x = 1; x < heat.width - 1; ++x) {
+            const cycles = strip.scene.cyclesAt(x)
+            if (cycles <= 0)
+                continue
+            const base = cycles > 83776 ? palette.errorText
+                : cycles > meter.budget ? palette.warningText : palette.polyphonyActiveFill
+            const blend = cycles <= 83776 && cycles <= meter.budget
+                ? Math.pow(Math.min(1, cycles / meter.budget), 1.5) * 0.75 : 0
+            const warning = palette.warningText
+            const expected = [
+                Math.round(255 * (base.r * (1 - blend) + warning.r * blend)),
+                Math.round(255 * (base.g * (1 - blend) + warning.g * blend)),
+                Math.round(255 * (base.b * (1 - blend) + warning.b * blend))
+            ]
+            const point = heat.mapToItem(capture, x, heat.height / 2)
+            const px = Math.floor(point.x * image.width / capture.width)
+            const py = Math.floor(point.y * image.height / capture.height)
+            if (px < 0 || px >= image.width || py < 0 || py >= image.height)
+                continue
+            const actual = [image.red(px, py), image.green(px, py), image.blue(px, py)]
+            const distance = Math.max(Math.abs(actual[0] - expected[0]),
+                                      Math.abs(actual[1] - expected[1]),
+                                      Math.abs(actual[2] - expected[2]))
+            if (distance < nearest) {
+                nearest = distance
+                detail = "cost " + cycles + "; pixel " + px + "," + py
+                    + "; actual RGB " + actual + "; expected RGB " + expected
+            }
+            if (distance <= 8)
+                break
+        }
+        verify(nearest <= 8, "a cost-bearing span paints its modeled theme color: " + detail)
+    }
+
+    function verifyHistoryPixels(palette) {
+        const history = findChild(shell, "cpuHistory")
+        verify(history && history.width > 0 && history.height > 0,
+               "the mounted history has a visible paint area")
+        const capture = shell.contentItem
+        verify(waitForRendering(capture, 5000), "the shell submits the history frame")
+        const image = grabImage(capture)
+        const colors = [palette.polyphonyActiveFill, palette.warningText, palette.errorText]
+        let painted = false
+        for (let x = 0.5; x < history.width; ++x) {
+            const point = history.mapToItem(capture, x, history.height - 2)
+            const px = Math.floor(point.x * image.width / capture.width)
+            const py = Math.floor(point.y * image.height / capture.height)
+            if (px < 0 || px >= image.width || py < 0 || py >= image.height)
+                continue
+            painted = colors.some(function(color) {
+                return Math.abs(image.red(px, py) - color.r * 255) <= 8
+                    && Math.abs(image.green(px, py) - color.g * 255) <= 8
+                    && Math.abs(image.blue(px, py) - color.b * 255) <= 8
+            })
+            if (painted)
+                break
+        }
+        verify(painted, "history paints a modeled-cost bar in its theme severity color")
+    }
+
+    function test_cpuMeterAndOfflineProfile() {
+        const presenter = createShell()
+        const session = presenter.session
+        const meter = presenter.cpuMeter
+        session.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() {
+            return session.songOpen && presenter.action("transport.play").enabled
+        }, 30000), "a real song and audio renderer are ready")
+        verify(waitForNative(function() {
+            const readout = findChild(shell, "shellCpuValue")
+            return readout && readout.visible && readout.width > 0
+        }, 5000), "the status bar mounts its clickable CPU readout")
+        const status = findChild(shell, "shellCpuValue")
+        mouseClick(status, status.width / 2, status.height / 2)
+        tryVerify(function() { return presenter.cpuMeterVisible && findChild(shell, "shellCpuDock").visible }, 3000,
+                  "the status readout opens the production CPU panel")
+        verify(findChild(shell, "cpuMeter") && findChild(shell, "cpuHistory"),
+               "stacked terms and the frame history are mounted")
+        presenter.activate("transport.play")
+        verify(waitForNative(function() {
+            meter.poll()
+            return meter.valid && meter.historyCount > 0 && meter.peakVisible
+        }, 10000), "real song playback publishes modeled GBA costs")
+        compare(meter.total, meter.sequencer + meter.cgb + meter.mixer,
+                "the displayed total is the sum of its three terms")
+        verify(meter.peak >= meter.total && meter.peakTime.length > 0,
+               "the panel keeps the peak and its song time")
+        // Select the View action explicitly, independently of saved preferences.
+        if (presenter.cpuProfileVisible) {
+            presenter.activate("view.cpu_profile")
+            tryCompare(presenter, "cpuProfileVisible", false, 3000)
+        }
+        presenter.activate("view.cpu_profile")
+        tryCompare(presenter, "cpuProfileVisible", true, 3000)
+        let surface = null
+        verify(waitForNative(function() {
+            surface = selectedSurface()
+            return surface && surface.visible && surface.width > 0
+        }, 10000), "the selected song's deferred editor surface mounts")
+        if (surface.showEvents)
+            presenter.activate("view.event_list")
+        tryCompare(surface, "showEvents", false, 3000)
+        let strip = null
+        verify(waitForNative(function() {
+            strip = findChild(surface, "cpuProfileStrip")
+            return strip && strip.visible && strip.width > 0 && strip.height > 0
+        }, 10000), "the selected song mounts its visible profile strip")
+        const ruler = findChild(surface, "timelineQuickRuler")
+        const heat = findChild(strip, "cpuProfileHeat")
+        const hover = findChild(strip, "cpuProfileHover")
+        verify(ruler && heat && hover, "the ruler, heat columns and hover target are mounted")
+        fuzzyCompare(strip.mapToItem(surface, 0, 0).y,
+                     ruler.mapToItem(surface, 0, ruler.height).y, 0.01,
+                     "the profile strip starts immediately below the ruler")
+        verify(waitForNative(function() {
+            meter.poll()
+            if (meter.profileStatus.length > 0)
+                return false
+            for (let x = 1; x < heat.width; ++x) {
+                if (strip.scene.cyclesAt(x) > 0)
+                    return true
+            }
+            return false
+        }, 30000), "the isolated offline renderer fills the timeline heat strip")
+        verifyHistoryPixels(surface.gridModel.palette)
+        // Freeze follow-playhead movement while comparing the rendered columns
+        // with the exact costs and theme colors used to paint them.
+        presenter.activate("transport.pause")
+        verify(waitForNative(function() {
+            meter.poll()
+            return !meter.playing && meter.peakVisible
+        }, 5000), "pause retains the peak but stops showing a current frame")
+        verifyProfilePixels(surface, strip)
+        let hoverX = -1
+        for (let x = 1; x < hover.width - 1; ++x) {
+            if (strip.scene.cyclesAt(x) > 0) {
+                hoverX = x
+                break
+            }
+        }
+        verify(hoverX >= 0, "a measured profile frame is reachable by pointer")
+        mouseMove(hover, hoverX, hover.height / 2)
+        tryVerify(function() {
+            return hover.containsMouse && hover.cycles > 0
+                && hover.cycles === strip.scene.cyclesAt(hover.mouseX)
+                && hover.ToolTip.visible && hover.ToolTip.text.indexOf(String(hover.cycles)) >= 0
+        }, 5000, "hovering a heat column displays its estimated cycle count")
+
+        const grid = surface.gridModel
+        const previousScroll = grid.cameraScrollX
+        const forward = Math.min(grid.cameraMaxHScroll, previousScroll + grid.beatWidth)
+        const targetScroll = forward > previousScroll + 0.5 ? forward
+            : Math.max(grid.cameraMinHScroll, previousScroll - grid.beatWidth)
+        verify(Math.abs(targetScroll - previousScroll) > 0.5, "the song has horizontal camera travel")
+        const previousRevision = strip.scene.displayRevision
+        grid.setCameraHScroll(targetScroll)
+        verify(waitForNative(function() {
+            return Math.abs(grid.cameraScrollX - previousScroll) > 0.5
+                && strip.scene.displayRevision !== previousRevision
+                && hover.cycles === strip.scene.cyclesAt(hover.mouseX)
+        }, 5000), "scrolling resamples the heat columns and updates the hovered value")
+        verifyProfilePixels(surface, strip)
+
+        const previousBeatWidth = grid.beatWidth
+        const beforeZoom = strip.scene.displayRevision
+        grid.handleWheel(0, 120, 0, 0, Qt.NoModifier, 0, false, heat.width / 2, 0)
+        verify(waitForNative(function() {
+            return grid.beatWidth !== previousBeatWidth && strip.scene.displayRevision !== beforeZoom
+                && hover.cycles === strip.scene.cyclesAt(hover.mouseX)
+        }, 5000), "zoom resamples the same pointer and camera projection")
+        verifyProfilePixels(surface, strip)
+
+        const palette = grid.palette
+        const originalLow = palette.polyphonyActiveFill
+        const originalWarning = palette.warningText
+        const originalError = palette.errorText
+        const beforeTheme = strip.scene.displayRevision
+        palette.polyphonyActiveFill = "#179fc4"
+        palette.warningText = "#e3a219"
+        palette.errorText = "#d13397"
+        verify(waitForNative(function() {
+            return strip.scene.displayRevision !== beforeTheme
+        }, 5000), "theme changes repaint the retained graph")
+        verifyProfilePixels(surface, strip)
+        palette.polyphonyActiveFill = originalLow
+        palette.warningText = originalWarning
+        palette.errorText = originalError
+
+        presenter.activate("view.cpu_profile")
+        tryVerify(function() { return !strip.visible && !presenter.cpuProfileVisible }, 3000,
+                  "the View action hides the strip")
+        compare(bootstrap.preferences.bool("cpuProfileStrip", true), false,
+                "the hidden profile preference is persisted")
+        presenter.activate("view.cpu_profile")
+        tryVerify(function() { return strip.visible && presenter.cpuProfileVisible }, 3000,
+                  "the View action restores the strip")
+        compare(bootstrap.preferences.bool("cpuProfileStrip", false), true,
+                "the restored profile preference is persisted")
+        const retainedHistoryCount = meter.historyCount
+        presenter.activate("view.cpu_meter")
+        tryVerify(function() { return findChild(shell, "cpuHistory") === null }, 3000,
+                  "closing the dock unloads the history graph")
+        compare(meter.historyCount, retainedHistoryCount, "unloading the graph preserves playback history")
+        presenter.activate("view.cpu_meter")
+        tryVerify(function() { return findChild(shell, "cpuHistory") !== null }, 3000,
+                  "reopening the dock remounts its retained history")
+        compare(meter.historyCount, retainedHistoryCount, "remounting does not reset playback history")
+        meter.reset()
+        compare(meter.historyCount, 0, "reset clears the ten-second history")
+        compare(meter.peakVisible, false, "reset clears the retained peak")
+        const close = findChild(shell, "shellCpuClose")
+        mouseClick(close, close.width / 2, close.height / 2)
+        tryVerify(function() { return !presenter.cpuMeterVisible }, 3000, "the panel close button hides it")
+    }
+
     function test_viewActionAndEventNavigation() {
         var presenter = createShell()
         var session = presenter.session

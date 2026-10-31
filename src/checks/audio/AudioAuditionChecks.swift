@@ -182,6 +182,7 @@ public func runAudioAuditionChecks(_ report: CheckReport) {
     checkKitAuditionSlots(report)
     checkKitKeysplitAndPsg(report)
     checkBandOccurrenceLifetimes(report)
+    checkKeyboardMembershipIndependence(report)
     checkBandLosslessPublication(report)
     checkBandPayloadTransitions(report)
     checkBandCutLifecycle(report)
@@ -601,6 +602,42 @@ private func checkBandOccurrenceLifetimes(_ report: CheckReport) {
         cppID: id, message: "rapid reentry is a real new native attack")
     rig.cover([])
     rig.expectHeld(report, id, [], "rapid reentry's final departure leaves no held voice")
+}
+
+private func checkKeyboardMembershipIndependence(_ report: CheckReport) {
+    let id = "swiftcore/AudioAudition::keyboardMembershipIndependence"
+    guard let rig = AuditionCheckEngines(capacity: 15) else {
+        report.fail(id, "engine initialization failed")
+        return
+    }
+    func keyboard(_ notes: [BandAuditionNote]) {
+        rig.audition.updateKeyboardAudition(notes)
+        rig.apply()
+    }
+    let typed = BandAuditionNote(noteID: 60, track: 1, key: 60, velocity: 90, durationSamples: .max)
+    let band = BandAuditionNote(noteID: 60, track: 0, key: 64, velocity: 41, durationSamples: .max)
+    keyboard([typed])
+    rig.cover([band])
+    rig.expectHeld(
+        report, id, [.init(90, track: 1, key: 60), .init(41, track: 0, key: 64)],
+        "a keyboard key and a band note with the same identity both sound")
+    rig.cover([])
+    rig.expectHeld(report, id, [.init(90, track: 1, key: 60)], "the band's departure leaves the keyboard's key held")
+    keyboard([typed, BandAuditionNote(noteID: 67, track: 1, key: 67, velocity: 20, durationSamples: .max)])
+    rig.expectHeld(
+        report, id, [.init(90, track: 1, key: 60), .init(20, track: 1, key: 67)],
+        "a held keyboard key never retriggers when the chord grows")
+    keyboard([])
+    rig.expectHeld(report, id, [], "the keyboard's empty membership releases every key it held")
+    keyboard([typed])
+    m4a_engine_all_sound_off(rig.main)
+    rig.audition.clearMainPreviews()
+    rig.expectHeld(report, id, [], "a transport cut silences the held key")
+    keyboard([])
+    keyboard([typed])
+    rig.expectHeld(report, id, [.init(90, track: 1, key: 60)], "a key pressed again after a cut sounds afresh")
+    keyboard([])
+    rig.expectHeld(report, id, [], "its release leaves nothing held")
 }
 
 private func checkBandLosslessPublication(_ report: CheckReport) {

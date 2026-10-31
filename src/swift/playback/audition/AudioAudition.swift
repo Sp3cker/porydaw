@@ -31,7 +31,8 @@ public final class AudioAudition {
     private var heldOccurrence: UInt64 = 0
     private var voiceKey: Int32 = -1
     private let samples = AudioSampleAudition()
-    private let band = AudioBandAudition()
+    private let band = AudioBandAudition(source: .band)
+    private let keyboard = AudioBandAudition(source: .keyboard)
     let timed = TimedAuditions()
     let voices = AudioAuditionVoices()
 
@@ -47,6 +48,11 @@ public final class AudioAudition {
     /// Publish identity-based entrances and departures from the single UI producer.
     public func updateBandAudition(_ notes: [BandAuditionNote]) {
         band.update(notes)
+    }
+
+    /// The virtual keyboard's held keys, an independent membership beside the band's.
+    public func updateKeyboardAudition(_ notes: [BandAuditionNote]) {
+        keyboard.update(notes)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
@@ -111,6 +117,7 @@ public final class AudioAudition {
         if !deferTimed {
             timed.apply(main, voices: voices, frames: frames)
             band.apply(main, voices: voices)
+            keyboard.apply(main, voices: voices)
         }
         let voice = voiceCommand.load(ordering: .acquiring)
         if voice != appliedVoice {
@@ -150,6 +157,7 @@ public final class AudioAudition {
     public func clearMainPreviews() {
         timed.clear(dropQueued: true)
         band.discardPending()
+        keyboard.discardPending()
         heldOccurrence = 0
         voices.clear()
     }

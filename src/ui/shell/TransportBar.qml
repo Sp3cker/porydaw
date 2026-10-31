@@ -67,7 +67,10 @@ Rectangle {
         interval: 100
         repeat: true
         running: bar.visible && bar.songAvailable
-        onTriggered: bar.presenter.refresh()
+        onTriggered: {
+            bar.presenter.refresh()
+            bar.shell.cpuMeter.poll()
+        }
     }
 
     RowLayout {

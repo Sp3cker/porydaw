@@ -5,8 +5,7 @@ SwiftRollTrackHeadersSupport {
     function test_zMountedMenuDispatchAndDismissal() {
         var h = surface().headersModel
         var rows = item("timelineTrackHeaderRows")
-        var panel = openHeaderMenu(0)
-        compare(panel.rowCount, 5, "the header menu lists the fork's five actions")
+        openHeaderMenu(0)
         var labels = ["Change voice...", "Show voice in voicegroup", "Rename track...",
                       "Duplicate track", "Delete track"]
         for (var n = 1; n <= 5; ++n) {

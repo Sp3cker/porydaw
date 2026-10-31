@@ -8,6 +8,7 @@ globs: "*.swift, Package.swift"
 - Access control is `private` by default. Widen deliberately. Mark classes `final` unless designed for subclassing.
 - One primary type per file. Group protocol conformances in `extension T: P { }` blocks.
 - No tiny wrappers: inline one-expression functions and computed properties unless the name is a durable domain concept, a protocol requirement, or a test seam.
+- Declare helper functions and helper types above their first call site (bottom-up for helpers; `init` and route registration such as `boot(routes:)` may remain at the top of the type).
 
 ## Optionals and errors
 - Handle absence with `guard let` early exits. The happy path is not indented.

@@ -209,7 +209,7 @@ public final class TrackHeadersPresenter {
         nextEnds.reserveCapacity(trackCount)
         let contextTick = playing ? playheadTick : session.editCursor
         for track in 0..<trackCount {
-            let span = resolvedProgramSpan(track: track, session: session, tick: contextTick)
+            let span = Self.resolvedProgramSpan(track: track, session: session, tick: contextTick)
             nextPrograms.append(span.program)
             nextStarts.append(span.start)
             nextEnds.append(span.end)
@@ -289,7 +289,7 @@ public final class TrackHeadersPresenter {
             {
                 continue
             }
-            let span = resolvedProgramSpan(track: track, session: session, tick: contextTick)
+            let span = Self.resolvedProgramSpan(track: track, session: session, tick: contextTick)
             resolvedProgramStarts[track] = span.start
             resolvedProgramEnds[track] = span.end
             guard resolvedPrograms[track] != span.program else { continue }

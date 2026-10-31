@@ -66,23 +66,11 @@ Item {
 
     // Window-scope shortcuts get native Qt ShortcutOverride arbitration; editor
     // strokes stay on the focused tab's raw key path.
-    Repeater {
-        model: content.shell.windowActionIds
-        delegate: Item {
-            id: shortcutDelegate
-            required property string modelData
-            final readonly property ShellActionState actionState: content.shell.action(modelData)
-            width: 0
-            height: 0
-            Shortcut {
-                objectName: "shellShortcut_" + shortcutDelegate.modelData
-                sequences: content.shell.actionSequences(shortcutDelegate.modelData)
-                context: Qt.WindowShortcut
-                // A modeless studio owns its own window shortcuts while active.
-                enabled: shortcutDelegate.actionState.enabled && content.root.active && content.root.activeFocusItem !== null
-                onActivated: content.shell.activate(shortcutDelegate.modelData)
-            }
-        }
+    // A modeless studio owns its own window shortcuts while active.
+    WindowActionShortcuts {
+        shell: content.shell
+        namePrefix: "shellShortcut_"
+        available: content.root.active && content.root.activeFocusItem !== null
     }
 
     ShellMenuBar {
@@ -154,6 +142,11 @@ Item {
         hostWindow: content.root
         applicationSession: content.shell.session
         colors: content.root.colors
+    }
+    VirtualKeyboardHost {
+        presenter: content.shell.session.virtualKeyboard
+        shell: content.shell
+        hostWindow: content.root
     }
     WavExportSurface {
         presenter: content.shell.session.wavExportPresenter()

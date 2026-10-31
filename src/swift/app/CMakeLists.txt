@@ -47,6 +47,9 @@ add_library(PorydawApp STATIC
     kitstudio/KitLeaseReader.swift
     kitstudio/KitEditLoader.swift
     audio/PolyphonyPanelPresenter.swift
+    audio/CpuMeterPresenter.swift
+    audio/CpuGraphScene.swift
+    audio/CpuProfileJob.swift
     ApplicationSession.swift
     ApplicationSession+Tabs.swift
     ApplicationSession+Close.swift
@@ -144,6 +147,10 @@ add_library(PorydawApp STATIC
     headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
+    keyboard/VirtualKeyboardHolders.swift
+    keyboard/VirtualKeyboardKeymap.swift
+    keyboard/VirtualKeyboardLayout.swift
+    keyboard/VirtualKeyboardPresenter.swift
     shell/ShellPresenter.swift
     shell/ShellActionCatalog.swift
     shell/ShellPresenter+ActionPolicy.swift
@@ -241,6 +248,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift
+    audio/AudioCpuTelemetry.swift
     audio/ResonanceSuppression.swift
     audio/Metronome.swift
     export/WavExport.swift

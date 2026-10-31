@@ -10,9 +10,172 @@ import NativeDisplayList
 private let displayListRoundTripID = "displaylist/DisplayListCheck::roundTrip"
 private let displayListRejectsID = "displaylist/DisplayListCheck::rejects"
 
+@MainActor
+private func cpuGraphRects(_ scene: CpuGraphScene) -> [PdDlRect] {
+    let data = scene.displayList(list: 0)
+    return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [PdDlRect] in
+        var view = PdDlView()
+        guard pd_dl_decode(raw.baseAddress, raw.count, &view), let header = view.header else { return [] }
+        return (0..<Int(header.pointee.rectCount)).map { (index: Int) -> PdDlRect in view.rects[index] }
+    }
+}
+
+@MainActor
+private func cpuGraphProjectionOutcomes() -> [(Bool, String)] {
+    let meter = CpuMeterPresenter()
+    meter.profilePoints = [
+        CpuProfilePoint(tick: 0, total: 10_000), CpuProfilePoint(tick: 1, total: 90_000),
+        CpuProfilePoint(tick: 2, total: -1), CpuProfilePoint(tick: 4, total: 30_000),
+        CpuProfilePoint(tick: 5, total: 60_000), CpuProfilePoint(tick: 6, total: 83_776),
+        CpuProfilePoint(tick: 7, total: 83_777),
+    ]
+    meter.profileEndTick = 8
+    let palette = GridPalette()
+    palette.polyphonyActiveFill = PaletteMath.qmlColor(argb: 0xFF20_8040)
+    palette.warningText = PaletteMath.qmlColor(argb: 0xFF60_4000)
+    let first = CpuGraphScene()
+    first.meter = meter
+    first.palette = palette
+    first.updateProfile(
+        width: 4, height: 10,
+        scrollX: 0, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    var outcomes: [(Bool, String)] = [
+        (
+            first.cyclesAt(x: 0.5) == 10_000 && first.cyclesAt(x: 1.5) == 90_000,
+            "adjacent spans exclude the frame exactly at their right edge"
+        ),
+        (
+            first.cyclesAt(x: 2.5) == -1 && first.cyclesAt(x: 3.5) == -1,
+            "unavailable frames remain gaps until the next frame"
+        ),
+    ]
+    first.updateProfile(
+        width: 1, height: 10,
+        scrollX: 0, beatWidth: 0.5, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append((first.cyclesAt(x: 0.5) == 90_000, "downsampling retains a narrow peak inside a pixel span"))
+    let second = CpuGraphScene()
+    second.meter = meter
+    second.palette = palette
+    second.updateProfile(
+        width: 2, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            second.cyclesAt(x: 0.5) == 30_000 && second.cyclesAt(x: 1.5) == 60_000
+                && first.cyclesAt(x: 0.5) == 90_000,
+            "two editor scenes retain independent camera and pointer projections"
+        ))
+    second.palette = nil
+    second.updateProfile(
+        width: 2, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            second.cyclesAt(x: 0.5) == -1 && cpuGraphRects(second).isEmpty,
+            "a missing palette clears previously painted and hovered profile costs"
+        ))
+    second.palette = palette
+    second.updateProfile(
+        width: 2, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            second.cyclesAt(x: 0.5) == 30_000,
+            "restoring the palette rebuilds the prior camera projection"
+        ))
+    first.updateProfile(
+        width: 4, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 2)
+    let rects = cpuGraphRects(first)
+    outcomes.append(
+        (
+            first.cyclesAt(x: 0.25) == 30_000 && first.cyclesAt(x: 0.75) == 30_000
+                && first.cyclesAt(x: 1.25) == 60_000 && first.cyclesAt(x: 3.75) == 83_777,
+            "high-DPI spans extend each frame to its next tick"
+        ))
+    outcomes.append(
+        (
+            rects.count == 4 && rects[2].argb == PaletteMath.argb(palette.warningText)
+                && rects[3].argb == PaletteMath.argb(palette.errorText)
+                && rects[0].y == 0.5 && rects[0].h == 9,
+            "packed geometry preserves VBlank threshold colors and physical-pixel insets"
+        ))
+    outcomes.append(
+        (
+            rects.count == 4 && rects[1].argb == 0xFF50_5010,
+            "a frame exactly at budget retains the 75-percent warning warmth over the active fill"
+        ))
+    palette.errorText = PaletteMath.qmlColor(argb: 0xFF12_3456)
+    first.updateProfile(
+        width: 4, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 2)
+    let recolored = cpuGraphRects(first)
+    outcomes.append(
+        (
+            recolored.last?.argb == 0xFF12_3456 && first.cyclesAt(x: 3.75) == 83_777,
+            "theme changes repaint without changing pointer costs"
+        ))
+    first.updateProfile(
+        width: 4, height: 10,
+        scrollX: -2, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            first.cyclesAt(x: 0.5) == -1 && first.cyclesAt(x: 1.5) == -1
+                && first.cyclesAt(x: 2.5) == 10_000,
+            "pre-song spans remain empty at the first-frame boundary"
+        ))
+    first.updateProfile(
+        width: 4, height: 10,
+        scrollX: 8, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            first.cyclesAt(x: 0) == -1 && first.cyclesAt(x: 4) == -1 && cpuGraphRects(first).isEmpty,
+            "the profile end and pointer right edge are exclusive"
+        ))
+    meter.profilePoints.removeAll()
+    meter.profileDataRevision &+= 1
+    second.updateProfile(
+        width: 2, height: 10,
+        scrollX: 4, beatWidth: 1, ticksPerBeat: 1, devicePixelRatio: 1)
+    outcomes.append(
+        (
+            second.cyclesAt(x: 0.5) == -1 && cpuGraphRects(second).isEmpty,
+            "invalidating a profile clears its previous painted and hovered costs"
+        ))
+    meter.historyFrames = [10_000, -1, 90_000]
+    let history = CpuGraphScene()
+    history.meter = meter
+    history.palette = palette
+    history.updateHistory(width: 598, height: 140)
+    let bars = cpuGraphRects(history)
+    outcomes.append(
+        (
+            bars.count == 2 && bars[0].x == 595 && bars[1].x == 597
+                && bars[1].argb == 0xFF12_3456
+                && abs(bars[0].h - 140 * 10_000 / (83_776 * 1.4)) < 1e-9,
+            "history stays right-aligned, scaled and severity-colored across unavailable frames"
+        ))
+    history.meter = nil
+    history.updateHistory(width: 598, height: 140)
+    outcomes.append(
+        (
+            cpuGraphRects(history).isEmpty,
+            "a missing meter clears the previously painted history"
+        ))
+    return outcomes
+}
+
+private func cpuGraphProjection(_ report: CheckReport) {
+    // The core-check envelope invokes every suite synchronously on Qt's main thread.
+    let outcomes = MainActor.assumeIsolated { cpuGraphProjectionOutcomes() }
+    let check = report.scoped(cppID: "displaylist/DisplayListCheck::cpuGraphProjection")
+    for (passed, message) in outcomes { check.expect(passed, message: message) }
+}
+
 public func runDisplayListChecks(_ report: CheckReport) {
     displayListRoundTrip(report)
     displayListRejects(report)
+    cpuGraphProjection(report)
 }
 
 // MARK: - Fixture

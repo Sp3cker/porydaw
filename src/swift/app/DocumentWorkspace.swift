@@ -21,6 +21,8 @@ public final class DocumentWorkspace {
         public var publicationFailed: (String) -> Void
         public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
         public var transportPlayingChanged: (Bool) -> Void
+        /// The selected track, its name, voice or the edit cursor moved.
+        public var liveTargetChanged: () -> Void
 
         public init(
             addTrackVoiceRequested: @escaping () -> Void = {},
@@ -32,7 +34,8 @@ public final class DocumentWorkspace {
             sessionStateChanged: @escaping () -> Void,
             publicationFailed: @escaping (String) -> Void,
             timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void,
-            transportPlayingChanged: @escaping (Bool) -> Void = { _ in }
+            transportPlayingChanged: @escaping (Bool) -> Void = { _ in },
+            liveTargetChanged: @escaping () -> Void = {}
         ) {
             self.addTrackVoiceRequested = addTrackVoiceRequested
             self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
@@ -44,6 +47,7 @@ public final class DocumentWorkspace {
             self.sessionStateChanged = sessionStateChanged
             self.publicationFailed = publicationFailed
             self.transportPlayingChanged = transportPlayingChanged
+            self.liveTargetChanged = liveTargetChanged
         }
     }
 
@@ -222,6 +226,7 @@ public final class DocumentWorkspace {
     public func activate() {
         guard !isActive, !isTornDown else { return }
         isActive = true
+        audio.setCpuTrackBudget(session.document.trackBudget)
         audio.bind(
             timeline: session.timeline, bank: session.bankLease,
             config: session.document.state.config)
@@ -555,6 +560,9 @@ public final class DocumentWorkspace {
         }
         if !change.domains.intersection(applicationStateDomains).isEmpty {
             callbacks.sessionStateChanged()
+        }
+        if isActive && !change.domains.intersection([.document, .selection, .cursor, .bank]).isEmpty {
+            callbacks.liveTargetChanged()
         }
     }
 

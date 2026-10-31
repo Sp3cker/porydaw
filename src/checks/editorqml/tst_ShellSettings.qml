@@ -183,6 +183,32 @@ ShellLaneSupport {
         second.destroy()
         nativeSettings.setString("engine.pcmMixer", "sappy")
     }
+    function test_cpuBudgetPersistsWithoutRestartOrApply() {
+        nativeSettings.setInt("engine.cpuBudgetCycles", 60000)
+        const presenter = createShell()
+        const model = presenter.settingsStore
+        compare(model.cpuBudgetCycles, 60000)
+        compare(model.cpuBudgetPercent, 72)
+        presenter.activate("edit.engine_settings")
+        tryCompare(dialog(), "visible", true)
+        const field = findChild(dialog(), "engine.cpu-budget")
+        const caption = findChild(dialog(), "engine.cpu-budget-percent")
+        verify(field !== null && caption !== null, "CPU budget controls are available")
+        compare(field.from, 1000)
+        compare(field.to, 280896)
+        compare(field.stepSize, 1000)
+        compare(caption.text, "72% of the VBlank window")
+        model.changeCpuBudgetCycles(41888)
+        tryCompare(caption, "text", "50% of the VBlank window")
+        compare(nativeSettings.int("engine.cpuBudgetCycles", -1), 41888)
+        model.changeCpuBudgetCycles(999999)
+        compare(model.cpuBudgetCycles, 280896)
+        model.changeCpuBudgetCycles(0)
+        compare(model.cpuBudgetCycles, 1000)
+        model.restoreDefaults()
+        compare(model.cpuBudgetCycles, 60000)
+        compare(nativeSettings.int("engine.cpuBudgetCycles", -1), 60000)
+    }
     function test_reopeningDiscardsCancelledDraft() {
         const presenter = createShell()
         const model = presenter.settingsStore
