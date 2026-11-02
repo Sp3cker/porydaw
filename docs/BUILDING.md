@@ -427,6 +427,12 @@ fourteen sites are safe; the one exception is the sample picker's bulk PCM copy
 C-boundary handoffs (`ToneData*` to `m4a_engine_set_voicegroup`, decoder
 outputs, `free`, POSIX syscalls) are exempt and marked in code.
 
+Split Studio's existing-kit edit path reads one `KitEditValue` and passes it to
+`KitEditLoader` for asset resolution; that same snapshot remains the save
+expectation. Do not re-read the kit while preparing its draft. Exercise drumkit
+and keysplit edit/save flows with
+`uv run --no-sync dev checks:shell --release --filter shell-edit-in-studio`.
+
 ## Verifying a build-system change
 
 1. Idle machine. Builds and benchmarks taken during or right after another build are

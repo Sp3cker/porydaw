@@ -3,7 +3,7 @@ import PorydawKitStudio
 import PorydawSample
 import PorydawVoicegroup
 
-/// Resolves committed mappings and audition assets without changing the current window.
+/// Resolves audition assets from the caller's captured kit without changing the current window.
 @MainActor
 enum KitEditLoader {
     struct LoadedKit {
@@ -18,9 +18,8 @@ enum KitEditLoader {
     }
 
     static func load(
-        service: ProjectService, projectRoot: String, lease: ProjectBankLease, slot: Int, parent: BankVoice
+        service: ProjectService, projectRoot: String, lease: ProjectBankLease, kit: KitEditValue, parent: BankVoice
     ) async throws -> LoadedKit {
-        let kit = try await service.readKit(lease: lease, slot: slot)
         try Task.checkCancellation()
         guard kit.parent == parent else {
             throw ProjectServiceError.operationFailed("Split Studio: the selected voice changed while loading.")

@@ -118,7 +118,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
             do {
                 let expected = try await service.readKit(lease: lease, slot: slot)
                 let loaded = try await KitEditLoader.load(
-                    service: service, projectRoot: session.projectRoot, lease: lease, slot: slot, parent: parent)
+                    service: service, projectRoot: session.projectRoot, lease: lease, kit: expected, parent: parent)
                 guard let self, self.current(generation: generation, service: service),
                     session.voiceList.voicegroup === group, session.voiceList.editingEnabled,
                     !self.orphanCleanupBusy, !self.orphanCleanupOpen
