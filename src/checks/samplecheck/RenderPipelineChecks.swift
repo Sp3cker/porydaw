@@ -50,6 +50,18 @@ private func renderDeterminism(_ report: CheckReport) {
             && firstRender.size == secondRender.size && firstRender.loopStart == secondRender.loopStart
             && firstRender.pitchFraction == secondRender.pitchFraction,
         message: "identical source and params render identical bytes and metadata")
+    check.expect(
+        firstRender == secondRender && firstRender.pcmRevision != secondRender.pcmRevision,
+        message: "independent equal renders have distinct PCM identities without changing value equality")
+    var retuned = firstRender
+    retuned.freq &+= 1
+    check.expect(
+        retuned.pcmRevision == firstRender.pcmRevision,
+        message: "playback metadata changes retain PCM identity")
+    retuned.s8[0] = retuned.s8[0] == 0 ? 1 : 0
+    check.expect(
+        retuned.pcmRevision != firstRender.pcmRevision && retuned.s8 != firstRender.s8,
+        message: "in-place PCM edits invalidate shared playback storage without changing the original")
     var changed = params
     changed.baseKey = 60
     first.setParams(changed)

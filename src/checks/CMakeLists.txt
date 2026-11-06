@@ -266,6 +266,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/EditorPresenterChecks.swift
         samplecheck/LibraryModelChecks.swift
         samplecheck/LoopToolsChecks.swift
+        samplecheck/PcmAuditionPlayerChecks.swift
         samplecheck/ProvenanceChecks.swift
         samplecheck/RegistrationChecks.swift
         samplecheck/RenderPipelineChecks.swift

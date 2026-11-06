@@ -46,6 +46,8 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var orphanCleanupTask: Task<Void, Never>?
     private var orphanCleanupCompletion: (() -> Void)?
     private let previewPreparation: SampleSourcePreparation
+    private var kitAuditionRequest: UInt64?
+    private weak var kitAuditionAudio: NativeAudio?
 
     @QtIgnored public init(session: ApplicationSession) {
         self.session = session
@@ -143,6 +145,12 @@ public final class KitStudioWorkflow: QmlUncreatable {
             next.presenter.waveform?.setPlayhead(frame: sourceFrame)
             self.auditionPlaying = next.pcm.playing
         }
+        next.pcm.onTerminated = { [weak self, weak next] in
+            guard let self, let next, self.window === next else { return }
+            next.playingSlice = nil
+            next.presenter.waveform?.setPlayhead(frame: nil)
+            self.auditionPlaying = false
+        }
         replaceWindow(next)
         if loaded == nil { presenter.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: "new_kit")) }
         restoreGeometry()
@@ -169,9 +177,12 @@ public final class KitStudioWorkflow: QmlUncreatable {
             return self.validateVoicegroupName(name, footprint: footprint)
         }
         effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
-            guard let self else { return false }
+            guard let self, let audio = self.session?.audio else { return false }
             self.stopAudition()
-            return self.session?.audio?.auditionKit(tone, key: key) ?? false
+            let request = audio.beginSampleRequest()
+            self.kitAuditionRequest = request
+            self.kitAuditionAudio = audio
+            return audio.auditionKit(request: request, tone, key: key)
         }
         effects.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
         return effects
@@ -347,7 +358,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public func stopAudition() {
         previewPreparation.cancel()
         window?.pcm.stop(owner: self)
-        session?.audio?.auditionSampleOff()
+        if let request = kitAuditionRequest { kitAuditionAudio?.auditionSampleOff(request: request) }
+        kitAuditionRequest = nil
+        kitAuditionAudio = nil
         window?.presenter.waveform?.setPlayhead(frame: nil)
         window?.playingSlice = nil
         auditionPlaying = false

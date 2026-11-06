@@ -150,9 +150,11 @@ extension ApplicationSession {
                 symbol: String, kind: VoiceListAuditionKind, adsr: VoiceListAdsr
             ) in
             guard let self, let service = self.catalogService,
-                let group = self.voiceList.voicegroup, self.voiceList.editingEnabled
+                let group = self.voiceList.voicegroup, self.voiceList.editingEnabled, let audio = self.audio
             else { return }
-            self.audio?.auditionSampleOff()
+            let request = audio.beginSampleRequest()
+            self.pickerAuditionRequest = request
+            self.pickerAuditionAudio = audio
             self.pickerAuditionRevision += 1
             let revision = self.pickerAuditionRevision
             Task { [weak self, weak group] in
@@ -160,8 +162,8 @@ extension ApplicationSession {
                 guard let self, let group, self.voiceList.voicegroup === group,
                     self.voiceList.editingEnabled,
                     self.catalogService === service,
-                    self.pickerAuditionRevision == revision,
-                    let audio = self.audio, let sound
+                    !self.isDisposed, self.pickerAuditionRevision == revision,
+                    self.audio === audio, audio.sampleRequestIsCurrent(request), let sound
                 else { return }
                 let chosen = AudioADSR(
                     attack: UInt8(truncatingIfNeeded: adsr.attack),
@@ -170,12 +172,18 @@ extension ApplicationSession {
                     release: UInt8(truncatingIfNeeded: adsr.release))
                 switch sound {
                 case .sample(let bytes, let frequency, let loopStart, let looped, let toneKey, let envelope):
+                    guard let pcm = await SampleAuditionPcm.prepare(samples: bytes),
+                        !self.isDisposed, self.voiceList.voicegroup === group,
+                        self.voiceList.editingEnabled, self.catalogService === service,
+                        self.pickerAuditionRevision == revision, self.audio === audio,
+                        audio.sampleRequestIsCurrent(request)
+                    else { return }
                     let envelope =
                         envelope.map {
                             AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
                         } ?? chosen
                     _ = audio.auditionSample(
-                        samples: bytes, frequency: frequency,
+                        request: request, pcm: pcm, frequency: frequency,
                         loopStart: loopStart, looped: looped,
                         key: 60, adsr: envelope, toneKey: toneKey)
                 case .wave(let bytes, let envelope):
@@ -183,13 +191,18 @@ extension ApplicationSession {
                         envelope.map {
                             AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
                         } ?? chosen
-                    _ = audio.auditionWave(wave16: bytes, key: 60, adsr: envelope)
+                    _ = audio.auditionWave(request: request, wave16: bytes, key: 60, adsr: envelope)
                 }
             }
         }
         voiceList.onSampleAuditionStopRequested = { [weak self] in
-            self?.pickerAuditionRevision += 1
-            self?.audio?.auditionSampleOff()
+            guard let self else { return }
+            self.pickerAuditionRevision += 1
+            if let request = self.pickerAuditionRequest {
+                self.pickerAuditionAudio?.auditionSampleOff(request: request)
+            }
+            self.pickerAuditionRequest = nil
+            self.pickerAuditionAudio = nil
         }
     }
 

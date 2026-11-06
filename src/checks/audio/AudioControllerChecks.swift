@@ -3,7 +3,7 @@ import PorydawApp
 import PorydawAppAudio
 import PorydawCore
 import PorydawDocument
-import PorydawPlayback
+@testable import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawProject
 import PorydawVoicegroup
@@ -1131,8 +1131,13 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         message: "released preview and muted main drain to silence")
 
     let sample = (0..<64).map { Int8((100 * sin(Double($0) * 2 * .pi / 64)).rounded()) }
+    guard let pcm = SampleAuditionPcm(samples: sample) else {
+        report.fail("swiftcore/AudioController::samplePreviewIsolation", "sample storage preparation failed")
+        return
+    }
+    let sampleRequest = audio.audition.beginSampleRequest()
     let accepted = audio.audition.publishSample(
-        samples: sample, frequency: 8363 * 1024,
+        request: sampleRequest, pcm: pcm, frequency: 8363 * 1024,
         loopStart: 0, looped: true, key: 60,
         adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60)
     report.expect(
@@ -1150,15 +1155,16 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     report.expectEqual(
         expected: sampleCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", what: "sample preview does not park sequence")
-    audio.audition.sampleOff()
+    audio.audition.sampleOff(request: sampleRequest)
     let sampleReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(sampleReleased.suffix(4096)) <= 1 / 32768,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sampleOff silences the looped sample")
 
     let wave = [UInt8](repeating: 0xFF, count: 8) + [UInt8](repeating: 0, count: 8)
+    let waveRequest = audio.audition.beginSampleRequest()
     let waveAccepted = audio.audition.publishWave(
-        wave16: wave, key: 60,
+        request: waveRequest, wave16: wave, key: 60,
         adsr: AudioADSR(attack: 7, decay: 0, sustain: 15, release: 0))
     report.expect(
         waveAccepted, cppID: "swiftcore/AudioController::wavePreviewIsolation", message: "wave publication accepted")
@@ -1167,7 +1173,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         audioControllerCheckPeak(waved.suffix(4096)) > 0.01 && audio.activeCgbChannels == 0,
         cppID: "swiftcore/AudioController::wavePreviewIsolation",
         message: "CGB wave sounds exclusively through preview engine")
-    audio.audition.sampleOff()
+    audio.audition.sampleOff(request: waveRequest)
     let waveReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(waveReleased.suffix(4096)) <= 1 / 32768,

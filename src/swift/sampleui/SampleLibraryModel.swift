@@ -127,6 +127,7 @@ public final class SampleLibraryModel: QmlUncreatable {
         let paths = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
         roots = paths.map { FolderNode(path: $0, depth: 0, rootPath: $0) }
         previewPlayer.onPlayhead = { [weak self] (frame: Int?) in self?.previewPlayheadMoved(frame) }
+        previewPlayer.onTerminated = { [weak self] in self?.setPreviewingPath(path: "") }
         persistRoots()
         navigate(to: roots.first)
     }
@@ -260,8 +261,8 @@ public final class SampleLibraryModel: QmlUncreatable {
         previewPlayer.play(
             owner: self, rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
         previewFrames = max(1, rendered.s8.count)
-        setPreviewingPath(path: path)
-        previewPlayheadMoved(0)
+        setPreviewingPath(path: previewPlayer.playing ? path : "")
+        previewPlayheadMoved(previewPlayer.playing ? 0 : nil)
     }
 
     public func tickPreview() { previewPlayer.tick() }

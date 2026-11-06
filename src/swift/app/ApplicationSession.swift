@@ -127,6 +127,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var pickerAuditionRevision = 0
     @QtIgnored
+    var pickerAuditionRequest: UInt64?
+    @QtIgnored
+    weak var pickerAuditionAudio: NativeAudio?
+    @QtIgnored
     let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every

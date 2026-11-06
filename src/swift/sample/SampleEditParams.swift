@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 public struct SampleEditParams: Sendable, Equatable {
     public enum NormalizeMode: Int, Sendable { case auto, looped, oneShot, off }
@@ -24,7 +25,13 @@ public struct SampleEditParams: Sendable, Equatable {
 }
 
 public struct ProcessedSample: Sendable, Equatable {
-    public var s8: [Int8] = []
+    private static let pcmRevisions = Atomic<UInt64>(0)
+    public private(set) var pcmRevision: UInt64 = 0
+    public var s8: [Int8] = [] {
+        didSet {
+            pcmRevision = s8.isEmpty ? 0 : Self.pcmRevisions.wrappingAdd(1, ordering: .relaxed).newValue
+        }
+    }
     public var freq: UInt32 = 0
     public var loopStart: UInt32 = 0
     public var size: UInt32 = 0
@@ -40,4 +47,13 @@ public struct ProcessedSample: Sendable, Equatable {
     public var preview: [Float] = []
 
     public init() {}
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.s8 == rhs.s8 && lhs.freq == rhs.freq && lhs.loopStart == rhs.loopStart
+            && lhs.size == rhs.size && lhs.looped == rhs.looped
+            && lhs.declaredRate == rhs.declaredRate && lhs.unityNote == rhs.unityNote
+            && lhs.pitchFraction == rhs.pitchFraction && lhs.outputRate == rhs.outputRate
+            && lhs.effectiveRate == rhs.effectiveRate && lhs.normalizeGain == rhs.normalizeGain
+            && lhs.seam == rhs.seam && lhs.warnings == rhs.warnings && lhs.preview == rhs.preview
+    }
 }

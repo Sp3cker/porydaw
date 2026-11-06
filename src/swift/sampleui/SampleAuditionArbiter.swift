@@ -3,18 +3,21 @@ import PorydawPlayback
 
 @MainActor
 public protocol SampleAuditionOutput: AnyObject {
+    func beginSampleRequest() -> UInt64
+    func sampleRequestIsCurrent(_ request: UInt64) -> Bool
     func auditionSample(
-        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
     ) -> Bool
-    func auditionSampleOff()
+    func auditionSampleOff(request: UInt64)
 }
 
-/// Coordinates ownership of the shared sample audition output.
+/// Coordinates ownership while sample preparation and native slot retirement complete.
 @MainActor
 public final class SampleAuditionArbiter {
     private let output: (any SampleAuditionOutput)?
     private weak var activeOwner: AnyObject?
+    private var activeRequest: UInt64?
 
     public init(output: (any SampleAuditionOutput)?) {
         self.output = output
@@ -22,28 +25,36 @@ public final class SampleAuditionArbiter {
 
     public var isAvailable: Bool { output != nil }
 
-    /// Releases the preceding audition before attempting to sound a new owner's sample.
-    /// A failed publish leaves the lane unowned.
-    public func publish(
-        owner: AnyObject, samples: [Int8], frequency: UInt32, loopStart: UInt32,
-        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
-    ) -> Bool {
-        activeOwner = nil
-        guard let output else { return false }
-        output.auditionSampleOff()
-        guard
-            output.auditionSample(
-                samples: samples, frequency: frequency, loopStart: loopStart,
-                looped: looped, key: key, adsr: adsr, toneKey: toneKey)
-        else { return false }
+    /// A new request immediately silences the preceding owner, before any preparation.
+    func begin(owner: AnyObject) -> UInt64? {
+        guard let output else { return nil }
+        let request = output.beginSampleRequest()
         activeOwner = owner
-        return true
+        activeRequest = request
+        return request
     }
 
-    /// Silences the lane only when the caller still owns its current audition.
+    func isCurrent(owner: AnyObject, request: UInt64) -> Bool {
+        activeOwner === owner && activeRequest == request && output?.sampleRequestIsCurrent(request) == true
+    }
+
+    /// Busy native storage stays silent and reserved for this request's next retry.
+    func publish(
+        owner: AnyObject, request: UInt64, pcm: SampleAuditionPcm,
+        frequency: UInt32, loopStart: UInt32, looped: Bool,
+        key: UInt8, adsr: AudioADSR, toneKey: UInt8
+    ) -> Bool {
+        guard isCurrent(owner: owner, request: request), let output else { return false }
+        return output.auditionSample(
+            request: request, pcm: pcm, frequency: frequency, loopStart: loopStart,
+            looped: looped, key: key, adsr: adsr, toneKey: toneKey)
+    }
+
+    /// Stops only the caller's current reservation, including unfinished preparation.
     public func stop(owner: AnyObject) {
-        guard activeOwner === owner else { return }
+        guard let request = activeRequest, isCurrent(owner: owner, request: request) else { return }
         activeOwner = nil
-        output?.auditionSampleOff()
+        activeRequest = nil
+        output?.auditionSampleOff(request: request)
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
-import PorydawPlayback
+@testable import PorydawPlayback
 import PorydawSample
 @testable import PorydawSampleUI
 
@@ -9,14 +9,21 @@ import PorydawSample
 
 @MainActor
 private final class BusyAuditionOutput: SampleAuditionOutput {
+    private let audition = AudioAudition()
+    func beginSampleRequest() -> UInt64 {
+        sounding = false
+        return audition.beginSampleRequest()
+    }
+    func sampleRequestIsCurrent(_ request: UInt64) -> Bool { audition.sampleRequestIsCurrent(request) }
     var accepts = true
     private(set) var sounding = false
     private(set) var busyAttemptWasSilent = false
 
     func auditionSample(
-        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
     ) -> Bool {
+        guard sampleRequestIsCurrent(request) else { return false }
         guard accepts else {
             busyAttemptWasSilent = !sounding
             return false
@@ -25,7 +32,11 @@ private final class BusyAuditionOutput: SampleAuditionOutput {
         return true
     }
 
-    func auditionSampleOff() { sounding = false }
+    func auditionSampleOff(request: UInt64) {
+        guard sampleRequestIsCurrent(request) else { return }
+        audition.sampleOff(request: request)
+        sounding = false
+    }
 }
 
 private final class AuditionOwner {}
@@ -36,10 +47,7 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
     let unavailable = SampleAuditionArbiter(output: nil)
     let owner = AuditionOwner()
     ownership.expect(
-        !unavailable.isAvailable
-            && !unavailable.publish(
-                owner: owner, samples: [64], frequency: 22_050, loopStart: 0,
-                looped: false, key: 60, adsr: AudioADSR(), toneKey: 60),
+        !unavailable.isAvailable && unavailable.begin(owner: owner) == nil,
         message: "Unavailable lane refuses audition")
     unavailable.stop(owner: owner)
 
@@ -48,28 +56,28 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
     let displaced = AuditionOwner()
     let rejected = AuditionOwner()
     let successor = AuditionOwner()
-    let pcm: [Int8] = [64, -64]
+    guard let pcm = SampleAuditionPcm(samples: [64, -64]) else {
+        ownership.expect(false, message: "audition fixture has PCM storage")
+        return
+    }
     let adsr = AudioADSR()
-    ownership.expect(
-        busyLane.publish(
-            owner: displaced, samples: pcm, frequency: 22_050,
+    func publish(_ owner: AuditionOwner) -> Bool {
+        guard let request = busyLane.begin(owner: owner) else { return false }
+        return busyLane.publish(
+            owner: owner, request: request, pcm: pcm, frequency: 22_050,
             loopStart: 0, looped: true, key: 60, adsr: adsr, toneKey: 60)
-            && busyOutput.sounding,
+    }
+    ownership.expect(
+        publish(displaced) && busyOutput.sounding,
         message: "First owner sounds on an available lane")
     busyOutput.accepts = false
     ownership.expect(
-        !busyLane.publish(
-            owner: rejected, samples: pcm, frequency: 22_050,
-            loopStart: 0, looped: true, key: 60, adsr: adsr, toneKey: 60)
-            && !busyOutput.sounding && busyOutput.busyAttemptWasSilent,
+        !publish(rejected) && !busyOutput.sounding && busyOutput.busyAttemptWasSilent,
         message: "Busy replacement releases the prior audition")
     busyLane.stop(owner: displaced)
     busyOutput.accepts = true
     ownership.expect(
-        busyLane.publish(
-            owner: successor, samples: pcm, frequency: 22_050,
-            loopStart: 0, looped: true, key: 60, adsr: adsr, toneKey: 60)
-            && busyOutput.sounding,
+        publish(successor) && busyOutput.sounding,
         message: "Lane recovers after a Busy publish")
     busyLane.stop(owner: rejected)
     ownership.expect(busyOutput.sounding, message: "Rejected owner cannot stop a later audition")
@@ -98,10 +106,18 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
             let rms = sqrt(samples.reduce(0.0) { $0 + Double($1) * Double($1) } / Double(samples.count))
             return peak >= 0.01 && rms >= 0.001
         }
-        first.toggle()
+        try awaitAuditionStart(first) { first.toggle() }
         audio.expect(renderIsAudible(), message: "First owner produces audible PCM")
-        second.toggle()
+        try awaitAuditionStart(second) { second.toggle() }
         audio.expect(renderIsAudible(), message: "New owner replaces the audible audition")
+        first.tick()
+        audio.expect(
+            !first.playing && first.playText == "Listen" && second.playing && renderIsAudible(),
+            message: "displacement clears the editor holder's playing state without silencing its successor")
+        first.setAuditionKey(key: 61)
+        audio.expect(
+            !first.playing && first.playText == "Listen" && second.playing && renderIsAudible(),
+            message: "a displaced editor's key change cannot revive its stopped player")
         first.close()
         audio.expect(
             !first.available && !first.playing && renderIsAudible(),
@@ -118,23 +134,46 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
 
         let rendered = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
             .processed
+        guard let prepared = SampleAuditionPcm(samples: rendered.s8) else { return }
+        guard let obsolete = lane.begin(owner: owner),
+            let replacement = lane.begin(owner: owner)
+        else { return }
+        audio.expect(
+            !lane.publish(
+                owner: owner, request: obsolete, pcm: prepared, frequency: rendered.freq,
+                loopStart: rendered.loopStart, looped: rendered.looped,
+                key: 60, adsr: adsr, toneKey: 60),
+            message: "an older preparation cannot publish into a newer request from the same owner")
+        lane.stop(owner: owner)
+        audio.expect(
+            !lane.publish(
+                owner: owner, request: replacement, pcm: prepared, frequency: rendered.freq,
+                loopStart: rendered.loopStart, looped: rendered.looped,
+                key: 60, adsr: adsr, toneKey: 60) && !renderIsAudible(),
+            message: "stopping a pending request prevents later preparation from sounding")
         weak var expired: AuditionOwner?
         do {
             let temporary = AuditionOwner()
             expired = temporary
+            let request = lane.begin(owner: temporary)
             audio.expect(
-                lane.publish(
-                    owner: temporary, samples: rendered.s8, frequency: rendered.freq,
-                    loopStart: rendered.loopStart, looped: rendered.looped, key: 60,
-                    adsr: adsr, toneKey: 60),
+                request.map {
+                    lane.publish(
+                        owner: temporary, request: $0, pcm: prepared, frequency: rendered.freq,
+                        loopStart: rendered.loopStart, looped: rendered.looped,
+                        key: 60, adsr: adsr, toneKey: 60)
+                } == true,
                 message: "Temporary owner starts an audition")
         }
         audio.expect(expired == nil, message: "Audition ownership does not retain an expired owner")
+        let request = lane.begin(owner: owner)
         audio.expect(
-            lane.publish(
-                owner: owner, samples: rendered.s8, frequency: rendered.freq,
-                loopStart: rendered.loopStart, looped: rendered.looped, key: 60,
-                adsr: adsr, toneKey: 60) && renderIsAudible(),
+            request.map {
+                lane.publish(
+                    owner: owner, request: $0, pcm: prepared, frequency: rendered.freq,
+                    loopStart: rendered.loopStart, looped: rendered.looped,
+                    key: 60, adsr: adsr, toneKey: 60)
+            } == true && renderIsAudible(),
             message: "New owner replaces an expired owner's sounding audition")
         lane.stop(owner: owner)
     } catch {

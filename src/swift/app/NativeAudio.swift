@@ -228,26 +228,34 @@ public final class NativeAudio {
         device.renderer.audition.previewVoice(program: program, key: key, velocity: velocity)
     }
 
+    public func beginSampleRequest() -> UInt64 {
+        device.renderer.audition.beginSampleRequest()
+    }
+
+    public func sampleRequestIsCurrent(_ request: UInt64) -> Bool {
+        device.renderer.audition.sampleRequestIsCurrent(request)
+    }
+
     public func auditionSample(
-        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR,
         toneKey: UInt8 = 60
     ) -> Bool {
         device.renderer.audition.publishSample(
-            samples: samples, frequency: frequency,
+            request: request, pcm: pcm, frequency: frequency,
             loopStart: loopStart, looped: looped, key: key,
             adsr: adsr, toneKey: toneKey)
     }
 
-    public func auditionWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
-        device.renderer.audition.publishWave(wave16: wave16, key: key, adsr: adsr)
+    public func auditionWave(request: UInt64, wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
+        device.renderer.audition.publishWave(request: request, wave16: wave16, key: key, adsr: adsr)
     }
 
-    public func auditionKit(_ tone: KitAuditionTone, key: UInt8) -> Bool {
-        device.renderer.audition.publishKitTone(tone, key: key)
+    public func auditionKit(request: UInt64, _ tone: KitAuditionTone, key: UInt8) -> Bool {
+        device.renderer.audition.publishKitTone(request: request, tone, key: key)
     }
 
-    public func auditionSampleOff() { device.renderer.audition.sampleOff() }
+    public func auditionSampleOff(request: UInt64) { device.renderer.audition.sampleOff(request: request) }
 
     public func songSettings(for config: SongConfig) -> AudioSettings {
         engineSettings.applyingSong(config)

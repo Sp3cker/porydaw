@@ -379,6 +379,14 @@ isolation and the benchmark below, not the floor.
 arbiter and PCM audition player shared by Sample Studio and Split Studio. It sits
 on Sample, AppAudio, AppPresentation and QtBridge; `PorydawApp` links it.
 
+Each audition player caches native PCM by `ProcessedSample.pcmRevision`, preparing
+new content off-main and sharing it across note retriggers and release tails. Pitch/ADSR changes,
+repeat and slot retries reuse the prepared bytes. Cold preparation is asynchronous
+and latest-request-only; an owner reservation prevents stopped or displaced requests
+from publishing late. The four-slot callback handoff retains separate wave headers
+without callback ARC. Native PCM storage is reclaimed on a utility executor, not
+the main actor or audio callback.
+
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|
 | `PorydawApp` | 7.77, 7.72 | 7.75 |

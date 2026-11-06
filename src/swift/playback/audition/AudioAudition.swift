@@ -25,6 +25,8 @@ public final class AudioAudition {
     private let voiceCommand = Atomic<UInt64>(0)
     private var noteGeneration: UInt8 = 0
     private var voiceGeneration: UInt8 = 0
+    // Single UI producer only; independent of callback publication/retirement.
+    private var sampleRequest: UInt64 = 0
     private var appliedNote: UInt32 = 0
     private var appliedVoice: UInt64 = 0
     private var heldSerial: UInt64 = 0
@@ -69,26 +71,46 @@ public final class AudioAudition {
         timed.publish(track: track, key: key, velocity: velocity, duration: durationSamples)
     }
 
+    /// Reserves the shared sample output and releases its preceding note immediately.
+    /// - Returns: The producer-owned token required for publication and stop.
+    public func beginSampleRequest() -> UInt64 {
+        sampleRequest &+= 1
+        samples.off()
+        return sampleRequest
+    }
+
+    /// Whether a producer request still owns the shared sample output.
+    public func sampleRequestIsCurrent(_ request: UInt64) -> Bool {
+        sampleRequest == request
+    }
+
     public func publishSample(
-        samples: [Int8], frequency: UInt32, loopStart: UInt32,
+        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR,
         toneKey: UInt8
     ) -> Bool {
-        self.samples.publish(
-            samples: samples, frequency: frequency, loopStart: loopStart,
+        guard sampleRequestIsCurrent(request) else { return false }
+        return self.samples.publish(
+            pcm: pcm, frequency: frequency, loopStart: loopStart,
             looped: looped, key: key, adsr: adsr, toneKey: toneKey)
     }
 
-    public func publishWave(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
-        samples.publish(wave16: wave16, key: key, adsr: adsr)
+    public func publishWave(request: UInt64, wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
+        guard sampleRequestIsCurrent(request) else { return false }
+        return samples.publish(wave16: wave16, key: key, adsr: adsr)
     }
 
     /// Publishes an in-memory kit through the shared four-slot retirement pool.
-    public func publishKitTone(_ tone: KitAuditionTone, key: UInt8) -> Bool {
-        samples.publishKitTone(tone, key: key)
+    public func publishKitTone(request: UInt64, _ tone: KitAuditionTone, key: UInt8) -> Bool {
+        guard sampleRequestIsCurrent(request) else { return false }
+        return samples.publishKitTone(tone, key: key)
     }
 
-    public func sampleOff() { samples.off() }
+    /// Releases only the current producer's note and invalidates its pending work.
+    public func sampleOff(request: UInt64) {
+        guard sampleRequestIsCurrent(request) else { return }
+        _ = beginSampleRequest()
+    }
 
     public func apply(
         main: UnsafeMutablePointer<M4AEngine>,
@@ -182,7 +204,7 @@ public final class AudioAudition {
         samples.reset()
     }
 
-    /// Cold, after engine voices have been cut. Invalidate outstanding requests.
+    /// Cold, after engine voices have been cut. Retires slots without changing producer requests.
     public func reset() {
         clearMainPreviews()
         voiceKey = -1
