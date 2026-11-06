@@ -130,20 +130,25 @@ Item {
         model: view.editor.waveform
         colors: view.colors
         baseFontPx: view.unit
+        // The first click of a double-click may add a marker; only a double-click on an existing one removes it.
+        property bool clickAddedMarker: false
         onPressStarted: button => {
             if (button === Qt.LeftButton)
                 view.workflow.stopAudition()
             wave.forceActiveFocus()
         }
         onClicked: (x, y) => {
-            view.editor.clearLastAddedMarker()
-            if (wave.model.handleAt(x, y) === 0)
+            wave.clickAddedMarker = wave.model.handleAt(x, y) === 0
+            if (wave.clickAddedMarker)
                 view.editor.addMarker(x)
         }
-        onDoubleClicked: (x, y) => view.editor.removeMarkerAt(x, y)
+        onDoubleClicked: (x, y) => {
+            if (!wave.clickAddedMarker)
+                view.editor.removeMarkerAt(x, y)
+        }
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
-                view.workflow.removeSelectedMarker()
+                view.editor.removeSelectedMarker()
                 event.accepted = true
             } else if (event.key === Qt.Key_Space && event.modifiers === Qt.NoModifier) {
                 if (view.workflow.auditionPlaying) view.workflow.stopAudition()

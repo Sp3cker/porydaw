@@ -25,6 +25,18 @@ public final class KitSourceRow: QmlUncreatable {
     }
 }
 
+/// The workflow's effects and policies a presenter calls out to; checks leave unused ones nil.
+public struct KitStudioEffects {
+    public var onSaveRequested: (() -> Void)?
+    public var onAlert: ((String) -> Void)?
+    public var validateName: ((String) -> String?)?
+    public var validateVoicegroupName: ((String) -> String?)?
+    public var publishKitTone: ((KitAuditionTone, UInt8) -> Bool)?
+    public var playPcm: ((Int) -> Void)?
+
+    public init() {}
+}
+
 /// Window state only; the workflow supplies facts and owns every external effect.
 @MainActor
 @QtBridgeable
@@ -34,7 +46,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     public var mode: Int = 0
     public var metaText: String = ""
     public var voicegroupName: String = ""
-    public var voicegroupNameInvalid: Bool = false
+    public var voicegroupNameInvalid: Bool = true
     public var canSave: Bool = false
     public var canUndo: Bool = false
     public var canRedo: Bool = false
@@ -58,56 +70,43 @@ public final class KitStudioPresenter: QmlUncreatable {
     public var sourceRate: Int = 0
     public var rateChoices: [String] = []
     public var slicesRevision: Int = 0
-    private var lastAddedMarkerId: Int?
-    @QtIgnored public var onSaveRequested: (() -> Void)?
-    @QtIgnored public var onAlert: ((String) -> Void)?
-    @QtIgnored public var validateName: ((String) -> String?)?
-    @QtIgnored public var validateVoicegroupName: ((String) -> String?)?
-    @QtIgnored public var publishKitTone: ((KitAuditionTone, UInt8) -> Bool)?
-    @QtIgnored public var playPcm: ((Int) -> Void)?
+    @QtIgnored public var effects: KitStudioEffects
     @QtIgnored public var samples: [String: ProcessedSample] = [:]
     @QtIgnored public var progWaves: [String: [UInt32]] = [:]
-    @QtIgnored public let draft: KitDraft
-    @QtIgnored public let session: KitSourceSession
+    @QtIgnored public let draft = KitDraft()
+    @QtIgnored public let session = KitSourceSession()
     public private(set) var voicegroupNameEdited = false
 
+    /// The last marker pressed on the waveform; Delete removes it.
+    private var selectedMarker: Int?
     private var activeSource: Int?
+    /// The source whose samples the waveform holds; undo clears it when the source audio may differ.
     private var displayedSource: Int?
-    private weak var displayedWaveform: MarkerWaveformModel?
     private var activeMode: KitMode = .drumkit
     private var cleanMode: KitMode = .drumkit
     private var cleanSessionSnapshot: KitSourceSession.Snapshot
 
-    @QtIgnored public init(draft: KitDraft = KitDraft(), session: KitSourceSession = KitSourceSession()) {
-        self.draft = draft
-        self.session = session
+    /// An empty, unnamed kit; `waveform` is the editor's marker view, absent in model-only checks.
+    @QtIgnored public init(waveform: MarkerWaveformModel? = nil, effects: KitStudioEffects = KitStudioEffects()) {
+        self.waveform = waveform
+        self.effects = effects
         draft.attachSession(session)
         cleanSessionSnapshot = session.snapshot()
-        session.validateName = { [weak self] (name: String) -> String? in self?.validateName?(name) }
-    }
-
-    /// Opens an empty kit.
-    @QtIgnored public func open() {
-        draft.load(KitDraft.Snapshot())
-        session.restore(KitSourceSession().snapshot())
-        activeMode = .drumkit
-        selectedZone = -1
-        activeSource = nil
-        displayedSource = nil
-        voicegroupName = ""
-        voicegroupNameInvalid = true
-        voicegroupNameEdited = false
-        resetCleanState()
+        session.validateName = { [weak self] (name: String) -> String? in self?.effects.validateName?(name) }
+        waveform?.onMarkerPressed = { [weak self] (id: Int) in self?.selectedMarker = id }
+        waveform?.onMarkerDragged = { [weak self] (id: Int, frame: Int) in self?.moveMarker(id: id, toFrame: frame) }
+        waveform?.fixedKinds = ["loop"]
         refresh()
     }
 
-    /// Opens committed mappings with a clean window-local history; each mapped project sample becomes
+    /// Committed mappings with a clean window-local history; each mapped project sample becomes
     /// one read-only whole slice, numbered in key order.
-    @QtIgnored public func load(
-        zones: [KitZone], mode: KitMode, name: String,
-        samples: [String: ProcessedSample], progWaves: [String: [UInt32]]
+    @QtIgnored public convenience init(
+        loading zones: [KitZone], mode: KitMode, name: String,
+        samples: [String: ProcessedSample], progWaves: [String: [UInt32]],
+        waveform: MarkerWaveformModel? = nil, effects: KitStudioEffects = KitStudioEffects()
     ) {
-        open()
+        self.init(waveform: waveform, effects: effects)
         self.samples = samples
         self.progWaves = progWaves
         var sliceNames: [String: String] = [:]
@@ -140,7 +139,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         activeSource = session.sources.first?.id
         voicegroupName = name
         voicegroupNameEdited = true
-        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: effects.validateVoicegroupName)
         markClean()
     }
 
@@ -150,14 +149,17 @@ public final class KitStudioPresenter: QmlUncreatable {
     @QtIgnored public func applySuggestedVoicegroupName(_ name: String) {
         guard !voicegroupNameEdited else { return }
         voicegroupName = name
-        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: effects.validateVoicegroupName)
         refresh()
     }
+
+    /// The user started typing a name; suggestions no longer replace it.
+    public func beginVoicegroupNameEdit() { voicegroupNameEdited = true }
 
     public func setVoicegroupName(name: String) {
         voicegroupName = name
         voicegroupNameEdited = true
-        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: validateVoicegroupName)
+        voicegroupNameInvalid = Self.invalidVoicegroupName(name, validate: effects.validateVoicegroupName)
         refresh()
     }
 
@@ -174,46 +176,62 @@ public final class KitStudioPresenter: QmlUncreatable {
         refresh()
     }
 
-    private func resetCleanState() {
-        cleanMode = activeMode
-        cleanSessionSnapshot = session.snapshot()
-    }
-
-    public func requestSave() { if canSave { onSaveRequested?() } }
+    public func requestSave() { if canSave { effects.onSaveRequested?() } }
 
     public func selectZone(row: Int) {
-        selectedZone = zones.indices.contains(row) ? row : -1
-        if selectedZone != -1 {
-            let sampleName = zones[selectedZone].sampleName
-            if let found = session.sources.first(where: { $0.slices.contains { $0.name == sampleName } }) {
-                if activeSource != found.id { activeSource = found.id }
-                if let slice = found.slices.first(where: { $0.name == sampleName }) {
-                    selectedSlice = draft.sliceIds[KitDraft.SliceKey(source: found.id, identity: slice.id)] ?? -1
-                }
-            }
-        } else {
-            selectedSlice = -1
+        guard zones.indices.contains(row) else {
+            draft.selection = .none
+            refresh()
+            return
+        }
+        let zone = zones[row]
+        draft.selection = .zone(mode: activeMode, startKey: zone.startKey)
+        if let source = session.sources.first(where: { $0.slices.contains { $0.name == zone.sampleName } }) {
+            activeSource = source.id
         }
         refresh()
     }
 
+    /// Selects the zone that maps the slice when one does, otherwise the slice alone.
     public func selectSlice(id: Int) {
-        selectedSlice = id
-        guard let address = sliceAddress(id),
-            let source = session.sources.first(where: { $0.id == address.source })
+        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
         else {
+            draft.selection = .none
             refresh()
             return
         }
-        let slice = source.slices[address.index]
-        if activeSource != source.id {
-            activeSource = source.id
-        }
-        if let zoneRow = zones.firstIndex(where: { $0.sampleName == slice.name }) {
-            selectZone(row: zoneRow)
+        activeSource = source.id
+        let name = source.slices[address.index].name
+        if let zone = zones.first(where: { $0.sampleName == name }) {
+            draft.selection = .zone(mode: activeMode, startKey: zone.startKey)
         } else {
-            refresh()
+            draft.selection = .slice(id: id)
         }
+        refresh()
+    }
+
+    /// Row and slice id the selection resolves to; either is nil while its zone or slice is absent.
+    private var resolvedSelection: (zone: Int?, slice: Int?) {
+        switch draft.selection {
+        case .none:
+            return (nil, nil)
+        case .zone(let mode, let startKey):
+            guard mode == activeMode, let row = zones.firstIndex(where: { $0.startKey == startKey }) else {
+                return (nil, nil)
+            }
+            return (row, sliceId(named: zones[row].sampleName))
+        case .slice(let id):
+            return (nil, sliceAddress(id) == nil ? nil : id)
+        }
+    }
+
+    private func sliceId(named name: String) -> Int? {
+        for source in session.sources {
+            if let slice = source.slices.first(where: { $0.name == name }) {
+                return draft.sliceIds[KitDraft.SliceKey(source: source.id, identity: slice.id)]
+            }
+        }
+        return nil
     }
 
     /// Typed per-key reads for the AOT-compiled keyboard.
@@ -228,10 +246,12 @@ public final class KitStudioPresenter: QmlUncreatable {
         return sliceNumber(name: zones[row].sampleName)
     }
 
+    /// Zones belong to one layout, so a zone selection carries over as its slice.
     public func setMode(index: Int) {
         guard index == 0 || index == 1 else { return }
+        let slice = resolvedSelection.slice
         activeMode = index == 0 ? .drumkit : .keysplit
-        selectedZone = -1
+        draft.selection = slice.map { (id: Int) -> KitDraft.Selection in .slice(id: id) } ?? .none
         refresh()
     }
 
@@ -247,7 +267,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard (0...127).contains(onKey), !name.isEmpty else { return }
         let end = dropRangeEnd(key: onKey)
         guard end >= 0 else {
-            onAlert?("That key is already occupied")
+            effects.onAlert?("That key is already occupied")
             refresh()
             return
         }
@@ -259,7 +279,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         var next = zones
         next.append(zone)
         next.sort { $0.startKey < $1.startKey }
-        if commitZones(next) { selectedZone = next.firstIndex { $0.startKey == onKey } ?? -1 }
+        if commitZones(next) { draft.selection = .zone(mode: activeMode, startKey: onKey) }
         refresh()
     }
 
@@ -287,7 +307,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard zones.indices.contains(row) else { return }
         let start = movedZoneStart(row: row, toKey: toKey)
         let next = movedZones(row: row, toKey: toKey)
-        if commitZones(next) { selectedZone = next.firstIndex { $0.startKey == start } ?? -1 }
+        if commitZones(next) { draft.selection = .zone(mode: activeMode, startKey: start) }
         refresh()
     }
 
@@ -298,7 +318,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         next[row].endKey = min(max(0, endKey), 127)
         let start = next[row].startKey
         next.sort { $0.startKey < $1.startKey }
-        if commitZones(next) { selectedZone = next.firstIndex { $0.startKey == start } ?? -1 }
+        if commitZones(next) { draft.selection = .zone(mode: activeMode, startKey: start) }
         refresh()
     }
 
@@ -332,7 +352,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard zones.indices.contains(row) else { return }
         var next = zones
         next.remove(at: row)
-        if commitZones(next) { selectedZone = -1 }
+        if commitZones(next) { draft.selection = .none }
         refresh()
     }
 
@@ -372,9 +392,9 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     private func editSelected(_ edit: (inout KitZone) -> Void) {
-        guard zones.indices.contains(selectedZone) else { return }
+        guard let row = resolvedSelection.zone else { return }
         var next = zones
-        edit(&next[selectedZone])
+        edit(&next[row])
         _ = commitZones(next)
         refresh()
     }
@@ -382,7 +402,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     @discardableResult private func commitZones(_ next: [KitZone]) -> Bool {
         guard next != zones else { return true }
         guard draft.setZones(next, mode: activeMode) else {
-            onAlert?("Zones must stay within 0–127 and cannot overlap")
+            effects.onAlert?("Zones must stay within 0–127 and cannot overlap")
             return false
         }
         return true
@@ -410,7 +430,6 @@ public final class KitStudioPresenter: QmlUncreatable {
         keysplit.removeAll { sliceNames.contains($0.sampleName) }
         if drumkit.count != drumBefore { draft.setZones(drumkit, mode: .drumkit) }
         if keysplit.count != keyBefore { draft.setZones(keysplit, mode: .keysplit) }
-        if selectedZone >= zones.count { selectedZone = -1 }
     }
 
     @QtIgnored public func nextFreeKey(from startKey: Int = 36) -> Optional<Int> {
@@ -476,7 +495,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
         // Slices exist but nothing is selected (fresh file load): show slice 1
         // in the inspector instead of an empty panel.
-        if selectedZone < 0, !zones.isEmpty {
+        if resolvedSelection.zone == nil, !zones.isEmpty {
             selectZone(row: 0)
         }
     }
@@ -516,19 +535,11 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     private func placeMarker(frame: Int, ensureFirstSlice: Bool) {
         guard let id = activeSource else { return }
-        let beforeMarkers = currentSource?.markers ?? []
         changeSessionWithAutoPlace {
             if ensureFirstSlice, $0.sources.first(where: { $0.id == id })?.slices.isEmpty == true {
                 $0.createFirstSlice(source: id)
             }
             $0.setMarker(source: id, frame: frame, snap: snap)
-        }
-        let afterMarkers = currentSource?.markers ?? []
-        let added = Set(afterMarkers).subtracting(beforeMarkers)
-        if let newFrame = added.first,
-            let newId = draft.markerIds[KitDraft.MarkerKey(source: id, frame: newFrame)]
-        {
-            lastAddedMarkerId = newId
         }
     }
 
@@ -540,19 +551,18 @@ public final class KitStudioPresenter: QmlUncreatable {
     public func removeMarkerAt(x: Double, y: Double) {
         guard let waveform else { return }
         let handle = waveform.handleAt(x: x, y: y)
-        guard handle != 0 else { return }
-        if handle == lastAddedMarkerId { return }
-        removeMarker(id: handle)
+        if handle != 0 { removeMarker(id: handle) }
     }
 
     public func removeMarker(id: Int) {
         guard let key = markerKey(id) else { return }
         changeSessionWithAutoPlace { $0.removeMarker(source: key.source, frame: key.frame) }
-        if lastAddedMarkerId == id { lastAddedMarkerId = nil }
     }
 
-    public func clearLastAddedMarker() {
-        lastAddedMarkerId = nil
+    /// Removes the last-pressed marker while its source is the one on screen.
+    public func removeSelectedMarker() {
+        guard let selectedMarker, let key = markerKey(selectedMarker), key.source == activeSource else { return }
+        removeMarker(id: selectedMarker)
     }
 
     public func moveMarker(id: Int, toFrame: Int) {
@@ -655,12 +665,12 @@ public final class KitStudioPresenter: QmlUncreatable {
                 }
             }
         }
-        return validateName?(name) != nil
+        return effects.validateName?(name) != nil
     }
 
-    public func playSlice(id: Int) { if sliceAddress(id) != nil { playPcm?(id) } }
+    public func playSlice(id: Int) { if sliceAddress(id) != nil { effects.playPcm?(id) } }
     public func playSelectedSlice() {
-        playSlice(id: sliceAddress(selectedSlice) != nil ? selectedSlice : sliceId(row: 0))
+        playSlice(id: resolvedSelection.slice ?? sliceId(row: 0))
     }
 
     /// Engine note and envelope for the slice's lowest mapped zone: drumkits sound the zone's
@@ -678,7 +688,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func playKey(key: Int) {
-        guard (0...127).contains(key), let publishKitTone,
+        guard (0...127).contains(key), let publishKitTone = effects.publishKitTone,
             zones.contains(where: { $0.startKey <= key && key <= $0.endKey })
         else { return }
         var rendered = samples
@@ -775,7 +785,7 @@ public final class KitStudioPresenter: QmlUncreatable {
         return source.slices[address.index]
     }
 
-    /// Re-publishes values after the workflow injects a waveform or value-only facts.
+    /// Re-publishes values after an edit or after the workflow changes value-only facts.
     @QtIgnored public func refresh() {
         mode = activeMode == .drumkit ? 0 : 1
         dirty = draft.dirty || activeMode != cleanMode || session.snapshot() != cleanSessionSnapshot
@@ -784,17 +794,22 @@ public final class KitStudioPresenter: QmlUncreatable {
         canRedo = draft.canRedo
         titleText = "Split Studio" + (dirty ? " •" : "")
         updateMeta()
-        if !zones.indices.contains(selectedZone) { selectedZone = -1 }
-        selectedZoneFirstKey = zones.indices.contains(selectedZone) ? zones[selectedZone].startKey : 0
-        selectedZoneLastKey = zones.indices.contains(selectedZone) ? zones[selectedZone].endKey : 0
-        selectedZoneSampleName = zones.indices.contains(selectedZone) ? zones[selectedZone].sampleName : ""
-        selectedZoneRootKey = zones.indices.contains(selectedZone) ? zones[selectedZone].rootKey : 60
-        selectedZonePan = zones.indices.contains(selectedZone) ? zones[selectedZone].pan : 0
-        selectedZoneAttack = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.attack : 0
-        selectedZoneDecay = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.decay : 0
-        selectedZoneSustain = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.sustain : 0
-        selectedZoneRelease = zones.indices.contains(selectedZone) ? zones[selectedZone].adsr.release : 0
-        selectedZonePanEnabled = zones.indices.contains(selectedZone) && activeMode == .drumkit
+        let resolved = resolvedSelection
+        // A vanished target clears the selection so a later occupant of its key is never selected.
+        if resolved.zone == nil, resolved.slice == nil { draft.selection = .none }
+        let zone = resolved.zone.map { (row: Int) -> KitZone in zones[row] }
+        selectedZone = resolved.zone ?? -1
+        selectedSlice = resolved.slice ?? -1
+        selectedZoneFirstKey = zone?.startKey ?? 0
+        selectedZoneLastKey = zone?.endKey ?? 0
+        selectedZoneSampleName = zone?.sampleName ?? ""
+        selectedZoneRootKey = zone?.rootKey ?? 60
+        selectedZonePan = zone?.pan ?? 0
+        selectedZoneAttack = zone?.adsr.attack ?? 0
+        selectedZoneDecay = zone?.adsr.decay ?? 0
+        selectedZoneSustain = zone?.adsr.sustain ?? 0
+        selectedZoneRelease = zone?.adsr.release ?? 0
+        selectedZonePanEnabled = zone != nil && activeMode == .drumkit
         if !session.sources.contains(where: { $0.id == activeSource }) { activeSource = session.sources.first?.id }
         let committedCount = session.sources.count { $0.committedSymbol != nil }
         var rowValues: [(name: String, active: Bool, committedCount: Int)] = []
@@ -826,19 +841,12 @@ public final class KitStudioPresenter: QmlUncreatable {
             rateChoices = []
         }
         if let waveform {
-            if displayedWaveform !== waveform {
-                waveform.onMarkerDragged = { [weak self] (id: Int, frame: Int) in
-                    self?.moveMarker(id: id, toFrame: frame)
-                }
-                waveform.fixedKinds = ["loop"]
-            }
-            if displayedSource != activeSource || displayedWaveform !== waveform {
+            if displayedSource != activeSource {
                 let buffer = currentSource?.sample.buffer ?? []
                 waveform.setSamples(
                     buffer, sampleRate: currentSource?.sample.sampleRate ?? 1,
                     gain: MarkerWaveformModel.peakFitGain(buffer))
                 displayedSource = activeSource
-                displayedWaveform = waveform
             }
             if let source = currentSource {
                 var markers = source.markers.map { (frame: Int) -> (id: Int, frame: Int, kind: String, label: String) in
@@ -856,7 +864,7 @@ public final class KitStudioPresenter: QmlUncreatable {
                 let frames = source.slices.map(\.startFrame)
                 let numbers = source.slices.map { sliceNumber(name: $0.name) }
                 waveform.setRegionBadges(frames: frames, numbers: numbers)
-                if let address = sliceAddress(selectedSlice), address.source == source.id {
+                if let id = resolved.slice, let address = sliceAddress(id), address.source == source.id {
                     let slice = source.slices[address.index]
                     waveform.setHighlight(startFrame: slice.startFrame, endFrame: slice.endFrame)
                 } else {

@@ -1,4 +1,4 @@
-/// Window-local kit state; every history entry contains both mode views.
+/// Window-local kit state; every history entry contains both mode views and the selection they addressed.
 @MainActor
 public final class KitDraft {
     public struct Snapshot: Equatable, Sendable {
@@ -19,15 +19,24 @@ public final class KitDraft {
         var source: Int
         var identity: Int
     }
+    /// What the inspector and waveform follow: a zone by its first key in one layout, or a slice.
+    /// History restores it with the zones it addressed, so a key never resolves to a later occupant.
+    enum Selection: Equatable {
+        case none
+        case zone(mode: KitMode, startKey: Int)
+        case slice(id: Int)
+    }
     private struct HistoryState {
         var zones: Snapshot
         var session: KitSourceSession.Snapshot?
         var markers: [MarkerKey: Int]
         var slices: [SliceKey: Int]
+        var selection: Selection
     }
 
     private(set) var markerIds: [MarkerKey: Int] = [:]
     private(set) var sliceIds: [SliceKey: Int] = [:]
+    var selection: Selection = .none
     private var session: KitSourceSession?
     private var editing = false
     private var nextId = 1
@@ -83,6 +92,7 @@ public final class KitDraft {
         // Invalid bind-time state is a programmer error; user-editable zone setters return false.
         precondition(Self.valid(snapshot.drumkitZones) && Self.valid(snapshot.keysplitZones))
         restore(snapshot)
+        selection = .none
         clean = snapshot
         undoEntries.removeAll()
         redoEntries.removeAll()
@@ -129,7 +139,9 @@ public final class KitDraft {
     }
 
     private func historyState() -> HistoryState {
-        HistoryState(zones: snapshot(), session: session?.snapshot(), markers: markerIds, slices: sliceIds)
+        HistoryState(
+            zones: snapshot(), session: session?.snapshot(), markers: markerIds, slices: sliceIds,
+            selection: selection)
     }
 
     private func restoreHistory(_ state: HistoryState) {
@@ -137,6 +149,7 @@ public final class KitDraft {
         if let snapshot = state.session { session?.restore(snapshot) }
         markerIds = state.markers
         sliceIds = state.slices
+        selection = state.selection
     }
 
     private func syncIds() {

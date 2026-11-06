@@ -44,6 +44,7 @@ add_library(PorydawApp STATIC
     samplestudio/SampleStudioWorkflow.swift
     kitstudio/KitStudioCloseGuard.swift
     kitstudio/KitStudioWorkflow.swift
+    kitstudio/KitStudioWindow.swift
     kitstudio/KitLeaseReader.swift
     kitstudio/KitEditLoader.swift
     audio/PolyphonyPanelPresenter.swift

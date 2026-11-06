@@ -182,12 +182,28 @@ public final class KitSourceSession {
         sources[index] = staged
     }
 
-    /// Deletes only the indexed slice; retained marker pairs are not implicitly resurrected.
+    /// Deletes the indexed slice; the previous adjacent slice, else the next, grows over its frames and
+    /// their shared marker goes. An isolated slice takes the markers that bordered only it.
     /// A committed sample's source leaves with its last slice.
     public func removeSlice(source: Int, slice: Int) {
         guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice) else { return }
-        sources[index].slices.remove(at: slice)
-        if sources[index].committedSymbol != nil, sources[index].slices.isEmpty { sources.remove(at: index) }
+        var staged = sources[index]
+        let removed = staged.slices.remove(at: slice)
+        if let previous = staged.slices.firstIndex(where: { (other: Slice) in other.endFrame == removed.startFrame }) {
+            staged.slices[previous].endFrame = removed.endFrame
+            staged.markers.removeAll { (frame: Int) in frame == removed.startFrame }
+        } else if let next = staged.slices.firstIndex(where: { (other: Slice) in other.startFrame == removed.endFrame })
+        {
+            staged.slices[next].startFrame = removed.startFrame
+            staged.markers.removeAll { (frame: Int) in frame == removed.endFrame }
+        } else {
+            staged.markers.removeAll { (frame: Int) in frame == removed.startFrame || frame == removed.endFrame }
+        }
+        if staged.committedSymbol != nil, staged.slices.isEmpty {
+            sources.remove(at: index)
+        } else {
+            sources[index] = staged
+        }
     }
 
     /// Changes the indexed slice's independently rendered declick overrides.

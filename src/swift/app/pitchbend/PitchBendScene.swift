@@ -229,7 +229,8 @@ public final class PitchBendLane {
             let x0 = k.x(at: point.tick)
             let x1 = next.map { k.x(at: $0.tick) } ?? g.canvasX + g.canvasWidth - 1
             let y = k.y(at: point.value)
-            let angled = next.map { $0.tick - point.tick == k.fineTicks } ?? false
+            // The note-end anchor restores the held value at the note end; it is a step, not a stroke sample.
+            let angled = next.map { $0.tick != k.endTick && $0.tick - point.tick == k.fineTicks } ?? false
             lineValues.append(
                 PitchBendLineValue(
                     x0: x0, y0: y, x1: x1,

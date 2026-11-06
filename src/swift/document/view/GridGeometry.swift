@@ -176,21 +176,25 @@ public struct RollGrid: Sendable {
         return true
     }
 
+    /// Auto stride: the finest rung that splits the beat evenly, is no finer than the clock
+    /// and fits a cell. Rungs nest, so the snap stride (one rung finer) divides the drawn one.
     private func adaptiveTicks(_ segment: GridSegment, camera: EditorCamera, snap: Bool) -> Tick {
         let ladder = feel == .straight ? Self.straightLadder : Self.tripletLadder
         let beat = UInt64(segment.beatTicks)
         let width = Double(beat) * camera.snapshot.pixelsPerTick
-        let step =
-            ladder.firstIndex {
-                width / Double($0) >= metrics.autoGridMinCell
-            } ?? ladder.count - 1
-        let visible = max(UInt64(clockTicks), beat / UInt64(ladder[step]))
-        guard snap && step > 0 else { return Tick(visible) }
-        let fine = max(1, beat / UInt64(ladder[step - 1]))
-        var a = visible
-        var b = fine
-        while b != 0 { (a, b) = (b, a % b) }
-        return Tick(max(UInt64(clockTicks), a))
+        func lattice(_ rung: Int) -> Bool {
+            beat % UInt64(rung) == 0 && beat / UInt64(rung) >= UInt64(clockTicks)
+        }
+        var step = ladder.count - 1
+        for index in ladder.indices
+        where lattice(ladder[index]) && width / Double(ladder[index]) >= metrics.autoGridMinCell {
+            step = index
+            break
+        }
+        if snap, let finer = ladder[..<step].lastIndex(where: lattice) {
+            step = finer
+        }
+        return Tick(max(UInt64(clockTicks), beat / UInt64(ladder[step])))
     }
 
     private var fixedTicks: Tick {
@@ -256,11 +260,13 @@ public struct RollGrid: Sendable {
             return nil
         case .clock:
             if fits(clockTicks) { return (UInt64(clockTicks), true) }
+            // Finer musical lines stand in for unpaintable clock lines, bar-anchored like
+            // the ladder above them: reachable only where the bar itself sits on the clock.
             var finest: Tick = 0
             var denominator = 4
             while denominator <= Int(UInt32.max) / 2 {
                 let ticks = musicalTicks(.musical(denominator), feel: feel)
-                guard ticks > clockTicks, fits(ticks) else { break }
+                guard ticks > clockTicks, ticks % clockTicks == 0, fits(ticks) else { break }
                 finest = ticks
                 denominator *= 2
             }

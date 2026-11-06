@@ -1,5 +1,6 @@
 import Foundation
 import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 import PorydawDocument
 
@@ -7,7 +8,8 @@ let workspaceRefreshScopeID = "swiftcore/DocumentWorkspace::refreshScope"
 
 /// The fan-out rebuilds only presenters whose stamps moved: a note move reaches the
 /// velocity page but not automation or headers; a lane edit reaches automation only;
-/// a program change reaches velocity and headers. Undo retraces the same scope.
+/// a program change reaches velocity and headers. Undo retraces the same scope. A grid
+/// division change redraws every visible drawer page's lattice lines.
 @MainActor
 func workspaceRefreshScope(
     _ report: CheckReport, session: DocumentSession, service: ProjectService
@@ -92,4 +94,36 @@ func workspaceRefreshScope(
         undoProgram == voiceScope && undoLane == laneScope && undoNote == noteScope,
         cppID: workspaceRefreshScopeID,
         message: "undo retraces each edit's refresh scope: \(undoProgram) \(undoLane) \(undoNote)")
+
+    let font = GridCameraPolicy.seedBaseFontPx
+    workspace.drawer.configureLayout(
+        hostWidth: Int(fontPx(font, 70)), hostHeight: Int(fontPx(font, 60)),
+        gutterWidth: Int(fontPx(font, 8)), fontPx: font, appFontLineSpacing: fontPx(font, 1))
+    for kind in [DrawerSectionKind.velocity, .automation] {
+        workspace.drawer.setSectionVisible(kind: kind.rawValue, visible: true, drawerOwnsFocus: false)
+    }
+    let velocityLists = workspace.velocityPage.displayRevision
+    let automationBuilds = workspace.automationPage.contentBuildCount
+    workspace.grid.performCommand(command: EditCommand.gridNarrow.rawValue)
+    report.expect(
+        workspace.velocityPage.displayRevision != velocityLists
+            && workspace.automationPage.contentBuildCount != automationBuilds,
+        cppID: workspaceRefreshScopeID,
+        message:
+            "a grid division change redraws the visible velocity and automation lattices: "
+            + "velocity \(velocityLists)→\(workspace.velocityPage.displayRevision) "
+            + "automation \(automationBuilds)→\(workspace.automationPage.contentBuildCount)")
+
+    workspace.drawer.setSectionVisible(
+        kind: DrawerSectionKind.automation.rawValue, visible: false, drawerOwnsFocus: false)
+    let hiddenBuilds = workspace.automationPage.contentBuildCount
+    workspace.grid.performCommand(command: EditCommand.gridWiden.rawValue)
+    let builtWhileHidden = workspace.automationPage.contentBuildCount
+    workspace.drawer.setSectionVisible(
+        kind: DrawerSectionKind.automation.rawValue, visible: true, drawerOwnsFocus: false)
+    report.expect(
+        builtWhileHidden == hiddenBuilds && workspace.automationPage.contentBuildCount != hiddenBuilds,
+        cppID: workspaceRefreshScopeID,
+        message: "a hidden automation page skips the grid change and rebuilds once shown: "
+            + "hidden \(hiddenBuilds)→\(builtWhileHidden)→\(workspace.automationPage.contentBuildCount)")
 }

@@ -121,9 +121,6 @@ public final class DocumentWorkspace {
         grid.onPitchBendRequested = { [weak pitchBend] in
             pitchBend?.openSelected() ?? false
         }
-        grid.onGridLatticeChanged = { [weak pitchBend] in
-            pitchBend?.gridLatticeDidChange()
-        }
         pitchBend.onSoloTracksRequested = { [weak grid] in
             grid?.performCommand(command: EditCommand.soloTracks.rawValue)
         }
@@ -211,6 +208,10 @@ public final class DocumentWorkspace {
             grid?.lastVelocity = Int(velocity)
         }
 
+        grid.onGridLatticeChanged = { [weak self, weak pitchBend] in
+            pitchBend?.gridLatticeDidChange()
+            self?.refreshDrawerPagesGeometry(zoom: true)
+        }
         viewport.onCameraChangeDetailed = { [weak self] _, change in
             self?.cameraDidChange(change)
         }
@@ -411,7 +412,13 @@ public final class DocumentWorkspace {
         guard change.contains(.scrollX) || change.contains(.zoom) else { return }
         let zoom = change.contains(.zoom)
         if zoom { otherEventsBand.refreshCamera() }
-        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+        refreshDrawerPagesGeometry(zoom: zoom)
+    }
+
+    /// Visible pages rebuild now; hidden ones catch up when shown. A grid lattice
+    /// change takes the zoom path because it redraws the same lines a zoom does.
+    private func refreshDrawerPagesGeometry(zoom: Bool) {
+        for kind in DrawerSectionKind.allCases {
             guard drawer.section(kind: kind.rawValue).visible else {
                 deferredCameraZoom[kind] = zoom || deferredCameraZoom[kind] == true
                 continue

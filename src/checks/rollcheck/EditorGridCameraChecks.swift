@@ -57,9 +57,12 @@ public func runEditorGridCameraChecks(_ report: CheckReport, viewport: DocumentV
     checkTrackOwnerRemap(report, viewport: viewport)
     checkFractionalGridLattice(report, viewport: viewport)
     checkContentWindowBoundaryReversal(report)
+    checkCoarseClockDrawnLinesAreSnapTargets(report)
     checkScratchDoubleDraw(report, viewport: viewport, grid: grid)
     checkHeldDrawResnapsAnchor(report, viewport: viewport, grid: grid)
     checkOffGridMoveSnapsToLattice(report, viewport: viewport, grid: grid)
+    checkAutoZoomSnapKeepsDrawnLattice(report, viewport: viewport, grid: grid)
+    checkNudgeFollowsBarAnchoredLattice(report, viewport: viewport, grid: grid)
 }
 
 @MainActor

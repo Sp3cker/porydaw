@@ -1,5 +1,7 @@
+import PorydawAppPresentation
 import PorydawKitStudio
 import PorydawSample
+import PorydawSampleUI
 import PorydawVoicegroup
 
 @MainActor
@@ -91,24 +93,38 @@ private func checkSourceSelection(_ report: CheckReport) {
     session.setMarker(source: id, frame: 300, snap: false)
     r.expectEqual(expected: [100, 300], actual: session.sources[0].markers, what: "markers bound each split")
     r.expectEqual(expected: 3, actual: session.sources[0].slices.count, what: "each split adds one slice")
+    session.removeSlice(source: id, slice: 1)
+    r.expectEqual(
+        expected: [300], actual: session.sources[0].markers,
+        what: "delete removes the marker the slice shared with the previous one")
+    r.expectEqual(
+        expected: ["src_00", "src_02"], actual: session.sources[0].slices.map(\.name),
+        what: "the previous slice keeps its name")
+    r.expectEqual(
+        expected: [300, 400], actual: session.sources[0].slices.map(\.endFrame),
+        what: "the previous slice grows over the deleted frames")
     session.removeSlice(source: id, slice: 0)
+    r.expect(session.sources[0].markers.isEmpty, message: "the first slice merges into the next")
     r.expectEqual(
-        expected: [100, 300], actual: session.sources[0].markers, what: "delete keeps marker boundaries")
-    session.setMarker(source: id, frame: 50, snap: false)
+        expected: ["src_02"], actual: session.sources[0].slices.map(\.name), what: "the next slice keeps its name")
     r.expectEqual(
-        expected: ["src_00", "src_01", "src_02"], actual: session.sources[0].slices.map(\.name),
-        what: "gap slice reuses the freed suffix")
-    session.moveMarker(source: id, from: 300, to: 250, snap: false)
+        expected: [0], actual: session.sources[0].slices.map(\.startFrame),
+        what: "the next slice grows back over the deleted frames")
+
+    session.addSource(sessionSample(count: 400))
+    let gapped = session.sources[1].id
+    for frame in [100, 200, 300] { session.setMarker(source: gapped, frame: frame, snap: false) }
+    session.removeMarker(source: gapped, frame: 300)
+    r.expectEqual(expected: [100, 200], actual: session.sources[1].markers, what: "endpoint removal leaves a gap")
+    session.setMarker(source: gapped, frame: 300, snap: false)
     r.expectEqual(
-        expected: [100, 250, 400], actual: session.sources[0].slices.map(\.endFrame),
-        what: "move updates adjacent bounds")
-    session.removeMarker(source: id, frame: 50)
-    r.expectEqual(
-        expected: [100, 250], actual: session.sources[0].slices.map(\.startFrame),
-        what: "endpoint marker removal deletes only its adjacent slice")
-    session.setMarker(source: id, frame: 50, snap: false)
-    r.expectEqual(
-        expected: 3, actual: session.sources[0].slices.count, what: "marker recreates a deleted gap slice")
+        expected: ["src_00", "src_01"], actual: session.sources[1].slices.map(\.name),
+        what: "a marker recreates the gap slice with its freed suffix")
+    session.removeMarker(source: gapped, frame: 100)
+    session.removeSlice(source: gapped, slice: 0)
+    r.expect(
+        session.sources[1].markers.isEmpty && session.sources[1].slices.isEmpty,
+        message: "an isolated slice takes the markers that bordered only it")
     let beforeRefusal = session.sources
     session.validateName = { (_: String) in "reserved" }
     session.setMarker(source: id, frame: 150, snap: false)
@@ -325,7 +341,6 @@ private func checkSourceSnapshot(_ report: CheckReport) {
 private func checkSourceAutoPlaceAndZoneRemoval(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitSourceSession::autoPlaceAndZoneVanishing")
     let p = KitStudioPresenter()
-    p.open()
     p.dropSample(name: "occupied", onKey: 36)
     p.setMode(index: 1)
     // A keysplit drop at 36 would extend to 127 and cover every key, so the one-key blocker goes in directly.
@@ -371,7 +386,7 @@ private func checkSourceAutoPlaceAndZoneRemoval(_ report: CheckReport) {
         actual: p.draft.drumkitZones.first(where: { $0.sampleName == slice1 })?.startKey,
         what: "surviving slice keeps its zone")
 
-    p.validateName = { $0 == "sample_02" ? "taken in project" : nil }
+    p.effects.validateName = { $0 == "sample_02" ? "taken in project" : nil }
     p.insertMarker(frame: 120)
     p.insertMarker(frame: 150)
     let slice3 = p.sliceName(id: p.sliceId(row: 2))
@@ -402,9 +417,9 @@ private func checkCommittedKitSamples(_ report: CheckReport) {
     func zone(_ key: Int, _ symbol: String) -> KitZone {
         KitZone(startKey: key, endKey: key, sampleName: symbol, rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
     }
-    let p = KitStudioPresenter()
-    p.load(
-        zones: [
+    let waveform = MarkerWaveformModel(palette: GridPalette())
+    let p = KitStudioPresenter(
+        loading: [
             zone(36, "DirectSoundWaveData_kick"), zone(38, "DirectSoundWaveData_kick"),
             zone(40, "DirectSoundWaveData_snare"),
         ],
@@ -413,7 +428,10 @@ private func checkCommittedKitSamples(_ report: CheckReport) {
             "DirectSoundWaveData_kick": committed(400, looped: true),
             "DirectSoundWaveData_snare": committed(300, looped: false),
         ],
-        progWaves: [:])
+        progWaves: [:], waveform: waveform)
+    r.expectEqual(
+        expected: ["Loop start", "Loop end"], actual: waveform.markers.map(\.label),
+        what: "a loaded kit shows its first sample's loop before any interaction")
     r.expectEqual(
         expected: ["kick", "kick", "snare"], actual: p.draft.drumkitZones.map(\.sampleName),
         what: "keys reference one slice per committed sample")

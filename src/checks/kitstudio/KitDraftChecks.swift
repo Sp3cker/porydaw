@@ -23,7 +23,6 @@ public func runKitDraftSuite(_ report: CheckReport) {
 private func checkKitWholeFileAdd(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::wholeFileAdd")
     let p = KitStudioPresenter()
-    p.open()
     p.addSource(
         ImportedSample(buffer: [Float](repeating: 0.5, count: 256), sampleRate: 44100, suggestedName: "kick"),
         autoPlaceFirstSlice: true)
@@ -273,7 +272,6 @@ private func checkKitToneCodec(_ report: CheckReport) {
 private func checkKitPresenterZones(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::zonesAndViews")
     let p = KitStudioPresenter()
-    p.open()
     p.dropSample(name: "a", onKey: 10)
     p.dropSample(name: "b", onKey: 20)
     r.expectEqual(
@@ -330,23 +328,47 @@ private func checkKitPresenterZones(_ report: CheckReport) {
     p.setMode(index: 1)
     p.selectZone(row: 0)
     r.expectEqual(expected: 48, actual: p.selectedZoneRootKey, what: "keysplit edits survive mode switches")
+
+    let shifted = KitStudioPresenter()
+    shifted.dropSample(name: "c", onKey: 60)
+    shifted.dropSample(name: "b", onKey: 40)
+    shifted.dropSample(name: "a", onKey: 20)
+    shifted.selectZone(row: 1)
+    shifted.undo()
+    r.expectEqual(expected: 0, actual: shifted.selectedZone, what: "undo keeps the selection on its zone as rows shift")
+    shifted.setZoneRootKey(key: 72)
+    r.expectEqual(
+        expected: [72, 60], actual: shifted.draft.drumkitZones.map(\.rootKey),
+        what: "inspector edits after undo reach the selected zone, not its old row")
+
+    let moved = KitStudioPresenter()
+    moved.dropSample(name: "a", onKey: 10)
+    moved.dropSample(name: "b", onKey: 20)
+    moved.moveZone(row: 1, toKey: 30)
+    moved.moveZone(row: 0, toKey: 20)
+    moved.undo()
+    r.expectEqual(expected: "b", actual: moved.selectedZoneSampleName, what: "undo restores the selection of its step")
+    moved.undo()
+    moved.setZoneRootKey(key: 72)
+    r.expectEqual(
+        expected: [60, 72], actual: moved.draft.drumkitZones.map(\.rootKey),
+        what: "undo edits the zone its step selected, not the current occupant of a stale key")
 }
 
 @MainActor
 private func checkKitPresenterDirty(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::dirtyTitleAndSave")
     let p = KitStudioPresenter()
-    p.open()
     r.expectEqual(expected: "Split Studio", actual: p.titleText, what: "clean title names no song or voice")
     r.expect(!p.dirty && !p.canSave, message: "empty kit starts clean and unsaveable")
     p.setMode(index: 1)
     r.expect(p.dirty && !p.canSave && !p.canUndo, message: "mode-only conversion is dirty but has no mapped zone")
     p.setMode(index: 0)
     r.expect(!p.dirty && !p.canSave, message: "original clean mode clears dirty")
-    p.validateVoicegroupName = { (name: String) -> String? in name == "kit" ? nil : "taken" }
+    p.effects.validateVoicegroupName = { (name: String) -> String? in name == "kit" ? nil : "taken" }
     p.applySuggestedVoicegroupName("kit")
     var saves = 0
-    p.onSaveRequested = { saves += 1 }
+    p.effects.onSaveRequested = { saves += 1 }
     p.requestSave()
     r.expectEqual(expected: 0, actual: saves, what: "Save callback gated by mapped zones")
     p.dropSample(name: "sample", onKey: 60)
@@ -369,7 +391,6 @@ private func checkKitPresenterDirty(_ report: CheckReport) {
 private func checkKitPresenterSlices(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::sliceMappingValidationAndHistory")
     let p = KitStudioPresenter()
-    p.open()
     r.expect(p.snap, message: "zero-crossing snap starts enabled")
     p.toggleSnap()
     p.addSource(ImportedSample(buffer: [Float](repeating: 0.5, count: 128), sampleRate: 13379, suggestedName: "source"))
@@ -393,7 +414,7 @@ private func checkKitPresenterSlices(_ report: CheckReport) {
     let oldName = p.sliceName(id: id)
     r.expect(
         p.sliceAddress(id)?.index == 0 && p.sliceAddress(secondId)?.index == 1, message: "ids map to session indices")
-    p.validateName = { (name: String) -> String? in
+    p.effects.validateName = { (name: String) -> String? in
         name == "taken" ? "Already registered" : nil
     }
     p.renameSlice(id: id, name: "taken")
@@ -463,7 +484,6 @@ private func checkKitPresenterSlices(_ report: CheckReport) {
 private func checkKitPresenterAudition(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::keyAudition")
     let p = KitStudioPresenter()
-    p.open()
     p.dropSample(name: "slice", onKey: 10)
     var sample = ProcessedSample()
     sample.s8 = [1, 2, 3]
@@ -471,7 +491,7 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
     p.samples = ["slice": sample]
     var samplePlayed = false
     var publishes = 0
-    p.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+    p.effects.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
         publishes += 1
         if key == 10, case .sample(let pcm, _, _, _, _, _, _, _) = tone.children[10] {
             samplePlayed = pcm == sample.s8
@@ -483,13 +503,12 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
     r.expect(samplePlayed && publishes == 1, message: "key audition publishes mapped sample tone only")
 
     let kit = KitStudioPresenter()
-    kit.open()
     kit.addSource(ImportedSample(buffer: [Float](repeating: 0.5, count: 128), sampleRate: 13379, suggestedName: "src"))
     kit.insertMarker(frame: 10)
     kit.insertMarker(frame: 100)
     kit.insertMarker(frame: 50)
     var played: [Int] = []
-    kit.playPcm = { (id: Int) in played.append(id) }
+    kit.effects.playPcm = { (id: Int) in played.append(id) }
     let second = kit.sliceId(row: 1)
     kit.selectSlice(id: second)
     kit.playSelectedSlice()
@@ -518,11 +537,11 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
 @MainActor
 private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::voicegroupNameAndMeta")
-    let p = KitStudioPresenter()
-    p.validateVoicegroupName = { (name: String) -> String? in
+    var effects = KitStudioEffects()
+    effects.validateVoicegroupName = { (name: String) -> String? in
         name == "breakbeat_92_kit" || name == "new_kit" ? nil : "Voicegroup \(name) already exists in this project."
     }
-    p.open()
+    let p = KitStudioPresenter(effects: effects)
     r.expect(p.voicegroupName.isEmpty && p.voicegroupNameInvalid, message: "open starts unnamed and unsaveable")
     r.expectEqual(expected: "0 slices · 0 bytes ROM", actual: p.metaText, what: "empty meta readout")
     p.applySuggestedVoicegroupName("new_kit")

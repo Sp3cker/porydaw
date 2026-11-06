@@ -166,6 +166,124 @@ func checkOffGridMoveSnapsToLattice(
         cppID: checkID, message: "past half a stride the off-grid note lands on the 1/8 lattice")
 }
 
+/// Auto zoomed past 1/32 keeps snapping to the 1/32 lines it draws instead of collapsing
+/// to single ticks through the non-dividing 1/64 rung.
+@MainActor
+func checkAutoZoomSnapKeepsDrawnLattice(
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
+) {
+    let session = viewport.session
+    let checkID = "swiftcore/PianoRoll::autoZoomSnapKeepsDrawnLattice"
+    let document = session.document
+    let camera = viewport.camera
+    let selection = viewport.grid.selection
+    let selected = session.selectedNoteOrder
+    let history = document.history.undoIndex
+    defer {
+        while document.history.undoIndex > history { _ = document.history.undoDocument() }
+        session.setSelectedNotes(selected)
+        _ = viewport.mutateCamera { $0 = camera }
+        _ = viewport.grid.setSelection(selection)
+        grid.refreshFromSession()
+    }
+    grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
+    _ = viewport.mutateCamera { _ = $0.setTimeZoom(384) }
+    _ = viewport.grid.setSelection(.auto)
+    let beat = Double(document.ticksPerBeat)
+    let beatStart = Int((viewport.camera.tickAtContentX(320) / beat).rounded(.up) * beat)
+    let drawn = Int(viewport.grid.gridTicksAt(Tick(beatStart), camera: viewport.camera))
+    let snap = Int(viewport.grid.snapTicksAt(Tick(beatStart), camera: viewport.camera))
+    report.expect(
+        drawn == 3 && snap == 3, cppID: checkID,
+        message: "384 px/beat Auto draws and snaps the 1/32 lattice: drawn \(drawn) snap \(snap)")
+    let pitch = grid.pitch(atY: 160)
+    guard pitch >= 0,
+        let id = try? document.addNotes([
+            NewNote(
+                track: grid.trackIndex, tick: Tick(beatStart), pitch: UInt8(pitch),
+                duration: Tick(snap), velocity: 100)
+        ]).first
+    else {
+        report.fail(checkID, "could not plant a note")
+        return
+    }
+    grid.refreshFromSession()
+    guard let rect = selectionRect(id, grid: grid) else {
+        report.fail(checkID, "planted note is not projected")
+        return
+    }
+    let x = rect.x + rect.width / 2
+    let y = rect.y + rect.height / 2
+    let afterPlant = document.history.undoIndex
+    let tickPx = viewport.camera.snapshot.pixelsPerTick
+    grid.beginPointer(x: x, y: y, modifiers: 0)
+    grid.updatePointer(x: x + 1 * tickPx, y: y)
+    grid.endPointer(x: x + 1 * tickPx, y: y)
+    report.expect(
+        document.note(id)?.tick == Tick(beatStart) && document.history.undoIndex == afterPlant,
+        cppID: checkID, message: "one tick of travel moves nothing under Auto")
+    grid.beginPointer(x: x, y: y, modifiers: 0)
+    grid.updatePointer(x: x + 2 * tickPx, y: y)
+    grid.endPointer(x: x + 2 * tickPx, y: y)
+    report.expect(
+        document.note(id)?.tick == Tick(beatStart + 3), cppID: checkID,
+        message: "two ticks of travel land on the next 1/32 line, not on tick 2")
+}
+
+/// Arrow nudges step along the same bar-anchored lattice a drag snaps to. The fixture
+/// restates its signature off the beat, so absolute multiples of the stride would miss
+/// every drawn line after the seam.
+@MainActor
+func checkNudgeFollowsBarAnchoredLattice(
+    _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid
+) {
+    let session = viewport.session
+    let checkID = "swiftcore/PianoRoll::nudgeFollowsBarAnchoredLattice"
+    let document = session.document
+    let selection = viewport.grid.selection
+    let selected = session.selectedNoteOrder
+    let history = document.history.undoIndex
+    defer {
+        while document.history.undoIndex > history { _ = document.history.undoDocument() }
+        session.setSelectedNotes(selected)
+        _ = viewport.grid.setSelection(selection)
+        grid.refreshFromSession()
+    }
+    _ = viewport.grid.setSelection(.musical(4))
+    let stride = Int(viewport.grid.snapTicksAt(0, camera: viewport.camera))
+    let seam = stride / 2
+    document.setTimeSignature(tick: Tick(seam), numerator: 4, denominatorPower: 2)
+    grid.refreshFromSession()
+    report.expect(
+        Int(viewport.grid.axis.segmentAt(0).next) == seam, cppID: checkID,
+        message: "a 4/4 restated at tick \(seam) seams the lattice off the \(stride)-tick beat")
+    guard
+        let id = try? document.addNotes([
+            NewNote(track: grid.trackIndex, tick: 0, pitch: 60, duration: Tick(stride), velocity: 100)
+        ]).first
+    else {
+        report.fail(checkID, "could not plant a note at tick 0")
+        return
+    }
+    grid.refreshFromSession()
+    session.setSelectedNotes([id])
+    var landed: [Int] = []
+    for _ in 0..<3 {
+        grid.performCommand(command: EditCommand.nudgeRight.rawValue)
+        landed.append(document.note(id).map { Int($0.tick) } ?? -1)
+    }
+    let expected = [seam, seam + stride, seam + 2 * stride]
+    report.expect(
+        landed == expected, cppID: checkID,
+        message: "three Right nudges walk the seam-anchored lattice \(expected): \(landed)")
+    grid.performCommand(command: EditCommand.nudgeLeft.rawValue)
+    grid.performCommand(command: EditCommand.nudgeLeft.rawValue)
+    grid.performCommand(command: EditCommand.nudgeLeft.rawValue)
+    report.expect(
+        document.note(id)?.tick == 0, cppID: checkID,
+        message: "three Left nudges retrace the lattice back to tick 0")
+}
+
 @MainActor
 func checkProjection(
     _ report: CheckReport, viewport: DocumentViewport, grid: PianoGrid

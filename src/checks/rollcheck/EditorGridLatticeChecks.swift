@@ -6,6 +6,45 @@ import PorydawCore
 import QtBridge
 private let latticeID = "rollcheck/PianoRollStaticTest::tickRangeWalksFractionalLattice"
 private let contentWindowID = "swiftcore/EditorGridCamera::contentWindowBoundaryReversal"
+private let coarseClockID = "swiftcore/RollGrid::coarseClockDrawnLinesAreSnapTargets"
+
+/// A 480-tick beat has a 20-tick clock, so 1/64 lines (30 ticks) sit off the clock
+/// lattice; a 4/4 restated at tick 40 keeps bar anchors on the clock but off every
+/// painted stride. Every subdivision line Auto or Clock paints must be its own snap target.
+@MainActor
+func checkCoarseClockDrawnLinesAreSnapTargets(_ report: CheckReport) {
+    let beat: UInt32 = 480
+    let seam: Tick = 40
+    let axis = TimeAxis(
+        map: TimeMap(
+            ticksPerBeat: beat, lengthTicks: Tick(beat) * 16,
+            timeSigs: [TimeSigPoint(tick: seam, numerator: 4, denomPow2: 2)]))
+    let metrics = GridMetrics(baseFontPx: 13, dpr: 1, width: 640, height: 320, timeAxis: axis)
+    var camera = EditorCamera(
+        ticksPerBeat: beat, lengthTicks: UInt64(beat) * 16, viewportWidth: 640,
+        rollHeight: 320, limits: GridCameraPolicy.limits(baseFontPx: 13))
+    let clock = TimelineSnapPolicy.clockTicks(division: Int(beat), extendedClocks: false)
+    var grid = RollGrid(axis: axis, clockTicks: clock, metrics: metrics)
+    report.expect(clock == 20, cppID: coarseClockID, message: "480 ticks per beat is a 20-tick clock")
+    for (selection, pixelsPerBeat) in [(GridSelection.auto, 300.0), (.clock, 40.0)] {
+        _ = camera.setTimeZoom(pixelsPerBeat)
+        grid.setSelection(selection)
+        var lines: [Tick] = []
+        grid.forEachSubdivision(from: 0, to: seam + Tick(beat) * 2, camera: camera) { tick, _ in
+            lines.append(tick)
+        }
+        let unreachable = lines.filter { grid.snapTick(Double($0), camera: camera) != $0 }
+        report.expect(
+            lines.count > 4 && unreachable.isEmpty, cppID: coarseClockID,
+            message: "\(selection) at \(pixelsPerBeat) px/beat snaps onto every drawn line across "
+                + "the tick-\(seam) seam: \(lines.count) lines, unreachable \(unreachable.prefix(4))")
+    }
+    _ = camera.setTimeZoom(300)
+    grid.setSelection(.auto)
+    report.expect(
+        grid.gridTicksAt(seam, camera: camera) == 30 && grid.snapTicksAt(seam, camera: camera) == 30,
+        cppID: coarseClockID, message: "Auto at 300 px/beat draws and snaps 1/64 (30 ticks)")
+}
 
 @MainActor
 func checkFractionalGridLattice(_ report: CheckReport, viewport: DocumentViewport) {
@@ -26,25 +65,28 @@ func checkFractionalGridLattice(_ report: CheckReport, viewport: DocumentViewpor
     report.expect(
         segment.next >= 289, cppID: latticeID,
         message: "A019 fractional window segment reaches past tick 289")
+    // Right edge just under the 285 subdivision (288 is a beat line, never emitted).
     let left = 96.75
-    let right = 289.25
+    let right = 284.5
     let begin = TimeDefaults.tick(from: left)
     let end = Tick(ceil(right) + 1)
     var seen: [Tick] = []
     viewport.grid.forEachSubdivision(from: begin, to: end, camera: viewport.camera) { tick, _ in
         seen.append(tick)
     }
+    let stride = viewport.grid.gridTicksAt(96, camera: viewport.camera)
+    let snapStride = viewport.grid.snapTicksAt(96, camera: viewport.camera)
+    report.expect(
+        stride == 3 && snapStride == 3, cppID: latticeID,
+        message: "at 384 px/beat Auto draws and snaps 1/32, the finest rung dividing 24 ticks: "
+            + "drawn \(stride) snap \(snapStride)")
     var expected: [Tick] = []
-    for tick in Tick(96)..<Tick(291) where tick % 24 != 0 {
+    for tick in begin..<end where tick % 24 != 0 && tick % stride == 0 {
         expected.append(tick)
     }
     report.expect(
-        seen == expected, cppID: latticeID,
-        message: "A022 fractional window emits the independently enumerated lattice")
-    let stride = viewport.grid.gridTicksAt(96, camera: viewport.camera)
-    report.expect(
-        stride > 0 && stride < segment.beatTicks,
-        cppID: latticeID, message: "segment lattice stride is positive")
+        seen == expected && seen.last == 285, cppID: latticeID,
+        message: "A022 fractional window emits the independently enumerated lattice up to 285")
     var visible: [Tick] = []
     viewport.grid.forEachSubdivision(from: 96, to: 289, camera: viewport.camera) { tick, _ in
         visible.append(tick)

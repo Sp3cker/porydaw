@@ -75,9 +75,9 @@ public final class NoteCommands {
             case .transposeDownOctave:
                 transpose(-12)
             case .nudgeLeft:
-                nudge(-1, snapTicks: snapTicks)
+                nudge(-1)
             case .nudgeRight:
-                nudge(1, snapTicks: snapTicks)
+                nudge(1)
             case .muteTracks:
                 toggleMute()
             case .soloTracks:
@@ -187,18 +187,15 @@ public final class NoteCommands {
         }
     }
 
-    private func nudge(_ direction: Int, snapTicks: Tick) {
+    /// Steps the selection's earliest note to the grid's next/previous snap line, so a nudge
+    /// lands where a drag would: bar-anchored lattices, not absolute multiples of the stride.
+    private func nudge(_ direction: Int) {
         let notes = selectedNotes()
         guard let anchor = notes.map(\.tick).min() else { return }
-        let step = max(1, snapTicks)
-        let destination: Tick
-        if direction < 0 {
-            destination = anchor == 0 ? 0 : ((anchor - 1) / step) * step
-        } else {
-            let remainder = anchor % step
-            let delta = remainder == 0 ? step : step - remainder
-            destination = TimeDefaults.shiftTickClamped(anchor, by: Int64(delta))
-        }
+        let destination =
+            direction < 0
+            ? viewport.grid.snapTickDown(Double(anchor) - 1, camera: viewport.camera)
+            : viewport.grid.nextSnapTickAfter(anchor, camera: viewport.camera)
         let delta = Int64(destination) - Int64(anchor)
         guard delta != 0 else { return }
         session.document.nudgeNotes(notes.map(\.id), byTicks: delta, byKeys: 0)

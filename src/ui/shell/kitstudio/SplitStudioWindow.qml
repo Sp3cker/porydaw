@@ -293,13 +293,8 @@ ThemedWindow {
                     Layout.preferredHeight: 2.15 * studio.unit
                     invalid: studio.editor.voicegroupNameInvalid
                     text: studio.editor.voicegroupName
+                    onTextEdited: studio.editor.beginVoicegroupNameEdit()
                     onEditingFinished: studio.editor.setVoicegroupName(text)
-                    Connections {
-                        target: studio.editor
-                        function onVoicegroupNameChanged(): void {
-                            if (!voicegroupField.activeFocus) voicegroupField.text = studio.editor.voicegroupName
-                        }
-                    }
                 }
                 Button {
                     objectName: "splitStudioClose"
