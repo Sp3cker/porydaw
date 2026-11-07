@@ -88,13 +88,11 @@ ShellTransportSupport {
         tabs.selectTab(firstId)
         tryCompare(field, "value", edited, 3000,
                    "returning to first tab restores its edited master value")
-        shell.shellPresenter.session.requestUndo()
+        field.focusInput(Qt.OtherFocusReason)
+        keySequence(StandardKey.Undo)
         verify(waitForNative(function() {
-            restored.presenter.refresh()
             return field.value === firstValue && !shell.shellPresenter.session.documentDirty
-        }, 3000), "undo restores first song volume in mounted field")
-        compare(shell.shellPresenter.session.documentDirty, false,
-                "undo returns first song to its clean state")
+        }, 3000), "Undo with the committed master field focused restores the song volume")
         field.focusInput(Qt.OtherFocusReason)
         field.selectAll()
         const stopped = restored.presenter.state

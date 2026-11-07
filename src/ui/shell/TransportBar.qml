@@ -313,6 +313,7 @@ Rectangle {
             text: qsTr("Volume")
         }
         DragInput {
+            id: masterVolumeField
             objectName: "transportMasterVolume"
             inputObjectName: "transportMasterVolumeInput"
             accessibleName: qsTr("Master volume")
@@ -325,6 +326,15 @@ Rectangle {
             Layout.preferredWidth: Math.round(bar.baseFontPx * 6 + 18)
             Layout.preferredHeight: Math.round(bar.baseFontPx * 2.1)
             onValueCommitted: function(committed) { bar.presenter.setMasterVolume(committed) }
+            // An edited draft keeps its own Undo/Redo; a committed field yields to song history.
+            Connections {
+                target: masterVolumeField.textInput.Keys
+                function onShortcutOverride(event: KeyEvent): void {
+                    if ((event.matches(StandardKey.Undo) || event.matches(StandardKey.Redo))
+                            && !masterVolumeField.draftPending)
+                        event.accepted = false
+                }
+            }
         }
     }
     RowLayout {

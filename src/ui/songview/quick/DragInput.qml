@@ -26,6 +26,8 @@ Item {
     // and arrow/Page-key adjustments.
     property bool adjustmentsEnabled: true
     property alias textInput: focusLeaf
+    // True while the displayed text is an uncommitted edit of the value.
+    readonly property bool draftPending: input.text !== control.integerInput.displayText(control.value)
 
     signal valueCommitted(int committed)
     signal editingAccepted(int committed)
