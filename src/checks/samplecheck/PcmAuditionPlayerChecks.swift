@@ -7,6 +7,11 @@ import PorydawSample
 @testable import PorydawSampleUI
 @testable import SwiftCoreCheckLogic
 
+#if canImport(Darwin)
+    import Darwin
+    import Synchronization
+#endif
+
 /// Gates actual native preparation, including cancellation, without sleeps or scheduler polling.
 private actor ControlledPcmPreparation {
     private var inputs: [[Int8]] = []
@@ -430,6 +435,60 @@ private func checkRetiredToneStorage(_ report: CheckReport) async {
     }
 }
 
+#if canImport(Darwin)
+    private typealias PcmMallocLogger = @convention(c) (UInt32, UInt, UInt, UInt, UInt, UInt32) -> Void
+    private let pcmReclamationObservation = Mutex((address: UInt(0), freed: false, freedOnMain: false))
+    private let pcmMallocLogger: PcmMallocLogger = { type, _, address, _, _, _ in
+        guard type & 4 != 0 else { return }
+        // No allocating bookkeeping: the allocator invokes this hook for every native free.
+        pcmReclamationObservation.withLock { state in
+            guard address == state.address && !state.freed else { return }
+            state.freed = true
+            state.freedOnMain = pthread_main_np() != 0
+        }
+    }
+
+    @MainActor
+    private func checkNativePcmReclamation(_ report: CheckReport) async {
+        let cppID = "swiftcore/AudioSampleAudition::nativePcmReclamation"
+        // ASAN replaces the system allocator, so its frees do not reach malloc_logger.
+        guard dlsym(UnsafeMutableRawPointer(bitPattern: -2), "__asan_init") == nil else {
+            report.pass(cppID, row: "native free thread observation skipped under ASAN")
+            return
+        }
+        let scope = report.scoped(cppID: cppID)
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "malloc_logger") else {
+            scope.expect(false, message: "Darwin malloc_logger is available for native reclamation observation")
+            return
+        }
+        let slot = symbol.assumingMemoryBound(to: PcmMallocLogger?.self)
+        var pcm = SampleAuditionPcm(samples: [12, -24, 37])
+        guard let data = pcm?.data else {
+            scope.expect(false, message: "native reclamation fixture prepares")
+            return
+        }
+        pcmReclamationObservation.withLock { state in
+            state.address = UInt(bitPattern: data)
+            state.freed = false
+            state.freedOnMain = false
+        }
+        let saved = slot.pointee
+        slot.pointee = pcmMallocLogger
+        defer {
+            slot.pointee = saved
+            pcmReclamationObservation.withLock { $0.address = 0 }
+        }
+        // Keep the last owner until after the allocator hook is installed, then drop it on main.
+        withExtendedLifetime(pcm) {}
+        pcm = nil
+        await SampleAuditionPcm.Allocation.reclamationSettled()
+        let observation = pcmReclamationObservation.withLock { $0 }
+        scope.expect(
+            observation.freed && !observation.freedOnMain,
+            message: "dropping the last PCM owner on main frees its native bytes off main before drain")
+    }
+#endif
+
 @MainActor
 internal func runPcmAuditionPlayerChecks(_ report: CheckReport) {
     do {
@@ -441,6 +500,9 @@ internal func runPcmAuditionPlayerChecks(_ report: CheckReport) {
             try await checkBusyPlayerRetry(report)
             try await checkNativePlayerTakeovers(report)
             await checkRetiredToneStorage(report)
+            #if canImport(Darwin)
+                await checkNativePcmReclamation(report)
+            #endif
         }
     } catch {
         report.fail("swiftcore/PcmAuditionPlayer::fixture", "controlled player fixture failed: \(error)")

@@ -440,7 +440,9 @@ repeat and slot retries reuse the prepared bytes. Cold preparation is asynchrono
 and latest-request-only; an owner reservation prevents stopped or displaced requests
 from publishing late. The four-slot callback handoff retains separate wave headers
 without callback ARC. Native PCM storage is reclaimed on a utility executor, not
-the main actor or audio callback.
+the main actor or audio callback. A portable `DispatchQueue`-backed `SerialExecutor`
+owns isolated destruction on every platform; its FIFO drain waits for previously
+queued reclamation without relying on Darwin's `DispatchSerialQueue`.
 
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|

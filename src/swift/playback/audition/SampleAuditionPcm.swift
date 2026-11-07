@@ -5,10 +5,21 @@ import Foundation
 /// Preparation and final reclamation run off the main actor; publication only retains it.
 public final class SampleAuditionPcm {
     actor Allocation {
-        private static let queue = DispatchSerialQueue(label: "porydaw.audition.reclaim", qos: .utility)
+        private final class ReclamationExecutor: SerialExecutor {
+            let queue = DispatchQueue(label: "porydaw.audition.reclaim", qos: .utility)
+
+            func enqueue(_ job: consuming ExecutorJob) {
+                let unowned = UnownedJob(job)
+                queue.async {
+                    unowned.runSynchronously(on: self.asUnownedSerialExecutor())
+                }
+            }
+        }
+
+        private static let executor = ReclamationExecutor()
 
         nonisolated var unownedExecutor: UnownedSerialExecutor {
-            Self.queue.asUnownedSerialExecutor()
+            Self.executor.asUnownedSerialExecutor()
         }
         private let bytes: DispatchData
 
@@ -17,7 +28,7 @@ public final class SampleAuditionPcm {
         /// Drains previously queued isolated destruction without retaining its allocation.
         static func reclamationSettled() async {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                queue.async { continuation.resume() }
+                executor.queue.async { continuation.resume() }
             }
         }
 
