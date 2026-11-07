@@ -11,6 +11,7 @@ add_library(PorydawCore STATIC
     EngineNoteNormalizer.swift
     TrackEffect.swift
     TrackEffectEditing.swift
+    EffectsSidecar.swift
     SongDocument.swift
     DocumentChangeSet.swift
     DocumentRevisions.swift

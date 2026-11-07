@@ -277,6 +277,8 @@ extension ApplicationSession {
             } else {
                 songTabs.add(tabSession, at: index)
             }
+            publish(\.lastOpenNotice, session.lastOpenNotice)
+            if !lastOpenNotice.isEmpty { onOpenNoticeChanged?() }
         } catch {
             if Task.isCancelled {
                 if let pending { songTabs.cancelReload(tabId: pending.tabId) }

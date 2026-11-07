@@ -7,9 +7,9 @@ import PorydawProject
 
 /// The session state affected by a completed operation.
 public struct SessionChangeDomains: OptionSet, Sendable {
-    public let rawValue: UInt8
+    public let rawValue: UInt16
 
-    public init(rawValue: UInt8) {
+    public init(rawValue: UInt16) {
         self.rawValue = rawValue
     }
 
@@ -21,6 +21,7 @@ public struct SessionChangeDomains: OptionSet, Sendable {
     public static let cursor = SessionChangeDomains(rawValue: 1 << 5)
     public static let mixState = SessionChangeDomains(rawValue: 1 << 6)
     public static let scale = SessionChangeDomains(rawValue: 1 << 7)
+    public static let effects = SessionChangeDomains(rawValue: 1 << 8)
 }
 
 /// What the session publishes after reconciling a completed state change.
@@ -93,6 +94,8 @@ public final class DocumentSession {
     /// On-disk MIDI identity at the last load or save. Nil predates tracking
     /// (direct init); the first save then adopts the disk without prompting.
     public private(set) var lastKnownMidiBytes: [UInt8]?
+    /// Recovery notice for discarded or corrupt MIDI-effects configuration.
+    public private(set) var lastOpenNotice = ""
 
     /// Selection order is authoritative; membership is its cached lookup index.
     /// Both are session-only and never dirty the document or enter history.
@@ -283,14 +286,31 @@ public final class DocumentSession {
         loaded: LoadedSong, file: MidiFile, service: ProjectService,
         sampleRate: Double
     ) -> DocumentSession {
+        var effects: [TrackEffect] = []
+        var dropped = 0
+        var notice = ""
+        switch loaded.effects {
+        case let .restored(sidecar, count):
+            effects = sidecar.effects.map { (stored: StoredEffect) in stored.effect }
+            dropped = count
+            if count > 0 {
+                notice = "\(loaded.label): \(count) MIDI effect(s) referred to missing tracks and were removed."
+            }
+        case .corrupt:
+            notice = "\(loaded.label): the MIDI-effects sidecar was corrupt and was moved aside."
+        case nil:
+            break
+        }
         let document = SongDocument(
             file: file, config: loaded.config,
-            source: loaded.source, trackBudget: loaded.trackBudget)
+            source: loaded.source, trackBudget: loaded.trackBudget,
+            effects: effects, effectsDropped: dropped > 0)
         let session = DocumentSession(
             document: document, service: service, lease: loaded.bank,
             slots: loaded.bankSlots, dirty: loaded.bank.dirty,
             loadName: loaded.bank.loadName, sampleRate: sampleRate)
         session.lastKnownMidiBytes = loaded.midiBytes
+        session.lastOpenNotice = notice
         return session
     }
 
@@ -439,12 +459,13 @@ public final class DocumentSession {
         }
         let previousArg = document.state.config.voicegroupArgument
         let identityBefore = document.history.currentIdentity
-        let changed: Bool
-        switch direction {
-        case .undo: changed = document.history.undoDocument()
-        case .redo: changed = document.history.redoDocument()
-        }
-        withStateChanges {
+        // Replay and its session repairs publish as one completed operation.
+        let changed = withStateChanges {
+            let changed: Bool
+            switch direction {
+            case .undo: changed = document.history.undoDocument()
+            case .redo: changed = document.history.redoDocument()
+            }
             var domains: SessionChangeDomains = [.dirty, .history]
             // Only song history restores song selection.
             let identityAfter = document.history.currentIdentity
@@ -461,6 +482,7 @@ public final class DocumentSession {
             }
             if domains.contains(.bank) { pendingBankNotification = false }
             publishChange(domains)
+            return changed
         }
         if let loadFailure { throw loadFailure }
         return changed

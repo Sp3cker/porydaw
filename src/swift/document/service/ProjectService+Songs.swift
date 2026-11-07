@@ -78,6 +78,7 @@ extension ProjectService {
                 throw ProjectServiceError.operationFailed("A song named \(label) already exists.")
             }
             try await store.writeFile(destination.path, data: Data(snapshot.bytes))
+            try writeEffectsSidecar(snapshot.effectsSidecar, label: label)
             try MidiCfg.writeSongFlags(
                 midiDir: midiDir, label: label,
                 flags: SongFlags.merge(snapshot.config))

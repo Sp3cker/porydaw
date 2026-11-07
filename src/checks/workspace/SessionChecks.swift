@@ -123,6 +123,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     runClipboardSelectionChecks(report, suite: session, service: service)
     runTrackHeadersChecks(report, session: session, service: service)
     runTrackHeadersInputChecks(report, session: session, service: service)
+    runEffectPersistenceChecks(report, session: session, service: service)
 
     sessionLifetime(report: report, session: session, service: service)
 }

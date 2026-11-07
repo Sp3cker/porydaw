@@ -124,10 +124,12 @@ public struct SaveSnapshot: Sendable {
     public let destination: SongSource
     public let revision: UInt64
     public let identity: DocumentIdentity
+    public let effectsSidecar: EffectsSidecar?
 
     public init(
         bytes: [UInt8], config: SongConfig, flagsNeeded: Bool,
-        destination: SongSource, revision: UInt64, identity: DocumentIdentity
+        destination: SongSource, revision: UInt64, identity: DocumentIdentity,
+        effectsSidecar: EffectsSidecar? = nil
     ) {
         self.bytes = bytes
         self.config = config
@@ -135,6 +137,7 @@ public struct SaveSnapshot: Sendable {
         self.destination = destination
         self.revision = revision
         self.identity = identity
+        self.effectsSidecar = effectsSidecar
     }
 }
 
@@ -376,7 +379,7 @@ public final class SongDocument {
         file: MidiFile, config: SongConfig = SongConfig(),
         source: SongSource = SongSource(),
         trackBudget: Int = TrackLimits.hardwareCapacity,
-        effects: [TrackEffect] = []
+        effects: [TrackEffect] = [], effectsDropped: Bool = false
     ) {
         var adopted = file
         var tempos: [TempoPoint] = []
@@ -411,6 +414,7 @@ public final class SongDocument {
         self.source = source
         self.trackBudget = min(max(trackBudget, 0), TrackLimits.hardwareCapacity)
         history = SongHistory()
+        if effectsDropped { history.markUnsaved() }
         history.attachApply { [weak self] changes, direction, trackRemap in
             self?.applyHistory(changes, direction: direction, trackRemap: trackRemap)
         }
@@ -526,7 +530,8 @@ public final class SongDocument {
             bytes: try export.encoded(), config: state.config,
             flagsNeeded: state.config != savedConfig || !source.hasConfig,
             destination: source, revision: revision,
-            identity: history.currentIdentity)
+            identity: history.currentIdentity,
+            effectsSidecar: state.effects.isEmpty ? nil : EffectsSidecar(effects: state.effects))
     }
 
     public func didSave(_ snapshot: SaveSnapshot) {

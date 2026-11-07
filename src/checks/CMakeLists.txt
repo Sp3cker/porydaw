@@ -428,6 +428,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ExportCaptureChecks.swift
         projectstore/ExportChecks.swift
         workspace/SessionChecks.swift
+        workspace/EffectPersistenceChecks.swift
         workspace/bank_sharing.swift
         workspace/bank_undo_publication.swift
         workspace/editor_view_state_checks.swift

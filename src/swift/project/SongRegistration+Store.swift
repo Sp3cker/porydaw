@@ -109,6 +109,12 @@ extension ProjectStore {
         do { try ProjectFileStore.remove(midiDir + "/\(label).s") } catch {
             problems.append(error.localizedDescription)
         }
+        let effectsPath = projectRoot + "/.porydaw/midi-effects/\(label).json"
+        if ProjectFileStore.exists(effectsPath) {
+            do { try ProjectFileStore.remove(effectsPath) } catch {
+                problems.append(error.localizedDescription)
+            }
+        }
         do { try SongRegistration.removeFlags(root: projectRoot, label: label) } catch {
             problems.append(error.localizedDescription)
         }

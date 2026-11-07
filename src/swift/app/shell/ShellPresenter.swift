@@ -92,6 +92,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             self?.presentFailure(title: title, message: message)
         }
         session.onSaveStateChanged = { [weak self] in self?.saveStateChanged() }
+        session.onOpenNoticeChanged = { [weak self] in self?.openNoticeChanged() }
         session.onProjectStateChanged = { [weak self] in self?.projectStateChanged() }
         session.onDocumentStateChanged = { [weak self] songOpenChanged in
             self?.documentStateChanged(songOpenChanged: songOpenChanged)
@@ -483,6 +484,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
         if songOpenChanged && session.songOpen { statusText = "Song open" }
         refreshWindowChrome()
         refreshActionStates()
+    }
+
+    private func openNoticeChanged() {
+        guard !session.lastOpenNotice.isEmpty else { return }
+        criticalRequested(title: "MIDI effects", message: session.lastOpenNotice)
+        session.publish(\.lastOpenNotice, "")
     }
 
     private func saveStateChanged() {

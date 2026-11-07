@@ -96,13 +96,19 @@ public final class SongHistory {
     private var index = 0
     private var nextIdentity: UInt64 = 2
     private var baseIdentity = DocumentIdentity(rawValue: 1)
-    private var savedIdentity = DocumentIdentity(rawValue: 1)
+    private var savedIdentity: DocumentIdentity? = DocumentIdentity(rawValue: 1)
     private var applyDocument: ((DocumentChangeSet, HistoryDirection, TrackRemap?) -> Void)?
     private var labelDocument: ((HistoryOperation, DocumentChangeSet) -> String)?
     private var transition: BindingTransitionToken?
     private var nextTransition: UInt64 = 1
 
     public init() {}
+
+    /// Recovery changed the loaded state, so no retained identity matches disk.
+    internal func markUnsaved() {
+        savedIdentity = nil
+        revision += 1
+    }
 
     /// A document save ends the adjacent document merge gesture.
     public func markSaved(_ identity: DocumentIdentity) {

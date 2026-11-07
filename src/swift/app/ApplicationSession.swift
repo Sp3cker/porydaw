@@ -14,6 +14,7 @@ import PorydawAppPresentation
 public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveInProgress = false
     @QtTracked public var lastSaveError = ""
+    @QtTracked public var lastOpenNotice = ""
     /// Save-conflict prompt: empty label means no prompt. The fork name field
     /// follows the New Song label law through acceptSaveConflictLabelEdit.
     @QtTracked public var saveConflictSongLabel = ""
@@ -67,6 +68,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var onStatusMessage: ((String) -> Void)?
     @QtIgnored var onFailure: ((String, String) -> Void)?
     @QtIgnored var onSaveStateChanged: (() -> Void)?
+    @QtIgnored var onOpenNoticeChanged: (() -> Void)?
     @QtIgnored var onProjectStateChanged: (() -> Void)?
     @QtIgnored var onDocumentStateChanged: ((Bool) -> Void)?
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
