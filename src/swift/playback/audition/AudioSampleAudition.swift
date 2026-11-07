@@ -1,5 +1,3 @@
-import Dispatch
-import Foundation
 import PorydawPlaybackNative
 import Synchronization
 
@@ -24,8 +22,6 @@ final class AudioSampleAudition {
     private var generation: UInt64 = 0
     private var adopted: UInt64 = 0
     private var retainedPcm = InlineArray<4, SampleAuditionPcm?>(repeating: nil)
-    // Producer-only ownership; callback slots retain only trivial borrowed pointers.
-    private(set) var retainedBytes = InlineArray<4, SampleAuditionPcm.Allocation?>(repeating: nil)
     private var soundingKey: Int = -1
 
     init() {
@@ -35,6 +31,7 @@ final class AudioSampleAudition {
     }
 
     deinit {
+        for index in 0..<4 { slots[index].bytes?.deallocate() }
         slots.deinitialize(count: 4)
         slots.deallocate()
         waves.deinitialize(count: 4)
@@ -43,35 +40,25 @@ final class AudioSampleAudition {
         adoptedWaves.deallocate()
     }
 
-    private func retiredSlot() -> Int? {
+    /// Frees the storage of every slot the callback has retired and returns the first of them.
+    private func claimRetiredSlot() -> Int? {
         let ack = acknowledgement.load(ordering: .acquiring)
-        var available: Int?
+        var claimed: Int?
         for index in 0..<4 {
             let gen = slots[index].generation
-            if gen == 0 || (gen <= ack >> 8 && (ack & (1 << index)) == 0) {
-                retainedPcm[index] = nil
-                if available == nil { available = index }
-            }
+            guard gen == 0 || (gen <= ack >> 8 && (ack & (1 << index)) == 0) else { continue }
+            slots[index].bytes?.deallocate()
+            slots[index].bytes = nil
+            slots[index].childWaves = nil
+            slots[index].byteCount = 0
+            retainedPcm[index] = nil
+            if claimed == nil { claimed = index }
         }
-        return available
+        return claimed
     }
 
-    private func clearBytes(_ index: Int) {
-        slots[index].bytes = nil
-        slots[index].childWaves = nil
-        slots[index].byteCount = 0
-        retainedBytes[index] = nil
-    }
-
-    private func replaceBytes(_ index: Int, count: Int) -> UnsafeMutableRawPointer {
-        clearBytes(index)
-        retainedPcm[index] = nil
-        guard let bytes = malloc(count) else {
-            preconditionFailure("Unable to allocate audition tone storage")
-        }
-        retainedBytes[index] = SampleAuditionPcm.Allocation(
-            bytes: DispatchData(
-                bytesNoCopy: UnsafeRawBufferPointer(start: bytes, count: count), deallocator: .free))
+    private func allocateBytes(_ index: Int, count: Int) -> UnsafeMutableRawPointer {
+        let bytes = UnsafeMutableRawPointer.allocate(byteCount: count, alignment: 16)
         slots[index].bytes = bytes
         slots[index].byteCount = count
         return bytes
@@ -101,12 +88,10 @@ final class AudioSampleAudition {
         pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
     ) -> Bool {
-        guard let index = retiredSlot() else { return false }
-        clearBytes(index)
-        let bytes = pcm.data
+        guard let index = claimRetiredSlot() else { return false }
         retainedPcm[index] = pcm
         configureWave(
-            waves.advanced(by: index), data: bytes, count: pcm.count,
+            waves.advanced(by: index), data: pcm.data, count: pcm.count,
             frequency: frequency, loopStart: loopStart, looped: looped)
         slots[index].tone = ToneData()
         slots[index].tone.type = 0  // VOICE_DIRECTSOUND
@@ -121,10 +106,10 @@ final class AudioSampleAudition {
     }
 
     func publish(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
-        guard wave16.count == 16, let index = retiredSlot() else { return false }
+        guard wave16.count == 16, let index = claimRetiredSlot() else { return false }
         // Allocate word-aligned storage and bind as words, as required by the
         // declared CGB wave pointer. Byte copying preserves packed nibble order.
-        let bytes = replaceBytes(index, count: 16)
+        let bytes = allocateBytes(index, count: 16)
         let words = bytes.bindMemory(to: UInt32.self, capacity: 4)
         words.initialize(repeating: 0, count: 4)
         wave16.withUnsafeBytes { bytes.copyMemory(from: $0.baseAddress!, byteCount: 16) }
@@ -150,7 +135,7 @@ final class AudioSampleAudition {
                 table.allSatisfy({ Int($0) < kit.children.count })
             else { return false }
         }
-        guard let index = retiredSlot() else { return false }
+        guard let index = claimRetiredSlot() else { return false }
         let waveOffset = MemoryLayout<ToneData>.stride * 128
         let tableOffset = waveOffset + MemoryLayout<WaveData>.stride * 128
         let assetOffset = (tableOffset + 128 + 15) & ~15
@@ -166,7 +151,7 @@ final class AudioSampleAudition {
                 }
             }
         }
-        let bytes = replaceBytes(index, count: count)
+        let bytes = allocateBytes(index, count: count)
         let children = bytes.bindMemory(to: ToneData.self, capacity: 128)
         children.initialize(repeating: ToneData(), count: 128)
         let childWaves = bytes.advanced(by: waveOffset).bindMemory(to: WaveData.self, capacity: 128)

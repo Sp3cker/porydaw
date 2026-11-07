@@ -375,17 +375,14 @@ dependencies, C interop only via `voicegroup_asset_batch.h`) was split out of
 AppPresentation → App still recompile). The split pays for itself through
 isolation and the benchmark below, not the floor.
 
-`PorydawSampleUI` (`src/swift/sampleui/`) holds the sample library model, audition
-arbiter and PCM audition player shared by Sample Studio and Split Studio. It sits
-on Sample, AppAudio, AppPresentation and QtBridge; `PorydawApp` links it.
+`PorydawSampleUI` (`src/swift/sampleui/`) holds the sample library model and the PCM
+audition player shared by Sample Studio and Split Studio. It sits on Sample, AppAudio,
+AppPresentation and QtBridge; `PorydawApp` links it.
 
-Each audition player caches native PCM by `ProcessedSample.pcmRevision`, preparing
-new content off-main and sharing it across note retriggers and release tails. Pitch/ADSR changes,
-repeat and slot retries reuse the prepared bytes. Cold preparation is asynchronous
-and latest-request-only; an owner reservation prevents stopped or displaced requests
-from publishing late. The four-slot callback handoff retains separate wave headers
-without callback ARC. Native PCM storage is reclaimed on a utility executor, not
-the main actor or audio callback.
+Every sample producer claims the shared preview output with `AudioAudition.beginSample()`;
+a newer lease silences the older one, which can then neither publish nor stop its successor.
+A player copies a render to native PCM once and reuses it, with its release tails, until the
+holder plays different bytes.
 
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|

@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppAudio
+import PorydawPlayback
 import PorydawSample
 import PorydawSampleUI
 
@@ -13,7 +14,6 @@ final class StudioLibraryHost {
     private let onPreviewFailure: (StudioLibraryHost) -> Void
     private let preparation: SampleSourcePreparation
     private(set) var pane: SampleLibraryModel?
-    private var auditionLane: SampleAuditionArbiter?
     // Bumped by every preview and stop, so a preview still awaiting its decode never plays late.
     private var previewGeneration = 0
     var onLoad: ((String) -> Void)?
@@ -41,7 +41,7 @@ final class StudioLibraryHost {
     func library() -> SampleLibraryModel? {
         if let pane { return pane }
         guard let session else { return nil }
-        let pane = SampleLibraryModel(preferences: session.preferences, palette: session.palette, lane: lane())
+        let pane = SampleLibraryModel(preferences: session.preferences, palette: session.palette, audition: audition)
         pane.onLoadRequested = { [weak self] (path: String) in self?.onLoad?(path) }
         pane.onOpenFileRequested = { [weak self] in self?.onOpenFile?() }
         pane.onPreviewRequested = { [weak self] (path: String) in self?.onPreview?(path) }
@@ -61,13 +61,7 @@ final class StudioLibraryHost {
         return URL(filePath: path, directoryHint: .notDirectory).standardizedFileURL
     }
 
-    func lane() -> SampleAuditionArbiter? {
-        if let auditionLane { return auditionLane }
-        guard let session else { return nil }
-        let lane = SampleAuditionArbiter(output: session.audio)
-        auditionLane = lane
-        return lane
-    }
+    var audition: AudioAudition? { session?.audio?.audition }
 
     /// Prepares and sounds `path` once; a nil `key` plays the file at its own pitch.
     func preview(path: String, accept: @escaping () -> Bool, key: @escaping () -> Int?) {
@@ -110,7 +104,7 @@ final class StudioLibraryHost {
             pane.showMessage(text: "\"\(URL(fileURLWithPath: path).lastPathComponent)\" renders no audio.")
             return
         }
-        guard let lane = lane(), lane.isAvailable else {
+        guard audition != nil else {
             clearPreview()
             pane.showMessage(text: "Audio is unavailable.")
             return

@@ -5,16 +5,11 @@ import PorydawSample
 
 @MainActor
 public final class PcmAuditionPlayer {
-    typealias Preparation = @Sendable ([Int8]) async -> sending SampleAuditionPcm?
-    private let preparePcm: Preparation
-    private var lane: SampleAuditionArbiter?
-    private weak var owner: AnyObject?
-    private var request: UInt64?
+    private var audition: AudioAudition?
+    private var lease: SampleAuditionLease?
     private var rendered: ProcessedSample?
-    private var preparedPcm: SampleAuditionPcm?
-    private var preparedRevision: UInt64 = 0
-    private var preparation: Task<Void, Never>?
-    private var preparingRevision: UInt64?
+    // Replays of one render (key, envelope, stop/listen, Busy retries) reuse its native copy.
+    private var prepared: (source: [Int8], pcm: SampleAuditionPcm)?
     private var key: UInt8 = 60
     private var adsr = AudioADSR()
     private var toneKey: UInt8 = 60
@@ -36,91 +31,35 @@ public final class PcmAuditionPlayer {
     public var onTerminated: (() -> Void)?
     public var playheadPosition: Double { position }
 
-    public init(lane: SampleAuditionArbiter?) {
-        self.lane = lane
-        preparePcm = { samples in await SampleAuditionPcm.prepare(samples: samples) }
+    public init(audition: AudioAudition?) {
+        self.audition = audition
     }
 
-    init(lane: SampleAuditionArbiter?, prepare: @escaping Preparation) {
-        self.lane = lane
-        preparePcm = prepare
-    }
-
-    /// Waits through the running preparation and any newest-content replacement it starts.
-    func preparationSettled() async {
-        while let preparation { await preparation.value }
-    }
-
-    isolated deinit { preparation?.cancel() }
-
-    private func publishPrepared() {
-        guard let lane, let owner, let request else {
-            clearPlayback()
-            return
-        }
-        guard let rendered, let preparedPcm, preparedRevision == rendered.pcmRevision else { return }
-        guard lane.isCurrent(owner: owner, request: request) else {
-            clearPlayback()
-            return
-        }
-        republishPending = !lane.publish(
-            owner: owner, request: request, pcm: preparedPcm,
-            frequency: rendered.freq, loopStart: rendered.loopStart,
+    /// Busy slots leave the lease held; `advance` retries until a slot retires or the lease is superseded.
+    private func publish() {
+        guard let lease, let rendered, let pcm = prepared?.pcm else { return }
+        republishPending = !lease.publish(
+            pcm: pcm, frequency: rendered.freq, loopStart: rendered.loopStart,
             looped: looped, key: key, adsr: adsr, toneKey: toneKey)
-        lastTick = ContinuousClock.now
-        if !republishPending {
-            onPlayhead?(0)
-            onStarted?()
-        }
-    }
-
-    private func prepareLatest() {
-        guard playing, let rendered else { return }
-        guard let owner, let request, lane?.isCurrent(owner: owner, request: request) == true else {
-            clearPlayback()
-            return
-        }
-        if preparedRevision == rendered.pcmRevision, preparedPcm != nil {
-            preparation?.cancel()
-            publishPrepared()
-            return
-        }
-        if preparation != nil {
-            if preparingRevision != rendered.pcmRevision { preparation?.cancel() }
-            return
-        }
-        let revision = rendered.pcmRevision
-        let samples = rendered.s8
-        preparingRevision = revision
-        let prepare = preparePcm
-        preparation = Task { [weak self] in
-            let pcm = await prepare(samples)
-            guard let self else { return }
-            self.preparation = nil
-            self.preparingRevision = nil
-            guard self.playing else { return }
-            if !Task.isCancelled, self.rendered?.pcmRevision == revision, let pcm {
-                self.preparedPcm = pcm
-                self.preparedRevision = revision
-                self.publishPrepared()
-            } else if !Task.isCancelled, self.rendered?.pcmRevision == revision {
-                self.stopCurrent()
-            } else if self.preparedRevision != self.rendered?.pcmRevision {
-                self.prepareLatest()
-            }
-        }
+        if !republishPending { onStarted?() }
     }
 
     public func play(
-        owner: AnyObject, rendered: ProcessedSample,
-        looped requestedLoop: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
+        rendered: ProcessedSample, looped requestedLoop: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
     ) {
-        guard let lane, !rendered.s8.isEmpty, let request = lane.begin(owner: owner) else {
-            stop(owner: owner)
+        guard let audition, !rendered.s8.isEmpty else {
+            stop()
             return
         }
-        self.owner = owner
-        self.request = request
+        // Array equality short-circuits on shared storage, so replaying one render never recopies it.
+        if prepared?.source != rendered.s8 {
+            guard let pcm = SampleAuditionPcm(samples: rendered.s8) else {
+                stop()
+                return
+            }
+            prepared = (rendered.s8, pcm)
+        }
+        lease = audition.beginSample()
         self.rendered = rendered
         self.key = key
         self.adsr = adsr
@@ -131,58 +70,44 @@ public final class PcmAuditionPlayer {
         rate = Double(rendered.freq) / 1024 * pow(2, Double(Int(key) - Int(toneKey)) / 12)
         position = 0
         gap = 0
-        lastTick = nil
-        republishPending = false
+        lastTick = ContinuousClock.now
         playing = true
-        prepareLatest()
+        onPlayhead?(0)
+        publish()
     }
 
     public func restart(looped: Bool) {
-        guard let owner, let rendered else { return }
-        play(owner: owner, rendered: rendered, looped: looped, key: key, adsr: adsr, toneKey: toneKey)
+        guard let rendered else { return }
+        play(rendered: rendered, looped: looped, key: key, adsr: adsr, toneKey: toneKey)
     }
 
-    public func stop(owner: AnyObject) {
-        if let request, lane?.isCurrent(owner: owner, request: request) == true {
-            lane?.stop(owner: owner)
-        }
-        clearPlayback()
-    }
-
-    private func stopCurrent() {
-        if let owner, let request, lane?.isCurrent(owner: owner, request: request) == true {
-            lane?.stop(owner: owner)
-        }
+    public func stop() {
+        lease?.stop()
         clearPlayback()
     }
 
     public func close() {
-        stopCurrent()
-        preparedPcm = nil
-        preparedRevision = 0
-        lane = nil
+        stop()
+        prepared = nil
+        audition = nil
     }
 
     public func tick() {
         let now = ContinuousClock.now
-        defer { if lastTick != nil { lastTick = now } }
-        guard let lastTick else {
-            advance(bySeconds: 0)
-            return
-        }
+        defer { lastTick = now }
+        guard let lastTick else { return }
         let duration = lastTick.duration(to: now)
         advance(bySeconds: Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18)
     }
 
     public func advance(bySeconds dt: Double) {
         guard playing else { return }
-        guard let owner, let request, lane?.isCurrent(owner: owner, request: request) == true else {
+        guard lease?.isCurrent == true else {
             clearPlayback()
             return
         }
-        guard lastTick != nil else { return }
         if republishPending {
-            publishPrepared()
+            publish()
             return
         }
         guard dt.isFinite, dt >= 0 else { return }
@@ -210,11 +135,9 @@ public final class PcmAuditionPlayer {
     }
 
     private func clearPlayback() {
-        preparation?.cancel()
         let wasPlaying = playing
         playing = false
-        request = nil
-        owner = nil
+        lease = nil
         lastTick = nil
         republishPending = false
         rendered = nil

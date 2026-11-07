@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawDocument
+import PorydawPlayback
 import PorydawProject
 import PorydawVoicegroup
 import QtBridge
@@ -125,11 +126,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     let songDock = SongDockController()
     @QtIgnored
-    var pickerAuditionRevision = 0
-    @QtIgnored
-    var pickerAuditionRequest: UInt64?
-    @QtIgnored
-    weak var pickerAuditionAudio: NativeAudio?
+    var pickerAudition: SampleAuditionLease?
     @QtIgnored
     let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not

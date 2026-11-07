@@ -120,10 +120,10 @@ public final class SampleLibraryModel: QmlUncreatable {
     @QtIgnored public var onOpenFileRequested: (() -> Void)?
 
     @QtIgnored
-    public init(preferences: PreferencesStore, palette: GridPalette, lane: SampleAuditionArbiter?) {
+    public init(preferences: PreferencesStore, palette: GridPalette, audition: AudioAudition?) {
         self.preferences = preferences
         preview = LibraryPreviewStrip(palette: palette)
-        previewPlayer = PcmAuditionPlayer(lane: lane)
+        previewPlayer = PcmAuditionPlayer(audition: audition)
         let paths = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
         roots = paths.map { FolderNode(path: $0, depth: 0, rootPath: $0) }
         previewPlayer.onPlayhead = { [weak self] (frame: Int?) in self?.previewPlayheadMoved(frame) }
@@ -258,8 +258,7 @@ public final class SampleLibraryModel: QmlUncreatable {
 
     /// Sounds a prepared preview once at `key`; the end clears `previewing`.
     @QtIgnored public func playPreview(_ rendered: ProcessedSample, path: String, key: UInt8, toneKey: UInt8) {
-        previewPlayer.play(
-            owner: self, rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
+        previewPlayer.play(rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
         previewFrames = max(1, rendered.s8.count)
         setPreviewingPath(path: previewPlayer.playing ? path : "")
         previewPlayheadMoved(previewPlayer.playing ? 0 : nil)
@@ -268,7 +267,7 @@ public final class SampleLibraryModel: QmlUncreatable {
     public func tickPreview() { previewPlayer.tick() }
 
     @QtIgnored public func stopPreview() {
-        previewPlayer.stop(owner: self)
+        previewPlayer.stop()
         setPreviewingPath(path: "")
     }
 

@@ -11,7 +11,6 @@ import QtBridge
 public final class SampleStudioAudition: QmlUncreatable {
     private let presenter: SampleStudioPresenter
     private let player: PcmAuditionPlayer
-    private var lane: SampleAuditionArbiter?
     private let destinationAdsr: VoiceListAdsr?
     private var looped = false
     private var crop = 0
@@ -27,12 +26,11 @@ public final class SampleStudioAudition: QmlUncreatable {
     public var useDestinationAdsr: Bool
 
     @QtIgnored
-    public init(presenter: SampleStudioPresenter, lane: SampleAuditionArbiter?, destinationAdsr: VoiceListAdsr?) {
+    public init(presenter: SampleStudioPresenter, audition: AudioAudition?, destinationAdsr: VoiceListAdsr?) {
         self.presenter = presenter
-        player = PcmAuditionPlayer(lane: lane)
-        self.lane = lane
+        player = PcmAuditionPlayer(audition: audition)
         self.destinationAdsr = destinationAdsr
-        available = lane?.isAvailable ?? false
+        available = audition != nil
         hasDestinationAdsr = destinationAdsr != nil
         useDestinationAdsr = destinationAdsr != nil
         player.onPlayhead = { [weak self] (frame: Int?) in
@@ -66,7 +64,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     public func stop() {
         playing = false
         playText = "Listen"
-        player.stop(owner: self)
+        player.stop()
     }
 
     public func setAuditionKey(key: Int) {
@@ -93,12 +91,11 @@ public final class SampleStudioAudition: QmlUncreatable {
         playing = false
         playText = "Listen"
         player.close()
-        lane = nil
         available = false
     }
 
     private func start(looped requestedLoop: Bool) {
-        guard lane != nil, !presenter.processed.s8.isEmpty else { stop(); return }
+        guard available, !presenter.processed.s8.isEmpty else { stop(); return }
         let rendered = presenter.processed
         looped = requestedLoop && rendered.looped
         let envelope: AudioADSR
@@ -118,7 +115,6 @@ public final class SampleStudioAudition: QmlUncreatable {
         playing = true
         playText = "Stop"
         player.play(
-            owner: self, rendered: rendered, looped: looped, key: UInt8(auditionKey),
-            adsr: envelope, toneKey: 60)
+            rendered: rendered, looped: looped, key: UInt8(auditionKey), adsr: envelope, toneKey: 60)
     }
 }

@@ -1,7 +1,6 @@
 add_library(PorydawSampleUI STATIC
     SampleLibraryModel.swift
     DroppedURIList.swift
-    SampleAuditionArbiter.swift
     PcmAuditionPlayer.swift
     MarkerWaveformModel.swift
     MarkerWaveformScene.swift

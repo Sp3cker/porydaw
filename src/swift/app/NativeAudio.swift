@@ -7,7 +7,6 @@ import PorydawVoicegroup
 import PorydawPlaybackNative
 import PorydawAudioDeviceNative
 import PorydawAppAudio
-import PorydawSampleUI
 
 public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
@@ -228,41 +227,13 @@ public final class NativeAudio {
         device.renderer.audition.previewVoice(program: program, key: key, velocity: velocity)
     }
 
-    public func beginSampleRequest() -> UInt64 {
-        device.renderer.audition.beginSampleRequest()
-    }
-
-    public func sampleRequestIsCurrent(_ request: UInt64) -> Bool {
-        device.renderer.audition.sampleRequestIsCurrent(request)
-    }
-
-    public func auditionSample(
-        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
-        looped: Bool, key: UInt8, adsr: AudioADSR,
-        toneKey: UInt8 = 60
-    ) -> Bool {
-        device.renderer.audition.publishSample(
-            request: request, pcm: pcm, frequency: frequency,
-            loopStart: loopStart, looped: looped, key: key,
-            adsr: adsr, toneKey: toneKey)
-    }
-
-    public func auditionWave(request: UInt64, wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
-        device.renderer.audition.publishWave(request: request, wave16: wave16, key: key, adsr: adsr)
-    }
-
-    public func auditionKit(request: UInt64, _ tone: KitAuditionTone, key: UInt8) -> Bool {
-        device.renderer.audition.publishKitTone(request: request, tone, key: key)
-    }
-
-    public func auditionSampleOff(request: UInt64) { device.renderer.audition.sampleOff(request: request) }
+    /// Sample producers claim the preview output with `audition.beginSample()`.
+    public var audition: AudioAudition { device.renderer.audition }
 
     public func songSettings(for config: SongConfig) -> AudioSettings {
         engineSettings.applyingSong(config)
     }
 }
-
-extension NativeAudio: SampleAuditionOutput {}
 
 extension AudioSettings {
     public func applyingSong(_ config: SongConfig) -> AudioSettings {

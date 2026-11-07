@@ -6,40 +6,6 @@ import PorydawSample
 @testable import PorydawSampleUI
 @testable import SwiftCoreCheckLogic
 
-extension AudioRenderEngine: SampleAuditionOutput {
-    public func beginSampleRequest() -> UInt64 { audition.beginSampleRequest() }
-
-    public func sampleRequestIsCurrent(_ request: UInt64) -> Bool { audition.sampleRequestIsCurrent(request) }
-
-    public func auditionSample(
-        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
-        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
-    ) -> Bool {
-        audition.publishSample(
-            request: request, pcm: pcm, frequency: frequency, loopStart: loopStart,
-            looped: looped, key: key, adsr: adsr, toneKey: toneKey)
-    }
-
-    public func auditionSampleOff(request: UInt64) { audition.sampleOff(request: request) }
-}
-
-@MainActor
-internal func awaitAuditionStart(
-    _ audition: SampleStudioAudition, perform action: @escaping @MainActor () -> Void
-) throws {
-    try runBlocking {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let previous = audition.onStarted
-            audition.onStarted = {
-                audition.onStarted = previous
-                previous?()
-                continuation.resume()
-            }
-            action()
-        }
-    }
-}
-
 @MainActor
 internal func runAuditionStripChecks(_ report: CheckReport) {
     let scope = report.scoped(cppID: "samplecheck/SampleProcessingTest::spaceAudition")
@@ -47,7 +13,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
         scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
         let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
-        let unavailable = SampleStudioAudition(presenter: presenter, lane: nil, destinationAdsr: nil)
+        let unavailable = SampleStudioAudition(presenter: presenter, audition: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
         strip.expect(
             source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
@@ -61,8 +27,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "A117 audition engine initializes")
         guard case .success(let renderer) = engineResult else { return }
         defer { renderer.unload() }
-        let lane = SampleAuditionArbiter(output: renderer)
-        let audition = SampleStudioAudition(presenter: presenter, lane: lane, destinationAdsr: nil)
+        let audition = SampleStudioAudition(presenter: presenter, audition: renderer.audition, destinationAdsr: nil)
         scope.expect(
             audition.available && !audition.playing && audition.playText == "Listen",
             message: "A121 idle audition is stopped")
@@ -73,13 +38,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "idle audition renders digital silence")
         var playhead: Int?
         audition.onPlayhead = { playhead = $0 }
-        try awaitAuditionStart(audition) {
-            audition.toggle()
-            audition.advance(bySeconds: 10)
-            scope.expect(playhead == nil, message: "cold preparation does not advance or finish the audition")
-            audition.setAuditionKey(key: 57)
-            audition.setAuditionKey(key: 60)
-        }
+        audition.toggle()
         scope.expect(audition.playing && audition.playText == "Stop", message: "A123 Listen changes to Stop")
         pcm.withUnsafeMutableBufferPointer { buffer in
             renderer.render(buffer.baseAddress!, frames: 48_000)
@@ -90,13 +49,11 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         audition.advance(bySeconds: 0.05)
         scope.expect(playhead != nil, message: "looped playhead follows rendered frames")
         let oldBytes = presenter.processed.s8
-        try awaitAuditionStart(audition) {
-            presenter.beginMarkerGesture()
-            presenter.dragMarkers(
-                cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
-                loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
-            presenter.endMarkerGesture()
-        }
+        presenter.beginMarkerGesture()
+        presenter.dragMarkers(
+            cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
+            loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
+        presenter.endMarkerGesture()
         scope.expect(
             presenter.processed.s8 != oldBytes && audition.playing,
             message: "loop marker drag republishes changed render while sounding")
@@ -111,7 +68,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             renderer.render(buffer.baseAddress!, frames: 48_000)
         }
         scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "A124 stopped audition reaches digital silence")
-        try awaitAuditionStart(audition) { audition.toggle() }
+        audition.toggle()
         audition.setAuditionKey(key: 57)
         scope.expect(audition.auditionKey == 57 && audition.playing, message: "key choice restarts sounding audition")
         audition.advance(bySeconds: 0.05)
@@ -127,8 +84,8 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "close releases the audition owner and playhead")
         let oneShot = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
         oneShot.setLoopOn(enabled: false)
-        let repeating = SampleStudioAudition(presenter: oneShot, lane: lane, destinationAdsr: nil)
-        try awaitAuditionStart(repeating) { repeating.toggle() }
+        let repeating = SampleStudioAudition(presenter: oneShot, audition: renderer.audition, destinationAdsr: nil)
+        repeating.toggle()
         repeating.advance(bySeconds: 10)
         repeating.advance(bySeconds: 0.51)
         pcm.withUnsafeMutableBufferPointer { buffer in

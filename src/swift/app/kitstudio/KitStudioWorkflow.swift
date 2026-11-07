@@ -46,8 +46,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var orphanCleanupTask: Task<Void, Never>?
     private var orphanCleanupCompletion: (() -> Void)?
     private let previewPreparation: SampleSourcePreparation
-    private var kitAuditionRequest: UInt64?
-    private weak var kitAuditionAudio: NativeAudio?
+    private var kitAudition: SampleAuditionLease?
 
     @QtIgnored public init(session: ApplicationSession) {
         self.session = session
@@ -136,7 +135,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
             presenter = KitStudioPresenter(waveform: waveform, effects: effects)
         }
         let next = KitStudioWindow(
-            presenter: presenter, footprint: footprint, pcm: PcmAuditionPlayer(lane: libraryHost.lane()))
+            presenter: presenter, footprint: footprint, pcm: PcmAuditionPlayer(audition: libraryHost.audition))
         next.pcm.onPlayhead = { [weak self, weak next] (frame: Int?) in
             guard let self, let next, let id = next.playingSlice else { return }
             let sourceFrame = frame.flatMap { (_: Int) -> Int? in
@@ -177,12 +176,11 @@ public final class KitStudioWorkflow: QmlUncreatable {
             return self.validateVoicegroupName(name, footprint: footprint)
         }
         effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
-            guard let self, let audio = self.session?.audio else { return false }
+            guard let self, let audition = self.session?.audio?.audition else { return false }
             self.stopAudition()
-            let request = audio.beginSampleRequest()
-            self.kitAuditionRequest = request
-            self.kitAuditionAudio = audio
-            return audio.auditionKit(request: request, tone, key: key)
+            let lease = audition.beginSample()
+            self.kitAudition = lease
+            return lease.publish(kit: tone, key: key)
         }
         effects.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
         return effects
@@ -347,7 +345,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
         window.playingSlice = id
         let voice = window.presenter.sliceVoice(id: id)
         window.pcm.play(
-            owner: self, rendered: rendered, looped: rendered.looped, key: voice?.note ?? 60,
+            rendered: rendered, looped: rendered.looped, key: voice?.note ?? 60,
             adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
         auditionPlaying = window.pcm.playing
     }
@@ -357,10 +355,9 @@ public final class KitStudioWorkflow: QmlUncreatable {
     }
     public func stopAudition() {
         previewPreparation.cancel()
-        window?.pcm.stop(owner: self)
-        if let request = kitAuditionRequest { kitAuditionAudio?.auditionSampleOff(request: request) }
-        kitAuditionRequest = nil
-        kitAuditionAudio = nil
+        window?.pcm.stop()
+        kitAudition?.stop()
+        kitAudition = nil
         window?.presenter.waveform?.setPlayhead(frame: nil)
         window?.playingSlice = nil
         auditionPlaying = false

@@ -74,7 +74,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             pickerURL: { (directory: String) -> URL in
                 URL(fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory, isDirectory: true)
             }, rejectNonFileScheme: true,
-            previewAllowed: { (host: StudioLibraryHost) -> Bool in host.lane()?.isAvailable == true },
+            previewAllowed: { (host: StudioLibraryHost) -> Bool in host.audition != nil },
             previewLabel: { (path: String, _: URL) -> String in path },
             onPreviewFailure: { (host: StudioLibraryHost) in host.clearPreview() })
         libraryHost.onLoad = { [weak self] (path: String) in self?.loadLibrarySample(path: path) }
@@ -502,7 +502,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                     sustain: voice.sustain, release: voice.release)
         }
         let player = SampleStudioAudition(
-            presenter: presenter, lane: libraryHost.lane(),
+            presenter: presenter, audition: libraryHost.audition,
             destinationAdsr: destinationAdsr)
         player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(frame: frame) }
         player.onStarted = { [weak self] in self?.stopLibraryPreview() }

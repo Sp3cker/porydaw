@@ -6,6 +6,7 @@ add_library(PorydawPlayback STATIC
     audition/AudioAuditionVoices.swift
     audition/AudioSampleAudition.swift
     audition/SampleAuditionPcm.swift
+    audition/SampleAuditionLease.swift
     audition/KitAuditionTone.swift
 )
 
