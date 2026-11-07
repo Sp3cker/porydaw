@@ -178,11 +178,13 @@ fileprivate enum AuditionCheckSource: UInt8, CaseIterable {
 public func runAudioAuditionChecks(_ report: CheckReport) {
     checkHeldAndTimedAuditions(report)
     checkSampleAuditionSlots(report)
+    checkSampleBusyWake(report)
     checkSharedSampleAuditionStorage(report)
     checkSampleAuditionFeedback(report)
     checkSampleAuditionValues(report)
     checkWaveAuditionSlots(report)
     checkKitAuditionSlots(report)
+    checkSharedKitRetirement(report)
     checkKitKeysplitAndPsg(report)
     checkBandOccurrenceLifetimes(report)
     checkKeyboardMembershipIndependence(report)
@@ -368,6 +370,53 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
     engine.apply()
     report.expectEqual(
         expected: 1, actual: engine.pcm(engine.preview).count, cppID: id, what: "audition works after reset")
+}
+
+private func checkSampleBusyWake(_ report: CheckReport) {
+    let id = "swiftcore/AudioAudition::busyWake"
+    guard let engine = AuditionCheckEngines(),
+        let pcm = SampleAuditionPcm(samples: [Int8](repeating: 40, count: 1024))
+    else {
+        report.fail(id, "fixture engine or PCM initialization failed")
+        return
+    }
+    let slots = engine.audition.samples
+    let feedback = engine.audition.sampleFeedbackCell
+    let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0)
+    engine.apply()
+    engine.apply()
+    report.expect(!feedback.waitForProgress(until: .now()), cppID: id, message: "idle callbacks do not wake control")
+    func publish(_ key: UInt8) -> Bool {
+        slots.publish(pcm: pcm, frequency: 13_700_096, loopStart: 0, looped: true, key: key, adsr: adsr, toneKey: 60)
+    }
+    report.expect(publish(60), cppID: id, message: "the initial publication takes a slot")
+    engine.apply()
+    report.expect(feedback.waitForProgress(until: .now()), cppID: id, message: "callback adoption wakes the waiter")
+    engine.apply()
+    report.expect(
+        !feedback.waitForProgress(until: .now()), cppID: id,
+        message: "an unchanged sounding note does not wake control")
+    report.expect(publish(61) && publish(62) && publish(63), cppID: id, message: "remaining slots become busy")
+    report.expect(!publish(64), cppID: id, message: "a fifth publication waits for retirement")
+    report.expect(!feedback.waitForProgress(until: .now()), cppID: id, message: "busy storage creates no timer wake")
+    engine.apply()
+    report.expect(feedback.waitForProgress(until: .now()), cppID: id, message: "callback retirement wakes the retry")
+    report.expect(publish(64), cppID: id, message: "the retry succeeds as soon as a slot is retired")
+    engine.apply()
+    report.expect(
+        engine.preview.pointee.tracks.1.currentVoice.wav?.pointee.data?[0] == 40,
+        cppID: id, message: "the retried note is adopted with its original PCM")
+    report.expect(feedback.waitForProgress(until: .now()), cppID: id, message: "retry adoption wakes control")
+    m4a_engine_all_sound_off(engine.preview)
+    engine.audition.reset()
+    report.expect(feedback.waitForProgress(until: .now()), cppID: id, message: "reset wakes control once")
+    engine.apply()
+    engine.apply()
+    report.expect(
+        !feedback.waitForProgress(until: .now()), cppID: id, message: "retired idle callbacks stay asleep")
+    report.expect(publish(65), cppID: id, message: "publication after idle reset retains free slots")
+    engine.apply()
+    report.expect(feedback.waitForProgress(until: .now()), cppID: id, message: "publication exits the idle fast path")
 }
 
 private func checkSharedSampleAuditionStorage(_ report: CheckReport) {
@@ -734,6 +783,34 @@ private func checkKitAuditionSlots(_ report: CheckReport) {
         expected: 4, actual: accepted, cppID: id, what: "acknowledged retirement reclaims every kit slot")
 }
 
+private func checkSharedKitRetirement(_ report: CheckReport) {
+    let id = "swiftcore/KitAudition::sharedRetirement"
+    guard let engine = AuditionCheckEngines() else {
+        report.fail(id, "fixture engine initialization failed")
+        return
+    }
+    let adsr = AudioADSR(attack: 255, decay: 0, sustain: 255, release: 240)
+    let sample = KitAuditionTone.Child.sample(
+        pcm: [Int8](repeating: 40, count: 1024), frequency: 13_700_096, key: 60,
+        panSweep: 0, adsr: adsr, kind: Int(VOICE_DIRECTSOUND), looped: true, loopStart: 0)
+    let kit = KitAuditionTone(mode: .keysplit, children: [sample], splitTable: [UInt8](repeating: 0, count: 128))
+    let slots = engine.audition.samples
+    var group: UnsafeMutableRawPointer?
+    var reused = true
+    var accepted = 0
+    for index in 0..<12 {
+        guard slots.publishKitTone(kit, key: UInt8(60 + index % 2)) else { break }
+        accepted += 1
+        engine.apply()
+        let current = engine.preview.pointee.tracks.1.currentVoice.subGroup
+        if let group { reused = reused && current == group } else { group = current }
+        engine.pump(engine.preview, blocks: 1)
+    }
+    report.expect(
+        accepted == 12 && group != nil && reused, cppID: id,
+        message: "shared kit tails retain their bytes without pinning every publication slot")
+}
+
 private func checkKitKeysplitAndPsg(_ report: CheckReport) {
     let id = "swiftcore/KitAudition::keysplitAndLockedWave"
     guard let engine = AuditionCheckEngines() else {
@@ -781,6 +858,9 @@ private func checkKitKeysplitAndPsg(_ report: CheckReport) {
     report.expect(lease.publishKitTone(kit, key: 64), cppID: id, message: "programmable child accepts audition")
     engine.apply()
     report.expect(
+        engine.preview.pointee.tracks.1.currentVoice.subGroup == group, cppID: id,
+        message: "unchanged kit reuses its prepared native subgroup across keys")
+    report.expect(
         engine.pump(engine.preview, blocks: 1) > 0, cppID: id, message: "locked programmable wave produces audio")
     engine.apply()
     lease.off()
@@ -794,6 +874,9 @@ private func checkKitKeysplitAndPsg(_ report: CheckReport) {
         mode: .keysplit, children: [.psg(missing)], splitTable: [UInt8](repeating: 0, count: 128))
     report.expect(lease.publishKitTone(silentKit, key: 64), cppID: id, message: "missing wave remains a silent child")
     engine.apply()
+    report.expect(
+        engine.preview.pointee.tracks.1.currentVoice.subGroup != group, cppID: id,
+        message: "changed kit content replaces the prepared native subgroup")
     report.expectEqual(expected: 0, actual: engine.cgb().count, cppID: id, what: "missing wave creates no channel")
     report.expectEqual(
         expected: Float(0), actual: engine.pump(engine.preview, blocks: 1), cppID: id,

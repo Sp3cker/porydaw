@@ -60,7 +60,7 @@ private final class AudioEventReceiver {
 @MainActor
 public final class NativeAudio {
     private static let silentActivity = [AudioActivityLevel](repeating: AudioActivityLevel(), count: 16)
-    private let control: AudioControl
+    let control: AudioControl
     private let info: AudioDeviceInfo
     private var eventTask: Task<Void, Never>?
     private let eventReceiver = AudioEventReceiver()
@@ -82,25 +82,37 @@ public final class NativeAudio {
     private var patternEpoch: UInt64 = 0
     private var transportEpoch: UInt64 = 0
     private var pendingTransport: AudioTransportState?
+    private var pendingHotTransport: UInt64?
+    private var submittedHot: UInt64 = 0
+    private var mainOwnsHotProducer = true
+    private var renderingStarted = false
     private var nextSampleLeaseID: UInt64 = 0
     private var sampleLease: SampleAuditionLease?
     public private(set) var requestedSettings = AudioSettings()
     public private(set) var requestedTimelineIdentity: UInt64 = 0
     public private(set) var patternState: AudioPatternState = .idle
+    public private(set) var lastDeviceError: String?
     public let status: AudioStatus
 
-    public convenience init() async throws {
+    @concurrent
+    private static func prepare() async throws -> (AudioControl, AudioDeviceInfo) {
         let control = AudioControl()
         let info = try await withCheckedThrowingContinuation {
             (continuation: CheckedContinuation<AudioDeviceInfo, any Error>) in
             control.submit(.initialize(continuation))
         }
+        return (control, info)
+    }
+
+    public convenience init() async throws {
+        let (control, info) = try await Self.prepare()
         self.init(control: control, info: info)
     }
 
     @concurrent
     public static func make() async throws -> NativeAudio {
-        try await NativeAudio()
+        let (control, info) = try await prepare()
+        return await NativeAudio(control: control, info: info)
     }
 
     private init(control: AudioControl, info: AudioDeviceInfo) {
@@ -138,11 +150,15 @@ public final class NativeAudio {
     private func markTransport(_ state: AudioTransportState) -> UInt64 {
         transportEpoch &+= 1
         pendingTransport = state
+        pendingHotTransport = nil
         return transportEpoch
     }
 
     private func clearTransport(_ epoch: UInt64) {
-        if transportEpoch == epoch { pendingTransport = nil }
+        if transportEpoch == epoch {
+            pendingTransport = nil
+            pendingHotTransport = nil
+        }
     }
 
     private func resetTransportOperation() -> (UInt64, AudioOperation<Void>) {
@@ -153,12 +169,55 @@ public final class NativeAudio {
         }
     }
 
+    private var canSubmitHotDirect: Bool {
+        guard shutdownOperation == nil, eventReceiver.completions.isEmpty else { return false }
+        if !mainOwnsHotProducer {
+            guard control.hotCompleted.load(ordering: .acquiring) == submittedHot else { return false }
+            mainOwnsHotProducer = true
+        }
+        return true
+    }
+
+    private func ensureRendering() {
+        guard !renderingStarted else { return }
+        if control.isRunning {
+            renderingStarted = true
+        } else {
+            control.requestStart()
+        }
+    }
+
+    @discardableResult
+    private func submitHot(_ command: AudioHotCommand, needsRendering: Bool = false) -> UInt64? {
+        guard shutdownOperation == nil else { return nil }
+        if needsRendering { ensureRendering() }
+        if canSubmitHotDirect {
+            command.apply(to: info.endpoint)
+            return nil
+        }
+        submittedHot &+= 1
+        mainOwnsHotProducer = false
+        control.submit(.hot(command, submittedHot))
+        return submittedHot
+    }
+
+    private var currentRequestedTransport: AudioTransportState {
+        if let sequence = pendingHotTransport,
+            control.hotCompleted.load(ordering: .acquiring) &- sequence < UInt64.max / 2
+        {
+            pendingHotTransport = nil
+            pendingTransport = nil
+        }
+        return pendingTransport ?? status.requestedTransport
+    }
+
     fileprivate func receive(_ event: AudioEvent) {
         switch event {
         case .completed:
             preconditionFailure("Completion delivered outside the event receiver")
-        case let .transport(epoch):
-            clearTransport(epoch)
+        case let .deviceFailure(message):
+            lastDeviceError = message
+            renderingStarted = false
         case let .sample(id, event):
             guard let lease = sampleLease, lease.id == id else { return }
             lease.deliver(event)
@@ -212,7 +271,8 @@ public final class NativeAudio {
     public var nullBackendForced: Bool { info.nullBackendForced }
     public var periodSizeFrames: Int { info.periodSizeFrames }
     public var periodCount: Int { info.periodCount }
-    public var requestedTransport: Int32 { (pendingTransport ?? status.requestedTransport).rawValue }
+    public var isDeviceRunning: Bool { control.isRunning }
+    public var requestedTransport: Int32 { currentRequestedTransport.rawValue }
     public var songLoaded: Bool { status.songLoaded }
     public var requestedSongLoaded: Bool { requestedBinding }
     public var playheadSamples: UInt64 { status.playheadSamples }
@@ -326,31 +386,45 @@ public final class NativeAudio {
         stopPatternIfNeeded()
         mainPreviewsCut()
         if requestedTransport == AudioTransportState.stopped.rawValue { invalidateTelemetry() }
-        let epoch = markTransport(.playing)
-        control.submit(.play(epoch))
+        if canSubmitHotDirect {
+            ensureRendering()
+            info.endpoint.transport.play()
+            return
+        }
+        let sequence = submitHot(.play, needsRendering: true)
+        if let sequence {
+            _ = markTransport(.playing)
+            pendingHotTransport = sequence
+        }
     }
     public func pause() {
         stopPatternIfNeeded()
         mainPreviewsCut()
-        let requested = pendingTransport ?? status.requestedTransport
-        let epoch = markTransport(requested == .playing ? .paused : requested)
-        control.submit(.pause(epoch))
+        let requested = currentRequestedTransport
+        let sequence = submitHot(.pause)
+        if let sequence {
+            _ = markTransport(requested == .playing ? .paused : requested)
+            pendingHotTransport = sequence
+        }
     }
     public func stop() {
         stopPatternIfNeeded()
         mainPreviewsCut()
-        let epoch = markTransport(.stopped)
-        control.submit(.stop(epoch))
+        let sequence = submitHot(.stop)
+        if let sequence {
+            _ = markTransport(.stopped)
+            pendingHotTransport = sequence
+        }
     }
-    public func seek(sample: UInt64) { stopPatternIfNeeded(); mainPreviewsCut(); control.submit(.seek(sample)) }
+    public func seek(sample: UInt64) { stopPatternIfNeeded(); mainPreviewsCut(); submitHot(.seek(sample)) }
 
     public var onMainPreviewsCut: (() -> Void)?
     private func mainPreviewsCut() { onMainPreviewsCut?() }
-    public func setLoopEnabled(_ enabled: Bool) { loopEnabled = enabled; control.submit(.loop(enabled)) }
-    public func setMix(muted: Set<Int>, soloed: Set<Int>) { control.submit(.mix(muted, soloed)) }
+    public func setLoopEnabled(_ enabled: Bool) { loopEnabled = enabled; submitHot(.loop(enabled)) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) { submitHot(.mix(muted, soloed)) }
     public func setOutputVolume(_ percent: Int) {
         outputVolume = min(100, max(0, percent))
-        control.submit(.volume(outputVolume))
+        submitHot(.volume(outputVolume))
     }
     public func setResonanceSuppression(_ enabled: Bool) {
         resonanceSuppression = enabled
@@ -425,15 +499,29 @@ public final class NativeAudio {
     }
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
-        control.submit(.previewNote(track, key, velocity))
+        if canSubmitHotDirect {
+            ensureRendering()
+            info.endpoint.audition.previewNote(track: track, key: key, velocity: velocity)
+        } else {
+            submitHot(.previewNote(track, key, velocity), needsRendering: true)
+        }
     }
-    public func updateBandAudition(_ notes: [BandAuditionNote]) { control.submit(.band(notes)) }
-    public func updateKeyboardAudition(_ notes: [BandAuditionNote]) { control.submit(.keyboard(notes)) }
+    public func updateBandAudition(_ notes: [BandAuditionNote]) {
+        submitHot(.band(notes), needsRendering: true)
+    }
+    public func updateKeyboardAudition(_ notes: [BandAuditionNote]) {
+        submitHot(.keyboard(notes), needsRendering: true)
+    }
     public func previewNoteTimed(track: UInt8, key: UInt8, velocity: UInt8, durationSamples: UInt32) {
-        control.submit(.previewTimed(track, key, velocity, durationSamples))
+        submitHot(.previewTimed(track, key, velocity, durationSamples), needsRendering: true)
     }
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
-        control.submit(.previewVoice(program, key, velocity))
+        if canSubmitHotDirect {
+            ensureRendering()
+            info.endpoint.audition.previewVoice(program: program, key: key, velocity: velocity)
+        } else {
+            submitHot(.previewVoice(program, key, velocity), needsRendering: true)
+        }
     }
 
     public func beginSampleAudition(

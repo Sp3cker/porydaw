@@ -19,22 +19,20 @@ public struct BandAuditionNote: Equatable, Sendable {
     }
 }
 
-/// Single-producer membership and lossless immutable batches. Only the producer
-/// allocates and reclaims batches; owner teardown requires a parked callback.
-/// Each instance owns one voice source, so serials never collide across producers.
-final class AudioBandAudition {
-    private struct Member {
+/// Serialized producer membership and lossless batches; teardown requires a parked callback.
+final class AudioBandAuditionEndpoint: Sendable {
+    fileprivate struct Member {
         let noteID: UInt64
         let serial: UInt64
         var seen: UInt64
     }
 
-    private enum Command: Sendable {
+    fileprivate enum Command: Sendable {
         case start(serial: UInt64, track: UInt8, key: UInt8, velocity: UInt8, durationSamples: UInt64)
         case release(serial: UInt64)
     }
 
-    private struct Commands: Sendable {
+    fileprivate struct Commands: Sendable {
         var inline = InlineArray<2, Command>(repeating: .release(serial: 0))
         var overflow: [Command] = []
         var count = 0
@@ -54,7 +52,7 @@ final class AudioBandAudition {
         }
     }
 
-    private final class Batch: Sendable {
+    fileprivate final class Batch: Sendable {
         let next = AtomicLazyReference<Batch>()
         let commands: Commands
         let sequence: UInt64
@@ -65,91 +63,113 @@ final class AudioBandAudition {
         }
     }
 
-    private let source: AudioAuditionVoices.Source
-    private var members: [Member] = []
-    private var memberIndex: [UInt64: Int] = [:]
-    private var generation: UInt64 = 0
-    private var serial: UInt64 = 0
-    // The producer head owns the chain through the tail, protecting callback
-    // borrows. Only nodes strictly behind the acquired acknowledgment are pruned.
-    private var producerHead: Batch
-    private var producerTail: Batch
-    private var consumerCursor: Batch
-    private let publishedSequence = Atomic<UInt64>(0)
-    private let acknowledgedSequence = Atomic<UInt64>(0)
+    private struct Producer {
+        var members: [Member] = []
+        var memberIndex: [UInt64: Int] = [:]
+        var generation: UInt64 = 0
+        var serial: UInt64 = 0
+        var head: Batch
+        var tail: Batch
+    }
 
-    init(source: AudioAuditionVoices.Source) {
-        self.source = source
-        let dummy = Batch(commands: Commands(), sequence: 0)
-        producerHead = dummy
-        producerTail = dummy
-        consumerCursor = dummy
+    private let producer: Mutex<Producer>
+    fileprivate let publishedSequence = Atomic<UInt64>(0)
+    fileprivate let acknowledgedSequence = Atomic<UInt64>(0)
+
+    fileprivate init(dummy: Batch) {
+        producer = Mutex(Producer(head: dummy, tail: dummy))
     }
 
     deinit {
-        // Park the callback before teardown. Keep the head owning the whole chain
-        // while dropping the old cursor, then release nodes without recursion.
-        consumerCursor = producerTail
-        while producerHead !== producerTail {
-            guard let next = producerHead.next.load() else {
-                preconditionFailure("Producer tail must be reachable from the producer head")
+        producer.withLock { (state: inout Producer) in
+            while state.head !== state.tail {
+                guard let next = state.head.next.load() else {
+                    preconditionFailure("Producer tail must be reachable from the producer head")
+                }
+                state.head = next
             }
-            producerHead = next
+        }
+    }
+
+    fileprivate func retireConsumer(_ cursor: inout Batch) {
+        producer.withLock { (state: inout Producer) in
+            cursor = state.tail
         }
     }
 
     func update(_ notes: [BandAuditionNote]) {
-        generation += 1
-        var commands = Commands()
-        let incoming = notes.span
-        let commandCapacity = members.count + incoming.count
-        for noteIndex in incoming.indices {
-            let note = incoming[noteIndex]
-            if let index = memberIndex[note.noteID] { members[index].seen = generation }
-        }
-        var index = 0
-        while index < members.count {
-            let member = members[index]
-            if member.seen == generation {
-                index += 1
-                continue
+        producer.withLock { (state: inout Producer) in
+            state.generation += 1
+            var commands = Commands()
+            let incoming = notes.span
+            let capacity = state.members.count + incoming.count
+            for noteIndex in incoming.indices {
+                let note = incoming[noteIndex]
+                if let index = state.memberIndex[note.noteID] {
+                    state.members[index].seen = state.generation
+                }
             }
-            commands.append(.release(serial: member.serial), capacity: commandCapacity)
-            memberIndex.removeValue(forKey: member.noteID)
-            let last = members.removeLast()
-            if index < members.count {
-                members[index] = last
-                memberIndex[last.noteID] = index
+            var index = 0
+            while index < state.members.count {
+                let member = state.members[index]
+                if member.seen == state.generation {
+                    index += 1
+                    continue
+                }
+                commands.append(.release(serial: member.serial), capacity: capacity)
+                state.memberIndex.removeValue(forKey: member.noteID)
+                let last = state.members.removeLast()
+                if index < state.members.count {
+                    state.members[index] = last
+                    state.memberIndex[last.noteID] = index
+                }
             }
-        }
-        for noteIndex in incoming.indices {
-            let note = incoming[noteIndex]
-            guard memberIndex[note.noteID] == nil else { continue }
-            serial += 1
-            memberIndex[note.noteID] = members.count
-            members.append(Member(noteID: note.noteID, serial: serial, seen: generation))
-            commands.append(
-                .start(
-                    serial: serial, track: note.track, key: note.key, velocity: note.velocity,
-                    durationSamples: note.durationSamples), capacity: commandCapacity)
-        }
-        guard commands.count > 0 else { return }
-        let acknowledged = acknowledgedSequence.load(ordering: .acquiring)
-        while producerHead.sequence < acknowledged {
-            guard let next = producerHead.next.load() else {
-                preconditionFailure("Acknowledged cursor must follow the producer head")
+            for noteIndex in incoming.indices {
+                let note = incoming[noteIndex]
+                guard state.memberIndex[note.noteID] == nil else { continue }
+                state.serial += 1
+                state.memberIndex[note.noteID] = state.members.count
+                state.members.append(Member(noteID: note.noteID, serial: state.serial, seen: state.generation))
+                commands.append(
+                    .start(
+                        serial: state.serial, track: note.track, key: note.key, velocity: note.velocity,
+                        durationSamples: note.durationSamples), capacity: capacity)
             }
-            producerHead = next
+            guard commands.count > 0 else { return }
+            let acknowledged = acknowledgedSequence.load(ordering: .acquiring)
+            while state.head.sequence < acknowledged {
+                guard let next = state.head.next.load() else {
+                    preconditionFailure("Acknowledged cursor must follow the producer head")
+                }
+                state.head = next
+            }
+            let batch = Batch(commands: commands, sequence: state.tail.sequence + 1)
+            _ = state.tail.next.storeIfNil(batch)
+            state.tail = batch
+            publishedSequence.store(batch.sequence, ordering: .releasing)
         }
-        let batch = Batch(commands: commands, sequence: producerTail.sequence + 1)
-        _ = producerTail.next.storeIfNil(batch)
-        producerTail = batch
-        publishedSequence.store(batch.sequence, ordering: .releasing)
     }
+}
+
+final class AudioBandAudition {
+    private let source: AudioAuditionVoices.Source
+    let endpoint: AudioBandAuditionEndpoint
+    private var consumerCursor: AudioBandAuditionEndpoint.Batch
+
+    init(source: AudioAuditionVoices.Source) {
+        self.source = source
+        let dummy = AudioBandAuditionEndpoint.Batch(commands: .init(), sequence: 0)
+        endpoint = AudioBandAuditionEndpoint(dummy: dummy)
+        consumerCursor = dummy
+    }
+
+    deinit { endpoint.retireConsumer(&consumerCursor) }
+
+    func update(_ notes: [BandAuditionNote]) { endpoint.update(notes) }
 
     func apply(_ engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices) {
         // One acquire captures a finite drain, even if the producer keeps writing.
-        let cutoff = publishedSequence.load(ordering: .acquiring)
+        let cutoff = endpoint.publishedSequence.load(ordering: .acquiring)
         while consumerCursor.sequence < cutoff {
             guard let batch = consumerCursor.next.load() else {
                 preconditionFailure("Published sequence must be reachable from the consumer cursor")
@@ -165,12 +185,12 @@ final class AudioBandAudition {
                     voices: voices)
             }
             consumerCursor = batch
-            acknowledgedSequence.store(batch.sequence, ordering: .releasing)
+            endpoint.acknowledgedSequence.store(batch.sequence, ordering: .releasing)
         }
     }
 
     private static func apply(
-        _ commands: borrowing Span<Command>, count: Int, source: AudioAuditionVoices.Source,
+        _ commands: borrowing Span<AudioBandAuditionEndpoint.Command>, count: Int, source: AudioAuditionVoices.Source,
         engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices
     ) {
         for index in 0..<count {
@@ -190,13 +210,13 @@ final class AudioBandAudition {
     /// Consumer-side (or cold parked) invalidation through a finite cutoff.
     /// Later commands survive; unchanged producer membership must not reattack.
     func discardPending() {
-        let cutoff = publishedSequence.load(ordering: .acquiring)
+        let cutoff = endpoint.publishedSequence.load(ordering: .acquiring)
         while consumerCursor.sequence < cutoff {
             guard let next = consumerCursor.next.load() else {
                 preconditionFailure("Published sequence must be reachable from the consumer cursor")
             }
             consumerCursor = next
         }
-        acknowledgedSequence.store(cutoff, ordering: .releasing)
+        endpoint.acknowledgedSequence.store(cutoff, ordering: .releasing)
     }
 }

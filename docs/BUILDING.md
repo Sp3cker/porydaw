@@ -400,23 +400,29 @@ module's compile flags (including via `-D` defines) drops its objects (see
 ## Audio execution and sample previews
 
 Main owns intent, presentation and preview arbitration. `AudioControl` is an actor
-on a dedicated serial queue; it owns the device, renderer and project bank lease,
-and applies submitted commands without suspending. The audio callback does the
-realtime work. `AudioStatus` exposes atomic scalar state, including requested and
-applied transport, settings, positions and telemetry generation.
+on a dedicated serial queue; it owns the device, renderer and project bank lease.
+Device preparation starts off main; the first rendering command starts the device.
+The audio callback does the realtime work. `AudioStatus` exposes atomic scalar
+state, including requested and applied transport, settings, positions and telemetry generation.
 
 Bind, unload, settings, voicegroup and pattern start/stop return awaitable
-`AudioOperation` receipts; other commands submit without waiting. One main-actor
-task consumes control's `AsyncStream` of completions, sample events, transport and
-telemetry. Control drains CPU frames and activity peaks; main coalesces delivered
-batches. Telemetry epochs and generations discard late batches after invalidation.
+`AudioOperation` receipts. Hot transport and preview commands write lifetime-stable
+endpoints directly when main owns the producer. While a cold receipt or queued hot
+write is outstanding, they use control's FIFO; main acquires the final queued write
+before resuming direct production. Start readiness and producer ownership are
+cached only across this explicit handover, not inferred from callback state.
+One main-actor task consumes completions, sample events and telemetry. Control
+drains CPU frames and activity peaks; main coalesces delivered batches. Telemetry
+epochs and generations discard late batches after invalidation.
 
 `NativeAudio.beginSampleAudition` claims a main-actor `SampleAuditionLease`; a new
 lease displaces the old holder. Leases submit value notes (PCM, wave or kit) to
-control, which prepares and reuses PCM, retries busy slots and reclaims retired
-storage. Callback feedback identifies adoption and natural completion: `.started`
-means adopted, `.finished` means ended, and `soundingFrame` reports the current
-note's callback-published position. Lease and note identities reject stale events.
+control, which prepares and reuses PCM and kit assets, retries busy slots and
+reclaims retired storage. Callback progress signals a semaphore-backed waiter;
+unchanged notes and retired idle slots do not wake control. Callback feedback
+identifies adoption and natural completion: `.started` means adopted, `.finished`
+means ended, and `soundingFrame` reports the current note's callback-published
+position. Lease and note identities reject stale events.
 
 `PcmAuditionPlayer` moves through idle, starting, sounding and repeat-gap states.
 Its policies are `.once` for library previews, `.repeatSame` for Split Studio

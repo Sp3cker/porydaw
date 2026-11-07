@@ -3,6 +3,7 @@ import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback
 import PorydawVoicegroup
+import Synchronization
 
 struct AudioDeviceInfo: Sendable {
     let sampleRate: Double
@@ -12,13 +13,41 @@ struct AudioDeviceInfo: Sendable {
     let periodSizeFrames: Int
     let periodCount: Int
     let status: AudioStatus
+    let endpoint: AudioRenderEndpoint
 }
 
 enum AudioEvent: Sendable {
     case completed(UInt64, Bool)
     case telemetry(UInt64, AudioCpuBatch, [AudioActivityLevel], AudioPolySnapshot, AudioPolySnapshot?)
     case sample(UInt64, SampleAuditionEvent)
-    case transport(UInt64)
+    case deviceFailure(String)
+}
+
+enum AudioHotCommand: Sendable {
+    case play, pause, stop
+    case seek(UInt64), loop(Bool), mix(Set<Int>, Set<Int>), volume(Int)
+    case previewNote(UInt8, UInt8, UInt8), band([BandAuditionNote]), keyboard([BandAuditionNote])
+    case previewTimed(UInt8, UInt8, UInt8, UInt32), previewVoice(UInt8, UInt8, UInt8)
+
+    func apply(to endpoint: AudioRenderEndpoint) {
+        switch self {
+        case .play: endpoint.transport.play()
+        case .pause: endpoint.transport.pause()
+        case .stop: endpoint.transport.stop()
+        case .seek(let sample): endpoint.transport.seek(sample)
+        case .loop(let enabled): endpoint.setLoopEnabled(enabled)
+        case .mix(let muted, let soloed): endpoint.setMix(muted: muted, soloed: soloed)
+        case .volume(let value): endpoint.transport.setOutputVolume(value)
+        case .previewNote(let track, let key, let velocity):
+            endpoint.audition.previewNote(track: track, key: key, velocity: velocity)
+        case .band(let notes): endpoint.audition.updateBandAudition(notes)
+        case .keyboard(let notes): endpoint.audition.updateKeyboardAudition(notes)
+        case .previewTimed(let track, let key, let velocity, let duration):
+            endpoint.audition.previewNoteTimed(track: track, key: key, velocity: velocity, durationSamples: duration)
+        case .previewVoice(let program, let key, let velocity):
+            endpoint.audition.previewVoice(program: program, key: key, velocity: velocity)
+        }
+    }
 }
 
 enum AudioCommand: Sendable {
@@ -28,13 +57,7 @@ enum AudioCommand: Sendable {
     case unload(UInt64)
     case settings(AudioSettings, UInt64)
     case voicegroup(ProjectBankLease, UInt64)
-    case play(UInt64)
-    case pause(UInt64)
-    case stop(UInt64)
-    case seek(UInt64)
-    case loop(Bool)
-    case mix(Set<Int>, Set<Int>)
-    case volume(Int)
+    case hot(AudioHotCommand, UInt64)
     case suppression(Bool)
     case metronome(Bool)
     case polyInvert(Bool)
@@ -44,21 +67,18 @@ enum AudioCommand: Sendable {
     case startPattern(PlaybackTimeline, UInt64)
     case replacePattern(PlaybackTimeline)
     case stopPattern(UInt64)
-    case previewNote(UInt8, UInt8, UInt8)
-    case band([BandAuditionNote])
-    case keyboard([BandAuditionNote])
-    case previewTimed(UInt8, UInt8, UInt8, UInt32)
-    case previewVoice(UInt8, UInt8, UInt8)
     case sample(SampleAuditionCommand)
-    case samplePulse(UInt64)
+    case sampleFeedback
+    case startRendering
     case shutdown(UInt64?)
 }
 
 actor AudioControl {
-    nonisolated let queue = DispatchSerialQueue(label: "porydaw.audio.control")
+    nonisolated let queue = DispatchSerialQueue(label: "com.porydaw.audio-control")
     nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
     nonisolated let events: AsyncStream<AudioEvent>
     nonisolated let sampleStatus: SampleAuditionStatus
+    nonisolated let hotCompleted = Atomic<UInt64>(0)
     private let sampleFeedback: SampleAuditionFeedbackCell
     private let continuation: AsyncStream<AudioEvent>.Continuation
     private var device: AudioDevice?
@@ -68,8 +88,11 @@ actor AudioControl {
     private var pendingSample: SampleAuditionNote?
     private var samplePublication: (lease: UInt64, note: SampleAuditionNoteID, generation: UInt64, started: Bool)?
     private var sampleResetGeneration: UInt64 = 0
-    private var samplePulseGeneration: UInt64 = 0
-    private var samplePulseScheduled = false
+    private let waiterDone = DispatchSemaphore(value: 0)
+    private var waiterStarted = false
+    private nonisolated let startQueued = Atomic<Bool>(false)
+    private nonisolated let started = Atomic<Bool>(false)
+    nonisolated var isRunning: Bool { started.load(ordering: .acquiring) }
 
     init() {
         let feedback = SampleAuditionFeedbackCell()
@@ -88,14 +111,42 @@ actor AudioControl {
         }
     }
 
-    private func scheduleSamplePulse() {
-        guard !samplePulseScheduled, let device else { return }
-        samplePulseScheduled = true
-        let generation = samplePulseGeneration
-        let period = max(0.005, min(0.05, Double(device.periodSizeFrames) / device.sampleRate))
-        queue.asyncAfter(deadline: .now() + period) { [self] in
-            submit(.samplePulse(generation))
+    nonisolated func requestStart() {
+        guard !started.load(ordering: .acquiring),
+            startQueued.compareExchange(expected: false, desired: true, ordering: .acquiringAndReleasing).exchanged
+        else { return }
+        submit(.startRendering)
+    }
+
+    private func startDevice(_ device: AudioDevice) -> Bool {
+        let success = device.start()
+        started.store(success, ordering: .releasing)
+        startQueued.store(false, ordering: .releasing)
+        if !success, let message = device.lastStartError { continuation.yield(.deviceFailure(message)) }
+        return success
+    }
+
+    private func startFeedbackWaiter() {
+        let feedback = sampleFeedback
+        let done = waiterDone
+        waiterStarted = true
+        let waiter = Thread { [weak self] in
+            defer { done.signal() }
+            while feedback.waitForProgress() {
+                guard let self else { return }
+                self.submit(.sampleFeedback)
+            }
         }
+        waiter.name = "porydaw.audio.feedback"
+        waiter.qualityOfService = .userInteractive
+        waiter.start()
+    }
+
+    private func stopFeedbackWaiter() {
+        guard waiterStarted else { return }
+        sampleFeedback.stopWaiting()
+        waiterDone.wait()
+        waiterStarted = false
     }
 
     private func sampleCommand(_ command: SampleAuditionCommand, renderer: AudioRenderEngine) {
@@ -120,12 +171,12 @@ actor AudioControl {
             samplePublication = nil
             sampleStatus.publish(lease: lease, note: .unassigned, generation: 0)
         }
-        pollSample(renderer)
+        processSampleFeedback(renderer)
     }
 
-    private func pollSample(_ renderer: AudioRenderEngine) {
+    private func processSampleFeedback(_ renderer: AudioRenderEngine) {
         guard let feedback = renderer.audition.sampleFeedback else {
-            scheduleSamplePulse()
+            sampleFeedback.wakeForProgress()
             return
         }
         if feedback.resetGeneration != sampleResetGeneration {
@@ -164,8 +215,7 @@ actor AudioControl {
                 continuation.yield(.sample(current.lease, .finished(current.note)))
             }
         }
-        let retiring = renderer.audition.reclaimSampleSlots()
-        if sampleLease != nil || retiring { scheduleSamplePulse() }
+        _ = renderer.audition.reclaimSampleSlots()
     }
 
     private func apply(_ command: AudioCommand) {
@@ -173,12 +223,13 @@ actor AudioControl {
             do {
                 let device = try AudioDevice(sampleFeedback: sampleFeedback)
                 self.device = device
+                startFeedbackWaiter()
                 reply.resume(
                     returning: AudioDeviceInfo(
                         sampleRate: device.sampleRate, backendName: device.backendName,
                         usingNullBackend: device.usingNullBackend, nullBackendForced: device.nullBackendForced,
                         periodSizeFrames: device.periodSizeFrames, periodCount: device.periodCount,
-                        status: device.renderer.status))
+                        status: device.renderer.status, endpoint: device.renderer.endpoint))
             } catch AudioRenderEngine.InitializationError.engine {
                 reply.resume(
                     throwing: NativeAudioError.initializationFailed(
@@ -189,11 +240,12 @@ actor AudioControl {
             return
         }
         if case .shutdown(let operation) = command {
-            samplePulseGeneration &+= 1
+            stopFeedbackWaiter()
             if let lease = sampleLease {
                 sampleStatus.publish(lease: lease, note: .unassigned, generation: 0)
             }
             withExtendedLifetime(bankLease) { device?.shutdown() }
+            started.store(false, ordering: .releasing)
             device = nil
             bankLease = nil
             if let operation { continuation.yield(.completed(operation, true)) }
@@ -202,6 +254,13 @@ actor AudioControl {
         }
         guard let device else { return }
         let renderer = device.renderer
+        let wasRunning = device.isRunning
+        defer {
+            if wasRunning, !device.isRunning, let message = device.lastStartError {
+                started.store(false, ordering: .releasing)
+                continuation.yield(.deviceFailure(message))
+            }
+        }
         switch command {
         case .initialize:
             preconditionFailure("Audio device initialized twice")
@@ -210,7 +269,8 @@ actor AudioControl {
                 renderer.bind(timeline: timeline, voicegroup: bank.engineVoices, settings: settings, identity: identity)
                 bankLease = bank
             }
-            pollSample(renderer)
+            processSampleFeedback(renderer)
+            _ = startDevice(device)
             continuation.yield(.completed(operation, true))
         case .publish(let timeline, let identity):
             renderer.publish(timeline, identity: identity)
@@ -219,32 +279,22 @@ actor AudioControl {
                 renderer.unload()
                 bankLease = nil
             }
-            pollSample(renderer)
+            processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
         case .settings(let settings, let operation):
             device.withRenderingStopped { renderer.updateSettings(settings) }
-            pollSample(renderer)
+            processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
         case .voicegroup(let bank, let operation):
             device.withRenderingStopped {
                 renderer.updateVoicegroup(bank.engineVoices)
                 bankLease = bank
             }
-            pollSample(renderer)
+            processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
-        case .play(let id):
-            renderer.play()
-            continuation.yield(.transport(id))
-        case .pause(let id):
-            renderer.pause()
-            continuation.yield(.transport(id))
-        case .stop(let id):
-            renderer.stop()
-            continuation.yield(.transport(id))
-        case .seek(let sample): renderer.seek(sample)
-        case .loop(let enabled): renderer.setLoopEnabled(enabled)
-        case .mix(let muted, let soloed): renderer.setMix(muted: muted, soloed: soloed)
-        case .volume(let value): renderer.setOutputVolume(value)
+        case .hot(let hot, let sequence):
+            hot.apply(to: renderer.endpoint)
+            hotCompleted.store(sequence, ordering: .releasing)
         case .suppression(let enabled): renderer.setResonanceSuppression(enabled)
         case .metronome(let enabled): renderer.setMetronomeEnabled(enabled)
         case .polyInvert(let enabled): renderer.setPolyDebugInvert(enabled)
@@ -257,34 +307,36 @@ actor AudioControl {
                     epoch, renderer.consumeCpuFrames(), renderer.consumeTrackActivityLevels(), renderer.polySnapshot(),
                     includePreview ? renderer.previewPolySnapshot() : nil))
         case .startPattern(let timeline, let operation):
-            let started = device.withRenderingStopped { renderer.startPatternAudition(timeline) }
-            pollSample(renderer)
+            let prepared = device.withRenderingStopped { renderer.startPatternAudition(timeline) }
+            processSampleFeedback(renderer)
+            let started = prepared && startDevice(device)
             continuation.yield(.completed(operation, started))
         case .replacePattern(let timeline): renderer.replacePatternAudition(timeline)
         case .stopPattern(let operation):
             device.withRenderingStopped { renderer.stopPatternAudition() }
-            pollSample(renderer)
+            processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
-        case .previewNote(let track, let key, let velocity):
-            renderer.audition.previewNote(track: track, key: key, velocity: velocity)
-        case .band(let notes): renderer.audition.updateBandAudition(notes)
-        case .keyboard(let notes): renderer.audition.updateKeyboardAudition(notes)
-        case .previewTimed(let track, let key, let velocity, let duration):
-            renderer.audition.previewNoteTimed(track: track, key: key, velocity: velocity, durationSamples: duration)
-        case .previewVoice(let program, let key, let velocity):
-            renderer.audition.previewVoice(program: program, key: key, velocity: velocity)
         case .sample(let command):
-            sampleCommand(command, renderer: renderer)
-        case .samplePulse(let generation):
-            guard generation == samplePulseGeneration else { return }
-            samplePulseScheduled = false
-            pollSample(renderer)
+            if case .play(let lease, _) = command, sampleLease == lease, !startDevice(device) {
+                sampleLease = nil
+                pendingSample = nil
+                samplePublication = nil
+                sampleStatus.publish(lease: lease, note: .unassigned, generation: 0)
+                continuation.yield(.sample(lease, .ended(.unavailable)))
+            } else {
+                sampleCommand(command, renderer: renderer)
+            }
+        case .sampleFeedback:
+            processSampleFeedback(renderer)
+        case .startRendering:
+            _ = startDevice(device)
         case .shutdown:
             preconditionFailure("Shutdown handled before borrowing renderer")
         }
     }
 
     isolated deinit {
+        stopFeedbackWaiter()
         withExtendedLifetime(bankLease) { device?.shutdown() }
         continuation.finish()
     }

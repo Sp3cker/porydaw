@@ -2,7 +2,7 @@ import Foundation
 @testable import PorydawApp
 import PorydawAppAudio
 import PorydawPlayback
-import PorydawKitStudio
+@testable import PorydawKitStudio
 import PorydawSample
 import PorydawVoicegroup
 
@@ -20,6 +20,7 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
     checkKitAsyncAudition(report)
+    checkKitSharedMetadataAndKeyRender(report)
     checkKitStaleKeyAudition(report)
     checkKitWorkflowRealAudition(report)
     checkKitWorkflowAuditionLeases(report)
@@ -545,6 +546,42 @@ private func auditionSample(name: String) -> ImportedSample {
     ImportedSample(
         buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
         sampleRate: 13379, suggestedName: name)
+}
+
+@MainActor
+private func checkKitSharedMetadataAndKeyRender(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::sharedMetadataKeyRender")
+    let kit = KitStudioPresenter()
+    let counter = KitSourceSession.RenderCounter()
+    kit.session.renderCounter = counter
+    kit.addSource(auditionSample(name: "shared"), autoPlaceFirstSlice: true)
+    var keys: [UInt8] = []
+    var pcm: [Int8] = []
+    kit.effects.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+        keys.append(key)
+        if case .sample(let samples, _, _, _, _, _, _, _) = tone.children[Int(key)] { pcm = samples }
+        return true
+    }
+    kit.playKey(key: 36)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (keys.isEmpty || !kit.metaText.hasPrefix("1 slice ·")) && Date() < deadline {
+                await Task.yield()
+            }
+            if keys.isEmpty || !kit.metaText.hasPrefix("1 slice ·") { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "shared metadata and key render did not land: \(error)")
+        return
+    }
+    let source = kit.session.sources[0]
+    r.expectEqual(expected: [36], actual: keys, what: "key audition publishes")
+    r.expectEqual(
+        expected: canonicalKitSlice(source: source, slice: source.slices[0]).s8,
+        actual: pcm, what: "key uses the canonical shared render")
+    r.expectEqual(
+        expected: 1, actual: counter.value.load(ordering: .relaxed), what: "metadata and key render the slice once")
 }
 
 @MainActor

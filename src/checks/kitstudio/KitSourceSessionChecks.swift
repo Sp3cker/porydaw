@@ -1,7 +1,7 @@
 import Foundation
 @testable import PorydawApp
 import PorydawAppPresentation
-import PorydawKitStudio
+@testable import PorydawKitStudio
 import PorydawSample
 import PorydawSampleUI
 import PorydawVoicegroup
@@ -14,6 +14,7 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceNames(report)
     checkSourceExhaustion(report)
     checkSourceRenderAndRates(report)
+    checkSharedRenderLanes(report)
     checkSourceAuditionFrameMapping(report)
     checkSourceSaveRender(report)
     checkSupersededSaveWritesNothing(report)
@@ -321,6 +322,73 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
     r.expectEqual(
         expected: 44100.0, actual: session.sources[0].targetRate,
         what: "later sources' rate edits leave first source unchanged")
+}
+
+@MainActor
+private func checkSharedRenderLanes(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::sharedRenderLanes")
+    let session = KitSourceSession()
+    let counter = KitSourceSession.RenderCounter()
+    session.renderCounter = counter
+    session.addSource(sessionSample())
+    let id = session.sources[0].id
+    _ = session.createFirstSlice(source: id)
+    let source = session.sources[0]
+    let input = [(source: source, slice: source.slices[0])]
+    var staleMetadata = false
+    var staleAudition = false
+    var metadata: [ProcessedSample] = []
+    var audition: [ProcessedSample] = []
+    session.renderSlices(input, metadata: true) { (_: [ProcessedSample]) in staleMetadata = true }
+    session.renderSlices(input) { (_: [ProcessedSample]) in staleAudition = true }
+    session.renderSlices(input, metadata: true) { (results: [ProcessedSample]) in metadata = results }
+    session.cancelRender()
+    session.renderSlices(input) { (results: [ProcessedSample]) in audition = results }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (metadata.isEmpty || audition.isEmpty) && Date() < deadline { await Task.yield() }
+            if metadata.isEmpty || audition.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "shared lane renders did not land: \(error)")
+        return
+    }
+    let expected = canonicalKitSlice(source: source, slice: source.slices[0])
+    r.expect(!staleMetadata && !staleAudition, message: "superseded requests never publish in either lane")
+    r.expectEqual(expected: [expected], actual: metadata, what: "latest metadata receives the canonical render")
+    r.expectEqual(expected: [expected], actual: audition, what: "latest audition receives the same render")
+    r.expectEqual(
+        expected: 1, actual: counter.value.load(ordering: .relaxed),
+        what: "lane cancellation preserves the shared render")
+
+    var oldRevisionPublished = false
+    session.setSliceFades(source: id, slice: 0, fadeIn: true, fadeOut: false)
+    let changed = session.sources[0]
+    let changedInput = [(source: changed, slice: changed.slices[0])]
+    session.renderSlices(changedInput, metadata: true) { (_: [ProcessedSample]) in oldRevisionPublished = true }
+    session.renderSlices(changedInput) { (_: [ProcessedSample]) in oldRevisionPublished = true }
+    session.setSliceFades(source: id, slice: 0, fadeIn: false, fadeOut: true)
+    let latest = session.sources[0]
+    let latestInput = [(source: latest, slice: latest.slices[0])]
+    metadata = []
+    audition = []
+    session.renderSlices(latestInput, metadata: true) { (results: [ProcessedSample]) in metadata = results }
+    session.renderSlices(latestInput) { (results: [ProcessedSample]) in audition = results }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (metadata.isEmpty || audition.isEmpty) && Date() < deadline { await Task.yield() }
+            if metadata.isEmpty || audition.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "new revision renders did not land: \(error)")
+        return
+    }
+    let latestExpected = canonicalKitSlice(source: latest, slice: latest.slices[0])
+    r.expect(!oldRevisionPublished, message: "source edits invalidate both previous lane requests")
+    r.expectEqual(expected: [latestExpected], actual: metadata, what: "metadata follows the latest source revision")
+    r.expectEqual(expected: [latestExpected], actual: audition, what: "audition follows the latest source revision")
 }
 
 @MainActor

@@ -24,6 +24,8 @@ public final class AudioDevice {
     public let nullBackendForced: Bool
     public private(set) var periodSizeFrames = 0
     public private(set) var periodCount = 0
+    public private(set) var isRunning = false
+    public private(set) var lastStartError: String?
 
     public init(sampleFeedback: SampleAuditionFeedbackCell = .init()) throws {
         let environment = ProcessInfo.processInfo.environment
@@ -72,9 +74,6 @@ public final class AudioDevice {
             retainedRenderer = try AudioRenderEngine(
                 sampleRate: sampleRate, periodFrames: periodSizeFrames, sampleFeedback: sampleFeedback)
             device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
-            guard ma_device_start(device) == MA_SUCCESS else {
-                throw InitializationError.startDevice
-            }
         } catch {
             shutdown()
             throw error
@@ -83,9 +82,22 @@ public final class AudioDevice {
 
     /// Control parks and restarts rendering synchronously for cold operations.
     public func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
-        if let device { _ = ma_device_stop(device) }
-        defer { if let device { _ = ma_device_start(device) } }
+        let wasRunning = isRunning
+        if wasRunning, let device { _ = ma_device_stop(device); isRunning = false }
+        defer { if wasRunning { _ = start() } }
         return try body()
+    }
+
+    @discardableResult
+    public func start() -> Bool {
+        if isRunning { return true }
+        guard let device, ma_device_start(device) == MA_SUCCESS else {
+            lastStartError = InitializationError.startDevice.localizedDescription
+            return false
+        }
+        isRunning = true
+        lastStartError = nil
+        return true
     }
 
     public func shutdown() {
@@ -96,6 +108,7 @@ public final class AudioDevice {
             device.deallocate()
             self.device = nil
             deviceInitialized = false
+            isRunning = false
         }
         retainedRenderer = nil
         if let context {

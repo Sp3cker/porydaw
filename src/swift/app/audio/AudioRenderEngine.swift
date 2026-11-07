@@ -13,6 +13,31 @@ public struct AudioSettings: Sendable {
     public init() {}
 }
 
+public final class AudioRenderEndpoint: Sendable {
+    public let transport: AudioTransportEndpoint
+    public let audition: AudioAuditionEndpoint
+    let loop = Atomic<Bool>(true)
+    let mute = Atomic<UInt32>(0)
+    let solo = Atomic<UInt32>(0)
+
+    init(status: AudioStatus, audition: AudioAuditionEndpoint) {
+        transport = AudioTransportEndpoint(status: status)
+        self.audition = audition
+    }
+
+    public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
+        mute.store(Self.trackMask(muted), ordering: .relaxed)
+        solo.store(Self.trackMask(soloed), ordering: .relaxed)
+    }
+
+    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
+        tracks.reduce(into: UInt32(0)) { mask, track in
+            if (0..<16).contains(track) { mask |= UInt32(1) << track }
+        }
+    }
+}
+
 /// Device-independent production callback. Cold APIs require the device owner to quiesce rendering.
 /// Timelines are owned by the handoff; the voicegroup is borrowed until cold unload/rebind returns.
 public final class AudioRenderEngine {
@@ -26,6 +51,7 @@ public final class AudioRenderEngine {
     private var player = Sequencer()
     private var patternPlayer = Sequencer()
     public let status: AudioStatus
+    public let endpoint: AudioRenderEndpoint
     private let handoff = AudioTimelineHandoff()
     /// Isolated loop; the callback borrows its storage without copying Array owners.
     private let patternHandoff = AudioTimelineHandoff()
@@ -36,9 +62,6 @@ public final class AudioRenderEngine {
     private var cpuRunning = false
     private var cpuContinueOnStart = false
     private let metronome: Metronome
-    private let loop = Atomic<Bool>(true)
-    private let mute = Atomic<UInt32>(0)
-    private let solo = Atomic<UInt32>(0)
     private let invert = Atomic<Bool>(false)
     private let polyReset = Atomic<UInt32>(0)
     private var appliedMute: UInt32 = 0
@@ -65,10 +88,14 @@ public final class AudioRenderEngine {
         periodSizeFrames = periodFrames
         let status = AudioStatus()
         self.status = status
-        transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames, status: status)
+        let audition = AudioAudition(sampleFeedback: sampleFeedback)
+        self.audition = audition
+        let endpoint = AudioRenderEndpoint(status: status, audition: audition.endpoint)
+        self.endpoint = endpoint
+        transportState = AudioTransport(
+            sampleRate: sampleRate, periodFrames: periodFrames, status: status, endpoint: endpoint.transport)
         telemetry = AudioTelemetry(status: status)
         cpuTelemetry = AudioCpuTelemetry(status: status)
-        audition = AudioAudition(sampleFeedback: sampleFeedback)
         suppression = ResonanceSuppression(sampleRate: Float(sampleRate))
         metronome = Metronome(sampleRate: sampleRate)
         left = .allocate(capacity: capacity)
@@ -97,7 +124,7 @@ public final class AudioRenderEngine {
 
     public var songLoaded: Bool { status.songLoaded }
     public var requestedTransport: AudioTransportState { status.requestedTransport }
-    public var loopEnabled: Bool { loop.load(ordering: .relaxed) }
+    public var loopEnabled: Bool { endpoint.loop.load(ordering: .relaxed) }
     public var outputVolume: Int { transportState.outputVolume }
     public var resonanceSuppression: Bool { suppression.enabled }
     public var polyDebugInvert: Bool { invert.load(ordering: .relaxed) }
@@ -116,26 +143,17 @@ public final class AudioRenderEngine {
     public func setCpuTrackBudget(_ count: Int) {
         cpuTrackBudget.store(min(16, max(0, count)), ordering: .relaxed)
     }
-    public func play() {
-        guard songLoaded else { return }
-        if transportState.requested == .stopped { cpuTelemetry.reset() }
-        transportState.requested = .playing
-    }
-    public func pause() { if requestedTransport == .playing { transportState.requested = .paused } }
-    public func stop() { transportState.stop() }
-    public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
-    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
-        mute.store(Self.trackMask(muted), ordering: .relaxed)
-        solo.store(Self.trackMask(soloed), ordering: .relaxed)
-    }
+    public func play() { endpoint.transport.play() }
+    public func pause() { endpoint.transport.pause() }
+    public func stop() { endpoint.transport.stop() }
+    public func setLoopEnabled(_ enabled: Bool) { endpoint.setLoopEnabled(enabled) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) { endpoint.setMix(muted: muted, soloed: soloed) }
     public func setOutputVolume(_ percent: Int) { transportState.outputVolume = percent }
     public func setResonanceSuppression(_ enabled: Bool) { suppression.setEnabled(enabled) }
     public func setMetronomeEnabled(_ enabled: Bool) { metronome.setEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { invert.store(enabled, ordering: .relaxed) }
     public func resetPolyStats() { polyReset.wrappingAdd(1, ordering: .relaxed) }
-    public func seek(_ sample: UInt64) {
-        if songLoaded { transportState.pendingSeek.store(sample, ordering: .releasing) }
-    }
+    public func seek(_ sample: UInt64) { endpoint.transport.seek(sample) }
 
     /// Cold only: pause the song at its current playhead and replace the isolated loop.
     /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
@@ -179,11 +197,6 @@ public final class AudioRenderEngine {
         if isPatternAuditioning { resetPreview() }
     }
 
-    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
-        tracks.reduce(into: UInt32(0)) { mask, track in
-            if (0..<16).contains(track) { mask |= UInt32(1) << track }
-        }
-    }
 
     public func bind(
         timeline: PlaybackTimeline,
@@ -204,8 +217,8 @@ public final class AudioRenderEngine {
         Sequencer.primeVoices(engine: main, timeline: timeline, position: 0)
         resetPreview()
         audition.clearMainPreviews()
-        mute.store(0, ordering: .relaxed)
-        solo.store(0, ordering: .relaxed)
+        endpoint.mute.store(0, ordering: .relaxed)
+        endpoint.solo.store(0, ordering: .relaxed)
         appliedMute = 0
         player.reset()
         telemetry.clear()
@@ -336,7 +349,7 @@ public final class AudioRenderEngine {
     private func adopt(_ timeline: borrowing PlaybackTimeline) {
         let resumeCpu = transportState.applied == .playing
         suspendCpuCost()
-        let pending = transportState.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
+        let pending = endpoint.transport.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
         let seeking = pending != UInt64.max
         let position = seeking ? pending : player.position
         if seeking {
@@ -351,7 +364,7 @@ public final class AudioRenderEngine {
         if resumeCpu { startCpuCost(timeline, continuing: true) }
     }
     private func applySeek() {
-        let sample = transportState.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
+        let sample = endpoint.transport.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
         guard sample != UInt64.max, let timeline = handoff.active else { return }
         let resumeCpu = transportState.applied == .playing
         suspendCpuCost()
@@ -364,8 +377,8 @@ public final class AudioRenderEngine {
         status.playhead.store(sample, ordering: .relaxed)
     }
     private func applyMute() {
-        let soloMask = solo.load(ordering: .relaxed)
-        let muted = mute.load(ordering: .relaxed)
+        let soloMask = endpoint.solo.load(ordering: .relaxed)
+        let muted = endpoint.mute.load(ordering: .relaxed)
         let mask = (soloMask != 0 ? (muted | ~soloMask) : muted) & 0xFFFF
         guard mask != appliedMute else { return }
         let newlyMuted = mask & ~appliedMute

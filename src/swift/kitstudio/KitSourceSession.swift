@@ -1,5 +1,6 @@
 import Foundation
 import PorydawSample
+import Synchronization
 
 /// Window-local sources and slicing state; all external name policy is injected.
 @MainActor
@@ -51,6 +52,8 @@ public final class KitSourceSession {
             sourcesRevision += 1
             cancelRender()
             cancelRender(metadataRender)
+            for job in renderJobs.values { job.task.cancel() }
+            renderJobs.removeAll()
             renderCache.removeAll()
         }
     }
@@ -86,27 +89,39 @@ public final class KitSourceSession {
         var key: RenderKey { RenderKey(source: source, slice: slice) }
     }
 
-    private struct RenderRequest {
+    private final class RenderRequest {
         let inputs: [RenderInput]
         let completion: @MainActor ([ProcessedSample]) -> Void
+        var results: [ProcessedSample] = []
+
+        init(inputs: [RenderInput], completion: @escaping @MainActor ([ProcessedSample]) -> Void) {
+            self.inputs = inputs
+            self.completion = completion
+            results.reserveCapacity(inputs.count)
+        }
     }
 
     private final class RenderLane {
-        var worker: Task<[ProcessedSample], Never>?
-        var completion: Task<Void, Never>?
-        var pending: RenderRequest?
         var generation = 0
     }
 
+    private struct RenderJob {
+        let id: UUID
+        let task: Task<ProcessedSample?, Never>
+    }
+
+    final class RenderCounter: Sendable {
+        let value = Atomic<Int>(0)
+    }
+
     private var renderCache: [RenderKey: ProcessedSample] = [:]
+    private var renderJobs: [RenderKey: RenderJob] = [:]
     private let auditionRender = RenderLane()
     private let metadataRender = RenderLane()
+    var renderCounter: RenderCounter?
 
     isolated deinit {
-        auditionRender.worker?.cancel()
-        auditionRender.completion?.cancel()
-        metadataRender.worker?.cancel()
-        metadataRender.completion?.cancel()
+        for job in renderJobs.values { job.task.cancel() }
     }
 
     /// Creates an empty window-local session.
@@ -289,8 +304,6 @@ public final class KitSourceSession {
 
     private func cancelRender(_ lane: RenderLane) {
         lane.generation += 1
-        lane.pending = nil
-        lane.worker?.cancel()
     }
 
     func renderSlices(
@@ -302,39 +315,41 @@ public final class KitSourceSession {
         let inputs = slices.map { (pair: (source: Source, slice: Slice)) -> RenderInput in
             RenderInput(source: pair.source, slice: pair.slice)
         }
-        lane.pending = RenderRequest(inputs: inputs, completion: completion)
-        lane.worker?.cancel()
-        if lane.worker == nil { startPendingRender(lane) }
+        let request = RenderRequest(inputs: inputs, completion: completion)
+        continueRender(request, lane: lane, generation: lane.generation)
     }
 
-    private func startPendingRender(_ lane: RenderLane) {
-        guard lane.worker == nil, let request = lane.pending else { return }
-        lane.pending = nil
-        let generation = lane.generation
-        let cached = request.inputs.map { (input: RenderInput) -> ProcessedSample? in renderCache[input.key] }
-        if cached.allSatisfy({ (sample: ProcessedSample?) -> Bool in sample != nil }) {
-            request.completion(cached.compactMap { (sample: ProcessedSample?) -> ProcessedSample? in sample })
+    private func continueRender(_ request: RenderRequest, lane: RenderLane, generation: Int) {
+        guard lane.generation == generation else { return }
+        while request.results.count < request.inputs.count {
+            let input = request.inputs[request.results.count]
+            if let cached = renderCache[input.key] {
+                request.results.append(cached)
+                continue
+            }
+            let job: RenderJob
+            if let existing = renderJobs[input.key] {
+                job = existing
+            } else {
+                let counter = renderCounter
+                let task = Task(priority: .userInitiated) { await Self.renderOffMain(input, counter: counter) }
+                job = RenderJob(id: UUID(), task: task)
+                renderJobs[input.key] = job
+            }
+            Task { [weak self] in
+                let rendered = await job.task.value
+                guard let self else { return }
+                if self.renderJobs[input.key]?.id == job.id {
+                    self.renderJobs.removeValue(forKey: input.key)
+                    if let rendered, self.contains(input) { self.renderCache[input.key] = rendered }
+                }
+                guard lane.generation == generation, let rendered, self.contains(input) else { return }
+                request.results.append(rendered)
+                self.continueRender(request, lane: lane, generation: generation)
+            }
             return
         }
-        let worker = Task(priority: .userInitiated) {
-            await Self.renderOffMain(request.inputs, cached: cached)
-        }
-        lane.worker = worker
-        lane.completion = Task { [weak self] in
-            let results = await worker.value
-            guard !Task.isCancelled, let self else { return }
-            lane.worker = nil
-            lane.completion = nil
-            if lane.generation == generation, results.count == request.inputs.count,
-                request.inputs.allSatisfy({ (input: RenderInput) -> Bool in self.contains(input) })
-            {
-                for (input, result) in zip(request.inputs, results) {
-                    self.renderCache[input.key] = result
-                }
-                request.completion(results)
-            }
-            self.startPendingRender(lane)
-        }
+        request.completion(request.results)
     }
 
     private func contains(_ input: RenderInput) -> Bool {
@@ -347,14 +362,11 @@ public final class KitSourceSession {
     }
 
     @concurrent
-    private static func renderOffMain(_ inputs: [RenderInput], cached: [ProcessedSample?]) async -> [ProcessedSample] {
-        var results: [ProcessedSample] = []
-        results.reserveCapacity(inputs.count)
-        for (input, sample) in zip(inputs, cached) {
-            if Task.isCancelled { return [] }
-            results.append(sample ?? render(input))
-        }
-        return results
+    private static func renderOffMain(_ input: RenderInput, counter: RenderCounter?) async -> ProcessedSample? {
+        guard !Task.isCancelled else { return nil }
+        counter?.value.wrappingAdd(1, ordering: .relaxed)
+        let result = render(input)
+        return Task.isCancelled ? nil : result
     }
 
     /// Renders and encodes a captured batch independently of audition rendering.

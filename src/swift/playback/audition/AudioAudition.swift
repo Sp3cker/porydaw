@@ -18,57 +18,89 @@ public struct AudioADSR: Sendable {
     }
 }
 
-/// One UI producer and one audio consumer. Destruction requires a parked
+public final class AudioAuditionEndpoint: Sendable {
+    fileprivate let noteCommand = Atomic<UInt32>(0)
+    fileprivate let voiceCommand = Atomic<UInt64>(0)
+    private let band: AudioBandAuditionEndpoint
+    private let keyboard: AudioBandAuditionEndpoint
+    fileprivate let timed = TimedAuditionEndpoint()
+
+    fileprivate init(band: AudioBandAuditionEndpoint, keyboard: AudioBandAuditionEndpoint) {
+        self.band = band
+        self.keyboard = keyboard
+    }
+
+    public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
+        let generation = UInt8(truncatingIfNeeded: noteCommand.load(ordering: .relaxed) >> 24) &+ 1
+        noteCommand.store(
+            UInt32(generation) << 24 | UInt32(track & 15) << 16 | UInt32(key & 127) << 8 | UInt32(velocity),
+            ordering: .releasing)
+    }
+
+    public func updateBandAudition(_ notes: [BandAuditionNote]) { band.update(notes) }
+    public func updateKeyboardAudition(_ notes: [BandAuditionNote]) { keyboard.update(notes) }
+
+    public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
+        let generation = UInt8(truncatingIfNeeded: voiceCommand.load(ordering: .relaxed) >> 32) &+ 1
+        voiceCommand.store(
+            UInt64(generation) << 32 | UInt64(program & 127) << 16 | UInt64(key & 127) << 8 | UInt64(velocity),
+            ordering: .releasing)
+    }
+
+    public func previewNoteTimed(track: UInt8, key: UInt8, velocity: UInt8, durationSamples: UInt32) {
+        timed.publish(track: track, key: key, velocity: velocity, duration: durationSamples)
+    }
+}
+
+/// One serialized producer and one audio consumer. Destruction requires a parked
 /// callback and engines whose channels no longer reference audition data.
 public final class AudioAudition {
-    private let noteCommand = Atomic<UInt32>(0)
-    private let voiceCommand = Atomic<UInt64>(0)
-    private var noteGeneration: UInt8 = 0
-    private var voiceGeneration: UInt8 = 0
+    public let endpoint: AudioAuditionEndpoint
     private var appliedNote: UInt32 = 0
     private var appliedVoice: UInt64 = 0
     private var heldSerial: UInt64 = 0
     private var heldOccurrence: UInt64 = 0
     private var voiceKey: Int32 = -1
     let samples: AudioSampleAudition
-    private let band = AudioBandAudition(source: .band)
-    private let keyboard = AudioBandAudition(source: .keyboard)
-    let timed = TimedAuditions()
+    private let band: AudioBandAudition
+    private let keyboard: AudioBandAudition
+    let timed: TimedAuditions
     let voices = AudioAuditionVoices()
 
     public init(sampleFeedback: SampleAuditionFeedbackCell = .init()) {
         samples = AudioSampleAudition(feedbackCell: sampleFeedback)
+        let band = AudioBandAudition(source: .band)
+        let keyboard = AudioBandAudition(source: .keyboard)
+        self.band = band
+        self.keyboard = keyboard
+        let endpoint = AudioAuditionEndpoint(band: band.endpoint, keyboard: keyboard.endpoint)
+        self.endpoint = endpoint
+        timed = TimedAuditions(endpoint: endpoint.timed)
     }
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
-        noteGeneration &+= 1
-        noteCommand.store(
-            UInt32(noteGeneration) << 24 | UInt32(track & 15) << 16 | UInt32(key & 127) << 8 | UInt32(velocity),
-            ordering: .releasing)
+        endpoint.previewNote(track: track, key: key, velocity: velocity)
     }
 
-    /// Publish identity-based entrances and departures from the single UI producer.
+    /// Publish identity-based entrances and departures from the serialized producer.
     public func updateBandAudition(_ notes: [BandAuditionNote]) {
-        band.update(notes)
+        endpoint.updateBandAudition(notes)
     }
 
     /// The virtual keyboard's held keys, an independent membership beside the band's.
     public func updateKeyboardAudition(_ notes: [BandAuditionNote]) {
-        keyboard.update(notes)
+        endpoint.updateKeyboardAudition(notes)
     }
 
     public func previewVoice(program: UInt8, key: UInt8, velocity: UInt8) {
-        voiceGeneration &+= 1
-        voiceCommand.store(
-            UInt64(voiceGeneration) << 32 | UInt64(program & 127) << 16 | UInt64(key & 127) << 8 | UInt64(velocity),
-            ordering: .releasing)
+        endpoint.previewVoice(program: program, key: key, velocity: velocity)
     }
 
     public func previewNoteTimed(
         track: UInt8, key: UInt8, velocity: UInt8,
         durationSamples: UInt32
     ) {
-        timed.publish(track: track, key: key, velocity: velocity, duration: durationSamples)
+        endpoint.previewNoteTimed(track: track, key: key, velocity: velocity, durationSamples: durationSamples)
     }
 
     /// Publishes a sample from the single control producer.
@@ -96,7 +128,7 @@ public final class AudioAudition {
         preview: UnsafeMutablePointer<M4AEngine>, frames: UInt32,
         deferTimed: Bool
     ) {
-        let note = noteCommand.load(ordering: .acquiring)
+        let note = endpoint.noteCommand.load(ordering: .acquiring)
         if note != appliedNote {
             appliedNote = note
             if heldOccurrence != 0 {
@@ -120,7 +152,7 @@ public final class AudioAudition {
             band.apply(main, voices: voices)
             keyboard.apply(main, voices: voices)
         }
-        let voice = voiceCommand.load(ordering: .acquiring)
+        let voice = endpoint.voiceCommand.load(ordering: .acquiring)
         if voice != appliedVoice {
             appliedVoice = voice
             if voiceKey >= 0 { m4a_engine_note_off(preview, 0, UInt8(voiceKey)) }
@@ -187,9 +219,33 @@ public final class AudioAudition {
     public func reset() {
         clearMainPreviews()
         voiceKey = -1
-        appliedNote = noteCommand.load(ordering: .acquiring)
-        appliedVoice = voiceCommand.load(ordering: .acquiring)
+        appliedNote = endpoint.noteCommand.load(ordering: .acquiring)
+        appliedVoice = endpoint.voiceCommand.load(ordering: .acquiring)
         samples.reset()
+    }
+}
+
+final class TimedAuditionIndex: Sendable {
+    let value = Atomic<UInt32>(0)
+}
+
+final class TimedAuditionEndpoint: Sendable {
+    private final class Slot: Sendable { let value = Atomic<UInt64>(0) }
+    private let slots = (0..<64).map { (_: Int) in Slot() }
+    let write = TimedAuditionIndex()
+    let read = TimedAuditionIndex()
+
+    func publish(track: UInt8, key: UInt8, velocity: UInt8, duration: UInt32) {
+        if velocity > 0 && duration == 0 { return }
+        let position = write.value.load(ordering: .relaxed)
+        if position &- read.value.load(ordering: .acquiring) >= 64 { return }
+        let value = UInt64(track & 15) | UInt64(key & 127) << 8 | UInt64(velocity) << 16 | UInt64(duration) << 24
+        slots[Int(position % 64)].value.store(value, ordering: .relaxed)
+        write.value.store(position &+ 1, ordering: .releasing)
+    }
+
+    func command(at position: UInt32) -> UInt64 {
+        slots[Int(position % 64)].value.load(ordering: .relaxed)
     }
 }
 
@@ -206,49 +262,42 @@ final class TimedAuditions {
         var remaining: Int64 = 0
         var serial: UInt64 = 0
     }
-    private let ring = UnsafeMutablePointer<Command>.allocate(capacity: 64)
+    private let endpoint: TimedAuditionEndpoint
     private let active = UnsafeMutablePointer<Active>.allocate(capacity: 24)
-    let write = Atomic<UInt32>(0)
-    let read = Atomic<UInt32>(0)
+    let write: TimedAuditionIndex
+    let read: TimedAuditionIndex
     private(set) var count = 0
     private var serial: UInt64 = 0
 
-    init() {
-        ring.initialize(repeating: Command(), count: 64)
+    init(endpoint: TimedAuditionEndpoint) {
+        self.endpoint = endpoint
+        write = endpoint.write
+        read = endpoint.read
         active.initialize(repeating: Active(), count: 24)
     }
 
     deinit {
-        ring.deinitialize(count: 64)
-        ring.deallocate()
         active.deinitialize(count: 24)
         active.deallocate()
     }
 
-    func publish(track: UInt8, key: UInt8, velocity: UInt8, duration: UInt32) {
-        if velocity > 0 && duration == 0 { return }
-        let position = write.load(ordering: .relaxed)
-        if position &- read.load(ordering: .acquiring) >= 64 { return }
-        ring[Int(position % 64)] = Command(
-            track: track & 15, key: key & 127,
-            velocity: velocity, duration: duration)
-        write.store(position &+ 1, ordering: .releasing)
-    }
-
     func clear(dropQueued: Bool) {
         count = 0
-        if dropQueued { read.store(write.load(ordering: .acquiring), ordering: .releasing) }
+        if dropQueued { read.value.store(write.value.load(ordering: .acquiring), ordering: .releasing) }
     }
 
     func apply(_ engine: UnsafeMutablePointer<M4AEngine>, voices: AudioAuditionVoices, frames: UInt32) {
-        let end = write.load(ordering: .acquiring)
-        var position = read.load(ordering: .relaxed)
+        let end = write.value.load(ordering: .acquiring)
+        var position = read.value.load(ordering: .relaxed)
         if position != end {
             engine.pointee.polyEventClock = UInt32.max
             engine.pointee.auditionNote = true
         }
         while position != end {
-            let command = ring[Int(position % 64)]
+            let value = endpoint.command(at: position)
+            let command = Command(
+                track: UInt8(truncatingIfNeeded: value), key: UInt8(truncatingIfNeeded: value >> 8),
+                velocity: UInt8(truncatingIfNeeded: value >> 16), duration: UInt32(truncatingIfNeeded: value >> 24))
             position &+= 1
             var slot = -1
             for index in 0..<count {
@@ -285,7 +334,7 @@ final class TimedAuditions {
                 track: command.track, key: command.key,
                 remaining: Int64(command.duration), serial: serial)
         }
-        read.store(position, ordering: .releasing)
+        read.value.store(position, ordering: .releasing)
         var index = 0
         while index < count {
             active[index].remaining -= Int64(frames)
