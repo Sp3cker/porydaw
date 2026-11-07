@@ -1,0 +1,17 @@
+Steinberg VST3 SDK
+Upstream: steinbergmedia/vst3sdk
+Tag: v3.8.1_build_84
+SDK commit: 3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96
+base commit: fcf9da0bd27a16f7f03773a3a39822f28f5c8477
+pluginterfaces commit: 4f547e8e102b47de4a8b8aaf343c73b700786372
+public.sdk commit: 586dc5e6c8012c3e4b01c79389375cbe96bdb1da
+Source-list reference: cmake/modules/SMTG_VST3_SDK.cmake
+cmake commit: 054c9143cbb8d47fc4694e473f2ee3b4d951a8f5
+
+Copied byte-identical from the tag and its recorded submodule commits:
+- external/vst3sdk/base/{source,thread}/
+- external/vst3sdk/pluginterfaces/{base,gui,vst}/
+- external/vst3sdk/public.sdk/source/{common,main,vst}/, excluding every samples, testsuite or test* directory
+- external/vst3sdk/public.sdk/LICENSE.txt
+
+No SDK CMake or VSTGUI dependency is used. Do not edit copied sources.

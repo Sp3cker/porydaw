@@ -95,6 +95,56 @@ remain GitHub-hosted.
 Startup benchmark commands remain available, but their synthetic process and
 statistics tests are excluded from the harness suite.
 
+## Vendored VST3 SDK
+
+`external/vst3sdk/` contains the source subset from `steinbergmedia/vst3sdk`
+tag `v3.8.1_build_84` (SDK 3.8.1). `VERSION.txt` records the SDK commit, the
+tag's exact `base`, `pluginterfaces`, and `public.sdk` submodule commits,
+and the `cmake` commit used to compare the hosting source list.
+This is an in-tree copy, not a submodule or a configure-time download.
+
+The byte-identical subset is `base/{source,thread}/`,
+`pluginterfaces/{base,gui,vst}/`, `public.sdk/source/{common,main,vst}/`,
+and `public.sdk/LICENSE.txt`. Every `samples`, `testsuite`, and `test*`
+directory is excluded. Copied SDK sources must not be edited.
+The SDK's CMake and VSTGUI are not used.
+
+`src/pluginhost/CMakeLists.txt` declares `porydaw_vst3_sdk`, a static C++17
+target with an explicit source list based on the pinned
+`cmake/modules/SMTG_VST3_SDK.cmake` hosting macro and its base dependencies.
+It selects exactly one platform module loader; the macOS loader uses
+Objective-C++17 with ARC. Debug uses `DEVELOPMENT=1`; other configurations
+use `RELEASE=1` and `NDEBUG`. Project warning flags are not applied to the SDK.
+Its include directory is a system include for native helper/check consumers
+only: no SDK includes in Swift module maps, and no SDK linkage in Porydaw's
+process. The helper owns plugin loading.
+
+The MIT notice in `public.sdk/LICENSE.txt` is copied without changes as
+`VST3-SDK-LICENSE.txt`. On macOS it is a `porydaw` bundle resource in
+`Contents/Resources/`, using the shell QML/font resource mechanism. Windows
+and Linux copy it beside the executable after building. Windows installation
+includes it in the staged release folder; Linux AppImage packaging copies it
+into `AppDir/usr/bin/` beside the executable.
+
+To update the dependency:
+
+1. Check out the new upstream SDK tag cleanly and check out its recorded
+   `base`, `pluginterfaces`, `public.sdk`, and `cmake` submodule commits.
+2. Re-copy only the directories and license listed above, retaining the
+   directory exclusions and removing files no longer present upstream.
+   Do not patch copied sources or add a Porydaw submodule.
+3. Update `external/vst3sdk/VERSION.txt` with the tag and all recorded commits.
+4. Re-check the explicit source list against
+   `smtg_create_public_sdk_hosting_target` in the new tag's
+   `cmake/modules/SMTG_VST3_SDK.cmake` and its base/common dependencies.
+   Name any extra link-required source explicitly and retain its macro
+   provenance comment; keep the single platform-loader selection.
+5. Run `uv run --no-sync dev build:checks` and
+   `uv run --no-sync dev format --check`. Confirm
+   `build/debug/porydaw.app/Contents/Resources/VST3-SDK-LICENSE.txt`
+   exists on macOS. CI supplies Windows MSVC and Linux compile coverage;
+   packaged releases must retain the notice on every platform.
+
 ## Standalone backup module
 
 `src/swift/backups` is the `PorydawBackups` Swift 6 package. It depends only on

@@ -173,6 +173,7 @@ if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
 endif()
 include(cmake/BinaryParsing.cmake)
 include(cmake/Lame.cmake)
+add_subdirectory(src/pluginhost)
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/backups)
 add_subdirectory(src/swift/playback)
@@ -543,11 +544,20 @@ set(porydaw_fonts
     "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleNext-SemiBold.ttf"
     "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleMono-Regular.ttf"
     "${PROJECT_SOURCE_DIR}/resources/icons/PorydawIcons.otf")
-set_source_files_properties(${shell_qml} ${porydaw_fonts} PROPERTIES
+set(porydaw_vst3_license "${CMAKE_CURRENT_BINARY_DIR}/VST3-SDK-LICENSE.txt")
+configure_file(
+    "${PROJECT_SOURCE_DIR}/external/vst3sdk/public.sdk/LICENSE.txt"
+    "${porydaw_vst3_license}" COPYONLY)
+set_source_files_properties(${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license} PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
-qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts})
+qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license})
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
+    add_custom_command(TARGET porydaw POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${PROJECT_SOURCE_DIR}/external/vst3sdk/public.sdk/LICENSE.txt"
+                "$<TARGET_FILE_DIR:porydaw>/VST3-SDK-LICENSE.txt"
+        VERBATIM)
 endif()
 if(NOT APPLE)
     foreach(qml IN LISTS shell_qml)
@@ -683,6 +693,7 @@ if(WIN32)
     # `cmake --install` stages the release folder from runtime files only, not the build tree.
     install(TARGETS porydaw RUNTIME DESTINATION .)
     install(FILES ${shell_qml} ${porydaw_fonts} ${porydaw_swift_runtime_dlls} DESTINATION .)
+    install(FILES "${porydaw_vst3_license}" DESTINATION .)
     if(TARGET Qt6::windeployqt AND NOT porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
         set(porydaw_install_deploy_args "")
         foreach(arg IN LISTS porydaw_windeployqt_args)

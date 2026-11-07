@@ -95,7 +95,7 @@ jobs:
           VERSION: ${{ env.SAFE_TAG }}
         run: |
           mkdir -p AppDir/usr/bin
-          cp build/PorydawApplication.qml build/*.ttf build/*.otf AppDir/usr/bin/
+          cp build/PorydawApplication.qml build/*.ttf build/*.otf build/VST3-SDK-LICENSE.txt AppDir/usr/bin/
           curl -fLO https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           curl -fLO https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
