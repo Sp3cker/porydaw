@@ -1,6 +1,6 @@
 #ifndef PORYDAW_PLUGINHOST_H
 #define PORYDAW_PLUGINHOST_H
-#include <stdint.h>
+#include "pluginbridge.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,11 +12,6 @@ typedef int32_t pdph_result;
 enum { PDPH_OK = 0, PDPH_ERR_ARGUMENT = -1, PDPH_ERR_STATE = -2,
        PDPH_ERR_SDK = -3, PDPH_ERR_INTERNAL = -4, PDPH_ERR_NO_EDITOR = -5,
        PDPH_ERR_UNSUPPORTED_PLATFORM = -6 };
-enum { PDPH_EVENT_NOTE_ON = 0, PDPH_EVENT_NOTE_OFF = 1, PDPH_EVENT_OTHER = 2 };
-enum { PDPH_CTX_PLAYING = 1 << 1, PDPH_CTX_CYCLE_ACTIVE = 1 << 2,
-       PDPH_CTX_PROJECT_TIME_MUSIC_VALID = 1 << 9, PDPH_CTX_TEMPO_VALID = 1 << 10,
-       PDPH_CTX_BAR_POSITION_VALID = 1 << 11, PDPH_CTX_CYCLE_VALID = 1 << 12,
-       PDPH_CTX_TIME_SIG_VALID = 1 << 13 };
 enum { PDPH_RESTART_RELOAD_COMPONENT = 1 << 0, PDPH_RESTART_IO_CHANGED = 1 << 1,
        PDPH_RESTART_PARAM_VALUES_CHANGED = 1 << 2, PDPH_RESTART_LATENCY_CHANGED = 1 << 3,
        PDPH_RESTART_PARAM_TITLES_CHANGED = 1 << 4, PDPH_RESTART_MIDI_CC_ASSIGNMENT_CHANGED = 1 << 5 };
@@ -26,17 +21,6 @@ typedef struct {
     char name[128], category[128], sub_categories[128], vendor[128], version[128], sdk_version[128];
 } pdph_class_info;
 typedef struct { int32_t event_in, event_out, audio_in, audio_out; } pdph_bus_counts;
-typedef struct {
-    uint32_t state_flags;
-    double sample_rate, tempo, ppq_position, bar_start_ppq, cycle_start_ppq, cycle_end_ppq;
-    int32_t time_sig_num, time_sig_den;
-    int64_t project_samples;
-} pdph_process_context;
-typedef struct {
-    int32_t sample_offset, note_id;
-    uint8_t kind, channel, pitch;
-    float velocity;
-} pdph_midi_event;
 // Plugin-chosen threads: callbacks must only flip atomics or enqueue; never throw.
 typedef struct {
     void* user;

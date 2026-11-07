@@ -1,4 +1,5 @@
 #include "pluginhost.h"
+#include "helper/host.h"
 #include <cstdio>
 #include <iomanip>
 #include <iostream>
@@ -60,7 +61,10 @@ int scan(int argc, char** argv) {
 }
 }
 int main(int argc, char** argv) {
-    try { return scan(argc, argv); }
+    try {
+        if (argc > 1 && std::string(argv[1]) == "host") return pdph::helper::run(argc, argv);
+        return scan(argc, argv);
+    }
     catch (const std::exception& error) { return failure(error.what()); }
     catch (...) { return failure("Unexpected scanner exception"); }
 }

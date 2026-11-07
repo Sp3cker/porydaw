@@ -183,6 +183,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         playback/PlaybackChecks.swift
         playback/LiveInsertChecks.swift
         pluginhost/PluginHostABIChecks.swift
+        pluginhost/BridgeChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift
@@ -250,7 +251,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     )
     target_compile_options(swift_core_check_logic PUBLIC
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/pluginhost/module.modulemap>")
-    target_link_libraries(swift_core_check_logic PRIVATE porydaw_pluginhost)
+    target_link_libraries(swift_core_check_logic PRIVATE porydaw_pluginhost PUBLIC PorydawPluginHost)
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"

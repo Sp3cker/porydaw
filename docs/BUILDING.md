@@ -131,6 +131,25 @@ and Linux copy it beside the executable after building. Windows installation
 includes it in the staged release folder; Linux AppImage packaging copies it
 into `AppDir/usr/bin/` beside the executable.
 
+`PorydawPluginBridge` compiles the SDK-free shared-memory wire format and C11
+wait/wake implementation. The helper links the same bridge library plus Qt Gui;
+Swift imports its C module without C++ interop or SDK linkage. MSVC enables
+`/experimental:c11atomics` on that C target only. C/C++ assertions enforce matching
+lock-free atomic sizes, alignment, field offsets and wire size. POSIX backing may
+be page-rounded; mappings still expose only the logical wire extent.
+
+`PorydawPluginHost` provides framed control and processing-channel ownership.
+One non-Sendable producer owns request/reply payload access; a separate
+main-actor mapping monitors atomics and unlinks the name after `Ready`.
+Live and Render must detach/join before transferring producer ownership.
+Swift owns control, watchdog and shutdown deadlines; native teardown never
+adds a competing hang policy. The helper supports both `scan` and
+`host --channel` modes.
+
+Run `uv run --no-sync dev checks --filter swiftcore-pluginbridge` for real-helper
+transport, state, crash, hang and shutdown coverage; add `--asan` for sanitizer
+coverage. `swiftcore-pluginhost-abi` covers the native engine separately.
+
 To update the dependency:
 
 1. Check out the new upstream SDK tag cleanly and check out its recorded
