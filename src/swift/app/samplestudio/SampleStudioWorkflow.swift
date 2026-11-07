@@ -276,7 +276,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let destination = destination
         let root = session.projectRoot
         let provenanceStore = SampleProvenanceStore(preferences: session.preferences)
-        let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(), update: editing)
+        let commitDocument = presenter.document
         let generation = sessionGeneration
         pendingTask = Task { [weak self] in
             defer {
@@ -286,6 +286,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 }
             }
             do {
+                let wav = await SampleStudioPresenter.wavBytes(for: commitDocument)
+                guard !Task.isCancelled, self?.sessionGeneration == generation else { return }
+                let request = SampleCommitRequest(name: name, wav: wav, update: editing)
                 try await service.commitSample(request)
                 if keepsProvenance {
                     provenanceStore.save(provenance, projectRoot: root, name: name)

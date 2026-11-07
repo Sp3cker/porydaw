@@ -377,12 +377,12 @@ private func checkArpeggiatorAudition(_ report: CheckReport) throws {
     report.expectEqual(
         expected: songPosition, actual: audio.playheadSamples,
         cppID: "arpeggiator/audition", what: "pattern audition does not advance the original song")
-    report.expectEqual(
-        expected: original.events, actual: audio.timeline?.events,
-        cppID: "arpeggiator/audition", what: "pattern audition retains the original song timeline")
+    report.expect(
+        audio.songLoaded, cppID: "arpeggiator/audition",
+        message: "pattern audition retains the bound song")
     audio.stopPatternAudition()
     report.expect(
-        !audio.isPatternAuditioning && audio.transport == .paused,
+        !audio.isPatternAuditioning && audio.requestedTransport == .paused,
         cppID: "arpeggiator/audition", message: "stopping the pattern leaves the original song paused")
     let stopped = rig.render(4096)
     report.expect(
@@ -649,11 +649,11 @@ private func checkArpeggiatorReplacement(_ report: CheckReport) throws {
     report.expectEqual(
         expected: songPosition, actual: audio.playheadSamples,
         cppID: "arpeggiator/replacement", what: "replacement does not advance the original song")
-    report.expectEqual(
-        expected: song.events, actual: audio.timeline?.events,
-        cppID: "arpeggiator/replacement", what: "replacement retains the original song timeline")
     report.expect(
-        audio.transport == .paused, cppID: "arpeggiator/replacement",
+        audio.songLoaded, cppID: "arpeggiator/replacement",
+        message: "replacement retains the bound song")
+    report.expect(
+        audio.requestedTransport == .paused, cppID: "arpeggiator/replacement",
         message: "replacement leaves the song transport paused")
 
     func expectCancelled(_ scenario: String, _ cancel: () -> Void) {

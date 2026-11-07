@@ -1,3 +1,4 @@
+import Foundation
 import PorydawAppPresentation
 import PorydawKitStudio
 import PorydawSample
@@ -12,6 +13,7 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceNames(report)
     checkSourceExhaustion(report)
     checkSourceRenderAndRates(report)
+    checkSourceSaveRender(report)
     checkSourceClose(report)
     checkSourceSnapshot(report)
     checkSourceAutoPlaceAndZoneRemoval(report)
@@ -288,6 +290,35 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
     r.expectEqual(
         expected: 44100.0, actual: session.sources[0].targetRate,
         what: "later sources' rate edits leave first source unchanged")
+}
+
+@MainActor
+private func checkSourceSaveRender(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::saveRender")
+    let session = KitSourceSession()
+    session.addSource(sessionSample(count: 400))
+    let id = session.sources[0].id
+    session.createFirstSlice(source: id)
+    session.setMarker(source: id, frame: 200, snap: false)
+    session.setSliceFades(source: id, slice: 0, fadeIn: true, fadeOut: false)
+    let source = session.sources[0]
+    let inputs = source.slices.map { (slice: KitSourceSession.Slice) in (source: source, slice: slice) }
+    let expected = source.slices.indices.map { (index: Int) -> Data in
+        SampleWavWriter.bytes(for: session.renderSlice(source: id, slice: index))
+    }
+    session.setSliceFades(source: id, slice: 0, fadeIn: false, fadeOut: true)
+    do {
+        let actual = try runBlocking { await KitSourceSession.renderWavs(inputs) }
+        r.expectEqual(expected: expected, actual: actual, what: "captured slices produce canonical WAV bytes in order")
+        let cancelled = try runBlocking {
+            let task = Task { await KitSourceSession.renderWavs(inputs) }
+            task.cancel()
+            return await task.value
+        }
+        r.expect(cancelled.isEmpty, message: "cancelled save rendering returns no partial WAV batch")
+    } catch {
+        r.expect(false, message: "save rendering did not settle: \(error)")
+    }
 }
 
 @MainActor

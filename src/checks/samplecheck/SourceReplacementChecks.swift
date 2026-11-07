@@ -28,6 +28,16 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     let validator: (String) -> String? = { name in name.isEmpty ? "Name required" : nil }
     let palette = GridPalette()
     ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
+    func waitForRender(_ presenter: SampleStudioPresenter, scope: CheckReport.Scoped) -> Bool {
+        do {
+            try runBlocking { await presenter.waitForRender() }
+            return true
+        } catch {
+            scope.expect(false, message: "sample render did not settle: \(error)")
+            return false
+        }
+    }
+
     func waveformHeight(_ wave: MarkerWaveformModel, atX x: Int) -> Double? {
         wave.displayList(list: 0).withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Double? in
             var view = PdDlView()
@@ -59,6 +69,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     }
 
     let blank = SampleStudioPresenter(document: SampleDocument(source: ImportedSample()), validateName: validator)
+    guard waitForRender(blank, scope: replacement) else { return }
     let blankTools = SampleLoopTools(presenter: blank)
     let blankWave = makeWaveform(presenter: blank, tools: blankTools)
     blankWave.setViewport(width: 120, height: 120)
@@ -66,6 +77,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         !blank.hasSource && !blank.canCommit && blank.nameReadOnly,
         message: "empty studio cannot commit or edit an unloaded sample name")
     blank.replaceSource(SampleDocument(source: next))
+    guard waitForRender(blank, scope: replacement) else { return }
     replacement.expect(
         blank.hasSource && blank.canCommit && !blank.nameReadOnly && blank.sampleName == "new_tone",
         message: "loading a source enables the prefilled valid name and commit")
@@ -74,6 +86,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
             && (waveformHeight(blankWave, atX: 30) ?? 0) > 10,
         message: "blank studio draws and fits newly loaded audio without a stale empty pyramid")
     blank.replaceSource(SampleDocument(source: ImportedSample(suggestedName: "empty_tone")))
+    guard waitForRender(blank, scope: replacement) else { return }
     replacement.expect(
         !blank.hasSource && !blank.canCommit && blank.nameReadOnly
             && waveformHeight(blankWave, atX: 30) == nil,
@@ -146,10 +159,12 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     sourceState.expect(wave.xForFrame(6_000) != beforePan, message: "active pan changes the zoomed viewport")
     let zoomX = wave.xForFrame(6_000)
     presenter.setFineTuneCents(value: 12)
+    guard waitForRender(presenter, scope: sourceState) else { return }
     sourceState.expect(
         wave.xForFrame(6_000) == zoomX,
         message: "parameter edit retains waveform zoom and pan")
     presenter.replaceSource(SampleDocument(source: next))
+    guard waitForRender(presenter, scope: sourceState) else { return }
     sourceState.expect(
         abs(wave.xForFrame(6_000) - 300) <= 2
             && abs(wave.frameAt(600) - next.frameCount + 1) <= 100,
@@ -169,6 +184,7 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
     }
     sourceState.expect(!hasPlayhead, message: "replacement clears the previous source playhead")
     let fresh = SampleStudioPresenter(document: SampleDocument(source: next), validateName: validator)
+    guard waitForRender(fresh, scope: sourceState) else { return }
     let freshTools = SampleLoopTools(presenter: fresh)
     let freshWave = makeWaveform(presenter: fresh, tools: freshTools)
     wave.setViewport(width: 120, height: 120)
@@ -197,10 +213,15 @@ internal func runSourceReplacementChecks(_ report: CheckReport) {
         message: "detected replacement pitch changes the editor key to A4")
     tools.tryAnotherLoop()
     freshTools.tryAnotherLoop()
+    do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
+        analysis.expect(false, message: "replacement loop analysis did not settle: \(error)")
+        return
+    }
     do { try runBlocking { await freshTools.waitForPitchAnalysis() } } catch {
         analysis.expect(false, message: "fresh pitch analysis did not settle: \(error)")
         return
     }
+    guard waitForRender(presenter, scope: analysis) else { return }
     analysis.expect(
         presenter.loopOn && fresh.loopOn && presenter.loopStart == fresh.loopStart
             && presenter.loopEnd == fresh.loopEnd && presenter.loopEnd < next.frameCount

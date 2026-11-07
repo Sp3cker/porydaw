@@ -13,11 +13,12 @@ func checkControllerPublication(_ report: CheckReport) throws {
         expected: UInt64(0), actual: audio.playheadSamples,
         cppID: "transportcheck/TransportTest::seekPublishesWithoutBlocking",
         what: "seek remains pending before callback")
+    let initialRevision = audio.status.appliedTimelineRevision
     let replacement = rig.timeline(changed: true)
     audio.publish(replacement)
     _ = rig.render(1)
     report.expect(
-        audio.timeline?.events == replacement.events && audio.playheadSamples == 3000,
+        audio.status.appliedTimelineRevision == initialRevision + 1 && audio.playheadSamples == 3000,
         cppID: "transportcheck/TransportTest::updateTimelineCarriesPendingSeek",
         message: "replacement must carry latest seek")
     for _ in 0..<64 { audio.publish(rig.timeline()) }
@@ -27,7 +28,7 @@ func checkControllerPublication(_ report: CheckReport) throws {
         cppID: "transportcheck/TransportTest::timelineHandoffOwnership",
         what: "coalescing preserves current cursor and live publication")
     report.expect(
-        audio.timeline?.events == rig.timeline().events,
+        audio.status.appliedTimelineRevision == initialRevision + 2,
         cppID: "transportcheck/TransportTest::timelineHandoffOwnership",
         message: "callback adopts newest coalesced timeline")
     audio.play()
@@ -63,12 +64,13 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
     report.expectEqual(
         expected: UInt64(0), actual: audio.playheadSamples, cppID: seekID, what: "callback applies reset seek")
 
+    let initialRevision = audio.status.appliedTimelineRevision
     let pendingReplacement = playbackCheckSilentTimeline(program: 1)
     audio.seek(midpoint)
     audio.publish(pendingReplacement)
     _ = rig.render(1)
     report.expect(
-        audio.timeline?.events == pendingReplacement.events && audio.playheadSamples == midpoint,
+        audio.status.appliedTimelineRevision == initialRevision + 1 && audio.playheadSamples == midpoint,
         cppID: updateSeekID, message: "distinct program replacement carries pending midpoint seek")
 
     audio.seek(0)
@@ -87,13 +89,14 @@ private func checkPublicationRequestContract(_ report: CheckReport) throws {
     _ = rig.render(12_000)
     let before = audio.playheadSamples
     report.expect(before > 0, cppID: playbackCheckLiveReplacementID, message: "playback starts before live edit")
+    let liveRevision = audio.status.appliedTimelineRevision
     let elapsed = clock.measure { audio.publish(liveReplacement) }
     report.expect(
         elapsed <= .milliseconds(20), cppID: playbackCheckLiveReplacementID,
         message: "live replacement publishes within 20 ms")
     _ = rig.render(512)
     report.expect(
-        audio.timeline?.events == liveReplacement.events && audio.playheadSamples > before,
+        audio.status.appliedTimelineRevision == liveRevision + 1 && audio.playheadSamples > before,
         cppID: playbackCheckLiveReplacementID, message: "callback adopts live event layout and advances")
     audio.stop()
     _ = rig.render(rig.settle + rig.ramp * 3)

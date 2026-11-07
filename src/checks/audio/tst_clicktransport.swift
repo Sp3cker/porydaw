@@ -114,7 +114,7 @@ func checkControllerCuts(_ report: CheckReport) throws {
     let before = audio.playheadSamples
     _ = rig.render(1)
     report.expect(
-        audio.transport == .playing && audio.playheadSamples == before + 1,
+        audio.requestedTransport == .playing && audio.playheadSamples == before + 1,
         cppID: "clickcheck/ClickTest::rapidRetargetKeepsNewestTransport", message: "retarget must finish and advance")
     try checkReloadAfterInterruptedFadeStartsLoud(report)
 }

@@ -30,29 +30,47 @@ public struct AudioPolySnapshot {
 
 /// Callback publishes component-wise peak holds. GUI consumption alone allocates value arrays.
 final class AudioTelemetry {
-    let playhead = Atomic<UInt64>(0)
-    let activePcm = Atomic<Int>(0)
-    let activeCgb = Atomic<Int>(0)
+    private let status: AudioStatus
     private let peaks: UnsafeMutablePointer<Atomic<UInt32>>
     private let scratch: UnsafeMutablePointer<UInt32>
     private let tracks = Int(MAX_TRACKS)
+    private let polyVersions: UnsafeMutablePointer<Atomic<UInt64>>
+    private let polyPublished = Atomic<Int>(0)
+    private let polyPinned = Atomic<Int>(-1)
+    private var cachedPoly: [UInt64]
+    private let poly: UnsafeMutablePointer<Atomic<UInt64>>
+    private static let pcmCount = Int(TOTAL_PCM_CHANNELS)
+    private static let cgbCount = Int(TOTAL_CGB_CHANNELS)
+    private static let trackCount = Int(MAX_TRACKS)
+    private static let eventCount = Int(M4A_POLY_EVENT_CAPACITY)
+    private static let polyCount = 1 + pcmCount + cgbCount + trackCount * 3 + eventCount * 2
 
-    init() {
+    init(status: AudioStatus) {
+        self.status = status
+        poly = .allocate(capacity: Self.polyCount * 3)
+        for i in 0..<(Self.polyCount * 3) { (poly + i).initialize(to: Atomic(0)) }
+        polyVersions = .allocate(capacity: 3)
+        for i in 0..<3 { (polyVersions + i).initialize(to: Atomic(0)) }
+        cachedPoly = [UInt64](repeating: 0, count: Self.polyCount)
         peaks = .allocate(capacity: Int(MAX_TRACKS))
         scratch = .allocate(capacity: Int(MAX_TRACKS))
         scratch.initialize(repeating: 0, count: Int(MAX_TRACKS))
         for i in 0..<Int(MAX_TRACKS) { (peaks + i).initialize(to: Atomic(0)) }
     }
     deinit {
+        poly.deinitialize(count: Self.polyCount * 3)
+        poly.deallocate()
+        polyVersions.deinitialize(count: 3)
+        polyVersions.deallocate()
         peaks.deinitialize(count: tracks)
         peaks.deallocate()
         scratch.deinitialize(count: tracks)
         scratch.deallocate()
     }
     func clear() {
-        playhead.store(0, ordering: .relaxed)
-        activePcm.store(0, ordering: .relaxed)
-        activeCgb.store(0, ordering: .relaxed)
+        status.playhead.store(0, ordering: .relaxed)
+        status.activePcm.store(0, ordering: .relaxed)
+        status.activeCgb.store(0, ordering: .relaxed)
         for i in 0..<tracks { peaks[i].store(0, ordering: .relaxed) }
     }
     private func maximum(_ a: UInt32, _ b: UInt32) -> UInt32 {
@@ -101,9 +119,9 @@ final class AudioTelemetry {
                 }
             }
         }
-        playhead.store(position, ordering: .relaxed)
-        activePcm.store(pcm, ordering: .relaxed)
-        activeCgb.store(cgb, ordering: .relaxed)
+        status.playhead.store(position, ordering: .relaxed)
+        status.activePcm.store(pcm, ordering: .relaxed)
+        status.activeCgb.store(cgb, ordering: .relaxed)
         for i in 0..<tracks {
             var observed = peaks[i].load(ordering: .relaxed)
             while true {
@@ -116,58 +134,140 @@ final class AudioTelemetry {
         }
     }
 
-    // Native engine explicitly permits best-effort GUI reads of these diagnostic fields.
-    static func lostTotal(_ engine: UnsafeMutablePointer<M4AEngine>) -> UInt64 {
-        withUnsafePointer(to: &engine.pointee.polyDropCount) { drops in
-            drops.withMemoryRebound(to: UInt32.self, capacity: Int(MAX_TRACKS)) { drop in
-                withUnsafePointer(to: &engine.pointee.polyStealCount) { steals in
-                    steals.withMemoryRebound(to: UInt32.self, capacity: Int(MAX_TRACKS)) { steal in
-                        var total: UInt64 = 0
-                        for i in 0..<Int(MAX_TRACKS) { total += UInt64(drop[i]) + UInt64(steal[i]) }
-                        return total
+    func publishPoly(_ engine: UnsafeMutablePointer<M4AEngine>) {
+        let published = polyPublished.load(ordering: .sequentiallyConsistent)
+        let pinned = polyPinned.load(ordering: .sequentiallyConsistent)
+        var index = (published + 1) % 3
+        if index == pinned { index = (index + 1) % 3 }
+        let poly = self.poly + index * Self.polyCount
+        let version = polyVersions[index].load(ordering: .sequentiallyConsistent)
+        polyVersions[index].store(version &+ 1, ordering: .sequentiallyConsistent)
+        poly[0].store(
+            UInt64(engine.pointee.maxPcmChannels) | (engine.pointee.polyDebugInvert ? 1 << 8 : 0)
+                | UInt64(engine.pointee.polyEventTotal) << 32, ordering: .sequentiallyConsistent)
+        var offset = 1
+        withUnsafePointer(to: &engine.pointee.pcmChannels) { (tuple: UnsafePointer<_>) in
+            tuple.withMemoryRebound(to: M4APCMChannel.self, capacity: Self.pcmCount) {
+                (channels: UnsafePointer<M4APCMChannel>) in
+                for i in 0..<Self.pcmCount {
+                    let channel = channels + i
+                    poly[offset + i].store(
+                        Self.packChannel(
+                            status: channel.pointee.status, track: channel.pointee.trackIndex,
+                            key: channel.pointee.midiKey),
+                        ordering: .sequentiallyConsistent)
+                }
+            }
+        }
+        offset += Self.pcmCount
+        withUnsafePointer(to: &engine.pointee.cgbChannels) { (tuple: UnsafePointer<_>) in
+            tuple.withMemoryRebound(to: M4ACGBChannel.self, capacity: Self.cgbCount) {
+                (channels: UnsafePointer<M4ACGBChannel>) in
+                for i in 0..<Self.cgbCount {
+                    let channel = channels + i
+                    poly[offset + i].store(
+                        Self.packChannel(
+                            status: channel.pointee.status, track: channel.pointee.trackIndex,
+                            key: channel.pointee.midiKey),
+                        ordering: .sequentiallyConsistent)
+                }
+            }
+        }
+        offset += Self.cgbCount
+        var lost: UInt64 = 0
+        func publishCounters<T>(_ counters: inout T) {
+            withUnsafePointer(to: &counters) { (tuple: UnsafePointer<T>) in
+                tuple.withMemoryRebound(to: UInt32.self, capacity: Self.trackCount) { (values: UnsafePointer<UInt32>) in
+                    for i in 0..<Self.trackCount {
+                        let value = UInt64(values[i])
+                        poly[offset + i].store(value, ordering: .sequentiallyConsistent)
+                        if offset < 1 + Self.pcmCount + Self.cgbCount + Self.trackCount * 2 { lost += value }
                     }
                 }
             }
+            offset += Self.trackCount
         }
+        publishCounters(&engine.pointee.polyDropCount)
+        publishCounters(&engine.pointee.polyStealCount)
+        publishCounters(&engine.pointee.polyTailCutCount)
+        status.lostTotal.store(lost, ordering: .relaxed)
+        withUnsafePointer(to: &engine.pointee.polyEvents) { (tuple: UnsafePointer<_>) in
+            tuple.withMemoryRebound(to: M4APolyEvent.self, capacity: Self.eventCount) {
+                (events: UnsafePointer<M4APolyEvent>) in
+                for i in 0..<Self.eventCount {
+                    let event = events[i]
+                    let fields =
+                        UInt64(event.type) | UInt64(event.trackIndex) << 8 | UInt64(event.midiKey) << 16
+                        | UInt64(event.byTrack) << 24 | UInt64(event.program) << 32
+                    poly[offset + i * 2].store(fields, ordering: .sequentiallyConsistent)
+                    poly[offset + i * 2 + 1].store(UInt64(event.tick), ordering: .sequentiallyConsistent)
+                }
+            }
+        }
+        polyVersions[index].store(version &+ 2, ordering: .sequentiallyConsistent)
+        polyPublished.store(index, ordering: .sequentiallyConsistent)
     }
-    static func snapshot(_ engine: UnsafeMutablePointer<M4AEngine>) -> AudioPolySnapshot {
-        let total = engine.pointee.polyEventTotal
-        func counters<T>(_ tuple: inout T) -> [UInt32] {
-            withUnsafePointer(to: &tuple) {
-                $0.withMemoryRebound(to: UInt32.self, capacity: Int(MAX_TRACKS)) {
-                    Array(UnsafeBufferPointer(start: $0, count: Int(MAX_TRACKS)))
-                }
+
+    private static func packChannel(status: UInt8, track: Int32, key: UInt8) -> UInt64 {
+        UInt64(status) | UInt64(UInt8(truncatingIfNeeded: track)) << 8 | UInt64(key) << 16
+    }
+
+    func snapshot() -> AudioPolySnapshot {
+        var values = [UInt64](repeating: 0, count: Self.polyCount)
+        var captured = false
+        for _ in 0..<3 {
+            let index = polyPublished.load(ordering: .sequentiallyConsistent)
+            polyPinned.store(index, ordering: .sequentiallyConsistent)
+            guard index == polyPublished.load(ordering: .sequentiallyConsistent) else {
+                polyPinned.store(-1, ordering: .sequentiallyConsistent)
+                continue
             }
+            let version = polyVersions[index].load(ordering: .sequentiallyConsistent)
+            if version & 1 == 0 {
+                let slot = poly + index * Self.polyCount
+                for i in 0..<Self.polyCount { values[i] = slot[i].load(ordering: .sequentiallyConsistent) }
+                captured = version == polyVersions[index].load(ordering: .sequentiallyConsistent)
+            }
+            polyPinned.store(-1, ordering: .sequentiallyConsistent)
+            if captured { break }
         }
-        let events = withUnsafePointer(to: &engine.pointee.polyEvents) {
-            $0.withMemoryRebound(to: M4APolyEvent.self, capacity: Int(M4A_POLY_EVENT_CAPACITY)) {
-                Array(UnsafeBufferPointer(start: $0, count: Int(M4A_POLY_EVENT_CAPACITY)))
+        if captured { cachedPoly = values } else { values = cachedPoly }
+        var offset = 1
+        func channels(_ count: Int) -> [AudioPolyChannel] {
+            let result = values[offset..<(offset + count)].map { (value: UInt64) in
+                AudioPolyChannel(
+                    on: value & 0xC7 != 0, releasing: value & 0x44 != 0,
+                    track: UInt8(truncatingIfNeeded: value >> 8), midiKey: UInt8(truncatingIfNeeded: value >> 16))
             }
+            offset += count
+            return result
         }
-        let pcm = withUnsafePointer(to: &engine.pointee.pcmChannels) {
-            $0.withMemoryRebound(to: M4APCMChannel.self, capacity: Int(TOTAL_PCM_CHANNELS)) { ptr in
-                (0..<Int(TOTAL_PCM_CHANNELS)).map {
-                    let ch = ptr[$0]
-                    return AudioPolyChannel(
-                        on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
-                        track: UInt8(truncatingIfNeeded: ch.trackIndex), midiKey: ch.midiKey)
-                }
+        let pcm = channels(Self.pcmCount)
+        let cgb = channels(Self.cgbCount)
+        func counters() -> [UInt32] {
+            let result = values[offset..<(offset + Self.trackCount)].map { (value: UInt64) in
+                UInt32(truncatingIfNeeded: value)
             }
+            offset += Self.trackCount
+            return result
         }
-        let cgb = withUnsafePointer(to: &engine.pointee.cgbChannels) {
-            $0.withMemoryRebound(to: M4ACGBChannel.self, capacity: Int(TOTAL_CGB_CHANNELS)) { ptr in
-                (0..<Int(TOTAL_CGB_CHANNELS)).map {
-                    let ch = ptr[$0]
-                    return AudioPolyChannel(
-                        on: ch.status & 0xC7 != 0, releasing: ch.status & 0x44 != 0,
-                        track: UInt8(truncatingIfNeeded: ch.trackIndex), midiKey: ch.midiKey)
-                }
-            }
+        let drop = counters()
+        let steal = counters()
+        let tailCut = counters()
+        let events = (0..<Self.eventCount).map { (index: Int) -> M4APolyEvent in
+            let fields = values[offset + index * 2]
+            var event = M4APolyEvent()
+            event.type = UInt8(truncatingIfNeeded: fields)
+            event.trackIndex = UInt8(truncatingIfNeeded: fields >> 8)
+            event.midiKey = UInt8(truncatingIfNeeded: fields >> 16)
+            event.byTrack = UInt8(truncatingIfNeeded: fields >> 24)
+            event.program = UInt8(truncatingIfNeeded: fields >> 32)
+            event.tick = UInt32(truncatingIfNeeded: values[offset + index * 2 + 1])
+            return event
         }
         return AudioPolySnapshot(
-            maxPcmChannels: engine.pointee.maxPcmChannels,
-            invert: engine.pointee.polyDebugInvert, pcm: pcm, cgb: cgb,
-            drop: counters(&engine.pointee.polyDropCount), steal: counters(&engine.pointee.polyStealCount),
-            tailCut: counters(&engine.pointee.polyTailCutCount), eventTotal: total, events: events)
+            maxPcmChannels: UInt8(truncatingIfNeeded: values[0]),
+            invert: values[0] & (1 << 8) != 0, pcm: pcm, cgb: cgb, drop: drop, steal: steal,
+            tailCut: tailCut, eventTotal: UInt32(truncatingIfNeeded: values[0] >> 32), events: events)
     }
 }

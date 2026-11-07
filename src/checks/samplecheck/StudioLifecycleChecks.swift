@@ -2,6 +2,7 @@ import Foundation
 import PorydawApp
 import PorydawAppAudio
 import PorydawSample
+import SwiftCoreCheckSupport
 
 @testable import SwiftCoreCheckLogic
 
@@ -12,12 +13,18 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
         let renderer = try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512)
         defer { renderer.unload() }
+        let firstPresenter = SampleStudioPresenter(
+            document: SampleDocument(source: source), validateName: { _ in nil })
+        let secondPresenter = SampleStudioPresenter(
+            document: SampleDocument(source: source), validateName: { _ in nil })
+        try runBlocking {
+            await firstPresenter.waitForRender()
+            await secondPresenter.waitForRender()
+        }
         let first = SampleStudioAudition(
-            presenter: SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil }),
-            audition: renderer.audition, destinationAdsr: nil)
+            presenter: firstPresenter, audition: renderer.audition, destinationAdsr: nil)
         let second = SampleStudioAudition(
-            presenter: SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil }),
-            audition: renderer.audition, destinationAdsr: nil)
+            presenter: secondPresenter, audition: renderer.audition, destinationAdsr: nil)
         var samples = [Float](repeating: 0, count: 48_000 * 2)
         func renderIsAudible() -> Bool {
             samples.withUnsafeMutableBufferPointer { buffer in

@@ -1,3 +1,4 @@
+import Foundation
 import PorydawAppAudio
 import PorydawPlayback
 import PorydawKitStudio
@@ -17,6 +18,7 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitWholeFileAdd(report)
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
+    checkKitAsyncAudition(report)
 }
 
 @MainActor
@@ -535,6 +537,93 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
 }
 
 @MainActor
+private func checkKitAsyncAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::asyncAudition")
+    let kit = KitStudioPresenter()
+    kit.addSource(
+        ImportedSample(
+            buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
+            sampleRate: 13379, suggestedName: "async"),
+        autoPlaceFirstSlice: true)
+    kit.toggleSnap()
+    kit.insertMarker(frame: 256)
+    let first = kit.sliceId(row: 0)
+    var keys: [UInt8] = []
+    var keyPCM: [Int8] = []
+    kit.effects.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+        keys.append(key)
+        if case .sample(let pcm, _, _, _, _, _, _, _) = tone.children[Int(key)] { keyPCM = pcm }
+        return true
+    }
+    kit.playKey(key: 36)
+    kit.playKey(key: 37)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while keys.isEmpty && Date() < deadline { await Task.yield() }
+            if keys.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "latest key render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: [37], actual: keys, what: "older key cannot publish over a newer key")
+    kit.playKey(key: 36)
+    r.expectEqual(expected: [37, 36], actual: keys, what: "unchanged key audition reuses cached slices")
+
+    var cached: ProcessedSample?
+    kit.renderSlice(id: first) { (sample: ProcessedSample) in cached = sample }
+    r.expect(cached != nil, message: "slice click reuses the key audition's cached render")
+    let source = kit.session.sources[0]
+    let expected = kit.session.renderSlice(source: source.id, slice: 0)
+    r.expectEqual(expected: expected.s8, actual: keyPCM, what: "key audition preserves canonical rendered PCM")
+    r.expectEqual(expected: expected, actual: cached, what: "cached audition bytes match the canonical render")
+    r.expectEqual(
+        expected: 128, actual: kit.sourceFrame(sliceId: first, renderedPosition: 128),
+        what: "playhead uses the sounding slice render's source mapping")
+    kit.moveMarker(id: kit.markerId(row: 0), toFrame: 192)
+    r.expectEqual(
+        expected: 256, actual: kit.sourceFrame(sliceId: first, renderedPosition: 300),
+        what: "editing a boundary does not change the mapping of the render still sounding")
+    var edited: ProcessedSample?
+    kit.renderSlice(id: first) { (sample: ProcessedSample) in edited = sample }
+    r.expect(edited == nil, message: "slice edit invalidates the cached render")
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while edited == nil && Date() < deadline { await Task.yield() }
+            if edited == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "edited slice render did not land: \(error)")
+        return
+    }
+    r.expectEqual(
+        expected: kit.session.renderSlice(source: source.id, slice: 0), actual: edited,
+        what: "edited audition uses the newly rendered bytes")
+    r.expectEqual(
+        expected: 192, actual: kit.sourceFrame(sliceId: first, renderedPosition: 300),
+        what: "playhead mapping switches with the new render")
+
+    kit.session.setSliceFades(source: source.id, slice: 0, fadeIn: true, fadeOut: false)
+    var stoppedRenderPublished = false
+    kit.renderSlice(id: first) { (_: ProcessedSample) in stoppedRenderPublished = true }
+    kit.cancelAuditionRender()
+    kit.playKey(key: 37)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while keys.count < 3 && Date() < deadline { await Task.yield() }
+            if keys.count < 3 { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "post-stop key render did not land: \(error)")
+        return
+    }
+    r.expect(!stoppedRenderPublished, message: "stop invalidates an in-flight slice render")
+}
+
+@MainActor
 private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::voicegroupNameAndMeta")
     var effects = KitStudioEffects()
@@ -558,16 +647,39 @@ private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     p.insertMarker(frame: 10)
     p.insertMarker(frame: 100)
     let slice = p.sliceName(id: p.sliceId(row: 0))
-    let autoMapped = p.metaText
-    r.expect(
-        autoMapped.hasPrefix("1 slice · ") && autoMapped.hasSuffix(" ROM") && autoMapped != "1 slice · 0 bytes ROM",
-        message: "auto-placed slice contributes saved-at-rate ROM")
+    let source = p.session.sources[0]
+    let rendered = p.session.renderSlice(source: source.id, slice: 0)
+    let expected = "1 slice · \(SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(rendered))) ROM"
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while p.metaText != expected && Date() < deadline { await Task.yield() }
+            if p.metaText != expected { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "auto-mapped ROM render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: expected, actual: p.metaText, what: "auto-mapped ROM matches the canonical render")
     p.dropSample(name: slice, onKey: 60)
     let mapped = p.metaText
-    r.expect(
-        mapped.hasPrefix("1 slice · ") && mapped.hasSuffix(" ROM") && mapped != "1 slice · 0 bytes ROM",
-        message: "mapped slice contributes saved-at-rate ROM")
+    r.expectEqual(expected: expected, actual: mapped, what: "mapped ROM remains exact")
     p.dropSample(name: slice, onKey: 61)
     r.expectEqual(expected: mapped, actual: p.metaText, what: "one sample counts once across keys")
+    p.setSourceRate(rate: 7884)
+    p.setSourceRate(rate: 26758)
+    let updated = p.session.renderSlice(source: source.id, slice: 0)
+    let expectedUpdated = "1 slice · \(SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(updated))) ROM"
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while p.metaText != expectedUpdated && Date() < deadline { await Task.yield() }
+            if p.metaText != expectedUpdated { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "latest ROM render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: expectedUpdated, actual: p.metaText, what: "latest rate controls the ROM readout")
     r.expect(p.canSave, message: "mapped zone with valid name is saveable")
 }

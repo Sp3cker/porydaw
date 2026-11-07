@@ -18,6 +18,7 @@ public final class SampleStudioAudition: QmlUncreatable {
 
     @QtIgnored public var onPlayhead: ((Int?) -> Void)?
     @QtIgnored public var onStarted: (() -> Void)?
+    public private(set) var lastPublishedRenderRevision = -1
     public var available: Bool
     @QtTracked public var playing = false
     @QtTracked public var playText = "Listen"
@@ -97,6 +98,7 @@ public final class SampleStudioAudition: QmlUncreatable {
     private func start(looped requestedLoop: Bool) {
         guard available, !presenter.processed.s8.isEmpty else { stop(); return }
         let rendered = presenter.processed
+        lastPublishedRenderRevision = presenter.renderRevision
         looped = requestedLoop && rendered.looped
         let envelope: AudioADSR
         if useDestinationAdsr, let destinationAdsr {
@@ -109,9 +111,9 @@ public final class SampleStudioAudition: QmlUncreatable {
             envelope = AudioADSR()
         }
         ratio =
-            rendered.outputRate > 0 && presenter.source.sampleRate > 0
-            ? rendered.outputRate / presenter.source.sampleRate : 1
-        crop = presenter.params.cropStart
+            rendered.outputRate > 0 && presenter.renderedSource.sampleRate > 0
+            ? rendered.outputRate / presenter.renderedSource.sampleRate : 1
+        crop = presenter.renderedParams.cropStart
         playing = true
         playText = "Stop"
         player.play(

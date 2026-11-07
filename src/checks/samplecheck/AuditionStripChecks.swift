@@ -1,9 +1,11 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
+import PorydawAppPresentation
 import PorydawPlayback
 import PorydawSample
 @testable import PorydawSampleUI
+import SwiftCoreCheckSupport
 @testable import SwiftCoreCheckLogic
 
 @MainActor
@@ -13,6 +15,16 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
         scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
         let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
+        try runBlocking { await presenter.waitForRender() }
+        let palette = GridPalette()
+        ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
+        let waveform = MarkerWaveformModel(palette: palette)
+        let tools = SampleLoopTools(presenter: presenter)
+        tools.publishWaveform(waveform, sourceChanged: true)
+        presenter.addRenderObserver { [weak tools, weak waveform] in
+            guard let tools, let waveform else { return }
+            tools.publishWaveform(waveform, sourceChanged: false)
+        }
         let unavailable = SampleStudioAudition(presenter: presenter, audition: nil, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
         strip.expect(
@@ -28,6 +40,13 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         guard case .success(let renderer) = engineResult else { return }
         defer { renderer.unload() }
         let audition = SampleStudioAudition(presenter: presenter, audition: renderer.audition, destinationAdsr: nil)
+        var observedLockstep: [Bool] = []
+        presenter.addRenderObserver { [weak presenter, weak tools, weak audition] in
+            guard let presenter, let tools, let audition else { return }
+            observedLockstep.append(
+                tools.lastWaveformRenderRevision == presenter.renderRevision
+                    && audition.lastPublishedRenderRevision == presenter.renderRevision)
+        }
         scope.expect(
             audition.available && !audition.playing && audition.playText == "Listen",
             message: "A121 idle audition is stopped")
@@ -54,6 +73,11 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
             loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
         presenter.endMarkerGesture()
+        try runBlocking { await presenter.waitForRender() }
+        scope.expect(
+            observedLockstep == [true] && tools.lastWaveformRenderRevision == audition.lastPublishedRenderRevision
+                && audition.lastPublishedRenderRevision == presenter.renderRevision,
+            message: "waveform and sounding audition publish the same landed render")
         scope.expect(
             presenter.processed.s8 != oldBytes && audition.playing,
             message: "loop marker drag republishes changed render while sounding")
@@ -84,6 +108,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "close releases the audition owner and playhead")
         let oneShot = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
         oneShot.setLoopOn(enabled: false)
+        try runBlocking { await oneShot.waitForRender() }
         let repeating = SampleStudioAudition(presenter: oneShot, audition: renderer.audition, destinationAdsr: nil)
         repeating.toggle()
         repeating.advance(bySeconds: 10)

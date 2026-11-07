@@ -282,7 +282,7 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
         let start = first.timeline.sample(for: 10)
         let end = first.timeline.sample(for: 20)
         app.play()
-        guard until({ audio.playheadSamples >= start && audio.transport == 2 }),
+        guard until({ audio.playheadSamples >= start && audio.requestedTransport == 2 }),
             audio.playheadSamples < end
         else {
             app.stop()
@@ -390,7 +390,7 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         let start = document.timeline.sample(for: 10)
         let end = document.timeline.sample(for: 20)
         app.play()
-        guard until({ audio.playheadSamples >= start && audio.transport == 2 }),
+        guard until({ audio.playheadSamples >= start && audio.requestedTransport == 2 }),
             audio.playheadSamples < end
         else {
             app.stop()

@@ -31,6 +31,7 @@ public struct KitStudioEffects {
     public var onAlert: ((String) -> Void)?
     public var validateName: ((String) -> String?)?
     public var validateVoicegroupName: ((String) -> String?)?
+    public var beginKeyAudition: (() -> Void)?
     public var publishKitTone: ((KitAuditionTone, UInt8) -> Bool)?
     public var playPcm: ((Int) -> Void)?
 
@@ -85,6 +86,7 @@ public final class KitStudioPresenter: QmlUncreatable {
     private var activeMode: KitMode = .drumkit
     private var cleanMode: KitMode = .drumkit
     private var cleanSessionSnapshot: KitSourceSession.Snapshot
+    private var soundingSlice: (id: Int, start: Int, end: Int, sourceRate: Double, renderedRate: Double)?
 
     /// An empty, unnamed kit; `waveform` is the editor's marker view, absent in model-only checks.
     @QtIgnored public init(waveform: MarkerWaveformModel? = nil, effects: KitStudioEffects = KitStudioEffects()) {
@@ -688,35 +690,67 @@ public final class KitStudioPresenter: QmlUncreatable {
     }
 
     public func playKey(key: Int) {
-        guard (0...127).contains(key), let publishKitTone = effects.publishKitTone,
+        guard (0...127).contains(key) else { return }
+        effects.beginKeyAudition?()
+        session.cancelRender()
+        guard effects.publishKitTone != nil,
             zones.contains(where: { $0.startKey <= key && key <= $0.endKey })
         else { return }
         var rendered = samples
         let names = Set(zones.map(\.sampleName))
+        var inputs: [(source: KitSourceSession.Source, slice: KitSourceSession.Slice)] = []
         for source in session.sources {
-            for (index, slice) in source.slices.enumerated() where names.contains(slice.name) {
-                rendered[slice.name] = render(source, index)
+            for slice in source.slices where names.contains(slice.name) {
+                if let symbol = source.committedSymbol(of: slice), let committed = samples[symbol] {
+                    rendered[slice.name] = committed
+                } else {
+                    inputs.append((source: source, slice: slice))
+                }
             }
         }
-        guard
-            let tone = KitDraftCodec.auditionTone(
-                draft: draft.snapshot(), mode: activeMode, key: key, samples: rendered, progWaves: progWaves)
-        else { return }
-        _ = publishKitTone(tone, UInt8(key))
-    }
-
-    @QtIgnored public func renderedSlice(id: Int) -> Optional<ProcessedSample> {
-        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
-        else { return nil }
-        return render(source, address.index)
-    }
-
-    /// An untouched committed slice plays the project's own audio; everything else renders.
-    private func render(_ source: KitSourceSession.Source, _ index: Int) -> ProcessedSample {
-        if let symbol = source.committedSymbol(of: source.slices[index]), let committed = samples[symbol] {
-            return committed
+        let snapshot = draft.snapshot()
+        let mode = activeMode
+        let waves = progWaves
+        session.renderSlices(inputs) { [weak self] (results: [ProcessedSample]) in
+            guard let self else { return }
+            for (input, result) in zip(inputs, results) { rendered[input.slice.name] = result }
+            guard
+                let tone = KitDraftCodec.auditionTone(
+                    draft: snapshot, mode: mode, key: key, samples: rendered, progWaves: waves)
+            else { return }
+            _ = self.effects.publishKitTone?(tone, UInt8(key))
         }
-        return session.renderSlice(source: source.id, slice: index)
+    }
+
+    /// Requests one slice; the callback and playhead mapping use the same captured render inputs.
+    @QtIgnored public func renderSlice(
+        id: Int, completion: @escaping @MainActor (ProcessedSample) -> Void
+    ) {
+        guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
+        else { return }
+        let slice = source.slices[address.index]
+        let finish: @MainActor (ProcessedSample) -> Void = { [weak self] (sample: ProcessedSample) in
+            guard let self else { return }
+            self.soundingSlice = (
+                id: id, start: slice.startFrame, end: slice.endFrame,
+                sourceRate: source.sample.sampleRate, renderedRate: source.targetRate
+            )
+            completion(sample)
+        }
+        if let symbol = source.committedSymbol(of: slice), let committed = samples[symbol] {
+            session.cancelRender()
+            finish(committed)
+        } else {
+            session.renderSlices([(source: source, slice: slice)]) { (results: [ProcessedSample]) in
+                guard let sample = results.first else { return }
+                finish(sample)
+            }
+        }
+    }
+
+    @QtIgnored public func cancelAuditionRender() {
+        session.cancelRender()
+        soundingSlice = nil
     }
 
     /// Whether the slice is an untouched project sample: its name is read-only and saving reuses it.
@@ -728,16 +762,14 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     /// Converts the audition player's rendered-grid position back to a source frame.
     @QtIgnored public func sourceFrame(sliceId: Int, renderedPosition: Double) -> Optional<Int> {
-        guard renderedPosition.isFinite, let address = sliceAddress(sliceId),
-            let source = session.sources.first(where: { $0.id == address.source }),
-            source.sample.sampleRate.isFinite, source.targetRate.isFinite,
-            source.sample.sampleRate > 0, source.targetRate > 0
+        guard renderedPosition.isFinite, let slice = soundingSlice, slice.id == sliceId,
+            slice.sourceRate.isFinite, slice.renderedRate.isFinite,
+            slice.sourceRate > 0, slice.renderedRate > 0
         else { return nil }
-        let slice = source.slices[address.index]
         let offset = min(
-            max(0, renderedPosition / (source.targetRate / source.sample.sampleRate)),
-            Double(slice.endFrame - slice.startFrame))
-        return slice.startFrame + Int(offset.rounded())
+            max(0, renderedPosition / (slice.renderedRate / slice.sourceRate)),
+            Double(slice.end - slice.start))
+        return slice.start + Int(offset.rounded())
     }
 
     public func undo() {
@@ -888,13 +920,23 @@ public final class KitStudioPresenter: QmlUncreatable {
         let mapped = Set(zones.map(\.sampleName))
         var seen = Set<String>()
         var bytes: UInt64 = 0
+        var inputs: [(source: KitSourceSession.Source, slice: KitSourceSession.Slice)] = []
         for source in session.sources {
-            for (index, slice) in source.slices.enumerated()
-            where mapped.contains(slice.name) && seen.insert(slice.name).inserted {
-                bytes += SampleStudioReadouts.romBytes(render(source, index))
+            for slice in source.slices where mapped.contains(slice.name) && seen.insert(slice.name).inserted {
+                if let symbol = source.committedSymbol(of: slice), let committed = samples[symbol] {
+                    bytes += SampleStudioReadouts.romBytes(committed)
+                } else {
+                    inputs.append((source: source, slice: slice))
+                }
             }
         }
-        let noun = sliceCount == 1 ? "slice" : "slices"
-        metaText = "\(sliceCount) \(noun) · \(SampleStudioReadouts.romSize(bytes: bytes)) ROM"
+        let count = sliceCount
+        session.renderSlices(inputs, metadata: true) { [weak self] (results: [ProcessedSample]) in
+            let total = results.reduce(bytes) { (sum: UInt64, sample: ProcessedSample) -> UInt64 in
+                sum + SampleStudioReadouts.romBytes(sample)
+            }
+            let noun = count == 1 ? "slice" : "slices"
+            self?.metaText = "\(count) \(noun) · \(SampleStudioReadouts.romSize(bytes: total)) ROM"
+        }
     }
 }

@@ -4,6 +4,7 @@ import PorydawApp
 import PorydawAppPresentation
 import PorydawSample
 import PorydawSampleUI
+import SwiftCoreCheckSupport
 @testable import SwiftCoreCheckLogic
 
 @MainActor
@@ -14,7 +15,18 @@ internal func runWaveformChecks(_ report: CheckReport) {
         return
     }
     scoped.expect(source.frameCount == 12_000, message: "A080 crossfade source imports")
+    func waitForRender(_ presenter: SampleStudioPresenter) -> Bool {
+        do {
+            try runBlocking { await presenter.waitForRender() }
+            return true
+        } catch {
+            scoped.expect(false, message: "sample render did not settle: \(error)")
+            return false
+        }
+    }
+
     let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
+    guard waitForRender(presenter) else { return }
     let palette = GridPalette()
     ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
     let model = MarkerWaveformModel(palette: palette)
@@ -48,6 +60,7 @@ internal func runWaveformChecks(_ report: CheckReport) {
         abs(model.frameAt(600) - source.frameCount + 1) <= 100,
         message: "fit exposes complete sample")
     presenter.setLoopOn(enabled: false)
+    guard waitForRender(presenter) else { return }
     geometry.expect(
         model.handleAt(x: Double(model.xForFrame(presenter.cropStart)), y: 10) == 1
             && !presenter.loopOn && model.markers.count == 2,
@@ -57,6 +70,7 @@ internal func runWaveformChecks(_ report: CheckReport) {
     params.loopStart = 2_000
     params.loopEnd = 2_137
     presenter.commitParams(params, mergeKey: -1)
+    guard waitForRender(presenter) else { return }
     let startX = Double(model.xForFrame(presenter.loopStart))
     geometry.expect(model.handleAt(x: startX, y: 110) == 3, message: "loop markers own the bottom band")
     let pyramidRevision = model.pyramidRevision
@@ -64,6 +78,7 @@ internal func runWaveformChecks(_ report: CheckReport) {
     presenter.undo()
     let togglesAsOneEntry = !presenter.params.crossfadeOn && presenter.canRedo
     presenter.redo()
+    guard waitForRender(presenter) else { return }
     scoped.expect(
         togglesAsOneEntry && presenter.params.crossfadeOn,
         message: "A083 crossfade toggle creates an undo entry")
@@ -71,10 +86,12 @@ internal func runWaveformChecks(_ report: CheckReport) {
     geometry.expect(model.press(x: dragX, y: 110), message: "loop end is draggable")
     model.drag(x: Double(model.xForFrame(presenter.cropEnd + 100)))
     model.release()
+    guard waitForRender(presenter) else { return }
     geometry.expect(
         presenter.loopEnd < presenter.cropEnd && presenter.loopStart < presenter.loopEnd,
         message: "drag clamps loop within crop")
     presenter.undo()
+    guard waitForRender(presenter) else { return }
     geometry.expect(presenter.loopEnd == 2_137, message: "drag undoes as one entry")
     let main = model.displayList(list: 0)
     let display = report.scoped(cppID: "swiftcore/MarkerWaveformModel::displayLists")
@@ -108,6 +125,7 @@ internal func runWaveformChecks(_ report: CheckReport) {
         message: "marker tabs draw one nonempty label per published marker")
     params.cropStart = params.loopStart
     presenter.commitParams(params, mergeKey: -1)
+    guard waitForRender(presenter) else { return }
     geometry.expect(
         model.handleAt(x: Double(model.xForFrame(presenter.cropStart)), y: 10) == 1
             && model.handleAt(x: Double(model.xForFrame(presenter.loopStart)), y: 110) == 3,
@@ -117,12 +135,14 @@ internal func runWaveformChecks(_ report: CheckReport) {
         message: "coincident crop marker begins a drag")
     model.drag(x: Double(model.xForFrame(presenter.cropEnd + 100)))
     model.release()
+    guard waitForRender(presenter) else { return }
     geometry.expect(
         presenter.cropStart <= presenter.cropEnd - 2
             && presenter.loopStart >= presenter.cropStart
             && presenter.loopEnd < presenter.cropEnd,
         message: "crop drag preserves an interior loop")
     presenter.undo()
+    guard waitForRender(presenter) else { return }
     geometry.expect(model.pyramidRevision == pyramidRevision, message: "parameter edits never rebuild peaks")
 
     // Exercise the public value model directly, independently of the Sample Studio adapter.

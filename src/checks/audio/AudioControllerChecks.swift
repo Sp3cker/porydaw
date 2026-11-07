@@ -308,6 +308,11 @@ private func checkCpuMeterPlayback(_ report: CheckReport) throws {
     report.expect(
         reset.generation != sought.generation && reset.frames.isEmpty,
         cppID: id, message: "peak/history reset discards the prior run without touching playback")
+    report.expect(
+        sought.matching(generation: audio.status.telemetryGeneration) == nil
+            && reset.matching(generation: audio.status.telemetryGeneration) != nil,
+        cppID: "swiftcore/AudioController::staleCpuBatch",
+        message: "a delivered pre-reset batch cannot repopulate cleared history")
     _ = rig.render(rig.rate / 4)
     let afterReset = audio.consumeCpuFrames()
     report.expect(
@@ -590,6 +595,15 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
                 report.expect(
                     sounding, cppID: id,
                     message: "real bank sounds through the null-backend callback before teardown")
+                let snapshots = (0..<64).map { (_: Int) in owner.polySnapshot() }
+                report.expect(
+                    snapshots.allSatisfy { (snapshot: AudioPolySnapshot) in
+                        snapshot.maxPcmChannels > 0 && snapshot.pcm.count == Int(TOTAL_PCM_CHANNELS)
+                            && snapshot.cgb.count == Int(TOTAL_CGB_CHANNELS)
+                            && snapshot.drop.count == Int(MAX_TRACKS)
+                            && snapshot.events.count == Int(M4A_POLY_EVENT_CAPACITY)
+                    }, cppID: "swiftcore/NativeAudio::concurrentPolySnapshot",
+                    message: "poly diagnostics remain complete while the null device renders")
                 releasedBank = song.bank
                 releasedFacade = owner
                 facade = owner
@@ -979,12 +993,18 @@ private func checkControllerTailMatrix(_ report: CheckReport) throws {
             _ = rig.render(rig.ramp * 3 + rig.settle)
             if songLoops && enabled {
                 report.expect(
-                    rig.renderer.transport == .playing && rig.renderer.playheadSamples < timeline.loopEndSample,
+                    rig.renderer.requestedTransport == .playing
+                        && rig.renderer.playheadSamples < timeline.loopEndSample,
                     cppID: id, message: "enabled song loop wraps instead of stopping")
             } else {
                 report.expect(
-                    rig.renderer.transport == .stopped && rig.renderer.playheadSamples == 0,
+                    rig.renderer.requestedTransport == .stopped && rig.renderer.playheadSamples == 0,
                     cppID: id, message: "without an effective loop the expired tail stops and rewinds")
+                report.expect(
+                    rig.renderer.status.requestedTransport == .stopped
+                        && rig.renderer.status.appliedTransport == .stopped,
+                    cppID: "swiftcore/AudioController::naturalEndRequestedTransport",
+                    message: "natural song end updates both requested and applied transport")
             }
         }
     }
@@ -1013,7 +1033,8 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
     audio.updateSettings(settings)
     let rateChanged = rig.render(rig.rate)
     report.expect(
-        audio.transport == .playing && audioControllerCheckPeak(rateChanged.suffix(4096)) > 0.001 && rig.sustaining(60),
+        audio.requestedTransport == .playing && audioControllerCheckPeak(rateChanged.suffix(4096)) > 0.001
+            && rig.sustaining(60),
         cppID: "swiftcore/AudioController::settingsMixRate", message: "mix-rate update preserves the sounding song")
     // Native rate reconfiguration resets the PCM FIFO; it is a cold discontinuity,
     // not a promised click-free crossfade. The sequence itself must not restart.
@@ -1057,8 +1078,8 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
             report.expect(
                 audioControllerCheckPeak(previous.suffix(4096)) > 0.01
                     && audioControllerCheckPeak(unloaded.suffix(4096)) <= 1 / 32768
-                    && !audio.songLoaded && audio.timeline == nil
-                    && audio.transport == .stopped && audio.playheadSamples == 0,
+                    && !audio.songLoaded
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0,
                 cppID: id, message: "unloading a sounding renderer removes its song and previous program preview")
 
             // Restore only the bank: no timeline bind or sequencer start is allowed.
@@ -1082,8 +1103,8 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
                 message: "no-song program audition renders the replacement \(family) timbre, not the unloaded bank")
             let sounding = audio.polySnapshot()
             report.expect(
-                !audio.songLoaded && audio.timeline == nil
-                    && audio.transport == .stopped && audio.playheadSamples == 0
+                !audio.songLoaded
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0
                     && audio.activePcmChannels == 0 && audio.activeCgbChannels == 0
                     && sounding.pcm.allSatisfy { !$0.on } && sounding.cgb.allSatisfy { !$0.on },
                 cppID: id,
@@ -1095,7 +1116,7 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
             report.expect(
                 audioControllerCheckPeak(released.suffix(4096)) <= 1 / 32768
                     && settled.pcm.allSatisfy { !$0.on } && settled.cgb.allSatisfy { !$0.on }
-                    && audio.transport == .stopped && audio.playheadSamples == 0 && !audio.songLoaded,
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0 && !audio.songLoaded,
                 cppID: id,
                 message:
                     "program release drains preview output to silence without leaving a held song voice or advancing the sequence"
@@ -1143,7 +1164,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         accepted, cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sample publication accepted")
     let sampleCursor = audio.playheadSamples
     report.expect(
-        audio.transport == .playing && sampleCursor > 0,
+        audio.requestedTransport == .playing && sampleCursor > 0,
         cppID: "swiftcore/AudioController::samplePreviewIsolation",
         message: "sequence is actively playing before sample audition")
     let sampled = rig.render(rig.rate)

@@ -25,13 +25,13 @@ public final class AudioRenderEngine {
     private let preview: UnsafeMutablePointer<M4AEngine>
     private var player = Sequencer()
     private var patternPlayer = Sequencer()
-    private let patternPosition = Atomic<UInt64>(0)
+    public let status: AudioStatus
     private let handoff = AudioTimelineHandoff()
     /// Isolated loop; the callback borrows its storage without copying Array owners.
     private let patternHandoff = AudioTimelineHandoff()
     let transportState: AudioTransport
-    private let telemetry = AudioTelemetry()
-    private let cpuTelemetry = AudioCpuTelemetry()
+    private let telemetry: AudioTelemetry
+    private let cpuTelemetry: AudioCpuTelemetry
     private let cpuTrackBudget = Atomic<Int>(10)
     private var cpuRunning = false
     private var cpuContinueOnStart = false
@@ -61,7 +61,11 @@ public final class AudioRenderEngine {
         self.preview = preview
         self.sampleRate = sampleRate
         periodSizeFrames = periodFrames
-        transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames)
+        let status = AudioStatus()
+        self.status = status
+        transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames, status: status)
+        telemetry = AudioTelemetry(status: status)
+        cpuTelemetry = AudioCpuTelemetry(status: status)
         audition = AudioAudition()
         suppression = ResonanceSuppression(sampleRate: Float(sampleRate))
         metronome = Metronome(sampleRate: sampleRate)
@@ -73,6 +77,7 @@ public final class AudioRenderEngine {
         right.initialize(repeating: 0, count: capacity)
         previewLeft.initialize(repeating: 0, count: capacity)
         previewRight.initialize(repeating: 0, count: capacity)
+        publishAppliedSettings()
     }
     deinit {
         m4a_engine_free(main)
@@ -88,28 +93,19 @@ public final class AudioRenderEngine {
         previewRight.deallocate()
     }
 
-    public var songLoaded: Bool { handoff.active != nil }
-    /// Control-thread snapshot; the callback borrows handoff storage directly.
-    public var timeline: PlaybackTimeline? { handoff.active?.pointee }
-    public var transport: AudioTransportState { transportState.requested }
+    public var songLoaded: Bool { status.songLoaded }
+    public var requestedTransport: AudioTransportState { status.requestedTransport }
     public var loopEnabled: Bool { loop.load(ordering: .relaxed) }
     public var outputVolume: Int { transportState.outputVolume }
     public var resonanceSuppression: Bool { suppression.enabled }
     public var polyDebugInvert: Bool { invert.load(ordering: .relaxed) }
-    public var playheadSamples: UInt64 { telemetry.playhead.load(ordering: .relaxed) }
-    /// Producer-owned: cold start publishes and every cancellation path clears the loop.
-    public var isPatternAuditioning: Bool { patternHandoff.isPublished }
-    /// Absolute position in the applied loop timeline, or zero when stopped.
-    public var patternAuditionPositionSamples: UInt64 { patternPosition.load(ordering: .relaxed) }
-    public var activePcmChannels: Int { telemetry.activePcm.load(ordering: .relaxed) }
-    public var activeCgbChannels: Int { telemetry.activeCgb.load(ordering: .relaxed) }
-    public var pcmMixerMode: M4APcmMixerMode { settings.pcmMixer }
-    public var appliedSongVolume: Int { Int(settings.songVolume) }
-    public var maxPcmChannels: Int { Int(settings.maxPcmChannels) }
-    public var pcmMixRate: Float { settings.pcmMixRate }
-    public var analogFilter: Bool { settings.analogFilter }
-    public var polyLostTotal: UInt64 { AudioTelemetry.lostTotal(main) }
-    public func polySnapshot() -> AudioPolySnapshot { AudioTelemetry.snapshot(main) }
+    public var playheadSamples: UInt64 { status.playheadSamples }
+    public var isPatternAuditioning: Bool { status.isPatternAuditioning }
+    public var patternAuditionPositionSamples: UInt64 { status.patternAuditionPositionSamples }
+    public var activePcmChannels: Int { status.activePcmChannels }
+    public var activeCgbChannels: Int { status.activeCgbChannels }
+    public var polyLostTotal: UInt64 { status.polyLostTotal }
+    public func polySnapshot() -> AudioPolySnapshot { telemetry.snapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] { telemetry.consume() }
     public func consumeCpuFrames() -> AudioCpuBatch { cpuTelemetry.consume() }
     public func resetCpuPeak() { cpuTelemetry.reset() }
@@ -121,7 +117,7 @@ public final class AudioRenderEngine {
         if transportState.requested == .stopped { cpuTelemetry.reset() }
         transportState.requested = .playing
     }
-    public func pause() { if transport == .playing { transportState.requested = .paused } }
+    public func pause() { if requestedTransport == .playing { transportState.requested = .paused } }
     public func stop() { transportState.stop() }
     public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
     public func setMix(muted: Set<Int>, soloed: Set<Int>) {
@@ -159,7 +155,8 @@ public final class AudioRenderEngine {
         patternPlayer.seek(timeline.loopStartSample, timeline: timeline)
         Sequencer.chase(engine: preview, timeline: timeline, position: timeline.loopStartSample)
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: timeline.loopStartSample)
-        patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
+        status.patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
+        status.patternActive.store(true, ordering: .releasing)
     }
 
     /// Publish a replacement loop while auditioning, without stopping rendering. The next
@@ -206,6 +203,10 @@ public final class AudioRenderEngine {
         appliedMute = 0
         player.reset()
         telemetry.clear()
+        telemetry.publishPoly(main)
+        publishAppliedSettings()
+        status.timelineRevision.wrappingAdd(1, ordering: .releasing)
+        status.loaded.store(true, ordering: .releasing)
     }
     public func publish(_ timeline: PlaybackTimeline) {
         guard songLoaded else { return }
@@ -225,6 +226,8 @@ public final class AudioRenderEngine {
         cpuTelemetry.resetNativeCursor()
         cpuTelemetry.reset()
         telemetry.clear()
+        telemetry.publishPoly(main)
+        status.loaded.store(false, ordering: .releasing)
     }
     public func updateSettings(_ settings: AudioSettings) {
         transportState.resetCut()
@@ -234,6 +237,7 @@ public final class AudioRenderEngine {
         // A mix-rate change rebuilds the reverb, so only a changed rate is applied.
         if changedRate { m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate) }
         resetPreview()
+        publishAppliedSettings()
     }
     public func updateVoicegroup(_ voicegroup: UnsafeMutablePointer<ToneData>?) {
         transportState.resetCut()
@@ -250,6 +254,21 @@ public final class AudioRenderEngine {
         }
         resetPreview()
     }
+    private func publishAppliedSettings() {
+        let mixerIsHq =
+            main.pointee.driver.map { (driver: UnsafeMutablePointer<M4ADriver>) in
+                m4a_driver_get_pcm_mixer_mode(driver) == M4A_PCM_MIXER_IPATIX
+            } ?? false
+        let bits =
+            UInt64(main.pointee.pcmMixRate.bitPattern)
+            | UInt64(main.pointee.maxPcmChannels) << 32
+            | UInt64(main.pointee.songMasterVolume) << 40
+            | UInt64(main.pointee.reverbAmount) << 48
+            | (main.pointee.analogFilter ? UInt64(1) << 56 : 0)
+            | (mixerIsHq ? UInt64(1) << 57 : 0)
+        status.settingsWord.store(bits, ordering: .releasing)
+    }
+
     /// Configures a freshly initialized engine; the mix rate goes last because it rebuilds the reverb.
     public static func configure(
         _ engine: UnsafeMutablePointer<M4AEngine>,
@@ -271,7 +290,8 @@ public final class AudioRenderEngine {
         if patternHandoff.isPublished {
             patternHandoff.reset()
             patternPlayer.reset()
-            patternPosition.store(0, ordering: .relaxed)
+            status.patternPosition.store(0, ordering: .relaxed)
+            status.patternActive.store(false, ordering: .releasing)
             audition.reset()
             suppression.reset()
             metronome.silence()
@@ -314,7 +334,7 @@ public final class AudioRenderEngine {
         if seeking {
             releaseMainNotes()
             player.seek(position, timeline: timeline)
-            telemetry.playhead.store(position, ordering: .relaxed)
+            status.playhead.store(position, ordering: .relaxed)
         } else {
             player.replaceTimeline(position, timeline: timeline)
         }
@@ -333,7 +353,7 @@ public final class AudioRenderEngine {
         Sequencer.chase(engine: main, timeline: timeline.pointee, position: sample)
         Sequencer.primeVoices(engine: main, timeline: timeline.pointee, position: sample)
         if resumeCpu { startCpuCost(timeline.pointee, continuing: true) }
-        telemetry.playhead.store(sample, ordering: .relaxed)
+        status.playhead.store(sample, ordering: .relaxed)
     }
     private func applyMute() {
         let soloMask = solo.load(ordering: .relaxed)
@@ -363,7 +383,7 @@ public final class AudioRenderEngine {
         patternPlayer.seek(start, timeline: timeline)
         Sequencer.chase(engine: preview, timeline: timeline, position: start)
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: start)
-        patternPosition.store(start, ordering: .relaxed)
+        status.patternPosition.store(start, ordering: .relaxed)
         suppression.reset()
         metronome.silence()
     }
@@ -409,7 +429,7 @@ public final class AudioRenderEngine {
         let position =
             patternPlayer.position == timeline.loopEndSample
             ? timeline.loopStartSample : patternPlayer.position
-        patternPosition.store(position, ordering: .relaxed)
+        status.patternPosition.store(position, ordering: .relaxed)
         telemetry.publish(engine: preview, position: player.position)
     }
 
@@ -420,7 +440,10 @@ public final class AudioRenderEngine {
             return
         }
         transition()
-        if let timeline = handoff.acquirePending() { adopt(timeline.pointee) }
+        if let timeline = handoff.acquirePending() {
+            adopt(timeline.pointee)
+            status.timelineRevision.wrappingAdd(1, ordering: .releasing)
+        }
         applySeek()
         applyMute()
         applyPolyDebug()
@@ -492,5 +515,7 @@ public final class AudioRenderEngine {
             done += count
         }
         telemetry.publish(engine: main, position: player.position)
+        telemetry.publishPoly(main)
+        publishAppliedSettings()
     }
 }

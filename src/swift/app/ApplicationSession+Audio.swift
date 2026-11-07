@@ -194,7 +194,7 @@ extension ApplicationSession {
 
     func playImpl() {
         guard let audio, audio.songLoaded else { return }
-        if audio.transport == AudioTransportState.stopped.rawValue,
+        if audio.requestedTransport == AudioTransportState.stopped.rawValue,
             let session = workspace?.session
         {
             publishSeek(tick: session.editCursor, timeline: session.timeline, startPlayback: true)
@@ -211,7 +211,7 @@ extension ApplicationSession {
             return
         }
         guard let audio, audio.songLoaded else { return }
-        if audio.transport == SharedPlayheadPolicy.playingTransport {
+        if audio.requestedTransport == SharedPlayheadPolicy.playingTransport {
             audio.pause()
             refreshTransportPresentation()
         } else if let session = workspace?.session {
@@ -235,7 +235,7 @@ extension ApplicationSession {
         session.editCursor = 0
         _ = workspace.viewport.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
         if let audio, audio.songLoaded,
-            audio.transport != AudioTransportState.stopped.rawValue
+            audio.requestedTransport != AudioTransportState.stopped.rawValue
         {
             publishSeek(tick: 0, timeline: session.timeline, startPlayback: false)
         } else {
@@ -251,14 +251,14 @@ extension ApplicationSession {
         if startPlayback {
             audio.play()
         }
-        playhead.observe(sample: target, transport: audio.transport)
+        playhead.observe(sample: target, transport: audio.requestedTransport)
     }
 
     /// Fork commitEditCursor egress: commits seek paused/playing playback to
     /// the cursor; stopped commits only move the cursor, background tabs never seek.
     func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
         guard workspace === origin, let audio, audio.songLoaded,
-            audio.transport != AudioTransportState.stopped.rawValue
+            audio.requestedTransport != AudioTransportState.stopped.rawValue
         else { return }
         publishSeek(tick: tick, timeline: origin.session.timeline, startPlayback: false)
         transportBar.refresh()
@@ -271,7 +271,7 @@ extension ApplicationSession {
 
     func resyncTransportAfterEngineTransition() {
         guard let audio, audio.songLoaded else { return }
-        guard transportBar.state != Int(audio.transport) + 1 else { return }
+        guard transportBar.state != Int(audio.requestedTransport) + 1 else { return }
         refreshTransportPresentation()
     }
 }

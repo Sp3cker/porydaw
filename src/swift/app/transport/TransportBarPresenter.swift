@@ -100,7 +100,7 @@ public final class TransportBarPresenter: QmlUncreatable {
             }
             return
         }
-        let transportState = Int(audio.transport) + 1
+        let transportState = Int(audio.requestedTransport) + 1
         publish(\.state, transportState)
         publish(\.polyMeterVisible, true)
         let pcm = "\(audio.activePcmChannels)/\(audio.maxPcmChannels)"

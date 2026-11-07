@@ -1,13 +1,15 @@
 import Synchronization
 
-public enum AudioTransportState: Int32 { case stopped, paused, playing }
+public enum AudioTransportState: Int32, Sendable { case stopped, paused, playing }
 
 /// Owns requested transport and sample-accurate gain envelopes; no engine or publication ownership.
 final class AudioTransport {
-    private let request = Atomic<Int32>(AudioTransportState.stopped.rawValue)
+    private let status: AudioStatus
     private let volume = Atomic<Int>(100)
     let pendingSeek = Atomic<UInt64>(UInt64.max)
-    private(set) var applied = AudioTransportState.stopped
+    private(set) var applied = AudioTransportState.stopped {
+        didSet { status.applied.store(applied.rawValue, ordering: .relaxed) }
+    }
     private(set) var cutting = false
     private var rising = false
     private(set) var target = AudioTransportState.stopped
@@ -23,7 +25,8 @@ final class AudioTransport {
     private var gainStep: Float = 0
     private var gainRemaining: UInt32 = 0
 
-    init(sampleRate: Double, periodFrames: Int) {
+    init(sampleRate: Double, periodFrames: Int, status: AudioStatus) {
+        self.status = status
         rampSamples = max(1, UInt32(sampleRate * 0.01))
         settleSamples =
             UInt32(max(1, periodFrames)) + max(1, UInt32(sampleRate * 2 / 59.7275))
@@ -31,8 +34,8 @@ final class AudioTransport {
     }
 
     var requested: AudioTransportState {
-        get { AudioTransportState(rawValue: request.load(ordering: .relaxed))! }
-        set { request.store(newValue.rawValue, ordering: .relaxed) }
+        get { status.requestedTransport }
+        set { status.requested.store(newValue.rawValue, ordering: .relaxed) }
     }
     var outputVolume: Int {
         get { volume.load(ordering: .relaxed) }

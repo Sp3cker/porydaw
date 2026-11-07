@@ -303,7 +303,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     app.play()
     report.expect(
         liveAudioUntil({
-            audio.transport == AudioTransportState.playing.rawValue
+            audio.requestedTransport == AudioTransportState.playing.rawValue
                 && audio.playheadSamples >= startTarget + UInt64(sampleRate * 0.25)
         }), cppID: transportID,
         message: "stopped Play progresses at least a quarter second beyond its actual start sample")
@@ -323,7 +323,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
                 && audio.maxPcmChannels == Int(settings.maxPcmChannels)
                 && audio.pcmMixRate == settings.pcmMixRate
                 && audio.analogFilter == settings.analogFilter
-                && audio.transport == AudioTransportState.playing.rawValue
+                && audio.requestedTransport == AudioTransportState.playing.rawValue
                 && audio.playheadSamples > beforeSettings
         }), cppID: transportID,
         message: "all four replaced PCM settings reach the playing device as its sample advances")
@@ -339,26 +339,21 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
                 lastSample = sample
                 stableSince = clock.now
             }
-            return audio.transport == AudioTransportState.paused.rawValue
+            return audio.requestedTransport == AudioTransportState.paused.rawValue
                 && clock.now - stableSince >= .milliseconds(100)
         }), cppID: transportID,
         message: "paused device samples remain unchanged throughout an uninterrupted 100 ms window")
     app.playheadPresenter().refreshImmediate()
-    if let pausedTimeline = audio.timeline {
-        report.expect(
-            abs(
-                app.playheadPresenter().tick
-                    - pausedTimeline.tick(for: audio.playheadSamples)) <= 0.25,
-            cppID: transportID,
-            message: "presented paused playhead is within 0.25 tick of the device timeline")
-    } else {
-        report.fail(transportID, "paused device lost its timeline")
-    }
+    let pausedTimeline = session.timeline
+    report.expect(
+        abs(app.playheadPresenter().tick - pausedTimeline.tick(for: audio.playheadSamples)) <= 0.25,
+        cppID: transportID,
+        message: "presented paused playhead is within 0.25 tick of the device timeline")
     let beforeResume = audio.playheadSamples
     app.play()
     report.expect(
         liveAudioUntil({
-            audio.transport == AudioTransportState.playing.rawValue
+            audio.requestedTransport == AudioTransportState.playing.rawValue
                 && audio.playheadSamples > beforeResume
         }), cppID: transportID,
         message: "toolbar resume strictly advances past the sample captured immediately before resume")
@@ -382,12 +377,13 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         }
         return remaining.isEmpty
     }
-    func deviceAgrees(after sample: UInt64) -> Bool {
-        audio.transport == AudioTransportState.playing.rawValue
+    func deviceAgrees(after sample: UInt64, revision: UInt64) -> Bool {
+        audio.requestedTransport == AudioTransportState.playing.rawValue
             && audio.playheadSamples > sample
-            && audio.timeline?.events == session.timeline.events
+            && audio.status.appliedTimelineRevision > revision
     }
     let beforeEdit = audio.playheadSamples
+    let revisionBeforeEdit = audio.status.appliedTimelineRevision
     let ids: [NoteID]
     do {
         ids = try document.addNotes([
@@ -408,7 +404,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         document.isDirty, cppID: timelineID,
         message: "live note and controller edits dirty the selected document")
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeEdit) })
+        liveAudioUntil({ deviceAgrees(after: beforeEdit, revision: revisionBeforeEdit) })
             && matchesCompleteSchedule([
                 expectedEvent(
                     tick: 0, type: 0x9, data0: 60,
@@ -424,9 +420,10 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         message: "inserted C4 note exists at tick zero in the selected document")
 
     let beforeMove = audio.playheadSamples
+    let revisionBeforeMove = audio.status.appliedTimelineRevision
     document.moveNotes([noteID], byTicks: 24, byKeys: 1)
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeMove) })
+        liveAudioUntil({ deviceAgrees(after: beforeMove, revision: revisionBeforeMove) })
             && matchesCompleteSchedule([
                 expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
                 expectedEvent(
@@ -442,6 +439,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         message: "moved note exists at tick 24 and key 61 in the selected document")
 
     let beforeUndo = audio.playheadSamples
+    let revisionBeforeUndo = audio.status.appliedTimelineRevision
     app.requestUndo()
     guard liveAudioUntil({ document.history.undoIndex == initialIndex + 2 }) else {
         report.fail(timelineID, "first live undo did not restore the note move")
@@ -458,7 +456,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         return
     }
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeUndo) })
+        liveAudioUntil({ deviceAgrees(after: beforeUndo, revision: revisionBeforeUndo) })
             && !document.isDirty && matchesCompleteSchedule([]),
         cppID: timelineID,
         message: "three live Undos restore the clean original event schedule while playback advances")
@@ -475,7 +473,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     _ = liveAudioUntil({ audio.playheadSamples > beforePreview + UInt64(sampleRate * 0.25) })
     voice.releaseVoice()
     report.expect(
-        playingPreviewActive && audio.transport == AudioTransportState.playing.rawValue,
+        playingPreviewActive && audio.requestedTransport == AudioTransportState.playing.rawValue,
         cppID: timelineID,
         message: "voice-control audition during playback leaves the song Playing")
     report.expect(
@@ -483,14 +481,14 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         message: "voice-control audition leaves the song sample counter advancing")
     app.stop()
     report.expect(
-        liveAudioUntil({ audio.transport == AudioTransportState.stopped.rawValue }),
+        liveAudioUntil({ audio.requestedTransport == AudioTransportState.stopped.rawValue }),
         cppID: timelineID, message: "Stop leaves the song transport Stopped")
     voice.pressVoice(slot: 0)
     let stoppedPreviewActive = voice.soundingVoice == 0
     voice.releaseVoice()
     report.expect(
         stoppedPreviewActive
-            && audio.transport == AudioTransportState.stopped.rawValue, cppID: timelineID,
+            && audio.requestedTransport == AudioTransportState.stopped.rawValue, cppID: timelineID,
         message: "voice-control audition from Stopped never starts the song transport")
     app.songTabs.requestClose(tabId: page.tabId)
     report.expect(
@@ -503,7 +501,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     let settledAt = clock.now
     _ = liveAudioUntil({ clock.now - settledAt >= .milliseconds(200) }, seconds: 0.3)
     report.expect(
-        audio.transport == AudioTransportState.stopped.rawValue
+        audio.requestedTransport == AudioTransportState.stopped.rawValue
             && !audio.songLoaded && audio.playheadSamples == retiredSample,
         cppID: timelineID,
         message: "stopped engine owns no advancing retired timeline after final tab closure")

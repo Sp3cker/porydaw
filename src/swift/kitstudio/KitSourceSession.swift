@@ -1,3 +1,4 @@
+import Foundation
 import PorydawSample
 
 /// Window-local sources and slicing state; all external name policy is injected.
@@ -16,6 +17,7 @@ public final class KitSourceSession {
     /// A decoded source and its ordered markers, pending slices and selected rate.
     public struct Source: Equatable, Sendable {
         public let id: Int
+        fileprivate let renderIdentity: UUID
         public let sample: ImportedSample
         /// The project symbol of a committed sample loaded from the kit; nil for opened files.
         public let committedSymbol: String?
@@ -44,11 +46,66 @@ public final class KitSourceSession {
         fileprivate let nextSliceId: Int
     }
 
-    public private(set) var sources: [Source] = []
+    public private(set) var sources: [Source] = [] {
+        didSet {
+            cancelRender()
+            cancelRender(metadataRender)
+            renderCache.removeAll()
+        }
+    }
     /// Returns a refusal for an unavailable name, or nil to accept it.
     public var validateName: ((String) -> String?)?
     private var nextSourceId = 0
     private var nextSliceId = 0
+
+    private struct RenderKey: Hashable, Sendable {
+        let source: UUID
+        let slice: Int
+        let start: Int
+        let end: Int
+        let fadeIn: Bool
+        let fadeOut: Bool
+        let rate: Double
+
+        init(source: Source, slice: Slice) {
+            self.source = source.renderIdentity
+            self.slice = slice.id
+            start = slice.startFrame
+            end = slice.endFrame
+            fadeIn = slice.fadeIn
+            fadeOut = slice.fadeOut
+            rate = source.targetRate
+        }
+    }
+
+    private struct RenderInput: Sendable {
+        let source: Source
+        let slice: Slice
+        var key: RenderKey { RenderKey(source: source, slice: slice) }
+    }
+
+    private struct RenderRequest {
+        let inputs: [RenderInput]
+        let completion: @MainActor ([ProcessedSample]) -> Void
+    }
+
+    private final class RenderLane {
+        var worker: Task<[ProcessedSample], Never>?
+        var completion: Task<Void, Never>?
+        var pending: RenderRequest?
+        var generation = 0
+    }
+
+    private var renderCache: [RenderKey: ProcessedSample] = [:]
+    private let auditionRender = RenderLane()
+    private let metadataRender = RenderLane()
+
+    isolated deinit {
+        auditionRender.worker?.cancel()
+        auditionRender.completion?.cancel()
+        metadataRender.worker?.cancel()
+        metadataRender.completion?.cancel()
+    }
 
     /// Creates an empty window-local session.
     public init() {}
@@ -69,7 +126,7 @@ public final class KitSourceSession {
     public func addSource(_ sample: ImportedSample) {
         sources.append(
             Source(
-                id: nextSourceId, sample: sample, committedSymbol: nil, markers: [], slices: [],
+                id: nextSourceId, renderIdentity: UUID(), sample: sample, committedSymbol: nil, markers: [], slices: [],
                 targetRate: SampleRatePolicy.targetRate(gbaReady: sample.gbaReady, sourceRate: sample.sampleRate)))
         nextSourceId += 1
     }
@@ -86,7 +143,8 @@ public final class KitSourceSession {
             id: nextSliceId, name: name, startFrame: 0, endFrame: sample.frameCount, fadeIn: false, fadeOut: false)
         sources.append(
             Source(
-                id: nextSourceId, sample: sample, committedSymbol: symbol, markers: [], slices: [slice],
+                id: nextSourceId, renderIdentity: UUID(), sample: sample, committedSymbol: symbol, markers: [],
+                slices: [slice],
                 targetRate: sample.sampleRate))
         nextSourceId += 1
         nextSliceId += 1
@@ -222,18 +280,110 @@ public final class KitSourceSession {
         return true
     }
 
-    /// Renders the indexed slice on demand, with no PCM cache or external effects.
+    /// Renders the indexed slice for save operations.
     public func renderSlice(source: Int, slice: Int) -> ProcessedSample {
         guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice) else {
             preconditionFailure("renderSlice requires an existing source and slice index")
         }
         let source = sources[index]
-        let region = source.slices[slice]
+        return Self.render(RenderInput(source: source, slice: source.slices[slice]))
+    }
+
+    func cancelRender() {
+        cancelRender(auditionRender)
+    }
+
+    private func cancelRender(_ lane: RenderLane) {
+        lane.generation += 1
+        lane.pending = nil
+        lane.worker?.cancel()
+    }
+
+    func renderSlices(
+        _ slices: [(source: Source, slice: Slice)], metadata: Bool = false,
+        completion: @escaping @MainActor ([ProcessedSample]) -> Void
+    ) {
+        let lane = metadata ? metadataRender : auditionRender
+        lane.generation += 1
+        let inputs = slices.map { (pair: (source: Source, slice: Slice)) -> RenderInput in
+            RenderInput(source: pair.source, slice: pair.slice)
+        }
+        lane.pending = RenderRequest(inputs: inputs, completion: completion)
+        lane.worker?.cancel()
+        if lane.worker == nil { startPendingRender(lane) }
+    }
+
+    private func startPendingRender(_ lane: RenderLane) {
+        guard lane.worker == nil, let request = lane.pending else { return }
+        lane.pending = nil
+        let generation = lane.generation
+        let cached = request.inputs.map { (input: RenderInput) -> ProcessedSample? in renderCache[input.key] }
+        if cached.allSatisfy({ (sample: ProcessedSample?) -> Bool in sample != nil }) {
+            request.completion(cached.compactMap { (sample: ProcessedSample?) -> ProcessedSample? in sample })
+            return
+        }
+        let worker = Task(priority: .userInitiated) {
+            await Self.renderOffMain(request.inputs, cached: cached)
+        }
+        lane.worker = worker
+        lane.completion = Task { [weak self] in
+            let results = await worker.value
+            guard !Task.isCancelled, let self else { return }
+            lane.worker = nil
+            lane.completion = nil
+            if lane.generation == generation, results.count == request.inputs.count,
+                request.inputs.allSatisfy({ (input: RenderInput) -> Bool in self.contains(input) })
+            {
+                for (input, result) in zip(request.inputs, results) {
+                    self.renderCache[input.key] = result
+                }
+                request.completion(results)
+            }
+            self.startPendingRender(lane)
+        }
+    }
+
+    private func contains(_ input: RenderInput) -> Bool {
+        guard
+            let source = sources.first(where: { (source: Source) -> Bool in
+                source.renderIdentity == input.source.renderIdentity
+            }), let slice = source.slices.first(where: { (slice: Slice) -> Bool in slice.id == input.slice.id })
+        else { return false }
+        return RenderKey(source: source, slice: slice) == input.key
+    }
+
+    @concurrent
+    private static func renderOffMain(_ inputs: [RenderInput], cached: [ProcessedSample?]) async -> [ProcessedSample] {
+        var results: [ProcessedSample] = []
+        results.reserveCapacity(inputs.count)
+        for (input, sample) in zip(inputs, cached) {
+            if Task.isCancelled { return [] }
+            results.append(sample ?? render(input))
+        }
+        return results
+    }
+
+    /// Renders and encodes a captured batch independently of audition rendering.
+    @concurrent
+    public static func renderWavs(_ slices: [(source: Source, slice: Slice)]) async -> [Data] {
+        var results: [Data] = []
+        results.reserveCapacity(slices.count)
+        for pair in slices {
+            if Task.isCancelled { return [] }
+            let rendered = render(RenderInput(source: pair.source, slice: pair.slice))
+            if Task.isCancelled { return [] }
+            results.append(SampleWavWriter.bytes(for: rendered))
+        }
+        return Task.isCancelled ? [] : results
+    }
+
+    nonisolated private static func render(_ input: RenderInput) -> ProcessedSample {
+        let source = input.source
+        let region = input.slice
         var params = SampleDocument.defaultParams(for: source.sample)
         params.cropStart = region.startFrame
         params.cropEnd = region.endFrame
         params.targetRate = source.targetRate
-        // A whole committed sample keeps its loop; every other slice renders one-shot.
         params.loopOn =
             source.committedSymbol != nil && source.sample.hasLoop && region.startFrame == 0
             && region.endFrame == source.sample.frameCount

@@ -9,8 +9,7 @@ final class AudioTimelineHandoff {
     private var current: UnsafeMutablePointer<PlaybackTimeline>?
     private var retired: [UnsafeMutablePointer<PlaybackTimeline>] = []
 
-    /// Borrowed until the consumer's next acquisition, or a quiescent reset.
-    /// Reading a value for UI use must stay on the single producer thread.
+    /// Borrowed only by control while parked, or by the callback until its next acquisition.
     var active: UnsafeMutablePointer<PlaybackTimeline>? { adopted.load(ordering: .acquiring) }
     /// Producer-owned: whether a timeline has been published since the last empty reset,
     /// including one the consumer has not yet acquired.

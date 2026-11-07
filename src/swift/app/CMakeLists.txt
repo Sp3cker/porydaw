@@ -246,6 +246,7 @@ target_link_libraries(PorydawAppCommands PUBLIC PorydawCore QtBridgeCpp Qt6::Gui
 add_library(PorydawAppAudio STATIC
     audio/AudioDevice.swift
     audio/AudioRenderEngine.swift
+    audio/AudioStatus.swift
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift

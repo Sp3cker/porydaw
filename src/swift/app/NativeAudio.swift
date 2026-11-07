@@ -20,9 +20,22 @@ public final class NativeAudio {
     private let device: AudioDevice
     private var bankLease: ProjectBankLease?
     private var engineSettings = AudioSettings()
+    public let status: AudioStatus
+    public var appliedSettings: AudioSettings {
+        let bits = status.appliedSettingsBits
+        var settings = AudioSettings()
+        settings.pcmMixRate = Float(bitPattern: UInt32(truncatingIfNeeded: bits))
+        settings.maxPcmChannels = UInt8(truncatingIfNeeded: bits >> 32)
+        settings.songVolume = UInt8(truncatingIfNeeded: bits >> 40)
+        settings.reverb = UInt8(truncatingIfNeeded: bits >> 48)
+        settings.analogFilter = bits & (UInt64(1) << 56) != 0
+        settings.pcmMixer = bits & (UInt64(1) << 57) != 0 ? M4A_PCM_MIXER_IPATIX : M4A_PCM_MIXER_SAPPY
+        return settings
+    }
 
     public init() async throws {
         device = try await Self.prepareDevice()
+        status = device.renderer.status
     }
 
     /// Device preparation starts on the pool without waiting for the main
@@ -46,6 +59,7 @@ public final class NativeAudio {
 
     private init(adopting device: sending AudioDevice) {
         self.device = device
+        status = device.renderer.status
     }
 
     isolated deinit {
@@ -59,26 +73,23 @@ public final class NativeAudio {
     public var nullBackendForced: Bool { device.nullBackendForced }
     public var periodSizeFrames: Int { device.periodSizeFrames }
     public var periodCount: Int { device.periodCount }
-    public var transport: Int32 { device.renderer.transport.rawValue }
-    public var songLoaded: Bool { device.renderer.songLoaded }
-    public var timeline: PlaybackTimeline? { device.renderer.timeline }
-    public var playheadSamples: UInt64 { device.renderer.playheadSamples }
-    public var isPatternAuditioning: Bool { device.renderer.isPatternAuditioning }
-    /// Absolute sample position in the applied loop timeline, or zero when stopped. Until the
-    /// callback adopts a replacement, it still describes the previous loop.
-    public var patternAuditionPositionSamples: UInt64 { device.renderer.patternAuditionPositionSamples }
-    public var activePcmChannels: Int32 { Int32(device.renderer.activePcmChannels) }
-    public var activeCgbChannels: Int32 { Int32(device.renderer.activeCgbChannels) }
-    public var outputVolume: Int { device.renderer.outputVolume }
-    public var appliedSongVolume: Int { device.renderer.appliedSongVolume }
-    public var loopEnabled: Bool { device.renderer.loopEnabled }
-    public var resonanceSuppression: Bool { device.renderer.resonanceSuppression }
-    public var polyDebugInvert: Bool { device.renderer.polyDebugInvert }
-    public var pcmMixerMode: M4APcmMixerMode { device.renderer.pcmMixerMode }
-    public var maxPcmChannels: Int { device.renderer.maxPcmChannels }
-    public var pcmMixRate: Float { device.renderer.pcmMixRate }
-    public var analogFilter: Bool { device.renderer.analogFilter }
-    public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
+    public var requestedTransport: Int32 { status.requestedTransport.rawValue }
+    public var songLoaded: Bool { status.songLoaded }
+    public var playheadSamples: UInt64 { status.playheadSamples }
+    public var isPatternAuditioning: Bool { status.isPatternAuditioning }
+    public var patternAuditionPositionSamples: UInt64 { status.patternAuditionPositionSamples }
+    public var activePcmChannels: Int32 { Int32(status.activePcmChannels) }
+    public var activeCgbChannels: Int32 { Int32(status.activeCgbChannels) }
+    public private(set) var outputVolume = 100
+    public var appliedSongVolume: Int { Int(appliedSettings.songVolume) }
+    public private(set) var loopEnabled = true
+    public private(set) var resonanceSuppression = false
+    public private(set) var polyDebugInvert = false
+    public var pcmMixerMode: M4APcmMixerMode { appliedSettings.pcmMixer }
+    public var maxPcmChannels: Int { Int(appliedSettings.maxPcmChannels) }
+    public var pcmMixRate: Float { appliedSettings.pcmMixRate }
+    public var analogFilter: Bool { appliedSettings.analogFilter }
+    public var polyLostTotal: UInt64 { status.polyLostTotal }
     public func setCpuTrackBudget(_ count: Int) { device.renderer.setCpuTrackBudget(count) }
 
     public func bind(
@@ -100,7 +111,7 @@ public final class NativeAudio {
     }
 
     public func publish(_ timeline: PlaybackTimeline) throws {
-        guard device.renderer.songLoaded else { throw NativeAudioError.publishFailed }
+        guard songLoaded else { throw NativeAudioError.publishFailed }
         stopPatternAudition()
         device.renderer.publish(timeline)
     }
@@ -163,19 +174,33 @@ public final class NativeAudio {
     /// bank swap), so their owners stop treating those notes as sounding.
     public var onMainPreviewsCut: (() -> Void)?
     private func mainPreviewsCut() { onMainPreviewsCut?() }
-    public func setLoopEnabled(_ enabled: Bool) { device.renderer.setLoopEnabled(enabled) }
+    public func setLoopEnabled(_ enabled: Bool) {
+        loopEnabled = enabled
+        device.renderer.setLoopEnabled(enabled)
+    }
     public func setMix(muted: Set<Int>, soloed: Set<Int>) {
         device.renderer.setMix(muted: muted, soloed: soloed)
     }
-    public func setOutputVolume(_ percent: Int) { device.renderer.setOutputVolume(percent) }
+    public func setOutputVolume(_ percent: Int) {
+        outputVolume = min(100, max(0, percent))
+        device.renderer.setOutputVolume(outputVolume)
+    }
     public func setResonanceSuppression(_ enabled: Bool) {
+        resonanceSuppression = enabled
         device.renderer.setResonanceSuppression(enabled)
     }
     public func setMetronomeEnabled(_ enabled: Bool) { device.renderer.setMetronomeEnabled(enabled) }
-    public func setPolyDebugInvert(_ enabled: Bool) { device.renderer.setPolyDebugInvert(enabled) }
+    public func setPolyDebugInvert(_ enabled: Bool) {
+        polyDebugInvert = enabled
+        device.renderer.setPolyDebugInvert(enabled)
+    }
     public func resetPolyStats() { device.renderer.resetPolyStats() }
     public func resetCpuPeak() { device.renderer.resetCpuPeak() }
-    public func consumeCpuFrames() -> AudioCpuBatch { device.renderer.consumeCpuFrames() }
+    public func consumeCpuFrames() -> AudioCpuBatch {
+        let batch = device.renderer.consumeCpuFrames()
+        let generation = status.telemetryGeneration
+        return batch.matching(generation: generation) ?? AudioCpuBatch(generation: generation, frames: [])
+    }
     public func polySnapshot() -> AudioPolySnapshot { device.renderer.polySnapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] {
         device.renderer.consumeTrackActivityLevels()
@@ -196,7 +221,7 @@ public final class NativeAudio {
 
     /// Silence and release the isolated loop without resuming or replacing the song.
     public func stopPatternAudition() {
-        guard device.renderer.isPatternAuditioning else { return }
+        guard status.isPatternAuditioning else { return }
         device.withRenderingStopped { device.renderer.stopPatternAudition() }
     }
 
