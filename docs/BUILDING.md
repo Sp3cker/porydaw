@@ -379,11 +379,6 @@ isolation and the benchmark below, not the floor.
 audition player shared by Sample Studio and Split Studio. It sits on Sample, AppAudio,
 AppPresentation and QtBridge; `PorydawApp` links it.
 
-Every sample producer claims the shared preview output with `AudioAudition.beginSample()`;
-a newer lease silences the older one, which can then neither publish nor stop its successor.
-A player copies a render to native PCM once and reuses it, with its release tails, until the
-holder plays different bytes.
-
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|
 | `PorydawApp` | 7.77, 7.72 | 7.75 |
@@ -401,6 +396,43 @@ Swift incremental state is mtime-based: `touch`, `git checkout` across branches,
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see
 `reconcile_swift_objects`), which is intended.
+
+## Audio execution and sample previews
+
+Main owns intent, presentation and preview arbitration. `AudioControl` is an actor
+on a dedicated serial queue; it owns the device, renderer and project bank lease,
+and applies submitted commands without suspending. The audio callback does the
+realtime work. `AudioStatus` exposes atomic scalar state, including requested and
+applied transport, settings, positions and telemetry generation.
+
+Bind, unload, settings, voicegroup and pattern start/stop return awaitable
+`AudioOperation` receipts; other commands submit without waiting. One main-actor
+task consumes control's `AsyncStream` of completions, sample events, transport and
+telemetry. Control drains CPU frames and activity peaks; main coalesces delivered
+batches. Telemetry epochs and generations discard late batches after invalidation.
+
+`NativeAudio.beginSampleAudition` claims a main-actor `SampleAuditionLease`; a new
+lease displaces the old holder. Leases submit value notes (PCM, wave or kit) to
+control, which prepares and reuses PCM, retries busy slots and reclaims retired
+storage. Callback feedback identifies adoption and natural completion: `.started`
+means adopted, `.finished` means ended, and `soundingFrame` reports the current
+note's callback-published position. Lease and note identities reject stale events.
+
+`PcmAuditionPlayer` moves through idle, starting, sounding and repeat-gap states.
+Its policies are `.once` for library previews, `.repeatSame` for Split Studio
+slices and `.repeatFresh` for Sample Studio; repeating waits 0.5 seconds after
+completion. Its playhead reads `soundingFrame`, not an estimated playback clock.
+
+Studio DSP runs off main as latest-work-wins jobs; stale results are rejected.
+Sample Studio publishes waveform state and republishes an active audition from
+the same landed render revision in one main-actor turn. Split Studio captures
+slice render inputs for both audition and playhead mapping. Both map the engine's
+actual sounding frame onto their waveform.
+
+The shell close barrier awaits audio shutdown. Control joins the device and tears
+it down while retaining the bank lease; project retirement waits for queued audio
+unload. This does not guarantee off-main bank destruction: `Bank.deinit` may still
+free memory on main.
 
 ## Voicegroup loading: parity and performance gate
 

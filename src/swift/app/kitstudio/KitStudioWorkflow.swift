@@ -398,10 +398,6 @@ public final class KitStudioWorkflow: QmlUncreatable {
         auditionPlaying = window?.pcm.playing ?? false
     }
 
-    @QtIgnored func advanceAudition(bySeconds dt: Double) {
-        window?.pcm.advance(bySeconds: dt)
-    }
-
     public func stopAudition() {
         window?.presenter.cancelAuditionRender()
         previewPreparation.cancel()

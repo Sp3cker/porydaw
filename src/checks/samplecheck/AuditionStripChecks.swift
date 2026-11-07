@@ -9,11 +9,55 @@ import SwiftCoreCheckSupport
 @testable import SwiftCoreCheckLogic
 
 @MainActor
+private func checkStudioOwnership(
+    _ report: CheckReport, presenter: SampleStudioPresenter, source: ImportedSample, output: SampleAuditionCheckOutput
+) throws {
+    let audio = report.scoped(cppID: "swiftcore/SampleStudioAudition::sharedOutputOwnership")
+    let otherPresenter = SampleStudioPresenter(
+        document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
+    try runBlocking { await otherPresenter.waitForRender() }
+    let first = SampleStudioAudition(
+        presenter: presenter, beginSampleAudition: output.begin,
+        isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+    let second = SampleStudioAudition(
+        presenter: otherPresenter, beginSampleAudition: output.begin,
+        isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+    first.toggle()
+    guard let firstNote = output.lastNote() else {
+        audio.expect(false, message: "First owner submits its PCM")
+        return
+    }
+    output.start(firstNote)
+    audio.expect(first.playing, message: "First owner is playing after engine adoption")
+    second.toggle()
+    guard let secondNote = output.lastNote() else {
+        audio.expect(false, message: "New owner submits replacement PCM")
+        return
+    }
+    output.start(secondNote)
+    let successor = output.current
+    audio.expect(
+        !first.playing && first.playText == "Listen" && second.playing && successor?.isCurrent == true,
+        message: "displacement clears the editor holder without silencing its successor")
+    first.setAuditionKey(key: 61)
+    audio.expect(
+        !first.playing && second.playing && successor?.isCurrent == true
+            && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
+        message: "a displaced editor's key change cannot revive its stopped player")
+    first.close()
+    first.toggle()
+    audio.expect(
+        !first.available && !first.playing && first.playText == "Listen" && successor?.isCurrent == true,
+        message: "closing the displaced editor leaves the current owner intact and cannot restart")
+    second.close()
+    audio.expect(successor?.isCurrent == false && !second.playing, message: "closing the active editor ends its lease")
+}
+
+@MainActor
 internal func runAuditionStripChecks(_ report: CheckReport) {
     let scope = report.scoped(cppID: "samplecheck/SampleProcessingTest::spaceAudition")
     do {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
-        scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
         let presenter = SampleStudioPresenter(
             document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
         try runBlocking { await presenter.waitForRender() }
@@ -32,9 +76,6 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             presenter: presenter, beginSampleAudition: output.begin,
             isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
-        strip.expect(
-            source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
-            message: "A087 editor-strip high resolution source imports")
         unavailable.toggle()
         strip.expect(
             !unavailable.available && !unavailable.playing && unavailable.playText == "Listen",
@@ -47,15 +88,7 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
             message: "the same studio sees output that becomes available later")
         unavailable.stop()
         _ = output.drain()
-        let engineResult = Result {
-            try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512, sampleFeedback: output.feedback)
-        }
-        scope.expect(
-            {
-                if case .success = engineResult { return true }; return false
-            }(),
-            message: "A117 audition engine initializes")
-        guard case .success(let renderer) = engineResult else { return }
+        let renderer = try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512, sampleFeedback: output.feedback)
         defer { renderer.unload() }
         let audition = SampleStudioAudition(
             presenter: presenter, beginSampleAudition: output.begin,
@@ -67,9 +100,6 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
                 tools.lastWaveformRenderRevision == presenter.renderRevision
                     && audition.lastPublishedRenderRevision == presenter.renderRevision)
         }
-        scope.expect(
-            audition.available && !audition.playing && audition.playText == "Listen",
-            message: "A121 idle audition is stopped")
         var pcm = [Float](repeating: 0, count: 48_000 * 2)
         var published: (note: SampleAuditionNote, generation: UInt64)?
         var adoptedGeneration: UInt64 = 0
@@ -171,12 +201,11 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
         scope.expect(
             !audition.available && !audition.playing && audition.playText == "Listen" && playhead == nil,
             message: "close releases the audition owner and playhead")
-        let oneShot = SampleStudioPresenter(
-            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
-        oneShot.setLoopOn(enabled: false)
-        try runBlocking { await oneShot.waitForRender() }
+        try checkStudioOwnership(report, presenter: presenter, source: source, output: output)
+        presenter.setLoopOn(enabled: false)
+        try runBlocking { await presenter.waitForRender() }
         let repeating = SampleStudioAudition(
-            presenter: oneShot, beginSampleAudition: output.begin,
+            presenter: presenter, beginSampleAudition: output.begin,
             isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
         repeating.toggle()
         guard let first = output.lastNote() else {

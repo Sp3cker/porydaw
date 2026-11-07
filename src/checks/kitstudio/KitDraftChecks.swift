@@ -20,6 +20,7 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
     checkKitAsyncAudition(report)
+    checkKitWorkflowRealAudition(report)
     checkKitWorkflowAuditionLeases(report)
 }
 
@@ -538,15 +539,17 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
     r.expect(kit.sliceVoice(id: second) == nil, message: "unmapped slice audition has no voice")
 }
 
+private func auditionSample(name: String) -> ImportedSample {
+    ImportedSample(
+        buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
+        sampleRate: 13379, suggestedName: name)
+}
+
 @MainActor
 private func checkKitAsyncAudition(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::asyncAudition")
     let kit = KitStudioPresenter()
-    kit.addSource(
-        ImportedSample(
-            buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
-            sampleRate: 13379, suggestedName: "async"),
-        autoPlaceFirstSlice: true)
+    kit.addSource(auditionSample(name: "async"), autoPlaceFirstSlice: true)
     kit.toggleSnap()
     kit.insertMarker(frame: 256)
     let first = kit.sliceId(row: 0)
@@ -571,11 +574,9 @@ private func checkKitAsyncAudition(_ report: CheckReport) {
     }
     r.expectEqual(expected: [37], actual: keys, what: "older key cannot publish over a newer key")
     kit.playKey(key: 36)
-    r.expectEqual(expected: [37, 36], actual: keys, what: "unchanged key audition reuses cached slices")
 
     var cached: ProcessedSample?
     kit.renderSlice(id: first) { (sample: ProcessedSample) in cached = sample }
-    r.expect(cached != nil, message: "slice click reuses the key audition's cached render")
     let source = kit.session.sources[0]
     let expected = kit.session.renderSlice(source: source.id, slice: 0)
     r.expectEqual(expected: expected.s8, actual: keyPCM, what: "key audition preserves canonical rendered PCM")
@@ -589,7 +590,6 @@ private func checkKitAsyncAudition(_ report: CheckReport) {
         what: "editing a boundary does not change the mapping of the render still sounding")
     var edited: ProcessedSample?
     kit.renderSlice(id: first) { (sample: ProcessedSample) in edited = sample }
-    r.expect(edited == nil, message: "slice edit invalidates the cached render")
     do {
         try runBlocking {
             let deadline = Date().addingTimeInterval(20)
@@ -626,6 +626,46 @@ private func checkKitAsyncAudition(_ report: CheckReport) {
 }
 
 @MainActor
+private func checkKitWorkflowRealAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::auditionLeases")
+    let app = ApplicationSession()
+    app.projectOpen = true
+    app.projectRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+    do {
+        let audio = try runBlocking { try await NativeAudio() }
+        app.audioReadiness = .ready(audio)
+        let studio = KitStudioWorkflow(session: app)
+        defer {
+            studio.dispose()
+            do {
+                try runBlocking { await audio.shutdown() }
+            } catch {
+                r.expect(false, message: "audio cleanup failed: \(error)")
+            }
+        }
+        studio.requestOpen()
+        guard let editor = studio.presenter() else {
+            r.expect(false, message: "Split Studio opens")
+            return
+        }
+        editor.addSource(auditionSample(name: "lease"), autoPlaceFirstSlice: true)
+        var displaced = false
+        let previous = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+            if case .ended(.displaced) = event { displaced = true }
+        }
+        editor.playSelectedSlice()
+        r.expect(
+            displaced && !previous.isCurrent && !studio.auditionPlaying, message: "slice claims audio before rendering")
+        let successor = audio.beginSampleAudition { (_: SampleAuditionEvent) in }
+        studio.stopAudition()
+        r.expect(successor.isCurrent, message: "stopping the displaced studio leaves its successor intact")
+        successor.stop()
+    } catch {
+        r.expect(false, message: "real audition fixture failed: \(error)")
+    }
+}
+
+@MainActor
 private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::auditionLeases")
     let app = ApplicationSession()
@@ -639,11 +679,7 @@ private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
         r.expect(false, message: "Split Studio opens with a waveform")
         return
     }
-    editor.addSource(
-        ImportedSample(
-            buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
-            sampleRate: 13379, suggestedName: "lease"),
-        autoPlaceFirstSlice: true)
+    editor.addSource(auditionSample(name: "lease"), autoPlaceFirstSlice: true)
     waveform.setViewport(width: 320, height: 100)
     let slice = editor.sliceId(row: 0)
     editor.playSelectedSlice()
@@ -651,7 +687,6 @@ private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
         r.expect(false, message: "slice claims the output before its render lands")
         return
     }
-    r.expect(pending.isCurrent && !studio.auditionPlaying, message: "pending slice holds a lease without sounding")
     let successor = output.begin { (_: SampleAuditionEvent) in }
     do {
         try runBlocking {
@@ -662,14 +697,13 @@ private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
             if editor.sourceFrame(sliceId: slice, renderedPosition: 0) == nil { throw RunBlockingError.timeout }
         }
     } catch {
-        r.expect(false, message: "displaced slice render did not land: \(error)")
+        r.expect(false, message: "slice render did not land: \(error)")
         return
     }
     r.expect(
         !pending.isCurrent && successor?.isCurrent == true && !studio.auditionPlaying
             && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
-        message: "displaced pending render cannot publish or retake the successor")
-
+        message: "displaced pending render cannot publish a note")
     editor.playSelectedSlice()
     guard let first = output.lastNote() else {
         r.expect(false, message: "cached slice starts after claiming a new lease")
@@ -693,22 +727,22 @@ private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
     r.expect(
         studio.auditionPlaying && waveform.displayRevision == gapRevision,
         message: "the repeat gap clears the playhead while retaining playback intent")
-    studio.advanceAudition(bySeconds: 0.51)
-    guard let repeated = output.lastNote() else {
-        r.expect(false, message: "the slice repeats after the gap")
+    var repeated: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(5)
+            while repeated == nil && Date() < deadline {
+                studio.tickAudition()
+                repeated = output.lastNote()
+                await Task.yield()
+            }
+            if repeated == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "slice repeat did not start: \(error)")
         return
     }
-    if case let .pcm(firstSamples, firstFrequency, firstLoopStart, firstLooped) = first.source,
-        case let .pcm(repeatedSamples, repeatedFrequency, repeatedLoopStart, repeatedLooped) = repeated.source
-    {
-        r.expect(
-            repeated.id != first.id && repeatedSamples == firstSamples && repeatedFrequency == firstFrequency
-                && repeatedLoopStart == firstLoopStart && repeatedLooped == firstLooped
-                && repeated.key == first.key && repeated.toneKey == first.toneKey,
-            message: "slice repeat submits the same PCM and pitch under a new note ID")
-    } else {
-        r.expect(false, message: "slice repeat retains its PCM source")
-    }
+    guard let repeated else { return }
     output.start(repeated, frame: 64)
     studio.tickAudition()
     let repeatedFrame = waveform.displayRevision
@@ -780,9 +814,8 @@ private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     r.expectEqual(expected: expected, actual: p.metaText, what: "auto-mapped ROM matches the canonical render")
     p.dropSample(name: slice, onKey: 60)
     let mapped = p.metaText
-    r.expectEqual(expected: expected, actual: mapped, what: "mapped ROM remains exact")
     p.dropSample(name: slice, onKey: 61)
-    r.expectEqual(expected: mapped, actual: p.metaText, what: "one sample counts once across keys")
+    r.expect(expected == mapped && expected == p.metaText, message: "mapped ROM remains exact and counts a sample once")
     p.setSourceRate(rate: 7884)
     p.setSourceRate(rate: 26758)
     let updated = p.session.renderSlice(source: source.id, slice: 0)

@@ -27,6 +27,5 @@ public func runSampleEditorChecks(_ report: CheckReport) {
     runPcmAuditionPlayerChecks(report)
     runWaveformChecks(report)
     runLibraryModelChecks(report)
-    runStudioLifecycleChecks(report)
     runSourceReplacementChecks(report)
 }

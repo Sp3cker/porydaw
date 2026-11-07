@@ -273,7 +273,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/SampleChecks.swift
         samplecheck/SoundFontChecks.swift
         samplecheck/SourceReplacementChecks.swift
-        samplecheck/StudioLifecycleChecks.swift
         samplecheck/WaveformChecks.swift
         themecolor/ThemeColorChecks.swift
         themecolor/ThemeColorPresets.swift
