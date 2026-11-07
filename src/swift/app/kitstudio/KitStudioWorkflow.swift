@@ -43,6 +43,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var window: KitStudioWindow?
     private let libraryHost: StudioLibraryHost
     private var loadTask: Task<Void, Never>?
+    private var sourceLoadTask: Task<Void, Never>?
     private var closeWaitTask: Task<Void, Never>?
     private var orphanCleanupTask: Task<Void, Never>?
     private var orphanCleanupCompletion: (() -> Void)?
@@ -166,6 +167,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
             case .sounding:
                 self.auditionPlaying = true
             case .ended:
+                next.presenter.cancelAuditionRender()
                 next.playingSlice = nil
                 next.presenter.waveform?.setPlayhead(frame: nil)
                 self.auditionPlaying = false
@@ -208,6 +210,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     }
                 })
         }
+        effects.endKeyAudition = { [weak self] in self?.kitAudition?.stop() }
         effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
             guard let lease = self?.kitAudition, lease.isCurrent else { return false }
             lease.play { (id: SampleAuditionNoteID) -> SampleAuditionNote in
@@ -216,6 +219,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
             return true
         }
         effects.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
+        effects.endSliceAudition = { [weak self] in self?.stopAudition() }
         return effects
     }
 
@@ -285,36 +289,55 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var editableWindow: KitStudioWindow? { windowOpen && !saving ? window : nil }
 
     public func loadSource(path: String) {
-        guard let state = editableWindow?.presenter, let url = libraryHost.sourceURL(path) else { return }
+        guard let window = editableWindow, let service = session?.catalogService,
+            let url = libraryHost.sourceURL(path)
+        else { return }
         stopAudition()
-        do { try addSource(url, to: state, autoPlaceFirstSlice: true) } catch { showAlert(error) }
+        addSource(url, to: window, service: service, dropKey: nil)
     }
 
     public func dropLibrarySample(path: String, onKey: Int) {
-        guard let state = editableWindow?.presenter, let url = libraryHost.sourceURL(path) else { return }
+        guard let window = editableWindow, let service = session?.catalogService,
+            let url = libraryHost.sourceURL(path)
+        else { return }
         stopAudition()
-        do {
-            try addSource(url, to: state, autoPlaceFirstSlice: false)
-            if let id = state.session.sources.last?.id {
-                state.session.createFirstSlice(source: id)
-            }
-            let newest = state.newestSliceId()
-            if newest != 0 {
-                state.dropSample(name: state.sliceName(id: newest), onKey: onKey)
-            }
-        } catch { showAlert(error) }
+        addSource(url, to: window, service: service, dropKey: onKey)
     }
 
-    /// Decodes and adds one file; the first file of an empty kit suggests the voicegroup name.
-    private func addSource(_ url: URL, to state: KitStudioPresenter, autoPlaceFirstSlice: Bool) throws {
-        let wasEmpty = state.session.sources.isEmpty
-        let sample = try SampleImport.decodeFile(path: url.path)
-        state.addSource(sample, autoPlaceFirstSlice: autoPlaceFirstSlice)
-        if wasEmpty, !state.voicegroupNameEdited {
-            let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
-            state.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
+    @concurrent
+    private static func decodeSource(_ path: String) async throws -> ImportedSample {
+        try SampleImport.decodeFile(path: path)
+    }
+
+    /// Source requests append in order; the first file suggests the voicegroup name.
+    private func addSource(_ url: URL, to window: KitStudioWindow, service: ProjectService, dropKey: Int?) {
+        let previous = sourceLoadTask
+        sourceLoadTask = Task { [weak self, weak window] in
+            await previous?.value
+            do {
+                let sample = try await Self.decodeSource(url.path)
+                guard let self, let window, self.editableWindow === window,
+                    self.isCurrent(window, service: service)
+                else { return }
+                let state = window.presenter
+                let wasEmpty = state.session.sources.isEmpty
+                state.addSource(sample, autoPlaceFirstSlice: dropKey == nil)
+                if wasEmpty, !state.voicegroupNameEdited {
+                    let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
+                    state.applySuggestedVoicegroupName(
+                        self.nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
+                }
+                self.session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
+                if let dropKey, let id = state.session.sources.last?.id {
+                    state.createFirstSliceAndDrop(source: id, onKey: dropKey)
+                }
+            } catch {
+                guard let self, let window, self.editableWindow === window,
+                    self.isCurrent(window, service: service)
+                else { return }
+                self.showAlert(error)
+            }
         }
-        session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
     }
 
     /// Whether every entry of a dragged `text/uri-list` names an audio file drop targets may accept.
@@ -376,13 +399,14 @@ public final class KitStudioWorkflow: QmlUncreatable {
         guard let window else { return }
         stopAudition()
         guard let lease = window.pcm.claim() else { return }
-        let voice = window.presenter.sliceVoice(id: id)
+        var latestNote: SampleAuditionNote?
         window.presenter.renderSlice(id: id) { [weak self, weak window] (rendered: ProcessedSample) in
             guard let self, let window, self.window === window, lease.isCurrent else { return }
             guard !rendered.s8.isEmpty else {
                 lease.stop()
                 return
             }
+            let voice = window.presenter.sliceVoice(id: id)
             window.playingSlice = id
             let note = SampleAuditionNote(
                 id: .unassigned,
@@ -390,7 +414,16 @@ public final class KitStudioWorkflow: QmlUncreatable {
                     samples: rendered.s8, frequency: rendered.freq,
                     loopStart: rendered.loopStart, looped: rendered.looped),
                 key: voice?.note ?? 60, adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
-            window.pcm.play(note, lease: lease, repeatPolicy: .repeatSame)
+            latestNote = note
+            if window.pcm.playing {
+                window.pcm.republish(note)
+            } else {
+                window.pcm.play(
+                    note, lease: lease,
+                    repeatPolicy: .repeatFresh({ () -> SampleAuditionNote? in
+                        latestNote
+                    }))
+            }
         }
     }
     public func tickAudition() {

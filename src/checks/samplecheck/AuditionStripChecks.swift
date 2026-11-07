@@ -54,10 +54,82 @@ private func checkStudioOwnership(
 }
 
 @MainActor
+private func checkStudioLoopMode(_ report: CheckReport, source: ImportedSample) throws {
+    let scope = report.scoped(cppID: "swiftcore/SampleStudioAudition::loopModeFollowsRender")
+    for initialLooped in [false, true] {
+        let presenter = SampleStudioPresenter(
+            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
+        presenter.setLoopOn(enabled: initialLooped)
+        try runBlocking { await presenter.waitForRender() }
+        let output = SampleAuditionCheckOutput()
+        let audition = SampleStudioAudition(
+            presenter: presenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+        defer { audition.close() }
+        audition.toggle()
+        guard let initial = output.lastNote(), case let .pcm(_, _, _, initialNoteLooped) = initial.source else {
+            scope.expect(false, message: "initial audition publishes PCM")
+            continue
+        }
+        scope.expect(
+            presenter.processed.looped == initialLooped && initialNoteLooped == initialLooped,
+            message: "initial note follows the landed loop mode")
+        output.start(initial)
+        presenter.setLoopOn(enabled: !initialLooped)
+        try runBlocking { await presenter.waitForRender() }
+        guard let changed = output.lastNote(), case let .pcm(samples, _, _, changedLooped) = changed.source else {
+            scope.expect(false, message: "loop mode change republishes PCM")
+            continue
+        }
+        scope.expect(
+            presenter.processed.looped == !initialLooped && changedLooped == !initialLooped
+                && samples == presenter.processed.s8
+                && audition.lastPublishedRenderRevision == presenter.renderRevision,
+            message: "loop mode change republishes the landed render in both directions")
+        output.start(changed)
+        var finished = changed
+        if !initialLooped {
+            presenter.setLoopOn(enabled: false)
+            try runBlocking { await presenter.waitForRender() }
+            guard let unlooped = output.lastNote(), case let .pcm(_, _, _, looped) = unlooped.source else {
+                scope.expect(false, message: "disabling looping republishes PCM")
+                continue
+            }
+            scope.expect(!looped, message: "disabling looping restores one-shot playback")
+            output.start(unlooped)
+            finished = unlooped
+        }
+        output.finish(finished)
+        audition.advance(bySeconds: 0.51)
+        guard let repeated = output.lastNote(), case let .pcm(_, _, _, repeatLooped) = repeated.source else {
+            scope.expect(false, message: "one-shot render repeats with fresh PCM")
+            continue
+        }
+        scope.expect(
+            !repeatLooped && repeated.id != finished.id && audition.playing,
+            message: "one-shot after a loop mode change repeats with a fresh unlooped note")
+        output.start(repeated)
+        output.finish(repeated)
+        presenter.setLoopOn(enabled: true)
+        try runBlocking { await presenter.waitForRender() }
+        audition.advance(bySeconds: 0.51)
+        guard let fresh = output.lastNote(), case let .pcm(freshSamples, _, _, freshLooped) = fresh.source else {
+            scope.expect(false, message: "loop mode change during the repeat gap publishes fresh PCM")
+            continue
+        }
+        scope.expect(
+            freshLooped && presenter.processed.looped && freshSamples == presenter.processed.s8
+                && fresh.id != repeated.id,
+            message: "fresh repeat uses the looped render landed during the repeat gap")
+    }
+}
+
+@MainActor
 internal func runAuditionStripChecks(_ report: CheckReport) {
     let scope = report.scoped(cppID: "samplecheck/SampleProcessingTest::spaceAudition")
     do {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
+        try checkStudioLoopMode(report, source: source)
         let presenter = SampleStudioPresenter(
             document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
         try runBlocking { await presenter.waitForRender() }

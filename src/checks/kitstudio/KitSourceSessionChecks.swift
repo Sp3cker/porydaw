@@ -31,6 +31,20 @@ private func sessionSample(
         playLength: count, suggestedName: name, gbaReady: gbaReady)
 }
 
+func canonicalKitSlice(source: KitSourceSession.Source, slice: KitSourceSession.Slice) -> ProcessedSample {
+    var params = SampleDocument.defaultParams(for: source.sample)
+    params.cropStart = slice.startFrame
+    params.cropEnd = slice.endFrame
+    params.targetRate = source.targetRate
+    params.loopOn =
+        source.committedSymbol != nil && source.sample.hasLoop && slice.startFrame == 0
+        && slice.endFrame == source.sample.frameCount
+    params.fadeIn = false
+    params.fadeOut = false
+    if source.targetRate != source.sample.sampleRate { params.exactPitchOverride = 0 }
+    return SampleSlice.render(source: source.sample, params: params, fadeIn: slice.fadeIn, fadeOut: slice.fadeOut)
+}
+
 @MainActor
 private func checkSourceMarkers(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitSourceSession::markerOrdering")
@@ -260,7 +274,18 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
             if params.targetRate != sample.sampleRate { params.exactPitchOverride = 0 }
             let direct = SampleSlice.render(source: sample, params: params, fadeIn: fadeIn, fadeOut: fadeOut)
             let before = session.sources
-            let rendered = session.renderSlice(source: id, slice: 0)
+            let source = session.sources[index]
+            let rendered = canonicalKitSlice(source: source, slice: source.slices[0])
+            do {
+                let wavs = try runBlocking {
+                    await KitSourceSession.renderWavs([(source: source, slice: source.slices[0])])
+                }
+                r.expectEqual(
+                    expected: [SampleWavWriter.bytes(for: direct)], actual: wavs,
+                    what: "off-main render matches the direct pipeline")
+            } catch {
+                r.expect(false, message: "off-main render failed: \(error)")
+            }
             r.expectEqual(expected: direct, actual: rendered, what: "render metadata matches direct pipeline")
             r.expectEqual(expected: before, actual: session.sources, what: "render is a pure query")
             r.expect(!rendered.looped, message: "slices are one-shot even for looped imports")
@@ -276,7 +301,8 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
             expected: oldRate, actual: session.sources[index].targetRate, what: "invalid selection preserves rate")
         r.expect(session.setSourceRate(source: id, rate: 7884), message: "shared table rate selected by Hz")
         r.expectEqual(expected: 7884.0, actual: session.sources[index].targetRate, what: "source stores selected Hz")
-        let resampled = session.renderSlice(source: id, slice: 0)
+        let resampledSource = session.sources[index]
+        let resampled = canonicalKitSlice(source: resampledSource, slice: resampledSource.slices[0])
         r.expectEqual(expected: 7884.0, actual: resampled.outputRate, what: "render uses selected source rate")
         if ready {
             r.expect(
@@ -285,8 +311,10 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
         r.expect(session.setSourceRate(source: id, rate: Int(rate)), message: "source rate option accepted")
         r.expectEqual(expected: rate, actual: session.sources[index].targetRate, what: "source-rate option stored")
         if ready {
+            let originalRateSource = session.sources[index]
             r.expectEqual(
-                expected: sample.exactPitch, actual: session.renderSlice(source: id, slice: 0).freq,
+                expected: sample.exactPitch,
+                actual: canonicalKitSlice(source: originalRateSource, slice: originalRateSource.slices[0]).freq,
                 what: "returning to the original rate restores exact pitch")
         }
     }
@@ -365,7 +393,7 @@ private func checkSourceSaveRender(_ report: CheckReport) {
     let source = session.sources[0]
     let inputs = source.slices.map { (slice: KitSourceSession.Slice) in (source: source, slice: slice) }
     let expected = source.slices.indices.map { (index: Int) -> Data in
-        SampleWavWriter.bytes(for: session.renderSlice(source: id, slice: index))
+        SampleWavWriter.bytes(for: canonicalKitSlice(source: source, slice: source.slices[index]))
     }
     session.setSliceFades(source: id, slice: 0, fadeIn: false, fadeOut: true)
     do {
@@ -631,7 +659,7 @@ private func checkCommittedKitSamples(_ report: CheckReport) {
     r.expect(!p.sliceIsCommitted(id: kick) && p.dirty, message: "the fork saves as new audio")
     let forked = p.session.sources[0]
     r.expect(
-        p.session.renderSlice(source: forked.id, slice: 0).looped,
+        canonicalKitSlice(source: forked, slice: forked.slices[0]).looped,
         message: "a fork covering the whole sample keeps its loop")
     p.undo()
     r.expect(

@@ -439,6 +439,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/startup_checks.swift
         workspace/transport_checks.swift
         kitstudio/KitDraftChecks.swift
+        kitstudio/KitSourceLoadingChecks.swift
         kitstudio/KitSourceSessionChecks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift

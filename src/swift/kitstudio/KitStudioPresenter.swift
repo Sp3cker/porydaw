@@ -32,8 +32,10 @@ public struct KitStudioEffects {
     public var validateName: ((String) -> String?)?
     public var validateVoicegroupName: ((String) -> String?)?
     public var beginKeyAudition: (() -> Void)?
+    public var endKeyAudition: (() -> Void)?
     public var publishKitTone: ((KitAuditionTone, UInt8) -> Bool)?
     public var playPcm: ((Int) -> Void)?
+    public var endSliceAudition: (() -> Void)?
 
     public init() {}
 }
@@ -87,6 +89,9 @@ public final class KitStudioPresenter: QmlUncreatable {
     private var cleanMode: KitMode = .drumkit
     private var cleanSessionSnapshot: KitSourceSession.Snapshot
     private var soundingSlice: (id: Int, start: Int, end: Int, sourceRate: Double, renderedRate: Double)?
+    private var requestedSlice: (id: Int, revision: Int, completion: @MainActor (ProcessedSample) -> Void)?
+    private var toneInputs: (draft: KitDraft.Snapshot, mode: KitMode)?
+    private var toneRevision = 0
 
     /// An empty, unnamed kit; `waveform` is the editor's marker view, absent in model-only checks.
     @QtIgnored public init(waveform: MarkerWaveformModel? = nil, effects: KitStudioEffects = KitStudioEffects()) {
@@ -502,6 +507,19 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
     }
 
+    @QtIgnored public func createFirstSliceAndDrop(source: Int, onKey: Int) {
+        var created = false
+        changeSession { (target: KitSourceSession) in
+            created = target.createFirstSlice(source: source)
+        }
+        guard created,
+            let slice = session.sources.first(where: { (item: KitSourceSession.Source) -> Bool in
+                item.id == source
+            })?.slices.first
+        else { return }
+        dropSample(name: slice.name, onKey: onKey)
+    }
+
     /// Tab rows: the kit-samples tab first when the kit has committed samples, then each opened file.
     private func sourceId(row: Int) -> Int? {
         let committed = session.sources.filter { $0.committedSymbol != nil }
@@ -710,9 +728,14 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
         let snapshot = draft.snapshot()
         let mode = activeMode
+        let revision = toneRevision
         let waves = progWaves
         session.renderSlices(inputs) { [weak self] (results: [ProcessedSample]) in
             guard let self else { return }
+            guard self.toneRevision == revision, self.activeMode == mode, self.draft.snapshot() == snapshot else {
+                self.effects.endKeyAudition?()
+                return
+            }
             for (input, result) in zip(inputs, results) { rendered[input.slice.name] = result }
             guard
                 let tone = KitDraftCodec.auditionTone(
@@ -722,8 +745,15 @@ public final class KitStudioPresenter: QmlUncreatable {
         }
     }
 
-    /// Requests one slice; the callback and playhead mapping use the same captured render inputs.
+    /// Publishes the slice and its playhead mapping again when source edits change its render.
     @QtIgnored public func renderSlice(
+        id: Int, completion: @escaping @MainActor (ProcessedSample) -> Void
+    ) {
+        requestedSlice = (id: id, revision: session.sourcesRevision, completion: completion)
+        renderRequestedSlice(id: id, completion: completion)
+    }
+
+    private func renderRequestedSlice(
         id: Int, completion: @escaping @MainActor (ProcessedSample) -> Void
     ) {
         guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
@@ -751,6 +781,8 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     @QtIgnored public func cancelAuditionRender() {
         session.cancelRender()
+        requestedSlice = nil
+        toneRevision += 1
         soundingSlice = nil
     }
 
@@ -820,6 +852,20 @@ public final class KitStudioPresenter: QmlUncreatable {
 
     /// Re-publishes values after an edit or after the workflow changes value-only facts.
     @QtIgnored public func refresh() {
+        let inputs = draft.snapshot()
+        if toneInputs?.draft != inputs || toneInputs?.mode != activeMode {
+            toneRevision += 1
+            toneInputs = (draft: inputs, mode: activeMode)
+        }
+        if let request = requestedSlice, request.revision != session.sourcesRevision {
+            if sliceAddress(request.id) == nil {
+                cancelAuditionRender()
+                effects.endSliceAudition?()
+            } else {
+                requestedSlice = (id: request.id, revision: session.sourcesRevision, completion: request.completion)
+                renderRequestedSlice(id: request.id, completion: request.completion)
+            }
+        }
         mode = activeMode == .drumkit ? 0 : 1
         dirty = draft.dirty || activeMode != cleanMode || session.snapshot() != cleanSessionSnapshot
         canSave = !zones.isEmpty && !voicegroupNameInvalid && !voicegroupName.isEmpty

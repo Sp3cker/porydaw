@@ -423,10 +423,12 @@ Its policies are `.once` for library previews, `.repeatSame` for Split Studio
 slices and `.repeatFresh` for Sample Studio; repeating waits 0.5 seconds after
 completion. Its playhead reads `soundingFrame`, not an estimated playback clock.
 
-Studio DSP runs off main as latest-work-wins jobs; stale results are rejected.
+Studio DSP runs off main as latest-work-wins jobs (edit renders, loop tools, slice
+and key renders, save renders, Split Studio source decoding); stale results are rejected.
 Sample Studio publishes waveform state and republishes an active audition from
-the same landed render revision in one main-actor turn. Split Studio captures
-slice render inputs for both audition and playhead mapping. Both map the engine's
+the same landed render revision in one main-actor turn. Split Studio rerenders the
+active slice on boundary edits and republishes it with its playhead mapping; a key
+audition whose draft revision changed never sounds. Both map the engine's
 actual sounding frame onto their waveform.
 
 The shell close barrier awaits audio shutdown. Control joins the device and tears

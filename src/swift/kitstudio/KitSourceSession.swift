@@ -48,11 +48,13 @@ public final class KitSourceSession {
 
     public private(set) var sources: [Source] = [] {
         didSet {
+            sourcesRevision += 1
             cancelRender()
             cancelRender(metadataRender)
             renderCache.removeAll()
         }
     }
+    private(set) var sourcesRevision = 0
     /// Returns a refusal for an unavailable name, or nil to accept it.
     public var validateName: ((String) -> String?)?
     private var nextSourceId = 0
@@ -280,14 +282,6 @@ public final class KitSourceSession {
         return true
     }
 
-    /// Renders the indexed slice for save operations.
-    public func renderSlice(source: Int, slice: Int) -> ProcessedSample {
-        guard let index = sourceIndex(source), sources[index].slices.indices.contains(slice) else {
-            preconditionFailure("renderSlice requires an existing source and slice index")
-        }
-        let source = sources[index]
-        return Self.render(RenderInput(source: source, slice: source.slices[slice]))
-    }
 
     func cancelRender() {
         cancelRender(auditionRender)

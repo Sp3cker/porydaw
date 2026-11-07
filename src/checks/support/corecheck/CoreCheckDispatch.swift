@@ -94,7 +94,11 @@ public func pdcSuiteRun(
     case PDC_SUITE_KEYSPLIT_TABLES: runKeysplitTablesSuite(report)
     case PDC_SUITE_BANK_OWNERSHIP: runBankOwnershipSuite(report)
     case PDC_SUITE_VOICE_LOCATOR: runVoicegroupLocatorSuite(report)
-    case PDC_SUITE_KIT_DRAFT: onMain(report, runKitDraftSuite)
+    case PDC_SUITE_KIT_DRAFT:
+        onMain(report) { (report: CheckReport) in
+            runKitDraftSuite(report)
+            runKitSourceLoadingChecks(report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

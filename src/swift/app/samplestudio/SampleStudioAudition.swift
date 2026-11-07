@@ -14,7 +14,6 @@ public final class SampleStudioAudition: QmlUncreatable {
     private let player: PcmAuditionPlayer
     private let destinationAdsr: VoiceListAdsr?
     private let isAudioAvailable: () -> Bool
-    private var looped = false
     private var crop = 0
     private var closed = false
     private var ratio = 1.0
@@ -105,7 +104,6 @@ public final class SampleStudioAudition: QmlUncreatable {
 
     private func start() {
         guard !presenter.processed.s8.isEmpty, let lease = player.claim() else { return }
-        looped = presenter.processed.looped
         guard let note = makeNote() else { lease.stop(); return }
         player.play(
             note, lease: lease,
@@ -136,7 +134,7 @@ public final class SampleStudioAudition: QmlUncreatable {
             id: .unassigned,
             source: .pcm(
                 samples: rendered.s8, frequency: rendered.freq, loopStart: rendered.loopStart,
-                looped: looped && rendered.looped),
+                looped: rendered.looped),
             key: UInt8(auditionKey), adsr: envelope, toneKey: 60)
     }
 }
