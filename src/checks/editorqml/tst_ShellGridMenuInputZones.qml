@@ -34,8 +34,8 @@ ShellGridMenuSupport {
         mouseClick(headerInput, headerInput.width * 0.5, rowY, Qt.RightButton)
         tryCompare(headers, "menuOpen", true)
         var headerMenu = panel()
-        tryCompare(headerMenu, "rowCount", 5)
-        for (var index = 0; index < 5; ++index) {
+        tryCompare(headerMenu, "rowCount", 6)
+        for (var index = 0; index < 6; ++index) {
             tryVerify(function() { return headerMenu.rowItem(index) !== null }, 3000)
             compare(headerMenu.rowItem(index).itemData.actionId, index + 1)
         }

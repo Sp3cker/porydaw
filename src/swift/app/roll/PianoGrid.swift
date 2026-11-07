@@ -105,6 +105,8 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored
     var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
     @QtIgnored
+    var lastEndTickPaintCount = 0
+    @QtIgnored
     var lastEndTickLength: Tick?
 
     @QtTracked public var scene = GridScene()
@@ -169,6 +171,11 @@ public final class PianoGrid: QmlUncreatable {
     var drawPreview: (tick: Int, duration: Int, pitch: Int)? {
         guard case .draw(let state) = gesture else { return nil }
         return (state.tick, state.duration, state.key)
+    }
+
+    var paintPreview: [RollPreviewNote] {
+        guard case .paint(let state) = gesture else { return [] }
+        return state.notes
     }
 
     var selectionBand: (x: Double, y: Double, w: Double, h: Double)? {
@@ -377,7 +384,7 @@ public final class PianoGrid: QmlUncreatable {
             switch hit?.zone {
             case .leftEdge: hovered = .leftEdge
             case .rightEdge: hovered = .rightEdge
-            default: hovered = .arrow
+            default: hovered = hit == nil && pencilMode ? .pencil : .arrow
             }
         }
         if cursorKind != hovered.rawValue {

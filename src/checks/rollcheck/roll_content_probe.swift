@@ -306,12 +306,14 @@ import QtBridge
         plotLabels.filter { $0.fontId == Self.valueFontId }
     }
 
-    /// Draw-preview records carry the NONE id; the fill matches the preview
-    /// palette slot.
-    func previewFill() -> PlotRect? {
-        guard let preview = slot(.drawPreviewFill) else { return nil }
-        return plotRects.first { $0.id == UInt64(PD_DL_ID_NONE) && $0.argb == preview }
+    /// Draw- and paint-preview records carry the NONE id; the fill matches the
+    /// preview palette slot.
+    func previewFills() -> [PlotRect] {
+        guard let preview = slot(.drawPreviewFill) else { return [] }
+        return plotRects.filter { $0.id == UInt64(PD_DL_ID_NONE) && $0.argb == preview }
     }
+
+    func previewFill() -> PlotRect? { previewFills().first }
 
     func loopEdgeMinX() -> Double? {
         guard let edge = slot(.loopEdge) else { return nil }

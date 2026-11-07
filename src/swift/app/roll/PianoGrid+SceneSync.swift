@@ -57,7 +57,7 @@ extension PianoGrid {
             fonts: measurementFonts, notes: visibleNotes,
             displacement: displacement, displacedNotes: displacedNotes,
             selectedNotes: selectedNotes,
-            drawPreview: drawPreview, bandSelection: selectionBand,
+            drawPreview: drawPreview, paintPreview: paintPreview, bandSelection: selectionBand,
             lastVelocity: lastVelocity, hoverKey: hoverKey,
             noteNameMode: noteNameMode,
             showVelocityValues: showVelocityValues,
@@ -152,19 +152,23 @@ extension PianoGrid {
     @QtIgnored
     private func recomputeContentEndTick() {
         let length = session.timeline.lengthTicks
+        let paint = paintPreview
         if notes == lastEndTickNotes, length == lastEndTickLength,
             drawPreview?.tick == lastEndTickPreview?.tick,
             drawPreview?.duration == lastEndTickPreview?.duration,
-            drawPreview?.pitch == lastEndTickPreview?.pitch
+            drawPreview?.pitch == lastEndTickPreview?.pitch,
+            paint.count == lastEndTickPaintCount
         {
             return
         }
         lastEndTickNotes = notes
         lastEndTickPreview = drawPreview
+        lastEndTickPaintCount = paint.count
         lastEndTickLength = length
         var end = max(Int(length), GridMetrics.songLengthTicks)
         for note in notes { end = max(end, note.tick + note.duration) }
         if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
+        for preview in paint { end = max(end, preview.tick + preview.duration) }
         contentEndTick = end
     }
 

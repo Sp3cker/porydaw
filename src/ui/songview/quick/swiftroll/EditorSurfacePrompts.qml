@@ -180,11 +180,13 @@ Item {
                             + promptHost.root.pitchBendPresenter.anchorWidth / 2 - width / 2,
                         parent.width - width))
                     y: {
-                        const below = promptHost.root.gridModel.rulerHeight
+                        // The roll starts below the ruler and the optional CPU profile strip.
+                        const rollTop = promptHost.root.gridModel.rulerHeight + promptHost.root.rollProfileHeight
+                        const below = rollTop
                             + promptHost.root.pitchBendPresenter.anchorY
                             + promptHost.root.pitchBendPresenter.anchorHeight
                             + promptHost.bodyFontMetrics.height / 3
-                        const above = promptHost.root.gridModel.rulerHeight
+                        const above = rollTop
                             + promptHost.root.pitchBendPresenter.anchorY - height
                             - promptHost.bodyFontMetrics.height / 3
                         return Math.max(0, Math.min(

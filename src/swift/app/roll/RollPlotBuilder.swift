@@ -14,6 +14,7 @@ struct RollPlotBuilder {
     private var visible: [Int] = []
     private var painted: [Painted] = []
     private var paintedRecords: [RollNote] = []
+    private var previewBoxes: [Painted] = []
     private var previewInkFill: UInt32 = 0
     private var previewInkLight: UInt32 = 0
     private var previewInkDark: UInt32 = 0
@@ -314,22 +315,27 @@ struct RollPlotBuilder {
             paintedRecords.append(record)
         }
 
-        // Preview fill.
-        var previewBox: Painted?
-        if let preview = input.drawPreview,
-            projection.row(forPitch: preview.pitch) >= 0
-        {
+        // Preview fills: the paint stroke's cells, then the draw note.
+        previewBoxes.removeAll(keepingCapacity: true)
+        let previewFill = ink(.drawPreviewFill)
+        func addPreview(tick: Int, duration: Int, pitch: Int) {
+            guard projection.row(forPitch: pitch) >= 0 else { return }
             let box = metrics.noteBox(
                 camera: camera,
-                x0: camera.viewX(tick: Double(preview.tick), dpr: dpr),
-                x1: camera.viewX(
-                    tick: Double(preview.tick + preview.duration), dpr: dpr),
-                pitch: preview.pitch)
-            let fill = ink(.drawPreviewFill)
-            emitClipped(box.x, box.y, box.w, box.h, fill)
-            previewBox = Painted(
-                x: box.x, y: box.y, w: box.w, h: box.h, id: Self.idNone,
-                pitch: preview.pitch, flags: 0, fill: fill)
+                x0: camera.viewX(tick: Double(tick), dpr: dpr),
+                x1: camera.viewX(tick: Double(tick + duration), dpr: dpr),
+                pitch: pitch)
+            emitClipped(box.x, box.y, box.w, box.h, previewFill)
+            previewBoxes.append(
+                Painted(
+                    x: box.x, y: box.y, w: box.w, h: box.h, id: Self.idNone,
+                    pitch: pitch, flags: 0, fill: previewFill))
+        }
+        for preview in input.paintPreview {
+            addPreview(tick: preview.tick, duration: preview.duration, pitch: preview.pitch)
+        }
+        if let preview = input.drawPreview {
+            addPreview(tick: preview.tick, duration: preview.duration, pitch: preview.pitch)
         }
 
         // Labels. Unclipped origin with intersect gate; ink precomputed per record.
@@ -364,8 +370,8 @@ struct RollPlotBuilder {
                     for (p, r) in zip(painted, paintedRecords) where p.flags & UInt8(1) == UInt8(0) {
                         addValue(box: p, text: Self.velocityTexts[r.velocity], id: p.id, argb: r.ink)
                     }
-                    if let preview = previewBox {
-                        let v = min(127, max(0, input.lastVelocity))
+                    let v = min(127, max(0, input.lastVelocity))
+                    for preview in previewBoxes {
                         addValue(
                             box: preview, text: Self.velocityTexts[v],
                             id: Self.idNone,
@@ -426,7 +432,7 @@ struct RollPlotBuilder {
                 addNoteBorder(box: p, argb: ink(.noteBorder), insetPixels: 0, id: p.id)
             }
         }
-        if let preview = previewBox {
+        for preview in previewBoxes {
             addNoteBorder(
                 box: preview, argb: ink(.noteBorder), insetPixels: 0,
                 id: Self.idNone)

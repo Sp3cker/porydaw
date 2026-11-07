@@ -7,6 +7,7 @@ import Porydaw.Ui
 ShellPitchBendSupport {
     function test_modWheelTopIs32() {
         const opened = openViaG(true)
+        const app = shell.shellPresenter.session
         const mod = findChild(opened.view, "modWheelGraph")
         const lfo = findChild(opened.view, "lfoSpeedGraph")
         compare(mod.upperValueText, "32")
@@ -18,7 +19,7 @@ ShellPitchBendSupport {
         mouseRelease(mod, x, canvas.y, Qt.LeftButton)
         verify(waitForNative(function() { return opened.grid.appliedRevisionText !== before }, 5000),
                "drawing at the modulation ceiling commits the curve")
-        compare(mod.liveValueText, "32", "the top of the modulation canvas writes 32")
+        tryCompare(mod, "liveValueText", "32", 5000, "the top of the modulation canvas writes 32")
         app.requestUndo()
         verify(waitForNative(function() { return app.canRedo }, 5000),
                "the modulation boundary edit remains undoable")

@@ -20,6 +20,12 @@ extension PianoGrid {
         switch command {
         case .pencilMode:
             pencilMode.toggle()
+            // The idle cursor follows at once; the next hover re-resolves notes and edges.
+            if gesture == nil,
+                cursorKind == GridCursorKind.arrow.rawValue || cursorKind == GridCursorKind.pencil.rawValue
+            {
+                cursorKind = (pencilMode ? GridCursorKind.pencil : GridCursorKind.arrow).rawValue
+            }
         case .gridNarrow:
             guard viewport.grid.narrow() else { return }
             gridLatticeDidChange()

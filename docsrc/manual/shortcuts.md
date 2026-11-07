@@ -50,7 +50,7 @@ On macOS, `Ctrl` corresponds to the `Cmd` key (Command).
 | Edit Note Pitch Bend | `G` | Opens the selected note's pitch-bend, modulation, and LFO-speed editor; press again to close |
 | Mute Selected Tracks | `M` | Toggles mute on selected track(s) |
 | Solo Selected Tracks | `S` | Toggles solo on selected track(s) |
-| Toggle Pencil Mode | `B` | Toggles automation pencil drawing on the automation page |
+| Toggle Pencil Mode | `B` | Toggles roll paint mode and automation pencil drawing |
 | Move Event Up / Down (Same Tick) | `Alt+Up` / `Alt+Down` | Reorders the current event-list row within its tick |
 | Clear Time Selection | *(unbound)* | Clears the active time selection band |
 | Set Velocity… | *(unbound)* | Opens the velocity prompt for the resolved selected notes |

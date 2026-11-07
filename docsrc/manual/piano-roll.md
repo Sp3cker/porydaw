@@ -17,6 +17,17 @@ color when that mode is enabled. Live audition follows the preview's pitch.
 <!-- TODO: Click-drag to draw; the snap grid; how the drawn length follows
 the grid. -->
 
+### Paint mode
+
+Press **B** to toggle paint mode (it also arms the automation pencil). The roll
+shows a pencil cursor over empty space. Press on an empty cell to paint a note
+that fills it; while the button is held, every visible grid line you cross and
+every pitch you move to paints another cell-long note. A fast drag still fills
+the cells it skips, and cells that already hold a note on that pitch are left
+alone. The stroke previews until release and then writes all its notes as one
+undo step, selected. Pressing an existing note still moves or resizes it, and
+double-clicking does nothing in paint mode.
+
 ## Moving and copying notes
 
 <!-- TODO: Drag to move (pitch + time), modifier for fine/unsnapped moves,

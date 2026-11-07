@@ -13,6 +13,7 @@ import QtBridge
 enum GridGesture {
     case pendingDraw(PendingDraw)
     case draw(Draw)
+    case paint(Paint)
     case velocity(Velocity)
     case move(Move)
     case resize(Resize)
@@ -42,6 +43,32 @@ enum GridGesture {
         var key: Int
         var pointerX: Double
         var pointerY: Double
+    }
+
+    /// Pencil-mode stroke: entering a painted grid cell or a pitch adds one cell-long note unless
+    /// it overlaps a same-pitch note on the track; release commits the stroke as one edit.
+    struct Paint {
+        /// The roll's notes at press; painting never overwrites them.
+        let existing: [GridNote]
+        var cellTick: Tick
+        var key: Int
+        var notes: [RollPreviewNote] = []
+        var pointerX: Double
+        var pointerY: Double
+
+        mutating func add(_ cell: (start: Tick, end: Tick)) {
+            let tick = Int(cell.start)
+            let end = Int(cell.end)
+            guard key >= 0, end > tick else { return }
+            for note in notes where note.pitch == key && note.tick < end && tick < note.tick + note.duration {
+                return
+            }
+            for note in existing
+            where !note.ghost && note.pitch == key && note.tick < end && tick < note.tick + note.duration {
+                return
+            }
+            notes.append(RollPreviewNote(tick: tick, duration: end - tick, pitch: key))
+        }
     }
 
     /// Under half a stride of pointer travel the note stays put; past it the grabbed start
@@ -121,7 +148,7 @@ enum GridGesture {
         case .draw(let state): (state.pointerX, state.pointerY)
         case .move(let state): (state.pointerX, state.pointerY)
         case .resize(let state): (state.pointerX, state.pointerY)
-        case .pendingDraw, .velocity, .pendingMenu, .band, .pan: nil
+        case .pendingDraw, .paint, .velocity, .pendingMenu, .band, .pan: nil
         }
     }
 
@@ -164,6 +191,31 @@ enum GridGesture {
             let key = pitch(y)
             if key >= 0 && (!scale.fold || scale.contains(key)) { state.key = key }
             return .draw(state)
+        case .paint(var state):
+            state.pointerX = x
+            state.pointerY = y
+            let key = pitch(y)
+            let keyChanged = key >= 0 && key != state.key && (!scale.fold || scale.contains(key))
+            if keyChanged { state.key = key }
+            let target = grid.visibleGridCellContaining(
+                TimeDefaults.tick(from: max(0, camera.tickAtContentX(x))), camera: camera)
+            if target.start == state.cellTick {
+                if keyChanged { state.add(target) }
+                return .paint(state)
+            }
+            // Every crossed line paints the cell it opens, so a fast drag leaves no gaps.
+            var cell = grid.visibleGridCellContaining(state.cellTick, camera: camera)
+            while cell.start != target.start {
+                let next =
+                    cell.start < target.start
+                    ? grid.visibleGridCellContaining(cell.end, camera: camera)
+                    : grid.visibleGridCellContaining(cell.start - 1, camera: camera)
+                guard next.start != cell.start else { break }
+                cell = next
+                state.add(cell)
+            }
+            state.cellTick = target.start
+            return .paint(state)
         case .move(var state):
             state.pointerX = x
             state.pointerY = y
@@ -331,6 +383,8 @@ extension PianoGrid {
                 return .pendingDraw(tick: tick)
             case .draw(let state):
                 return .draw(tick: state.tick, duration: state.duration, pitch: state.key)
+            case .paint(let state):
+                return .paint(count: state.notes.count)
             case .velocity:
                 return .velocity
             case .move(let state):
@@ -388,7 +442,9 @@ extension PianoGrid {
         case .pendingDraw:
             break
         case .draw(let state):
-            addNote(tick: state.tick, duration: state.duration, pitch: state.key)
+            addNotes([RollPreviewNote(tick: state.tick, duration: state.duration, pitch: state.key)])
+        case .paint(let state):
+            addNotes(state.notes)
         case .velocity(let state):
             if state.delta != 0 {
                 var changes: [NoteVelocity] = []
@@ -429,19 +485,22 @@ extension PianoGrid {
     }
 
     @QtIgnored
-    private func addNote(tick: Int, duration: Int, pitch: Int) {
-        guard session.selectedTrack != nil, tick >= 0, duration > 0,
-            (0...127).contains(pitch),
-            Int64(tick) + Int64(duration) <= Int64(TimeDefaults.maxTick)
-        else { return }
-        guard
-            let ids = try? session.document.addNotes([
+    private func addNotes(_ previews: [RollPreviewNote]) {
+        guard session.selectedTrack != nil else { return }
+        let velocity = UInt8(min(127, max(1, lastVelocity)))
+        var added: [NewNote] = []
+        added.reserveCapacity(previews.count)
+        for preview in previews {
+            guard preview.tick >= 0, preview.duration > 0, (0...127).contains(preview.pitch),
+                Int64(preview.tick) + Int64(preview.duration) <= Int64(TimeDefaults.maxTick)
+            else { continue }
+            added.append(
                 NewNote(
-                    track: trackIndex, tick: Tick(tick), pitch: UInt8(pitch),
-                    duration: Tick(duration), velocity: UInt8(min(127, max(1, lastVelocity))))
-            ]), let id = ids.first
-        else { return }
-        session.setSelectedNotes([id])
+                    track: trackIndex, tick: Tick(preview.tick), pitch: UInt8(preview.pitch),
+                    duration: Tick(preview.duration), velocity: velocity))
+        }
+        guard let ids = try? session.document.addNotes(added), let id = ids.last else { return }
+        session.setSelectedNotes(ids)
         activeNoteId = id.rawValue
     }
 
@@ -562,9 +621,18 @@ extension PianoGrid {
                 guard !viewport.scale.fold || viewport.scale.contains(pressKey)
                 else { return false }
                 session.clearSelectedNotes()
-                gesture = .pendingDraw(
-                    GridGesture.PendingDraw(
-                        pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
+                if pencilMode {
+                    let cell = viewport.grid.visibleGridCellContaining(
+                        TimeDefaults.tick(from: max(0, pressTick)), camera: viewport.camera)
+                    var paint = GridGesture.Paint(
+                        existing: notes, cellTick: cell.start, key: pressKey, pointerX: x, pointerY: y)
+                    paint.add(cell)
+                    gesture = .paint(paint)
+                } else {
+                    gesture = .pendingDraw(
+                        GridGesture.PendingDraw(
+                            pressX: x, pressY: y, pressTick: pressTick, pressKey: pressKey))
+                }
                 keyboardAuditionKey = pressKey
                 keyboardAuditionTrack = trackIndex
                 onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
@@ -625,6 +693,8 @@ extension PianoGrid {
         case .pendingDraw(let state):
             audition = (trackIndex, state.pressKey, min(127, max(1, lastVelocity)))
         case .draw(let state):
+            audition = (trackIndex, state.key, min(127, max(1, lastVelocity)))
+        case .paint(let state):
             audition = (trackIndex, state.key, min(127, max(1, lastVelocity)))
         case .move:
             if let note = session.document.note(NoteID(activeNoteId)) {
@@ -804,6 +874,8 @@ extension PianoGrid {
     }
 
     func doublePointerImpl(x: Double, y: Double) {
+        // Each press of a pencil double-click already painted; a delete would erase that paint.
+        guard !pencilMode else { return }
         stopAudition()
         if let hit = hitNote(x: x, y: y) {
             gesture = nil

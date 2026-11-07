@@ -91,9 +91,17 @@ enum RollNoteDisplacement: Equatable {
     }
 }
 
+/// One uncommitted note a draw or paint gesture previews in the plot.
+struct RollPreviewNote: Equatable {
+    var tick: Int
+    var duration: Int
+    var pitch: Int
+}
+
 enum RollStatusPresentation: Equatable {
     case pendingDraw(tick: Int)
     case draw(tick: Int, duration: Int, pitch: Int)
+    case paint(count: Int)
     case velocity
     case move(count: Int, ticks: Int, keys: Int)
     case resize(count: Int)
@@ -106,6 +114,7 @@ enum RollStatusPresentation: Equatable {
         case .pendingDraw(let tick): return "Pending draw at tick \(tick)"
         case .draw(let tick, let duration, let pitch):
             return "Drawing — tick \(tick), duration \(duration), pitch \(pitch)"
+        case .paint(let count): return "Painting \(count) note(s)"
         case .velocity: return "Changing velocity"
         case .move(let count, let ticks, let keys):
             return "Moving \(count) note(s) — dTick \(ticks), dKey \(keys)"
@@ -143,7 +152,8 @@ struct RollDrawingContentKey: Equatable {
     var keyboardNames: [String]?
     var typographyAvailable: Bool
     var fonts: RollDrawingContent.FontDescriptors
-    var drawPreview: RollDrawingContent.DrawPreviewSignature?
+    var drawPreview: RollPreviewNote?
+    var paintPreview: [RollPreviewNote]
     var lastVelocity: Int
     var noteNameMode: Bool
     var showVelocityValues: Bool
@@ -154,12 +164,6 @@ struct RollDrawingContentKey: Equatable {
 
 @MainActor
 enum RollDrawingContent {
-
-    struct DrawPreviewSignature: Equatable {
-        var tick: Int
-        var duration: Int
-        var pitch: Int
-    }
 
     struct FontDescriptors: Equatable {
         var values: [GridFontKind: GridFontSpec]
@@ -199,8 +203,9 @@ enum RollDrawingContent {
             typographyAvailable: input.typography != nil,
             fonts: FontDescriptors(values: input.fonts),
             drawPreview: input.drawPreview.map {
-                DrawPreviewSignature(tick: $0.tick, duration: $0.duration, pitch: $0.pitch)
+                RollPreviewNote(tick: $0.tick, duration: $0.duration, pitch: $0.pitch)
             },
+            paintPreview: input.paintPreview,
             lastVelocity: input.lastVelocity,
             noteNameMode: input.noteNameMode,
             showVelocityValues: input.showVelocityValues,

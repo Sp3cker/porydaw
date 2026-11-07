@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+import PorydawAppCommands
 import PorydawCore
 @testable import PorydawDocument
 
@@ -14,6 +15,7 @@ public func runPencilChecks(_ report: CheckReport, viewport: DocumentViewport) {
     checkVelocityDoubleClickDelete(report, viewport: viewport)
     checkPointerDrawCancellation(report, viewport: viewport)
     checkDrawLatchAndCancel(report, viewport: viewport)
+    checkPaintStroke(report, viewport: viewport)
 }
 
 public struct PencilCell {
@@ -570,4 +572,102 @@ private func checkDrawLatchAndCancel(_ report: CheckReport, viewport: DocumentVi
         session.selectedNotes.isEmpty && session.document.revision == escapeRevision
             && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
         cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
+}
+
+@MainActor
+private func checkPaintStroke(_ report: CheckReport, viewport: DocumentViewport) {
+    let session = viewport.session
+    let document = session.document
+    let id = "swiftcore/PianoRoll::paintStroke"
+    let grid = makeCameraGrid(viewport: viewport)
+    grid.performCommand(command: EditCommand.pencilMode.rawValue)
+    report.expect(
+        grid.pencilMode && grid.cursorKind == PianoGrid.GridCursorKind.pencil.rawValue,
+        cppID: id, message: "Pencil Mode turns the idle roll cursor into the pencil")
+    guard let cell = pencilFreeCell(viewport: viewport, grid: grid) else {
+        report.fail(id, "no free grid cell to paint in")
+        return
+    }
+    let camera = viewport.camera
+    let snapshot = camera.snapshot
+    let lower = cell.pitch - 1
+    let span = 5 * cell.duration
+    func x(_ index: Int) -> Double {
+        camera.viewX(
+            tick: Double(cell.tick + index * cell.duration) + Double(cell.duration) / 2,
+            dpr: grid.devicePixelRatio)
+    }
+    let occupied = (0..<document.engineTracks.usedTrackCount)
+        .flatMap { (track: Int) -> [Note] in document.notes(in: track) }
+        .contains { (note: Note) -> Bool in
+            (Int(note.pitch) == cell.pitch || Int(note.pitch) == lower)
+                && Int(note.tick) < cell.tick + span
+                && (note.isUnterminated || Int(note.tick) + Int(note.duration) > cell.tick)
+        }
+    let lowerRow = camera.projection.row(forPitch: lower)
+    guard !occupied, x(4) <= snapshot.viewportWidth - 4,
+        let top = camera.projection.rowTop(
+            lowerRow, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+        let bottom = camera.projection.rowBottom(
+            lowerRow, keyHeight: snapshot.keyHeight, scrollY: snapshot.scrollY, dpr: grid.devicePixelRatio),
+        bottom <= snapshot.rollHeight
+    else {
+        report.fail(id, "no free five-cell, two-pitch region to paint in")
+        return
+    }
+    let lowerY = (top + bottom) / 2
+    guard let baseline = try? document.captureSave() else {
+        report.fail(id, "could not capture the pre-paint SMF bytes")
+        return
+    }
+    func paintedCells() -> Set<[Int]> {
+        Set(
+            document.notes(in: grid.trackIndex).compactMap { note -> [Int]? in
+                let tick = Int(note.tick)
+                guard tick >= cell.tick, tick < cell.tick + span,
+                    Int(note.pitch) == cell.pitch || Int(note.pitch) == lower
+                else { return nil }
+                return [(tick - cell.tick) / cell.duration, Int(note.pitch), Int(note.duration)]
+            })
+    }
+
+    let revision = document.revision
+    let undoIndex = document.history.undoIndex
+    grid.beginPointer(x: x(0), y: cell.y, modifiers: 0)
+    grid.updatePointer(x: x(1), y: cell.y)
+    grid.updatePointer(x: x(3), y: cell.y)
+    grid.updatePointer(x: x(1), y: cell.y)
+    grid.updatePointer(x: x(1), y: lowerY)
+    report.expect(
+        RollContentProbe(grid).previewFills().count == 5 && document.revision == revision,
+        cppID: id, message: "a held stroke previews each entered cell and pitch once, unwritten")
+    grid.endPointer(x: x(1), y: lowerY)
+    let d = cell.duration
+    let stroke: Set<[Int]> = [
+        [0, cell.pitch, d], [1, cell.pitch, d], [2, cell.pitch, d], [3, cell.pitch, d], [1, lower, d],
+    ]
+    report.expect(
+        paintedCells() == stroke, cppID: id,
+        message: "release writes one cell-long note per crossed line, jumped cell and pitch move")
+    report.expect(
+        document.history.undoIndex == undoIndex + 1 && session.selectedNotes.count == stroke.count,
+        cppID: id, message: "the stroke is one undo step and selects what it painted")
+
+    grid.beginPointer(x: x(4), y: cell.y, modifiers: 0)
+    grid.updatePointer(x: x(2), y: cell.y)
+    grid.endPointer(x: x(2), y: cell.y)
+    report.expect(
+        paintedCells() == stroke.union([[4, cell.pitch, d]]), cppID: id,
+        message: "painting across existing notes keeps them and adds only free cells")
+
+    let cancelRevision = document.revision
+    grid.beginPointer(x: x(3), y: lowerY, modifiers: 0)
+    grid.updatePointer(x: x(4), y: lowerY)
+    grid.inputCancelled(reason: GridCancelReason.pointerUngrabbed.rawValue)
+    grid.endPointer(x: x(4), y: lowerY)
+    report.expect(
+        document.revision == cancelRevision && RollContentProbe(grid).previewFills().isEmpty
+            && !grid.interactionActive,
+        cppID: id, message: "a cancelled stroke discards its paint without a document write")
+    pencilRestore(report, id: id, session: session, baseline: baseline)
 }

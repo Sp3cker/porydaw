@@ -104,6 +104,7 @@ FocusScope {
     final property alias rollStack: rollBandContent.rollStack
     final property alias rollPlot: rollBandContent.rollPlot
     final property alias rollInput: rollBandContent.rollInput
+    final property alias rollProfileHeight: rollBandContent.profileHeight
     final property alias rollHint: rollBandContent.rollHint
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Control && root.rollInput.containsMouse && !root.rollInput.pressed)

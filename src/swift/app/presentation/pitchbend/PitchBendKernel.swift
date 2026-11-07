@@ -99,8 +99,8 @@ public struct PitchBendKernel {
         points[endTick] = self.endValue
         if let selectedTick, points[selectedTick] == nil { self.selectedTick = nil }
         gesture = nil
-        keyboardTick = startTick
-        liveValue = value(at: startTick)
+        // A committed stroke echoes back here; the cursor stays where the user last drew.
+        liveValue = value(at: keyboardTick)
     }
 
     public mutating func reset() {

@@ -152,17 +152,21 @@ Item {
                             id: rollCursor
                             readonly property list<int> shapes: [
                                 Qt.ArrowCursor, Qt.OpenHandCursor, Qt.ArrowCursor,
-                                Qt.ArrowCursor, Qt.ClosedHandCursor, Qt.SizeVerCursor
+                                Qt.ArrowCursor, Qt.ClosedHandCursor, Qt.SizeVerCursor,
+                                Qt.ArrowCursor
                             ]
                             readonly property list<url> sources: [
                                 "", "", "qrc:/cursors/left-drag.png",
-                                "qrc:/cursors/right-drag.png", "", ""
+                                "qrc:/cursors/right-drag.png", "", "",
+                                "qrc:/cursors/pencil.png"
                             ]
                             objectName: "swiftRollCursor"
                             target: rollInput
                             shape: shapes[rollBandContent.root.gridModel.cursorKind]
                             source: sources[rollBandContent.root.gridModel.cursorKind]
                             extent: rollBandContent.root.gridModel.resizeCursorExtent
+                            hotSpot: rollBandContent.root.gridModel.cursorKind === 6
+                                ? ItemCursor.BottomLeft : ItemCursor.Center
                             devicePixelRatio: rollBandContent.root.gridModel.devicePixelRatio
                         }
 

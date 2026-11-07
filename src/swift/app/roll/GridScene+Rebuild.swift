@@ -19,6 +19,7 @@ struct GridSceneInput {
     var displacedNotes: Set<NoteID> = []
     var selectedNotes: Set<NoteID> = []
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
+    var paintPreview: [RollPreviewNote] = []
     var bandSelection: (x: Double, y: Double, w: Double, h: Double)?
     var lastVelocity: Int = 100
     var hoverKey: Int = -1
