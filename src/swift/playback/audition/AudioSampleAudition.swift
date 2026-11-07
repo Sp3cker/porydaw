@@ -69,8 +69,8 @@ final class AudioSampleAudition {
         guard let bytes = malloc(count) else {
             preconditionFailure("Unable to allocate audition tone storage")
         }
-        retainedBytes[index] = SampleAuditionPcm.Allocation(
-            bytes: DispatchData(
+        retainedBytes[index] = SampleAuditionPcm.Allocation.retaining(
+            DispatchData(
                 bytesNoCopy: UnsafeRawBufferPointer(start: bytes, count: count), deallocator: .free))
         slots[index].bytes = bytes
         slots[index].byteCount = count

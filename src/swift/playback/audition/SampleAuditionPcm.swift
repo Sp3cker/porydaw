@@ -5,6 +5,12 @@ import Foundation
 /// Preparation and final reclamation run off the main actor; publication only retains it.
 public final class SampleAuditionPcm {
     actor Allocation {
+        // libdispatch's atomic reference counting synchronizes this opaque DispatchData lifetime token.
+        // No payload access; native borrowers retain Allocation until retirement.
+        private struct NativeBytes: @unchecked Sendable {
+            let data: DispatchData
+        }
+
         private final class ReclamationExecutor: SerialExecutor {
             let queue = DispatchQueue(label: "porydaw.audition.reclaim", qos: .utility)
 
@@ -21,9 +27,13 @@ public final class SampleAuditionPcm {
         nonisolated var unownedExecutor: UnownedSerialExecutor {
             Self.executor.asUnownedSerialExecutor()
         }
-        private let bytes: DispatchData
+        private let bytes: NativeBytes
 
-        init(bytes: DispatchData) { self.bytes = bytes }
+        private init(bytes: NativeBytes) { self.bytes = bytes }
+
+        static func retaining(_ data: DispatchData) -> Allocation {
+            Allocation(bytes: NativeBytes(data: data))
+        }
 
         /// Drains previously queued isolated destruction without retaining its allocation.
         static func reclamationSettled() async {
@@ -46,7 +56,7 @@ public final class SampleAuditionPcm {
         count = samples.count
         let bytes = DispatchData(
             bytesNoCopy: UnsafeRawBufferPointer(start: raw, count: count + 1), deallocator: .free)
-        allocation = Allocation(bytes: bytes)
+        allocation = Allocation.retaining(bytes)
         data = raw.bindMemory(to: Int8.self, capacity: count + 1)
         samples.withUnsafeBufferPointer { (source: UnsafeBufferPointer<Int8>) in
             guard let base = source.baseAddress else {

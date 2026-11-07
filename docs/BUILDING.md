@@ -447,6 +447,10 @@ without callback ARC. Native PCM storage is reclaimed on a utility executor, not
 the main actor or audio callback. A portable `DispatchQueue`-backed `SerialExecutor`
 owns isolated destruction on every platform; its FIFO drain waits for previously
 queued reclamation without relying on Darwin's `DispatchSerialQueue`.
+A private `@unchecked Sendable` lifetime token bridges non-Darwin `DispatchData`
+ownership into the actor without exposing payload access. Native borrowers must
+retain the allocation until retirement; the conformance covers retention and
+release, not concurrent mutation of the underlying bytes.
 
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|
