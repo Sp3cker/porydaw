@@ -137,6 +137,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         SOURCES
         lanes/SwiftCoreCheckLogicLane.swift
         arpeggiator/ArpeggiatorChecks.swift
+        editcheck/EngineNoteNormalizerChecks.swift
+        editcheck/TrackEffectModelChecks.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
         audio/resonancefixture.swift
@@ -174,6 +176,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editcheck/tst_songdocument_songraw.swift
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
+        playback/LiveInsertChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift

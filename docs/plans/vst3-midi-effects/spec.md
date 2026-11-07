@@ -27,11 +27,49 @@ Task 1 defines them, unchanged from the first design. `EngineNoteLattice` keeps 
 4. drop onsets outside the range;
 5. pitch 0…127, velocity clamped to 1…127;
 6. fixed-point durations, dropping notes too short to represent;
-7. at the same onset the later event wins;
+7. at the same onset and pitch the later event wins (different pitches remain a chord);
 8. trim same-pitch overlaps;
 9. throw `tooManyNotes` above 65 536 notes.
 
 `NormalizationReport` counts each adjustment.
+
+Canonical task-1 API (all properties and initializers below are public):
+
+```swift
+public struct RawNoteEvent: Equatable, Sendable {
+    public var tick: Int64
+    public var pitch: Int
+    public var velocity: Int
+    public var isOn: Bool
+    public var noteID: Int32?
+    public init(tick: Int64, pitch: Int, velocity: Int, isOn: Bool, noteID: Int32? = nil)
+}
+public struct EngineNoteLattice: Sendable {
+    public let quantumTicks: Int64
+    public let quantumClocks: Int64
+    public init(ticksPerBeat: UInt32, playbackSettings: PlaybackSettings) throws
+    public func snap(_ tick: Int64) -> Int64
+    public func isOnLattice(_ tick: Int64) -> Bool
+    public func durationTicks(target: Double, maximum: Int64) -> Int64?
+}
+public enum NormalizationError: Error, Equatable {
+    case invalidRange, tooManyNotes
+}
+public enum EngineNoteNormalizer {
+    public static let noteLimit = 65_536
+    public static func normalize(
+        _ events: [RawNoteEvent], track: Int, range: TimeRange, lattice: EngineNoteLattice
+    ) throws -> (notes: [NewNote], report: NormalizationReport)
+}
+```
+
+`NormalizationReport: Equatable, Sendable` has a public zero-argument initializer and public mutable `Int` counters, all initially zero: `notes`, `nonNoteEvents`, `droppedBeforeRange`, `droppedAfterRange`, `droppedPitch`, `droppedTooShort`, `orphanOffs`, `unterminatedNotes`, `snappedOnsets`, `adjustedDurations`, `velocityClamped`, `overlapsTrimmed`, `duplicatesSuppressed`. Capture supplies `nonNoteEvents`; normalization leaves it zero. Negative tracks, empty ranges and reserved endpoints throw `invalidRange`. Zero division throws `ArpeggiatorError.unsupportedTiming`.
+
+Signed raw ticks preserve pre-roll. Velocity-zero ons are offs. Reused positive IDs consume pending onsets FIFO by ID, regardless of off pitch; nil and nonpositive IDs share FIFO queues per pitch. Unmatched offs increment `orphanOffs`; open onsets close at `range.endTick` and increment `unterminatedNotes`. Range rejection follows snapping; out-of-bounds pitches are dropped rather than clamped.
+
+Duration target is paired off tick minus snapped onset, preserving absolute release, with maximum `range.endTick` minus snapped onset. Targets below one quantum drop as `droppedTooShort`; other targets choose the nearest fixed point, ties later, possibly extending past the raw release but never the range end. Overlaps retrim the previous same-pitch note with maximum at the next onset; no representable positive duration drops the previous note as `droppedTooShort`.
+
+Each rejected onset increments at most one `dropped*` counter. Adjustment counters are computed after suppression and overlap trimming, only for surviving notes; `adjustedDurations` compares the final duration with the release target. `duplicatesSuppressed` counts discarded same-onset, same-pitch predecessors represented by each surviving winner. Output follows stable chronological onset-event order, and `report.notes` equals its count.
 
 Live playback uses no normalizer: the insert returns raw events, and snapping happens only when notes enter Effect Output.
 

@@ -29,6 +29,8 @@ public func pdcSuiteRun(
         onMain(report) {
             coreEditCorpusLoadCheck($0); runNoteEditsSuite($0)
             runArpeggiatorChecks($0)
+            runEngineNoteNormalizerChecks($0)
+            runTrackEffectModelChecks($0)
         }
     case PDC_SUITE_DOCUMENT_HISTORY: onMain(report, runDocumentHistorySuite)
     case PDC_SUITE_EVENT_EDITS: onMain(report, runEventEditsSuite)

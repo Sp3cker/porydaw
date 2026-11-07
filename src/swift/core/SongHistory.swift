@@ -328,6 +328,10 @@ internal enum HistoryOperation: Hashable {
     case removeTime
     case insertBlankTime
     case duplicateTime
+    case addEffect
+    case removeEffect
+    case updateEffect(EffectID)
+    case editPluginState(EffectID)
 
     /// Explicit-pitch keyboard commands retain their undo step after an inverse;
     /// relative moves and length gestures discard the cancelled entry.
@@ -342,7 +346,7 @@ internal enum HistoryOperation: Hashable {
             .editTempo, .editRawAndTempo, .setLoop, .setTimeSignature,
             .moveTimeSignature, .deleteTimeSignature, .writeLane, .moveLanePoints,
             .deleteLanePoints, .applyRangeEdit, .moveRange, .removeTime,
-            .insertBlankTime, .duplicateTime:
+            .insertBlankTime, .duplicateTime, .addEffect, .removeEffect, .updateEffect, .editPluginState:
             true
         }
     }

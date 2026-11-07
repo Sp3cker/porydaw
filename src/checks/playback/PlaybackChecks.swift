@@ -19,6 +19,7 @@ public func runPlaybackSuite(_ report: CheckReport) {
     checkProjectFixture(path: projectFixture, report: report)
     checkExactSamples(report)
     runReusableTimelineBuilderChecks(report)
+    runLiveInsertChecks(report)
 
     let projectionPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-projection.mid").path

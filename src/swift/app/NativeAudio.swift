@@ -82,6 +82,18 @@ public final class NativeAudio {
     public var polyLostTotal: UInt64 { device.renderer.polyLostTotal }
     public func setCpuTrackBudget(_ count: Int) { device.renderer.setCpuTrackBudget(count) }
 
+    /// Attach a borrowed callback slot; its owner must detach before reclaiming it.
+    public func attachLiveInsert(track: Int, slot: UnsafeMutablePointer<LiveInsertSlot>) {
+        guard (0..<TrackLimits.hardwareCapacity).contains(track) else { return }
+        device.withRenderingStopped { device.renderer.attachLiveInsert(track: track, slot: slot) }
+    }
+
+    /// Park rendering and release all live notes on this track before returning.
+    public func detachLiveInsert(track: Int) {
+        guard (0..<TrackLimits.hardwareCapacity).contains(track) else { return }
+        device.withRenderingStopped { device.renderer.detachLiveInsert(track: track) }
+    }
+
     public func bind(
         timeline: PlaybackTimeline, bank: ProjectBankLease,
         config: SongConfig

@@ -43,11 +43,15 @@ public struct SongState: Equatable, Sendable {
     public var file: MidiFile
     public var tempo: [TempoPoint]
     public var config: SongConfig
+    public var effects: [TrackEffect]
 
-    public init(file: MidiFile, tempo: [TempoPoint], config: SongConfig) {
+    public init(file: MidiFile, tempo: [TempoPoint], config: SongConfig, effects: [TrackEffect] = []) {
         self.file = file
         self.tempo = tempo
         self.config = config
+        self.effects = effects.sorted { (left: TrackEffect, right: TrackEffect) in
+            left.config.track < right.config.track
+        }
     }
 }
 
@@ -56,7 +60,7 @@ extension SongState {
     /// falls back to full value comparison.
     func differs(from other: SongState) -> Bool {
         guard file.division == other.file.division, file.wasFormat0 == other.file.wasFormat0,
-            tempo == other.tempo, config == other.config,
+            tempo == other.tempo, config == other.config, effects == other.effects,
             file.chunks.count == other.file.chunks.count
         else { return self != other }
         for index in file.chunks.indices
@@ -105,9 +109,11 @@ public struct TrackRemap: Equatable, Sendable {
 public struct DocumentChange: Equatable, Sendable {
     public let revision: UInt64
     public let trackRemap: TrackRemap?
-    public init(revision: UInt64, trackRemap: TrackRemap? = nil) {
+    public let effectsOnly: Bool
+    public init(revision: UInt64, trackRemap: TrackRemap? = nil, effectsOnly: Bool = false) {
         self.revision = revision
         self.trackRemap = trackRemap
+        self.effectsOnly = effectsOnly
     }
 }
 
@@ -277,6 +283,50 @@ internal struct DocumentMutation {
         changes.tempo = change
     }
 
+    mutating func insertEffect(_ effect: TrackEffect) {
+        state.effects.append(effect)
+        state.effects.sort { (left: TrackEffect, right: TrackEffect) in left.config.track < right.config.track }
+        changes.effects.append(.insertEffect(effect))
+    }
+
+    mutating func removeEffect(_ id: EffectID) {
+        guard let index = state.effects.firstIndex(where: { (effect: TrackEffect) in effect.id == id }) else { return }
+        changes.effects.append(.removeEffect(state.effects.remove(at: index)))
+    }
+
+    mutating func setEffectConfig(
+        _ id: EffectID, config: TrackEffectConfig, origin: TrackEffectConfig? = nil
+    ) {
+        guard let index = state.effects.firstIndex(where: { (effect: TrackEffect) in effect.id == id }),
+            state.effects[index].config != config
+        else { return }
+        let before = origin ?? state.effects[index].config
+        state.effects[index].config = config
+        state.effects.sort { (left: TrackEffect, right: TrackEffect) in left.config.track < right.config.track }
+        changes.effects.append(.effectConfig(id, before: before, after: config))
+    }
+
+    mutating func setPluginState(_ id: EffectID, state pluginState: PluginStateBlob) {
+        guard let index = state.effects.firstIndex(where: { (effect: TrackEffect) in effect.id == id }),
+            state.effects[index].pluginState != pluginState
+        else { return }
+        changes.effects.append(.pluginState(id, before: state.effects[index].pluginState, after: pluginState))
+        state.effects[index].pluginState = pluginState
+    }
+
+    mutating func remapEffects(_ remap: TrackRemap) {
+        for effect in state.effects {
+            let track = effect.config.track
+            guard remap.engineTrackMap.indices.contains(track), let target = remap.engineTrackMap[track] else {
+                removeEffect(effect.id)
+                continue
+            }
+            var config = effect.config
+            config.track = target
+            setEffectConfig(effect.id, config: config)
+        }
+    }
+
     private mutating func recordEnd(chunk: Int, before: Tick, after: Tick) {
         guard before != after else { return }
         if let index = changes.chunkEnds.firstIndex(where: { $0.chunk == chunk }) {
@@ -319,12 +369,14 @@ public final class SongDocument {
     }
     private var gestureOrigin: GestureOrigin?
     private var nextNoteID: UInt64
+    private var nextEffectID: UInt64
     private var savedConfig: SongConfig
 
     public init(
         file: MidiFile, config: SongConfig = SongConfig(),
         source: SongSource = SongSource(),
-        trackBudget: Int = TrackLimits.hardwareCapacity
+        trackBudget: Int = TrackLimits.hardwareCapacity,
+        effects: [TrackEffect] = []
     ) {
         var adopted = file
         var tempos: [TempoPoint] = []
@@ -348,10 +400,13 @@ public final class SongDocument {
             }
         }
         let nextNoteID = Self.mintAllNoteIDs(in: &adopted)
-        state = SongState(file: adopted, tempo: tempos, config: config)
+        state = SongState(file: adopted, tempo: tempos, config: config, effects: effects)
         projection = NoteProjection(file: adopted)
         revisions = DocumentRevisions(chunkCount: adopted.chunks.count)
         self.nextNoteID = nextNoteID
+        let maximumEffectID = effects.lazy.map { (effect: TrackEffect) in effect.id.raw }.max() ?? 0
+        precondition(maximumEffectID < UInt64.max, "Effect identities are exhausted.")
+        nextEffectID = maximumEffectID + 1
         savedConfig = config
         self.source = source
         self.trackBudget = min(max(trackBudget, 0), TrackLimits.hardwareCapacity)
@@ -543,6 +598,13 @@ public final class SongDocument {
         return (chunk, map.tracks[track].channel)
     }
 
+    internal func mintEffectID() -> EffectID {
+        precondition(nextEffectID < UInt64.max, "Effect identities are exhausted.")
+        let result = EffectID(raw: nextEffectID)
+        nextEffectID += 1
+        return result
+    }
+
     internal func mintNoteID() -> NoteID {
         let result = NoteID(nextNoteID)
         nextNoteID = nextNoteID == .max ? 1 : nextNoteID + 1
@@ -569,16 +631,18 @@ public final class SongDocument {
     ) {
         gestureOrigin = nil
         changes.apply(to: &state, direction: direction)
-        // Replay may mutate event buffers in place; identity alone cannot detect it.
-        projection.repair(to: state.file, forceRebuild: true)
+        if !changes.effectsOnly {
+            // Replay may mutate event buffers in place; identity alone cannot detect it.
+            projection.repair(to: state.file, forceRebuild: true)
+        }
         publish(changes, trackRemap: trackRemap)
     }
 
     private func publish(_ changes: DocumentChangeSet, trackRemap: TrackRemap? = nil) {
         revision = revision == .max ? 1 : revision + 1
         revisions.advance(for: changes, chunkCount: state.file.chunks.count)
-        projection.repair(to: state.file)
-        onChange?(DocumentChange(revision: revision, trackRemap: trackRemap))
+        if !changes.effectsOnly { projection.repair(to: state.file) }
+        onChange?(DocumentChange(revision: revision, trackRemap: trackRemap, effectsOnly: changes.effectsOnly))
     }
 
     private func projectTimeSignatures() -> [TimeSignature] {

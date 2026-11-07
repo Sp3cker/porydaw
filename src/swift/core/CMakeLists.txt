@@ -7,6 +7,10 @@ add_library(PorydawCore STATIC
     Meter.swift
     PlaybackTimeline.swift
     Arpeggiator.swift
+    EngineNoteLattice.swift
+    EngineNoteNormalizer.swift
+    TrackEffect.swift
+    TrackEffectEditing.swift
     SongDocument.swift
     DocumentChangeSet.swift
     DocumentRevisions.swift
