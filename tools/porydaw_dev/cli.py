@@ -197,6 +197,11 @@ def parser() -> argparse.ArgumentParser:
         allow_abbrev=False,
     )
     command.add_argument("--check", action="store_true")
+    command.add_argument(
+        "--staged",
+        action="store_true",
+        help="check indexed sources and formatter configuration only",
+    )
     command.add_argument("--base", type=_nonempty, default="HEAD")
     command.add_argument("--whole", action="store_true")
     command.add_argument("files", nargs="*", type=_format_file)
@@ -281,6 +286,16 @@ def main() -> int:
         root_parser.error("--asan is not supported on Windows")
     if options.command == "format" and options.whole and not options.files:
         root_parser.error("--whole requires named files")
+    if options.command == "format" and options.staged:
+        if (
+            not options.check
+            or options.files
+            or options.whole
+            or options.base != "HEAD"
+        ):
+            root_parser.error(
+                "--staged requires --check without files, --whole, or --base"
+            )
     if (
         options.command == "bench:startup"
         and options.check
@@ -374,8 +389,10 @@ def main() -> int:
                     options.files,
                 )
             case "format":
-                from .format import run
+                from .format import run, run_staged
 
+                if options.staged:
+                    return run_staged()
                 return run(options.check, options.base, options.files, options.whole)
             case "setup":
                 from .setup import run

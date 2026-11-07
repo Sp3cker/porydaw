@@ -19,6 +19,11 @@ uv run --no-sync dev checks:backups                 # Foundation-only Swift pack
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
+The commit hook runs `uv run --no-sync dev format --check --staged`. It checks
+indexed Swift hunks and Python files using indexed formatter configuration;
+unstaged edits and untracked files are excluded. Fix formatting in the working
+tree and stage the intended result again; the hook never rewrites the index.
+
 Swift compiler warnings remain visible without being promoted to errors.
 This applies to Porydaw and third-party targets, including imported Qt headers
 and Debug type-check timing diagnostics.
