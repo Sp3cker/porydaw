@@ -173,19 +173,6 @@ configure_file(
     @ONLY
 )
 
-# Resolve the actual imported QtGui headers rather than assuming a framework
-# layout; the generated Clang module must name an existing qkeysequence.h.
-get_target_property(qt_gui_includes Qt6::Gui INTERFACE_INCLUDE_DIRECTORIES)
-set(QT_GUI_HEADERS "")
-foreach(qt_include IN LISTS qt_gui_includes)
-    if(EXISTS "${qt_include}/qkeysequence.h")
-        set(QT_GUI_HEADERS "${qt_include}")
-        break()
-    endif()
-endforeach()
-if(NOT QT_GUI_HEADERS)
-    message(FATAL_ERROR "Qt6::Gui does not expose qkeysequence.h for Swift keybindings")
-endif()
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/commands")
 configure_file(
     commands/QtKeybindings.modulemap.in

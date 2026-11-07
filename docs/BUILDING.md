@@ -280,6 +280,10 @@ in the `SendNonSendable` SIL pass — access such structs through the pointer
 `.github/workflows/build.yml` and `release.yml` call `cmake` directly (sccache,
 `cmake --install`); that is the only permitted direct caller.
 
+The `QtKeybindings` Clang module names only the project-owned bridge header.
+That header includes Qt through the `Qt6::Gui` target's normal header/framework
+search paths; do not name a kit's forwarding headers directly in the module map.
+
 Actions uploads expire after one day. Artifact retention runs hourly, manually, and
 after Build, All checks, or Release completes; it keeps unfinished runs and the
 newest successful run with unexpired artifacts per workflow, deleting older or

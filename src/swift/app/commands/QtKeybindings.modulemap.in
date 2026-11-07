@@ -1,5 +1,4 @@
 module QtKeybindings {
-    header "@QT_GUI_HEADERS@/qkeysequence.h"
     header "@CMAKE_SOURCE_DIR@/src/swift/app/commands/keybindings_bridge.h"
     export *
 }
