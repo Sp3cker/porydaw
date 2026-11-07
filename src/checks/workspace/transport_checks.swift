@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 @testable import PorydawAppPresentation
+import PorydawAppAudio
 import PorydawCore
 @testable import PorydawDocument
 import PorydawPlayback
@@ -205,6 +206,9 @@ private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: S
     report.expectEqual(
         expected: editedMaster, actual: firstDocument.state.config.masterVolume,
         cppID: id, what: "song master edit changes the first song cfg")
+    report.expect(
+        pollCheckUntil({ audio.appliedSongVolume == editedMaster }, seconds: 5), cppID: id,
+        message: "the queued song master update reaches the engine")
     report.expectEqual(
         expected: editedMaster, actual: audio.appliedSongVolume,
         cppID: id, what: "edited song master reaches applied audio settings")
@@ -507,9 +511,11 @@ private func pollCheckUntil(_ predicate: () -> Bool, seconds: TimeInterval = 5) 
 
 @MainActor
 private func workspaceAudioSounding(_ audio: NativeAudio) -> Bool {
-    audio.activeCgbChannels > 0
-        && audio.polySnapshot().cgb.contains {
-            $0.on && !$0.releasing && $0.track == 0 && $0.midiKey == 60
+    let channels = audio.polySnapshot().cgb
+    return audio.activeCgbChannels > 0
+        && channels.contains {
+            (channel: AudioPolyChannel) -> Bool in
+            channel.on && !channel.releasing && channel.track == 0 && channel.midiKey == 60
         }
 }
 
@@ -536,7 +542,11 @@ private func observeWorkspaceOpeningNote(
         app.stop()
         return nil
     }
-    let result = workspaceAudioSounding(audio)
+    var result = false
+    _ = pollCheckUntil({
+        result = workspaceAudioSounding(audio)
+        return result || audio.playheadSamples >= noteEnd
+    })
     if !result {
         let channels = audio.polySnapshot().cgb.filter(\.on).map {
             "(track:\($0.track), key:\($0.midiKey), releasing:\($0.releasing))"

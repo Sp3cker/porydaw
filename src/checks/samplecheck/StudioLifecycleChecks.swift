@@ -1,6 +1,7 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
+import PorydawPlayback
 import PorydawSample
 import SwiftCoreCheckSupport
 
@@ -11,55 +12,52 @@ internal func runStudioLifecycleChecks(_ report: CheckReport) {
     let audio = report.scoped(cppID: "swiftcore/SampleStudioAudition::sharedOutputOwnership")
     do {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
-        let renderer = try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512)
-        defer { renderer.unload() }
         let firstPresenter = SampleStudioPresenter(
-            document: SampleDocument(source: source), validateName: { _ in nil })
+            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
         let secondPresenter = SampleStudioPresenter(
-            document: SampleDocument(source: source), validateName: { _ in nil })
+            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
         try runBlocking {
             await firstPresenter.waitForRender()
             await secondPresenter.waitForRender()
         }
+        let output = SampleAuditionCheckOutput()
         let first = SampleStudioAudition(
-            presenter: firstPresenter, audition: renderer.audition, destinationAdsr: nil)
+            presenter: firstPresenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
         let second = SampleStudioAudition(
-            presenter: secondPresenter, audition: renderer.audition, destinationAdsr: nil)
-        var samples = [Float](repeating: 0, count: 48_000 * 2)
-        func renderIsAudible() -> Bool {
-            samples.withUnsafeMutableBufferPointer { buffer in
-                guard let baseAddress = buffer.baseAddress else { return }
-                renderer.render(baseAddress, frames: 48_000)
-            }
-            let peak = samples.reduce(Float.zero) { max($0, abs($1)) }
-            let rms = sqrt(samples.reduce(0.0) { $0 + Double($1) * Double($1) } / Double(samples.count))
-            return peak >= 0.01 && rms >= 0.001
-        }
+            presenter: secondPresenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
         first.toggle()
-        audio.expect(renderIsAudible(), message: "First owner produces audible PCM")
+        guard let firstNote = output.lastNote() else {
+            audio.expect(false, message: "First owner submits its PCM")
+            return
+        }
+        output.start(firstNote)
+        audio.expect(first.playing, message: "First owner is playing after engine adoption")
         second.toggle()
-        audio.expect(renderIsAudible(), message: "New owner replaces the audible audition")
+        guard let secondNote = output.lastNote() else {
+            audio.expect(false, message: "New owner submits replacement PCM")
+            return
+        }
+        output.start(secondNote)
+        let successor = output.current
+        audio.expect(second.playing && successor?.isCurrent == true, message: "New owner replaces the audition")
         first.tick()
         audio.expect(
-            !first.playing && first.playText == "Listen" && second.playing && renderIsAudible(),
+            !first.playing && first.playText == "Listen" && second.playing && successor?.isCurrent == true,
             message: "displacement clears the editor holder's playing state without silencing its successor")
         first.setAuditionKey(key: 61)
         audio.expect(
-            !first.playing && first.playText == "Listen" && second.playing && renderIsAudible(),
+            !first.playing && first.playText == "Listen" && second.playing && successor?.isCurrent == true
+                && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
             message: "a displaced editor's key change cannot revive its stopped player")
         first.close()
+        first.toggle()
         audio.expect(
-            !first.available && !first.playing && renderIsAudible(),
-            message: "Closing displaced editor leaves current owner's PCM audible")
+            !first.available && !first.playing && first.playText == "Listen" && successor?.isCurrent == true,
+            message: "Closing displaced editor leaves the current owner intact and cannot restart")
         second.close()
-        samples.withUnsafeMutableBufferPointer { buffer in
-            guard let baseAddress = buffer.baseAddress else { return }
-            renderer.render(baseAddress, frames: 48_000)
-            renderer.render(baseAddress, frames: 48_000)
-        }
-        audio.expect(
-            samples.allSatisfy { abs($0) <= 1e-7 },
-            message: "Closing active editor silences the lane")
+        audio.expect(successor?.isCurrent == false && !second.playing, message: "Closing active editor ends its lease")
     } catch {
         report.fail("swiftcore/SampleStudioAudition::fixture", "audition fixture failed: \(error)")
     }

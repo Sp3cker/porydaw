@@ -1,7 +1,7 @@
 import Synchronization
 import PorydawPlaybackNative
 
-public struct AudioActivityLevel: Equatable {
+public struct AudioActivityLevel: Equatable, Sendable {
     public var left: UInt8 = 0
     public var right: UInt8 = 0
 
@@ -10,13 +10,30 @@ public struct AudioActivityLevel: Equatable {
         self.right = right
     }
 }
-public struct AudioPolyChannel {
+public struct AudioPolyChannel: Sendable {
     public var on: Bool
     public var releasing: Bool
     public var track: UInt8
     public var midiKey: UInt8
 }
-public struct AudioPolySnapshot {
+public struct AudioPolyEvent: Sendable {
+    public var type: UInt8
+    public var trackIndex: UInt8
+    public var midiKey: UInt8
+    public var byTrack: UInt8
+    public var program: UInt8
+    public var tick: UInt32
+
+    public init(type: UInt8, trackIndex: UInt8, midiKey: UInt8, byTrack: UInt8, program: UInt8, tick: UInt32) {
+        self.type = type
+        self.trackIndex = trackIndex
+        self.midiKey = midiKey
+        self.byTrack = byTrack
+        self.program = program
+        self.tick = tick
+    }
+}
+public struct AudioPolySnapshot: Sendable {
     public var maxPcmChannels: UInt8
     public var invert: Bool
     public var pcm: [AudioPolyChannel]
@@ -25,7 +42,13 @@ public struct AudioPolySnapshot {
     public var steal: [UInt32]
     public var tailCut: [UInt32]
     public var eventTotal: UInt32
-    public var events: [M4APolyEvent]
+    public var events: [AudioPolyEvent]
+
+    public static var empty: AudioPolySnapshot {
+        AudioPolySnapshot(
+            maxPcmChannels: 0, invert: false, pcm: [], cgb: [], drop: [], steal: [],
+            tailCut: [], eventTotal: 0, events: [])
+    }
 }
 
 /// Callback publishes component-wise peak holds. GUI consumption alone allocates value arrays.
@@ -39,6 +62,12 @@ final class AudioTelemetry {
     private let polyPinned = Atomic<Int>(-1)
     private var cachedPoly: [UInt64]
     private let poly: UnsafeMutablePointer<Atomic<UInt64>>
+    private let previewVersion = Atomic<UInt64>(0)
+    private let previewPair0 = Atomic<UInt64>(0)
+    private let previewPair1 = Atomic<UInt64>(0)
+    private let previewPair2 = Atomic<UInt64>(0)
+    private let previewPair3 = Atomic<UInt64>(0)
+    private var cachedPreview: [UInt64]
     private static let pcmCount = Int(TOTAL_PCM_CHANNELS)
     private static let cgbCount = Int(TOTAL_CGB_CHANNELS)
     private static let trackCount = Int(MAX_TRACKS)
@@ -52,6 +81,8 @@ final class AudioTelemetry {
         polyVersions = .allocate(capacity: 3)
         for i in 0..<3 { (polyVersions + i).initialize(to: Atomic(0)) }
         cachedPoly = [UInt64](repeating: 0, count: Self.polyCount)
+        precondition(Self.cgbCount == 8)
+        cachedPreview = [UInt64](repeating: 0, count: Self.cgbCount)
         peaks = .allocate(capacity: Int(MAX_TRACKS))
         scratch = .allocate(capacity: Int(MAX_TRACKS))
         scratch.initialize(repeating: 0, count: Int(MAX_TRACKS))
@@ -212,6 +243,60 @@ final class AudioTelemetry {
         UInt64(status) | UInt64(UInt8(truncatingIfNeeded: track)) << 8 | UInt64(key) << 16
     }
 
+    func publishPreview(_ engine: UnsafeMutablePointer<M4AEngine>) {
+        let version = previewVersion.load(ordering: .sequentiallyConsistent)
+        previewVersion.store(version &+ 1, ordering: .sequentiallyConsistent)
+        withUnsafePointer(to: &engine.pointee.cgbChannels) { (tuple: UnsafePointer<_>) in
+            tuple.withMemoryRebound(to: M4ACGBChannel.self, capacity: Self.cgbCount) {
+                (channels: UnsafePointer<M4ACGBChannel>) in
+                func pair(_ index: Int) -> UInt64 {
+                    let first = channels + index
+                    let second = channels + index + 1
+                    return Self.packChannel(
+                        status: first.pointee.status, track: first.pointee.trackIndex,
+                        key: first.pointee.midiKey)
+                        | Self.packChannel(
+                            status: second.pointee.status, track: second.pointee.trackIndex,
+                            key: second.pointee.midiKey) << 24
+                }
+                previewPair0.store(pair(0), ordering: .sequentiallyConsistent)
+                previewPair1.store(pair(2), ordering: .sequentiallyConsistent)
+                previewPair2.store(pair(4), ordering: .sequentiallyConsistent)
+                previewPair3.store(pair(6), ordering: .sequentiallyConsistent)
+            }
+        }
+        previewVersion.store(version &+ 2, ordering: .sequentiallyConsistent)
+    }
+
+    func previewSnapshot() -> AudioPolySnapshot {
+        var values = [UInt64](repeating: 0, count: Self.cgbCount)
+        var captured = false
+        for _ in 0..<3 {
+            let version = previewVersion.load(ordering: .sequentiallyConsistent)
+            guard version & 1 == 0 else { continue }
+            let pairs = [
+                previewPair0.load(ordering: .sequentiallyConsistent),
+                previewPair1.load(ordering: .sequentiallyConsistent),
+                previewPair2.load(ordering: .sequentiallyConsistent),
+                previewPair3.load(ordering: .sequentiallyConsistent),
+            ]
+            for i in 0..<4 {
+                values[i * 2] = pairs[i] & 0xFF_FFFF
+                values[i * 2 + 1] = pairs[i] >> 24
+            }
+            captured = version == previewVersion.load(ordering: .sequentiallyConsistent)
+            if captured { break }
+        }
+        if captured { cachedPreview = values } else { values = cachedPreview }
+        var snapshot = AudioPolySnapshot.empty
+        snapshot.cgb = values.map { (value: UInt64) in
+            AudioPolyChannel(
+                on: value & 0xC7 != 0, releasing: value & 0x44 != 0,
+                track: UInt8(truncatingIfNeeded: value >> 8), midiKey: UInt8(truncatingIfNeeded: value >> 16))
+        }
+        return snapshot
+    }
+
     func snapshot() -> AudioPolySnapshot {
         var values = [UInt64](repeating: 0, count: Self.polyCount)
         var captured = false
@@ -254,16 +339,15 @@ final class AudioTelemetry {
         let drop = counters()
         let steal = counters()
         let tailCut = counters()
-        let events = (0..<Self.eventCount).map { (index: Int) -> M4APolyEvent in
+        let events = (0..<Self.eventCount).map { (index: Int) -> AudioPolyEvent in
             let fields = values[offset + index * 2]
-            var event = M4APolyEvent()
-            event.type = UInt8(truncatingIfNeeded: fields)
-            event.trackIndex = UInt8(truncatingIfNeeded: fields >> 8)
-            event.midiKey = UInt8(truncatingIfNeeded: fields >> 16)
-            event.byTrack = UInt8(truncatingIfNeeded: fields >> 24)
-            event.program = UInt8(truncatingIfNeeded: fields >> 32)
-            event.tick = UInt32(truncatingIfNeeded: values[offset + index * 2 + 1])
-            return event
+            return AudioPolyEvent(
+                type: UInt8(truncatingIfNeeded: fields),
+                trackIndex: UInt8(truncatingIfNeeded: fields >> 8),
+                midiKey: UInt8(truncatingIfNeeded: fields >> 16),
+                byTrack: UInt8(truncatingIfNeeded: fields >> 24),
+                program: UInt8(truncatingIfNeeded: fields >> 32),
+                tick: UInt32(truncatingIfNeeded: values[offset + index * 2 + 1]))
         }
         return AudioPolySnapshot(
             maxPcmChannels: UInt8(truncatingIfNeeded: values[0]),

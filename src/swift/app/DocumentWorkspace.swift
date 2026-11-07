@@ -236,9 +236,8 @@ public final class DocumentWorkspace {
         }
         audio.setMix(muted: session.mutedTracks, soloed: session.soloedTracks)
         appliedSongConfig = session.document.state.config
-        // The engine is bound before the publication is reinstalled, so no
-        // timeline of this document can be published onto another document's
-        // voices. `deactivate()` cleared the closure this restores.
+        // FIFO submission binds this document before any restored publication.
+        // `deactivate()` cleared the closure this restores.
         installPlaybackPublication()
         playhead.onPresentation = { [weak self] presentation in
             self?.present(playhead: presentation)

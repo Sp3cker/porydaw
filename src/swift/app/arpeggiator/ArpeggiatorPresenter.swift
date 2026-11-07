@@ -226,10 +226,21 @@ public final class ArpeggiatorPresenter {
             currentStep = -1
             return nil
         }
-        guard isAuditioning, audio.isPatternAuditioning, let timeline = draft.timeline else {
+        guard isAuditioning, let timeline = draft.timeline else {
             isAuditioning = false
             currentStep = -1
             return SharedPlayheadPreview(start: draft.range.start, end: draft.range.end)
+        }
+        switch audio.patternState {
+        case .idle:
+            isAuditioning = false
+            currentStep = -1
+            return SharedPlayheadPreview(start: draft.range.start, end: draft.range.end)
+        case .starting:
+            currentStep = -1
+            return SharedPlayheadPreview(start: draft.range.start, end: draft.range.end)
+        case .active:
+            break
         }
         let result = draft.result
         let tick = timeline.tick(for: audio.patternAuditionPositionSamples)
@@ -277,7 +288,11 @@ public final class ArpeggiatorPresenter {
         if isOpen { generateDraft() }
         guard isAuditioning else { return }
         // Replace the sounding loop in place; empty or failed drafts stop audition.
-        guard audio.isPatternAuditioning, let timeline = auditionTimeline() else {
+        guard let timeline = auditionTimeline() else {
+            stopAudition()
+            return
+        }
+        if case .idle = audio.patternState {
             stopAudition()
             return
         }

@@ -1,4 +1,5 @@
 import Foundation
+@testable import PorydawApp
 import PorydawAppPresentation
 import PorydawKitStudio
 import PorydawSample
@@ -13,7 +14,9 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceNames(report)
     checkSourceExhaustion(report)
     checkSourceRenderAndRates(report)
+    checkSourceAuditionFrameMapping(report)
     checkSourceSaveRender(report)
+    checkSupersededSaveWritesNothing(report)
     checkSourceClose(report)
     checkSourceSnapshot(report)
     checkSourceAutoPlaceAndZoneRemoval(report)
@@ -293,6 +296,64 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
 }
 
 @MainActor
+private func checkSourceAuditionFrameMapping(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::auditionFrameMapping")
+    var committed = ProcessedSample()
+    committed.s8 = (0..<400).map { (frame: Int) -> Int8 in Int8(frame % 64 - 32) }
+    committed.freq = 13379 * 1024
+    committed.size = 400
+    committed.looped = true
+    committed.loopStart = 397
+    let p = KitStudioPresenter(
+        loading: [
+            KitZone(
+                startKey: 36, endKey: 36, sampleName: "DirectSoundWaveData_loop",
+                rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
+        ],
+        mode: .drumkit, name: "kit",
+        samples: ["DirectSoundWaveData_loop": committed], progWaves: [:])
+    let slice = p.sliceId(row: 0)
+    var original: ProcessedSample?
+    p.renderSlice(id: slice) { (sample: ProcessedSample) in original = sample }
+    r.expectEqual(expected: committed, actual: original, what: "the untouched sample sounds its committed bytes")
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "committed bytes share the source frame grid without render metadata")
+
+    p.setSourceRate(rate: 7884)
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "a rate edit does not remap the committed sample still sounding")
+    var rendered: ProcessedSample?
+    p.renderSlice(id: slice) { (sample: ProcessedSample) in rendered = sample }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while rendered == nil && Date() < deadline { await Task.yield() }
+            if rendered == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "looped slice render did not land: \(error)")
+        return
+    }
+    guard let rendered else { return }
+    r.expect(rendered.looped && rendered.outputRate != 7884, message: "loop resampling adjusts the output rate")
+    r.expectEqual(
+        expected: 300, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "playhead maps with the sounding loop's adjusted rate")
+    p.setSourceRate(rate: 13379)
+    r.expectEqual(
+        expected: 300, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "a later rate edit preserves the sounding render's captured mapping")
+    p.undo()
+    p.undo()
+    p.renderSlice(id: slice) { (_: ProcessedSample) in }
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "playing the committed sample restores its source-grid mapping")
+}
+
+@MainActor
 private func checkSourceSaveRender(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitSourceSession::saveRender")
     let session = KitSourceSession()
@@ -318,6 +379,86 @@ private func checkSourceSaveRender(_ report: CheckReport) {
         r.expect(cancelled.isEmpty, message: "cancelled save rendering returns no partial WAV batch")
     } catch {
         r.expect(false, message: "save rendering did not settle: \(error)")
+    }
+}
+
+@MainActor
+private func checkSupersededSaveWritesNothing(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::supersededSaveWritesNothing")
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        r.expect(false, message: "save cancellation requires a staged fixture directory")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-kit-save-superseded")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProject(path: root)
+    do {
+        try runBlocking {
+            while !app.projectOpen && app.lastSaveError.isEmpty { await Task.yield() }
+        }
+    } catch {
+        r.expect(false, message: "project open did not settle: \(error)")
+        return
+    }
+    guard app.projectOpen, let service = app.catalogService else {
+        r.expect(false, message: "save cancellation fixture failed to open: \(app.lastSaveError)")
+        return
+    }
+    let studio = app.kitStudio()
+    studio.requestOpen()
+    guard let editor = studio.presenter() else {
+        r.expect(false, message: "Split Studio did not open")
+        return
+    }
+    editor.addSource(sessionSample(name: "cancelled_save", count: 4096), autoPlaceFirstSlice: true)
+    guard editor.canSave else {
+        r.expect(false, message: "save cancellation fixture is not saveable")
+        return
+    }
+    func projectFiles() throws -> [String: Data] {
+        let directory = URL(fileURLWithPath: root, isDirectory: true)
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: directory, includingPropertiesForKeys: [.isRegularFileKey])
+        else { throw CocoaError(.fileReadUnknown) }
+        var files: [String: Data] = [:]
+        while let file = enumerator.nextObject() as? URL {
+            if try file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true {
+                files[file.path] = try Data(contentsOf: file)
+            }
+        }
+        return files
+    }
+    do {
+        let before = try projectFiles()
+        studio.closeRequested()
+        guard studio.closeGuard.promptOpen else {
+            r.expect(false, message: "dirty Split Studio did not request a close decision")
+            return
+        }
+        studio.answerPrompt(answer: 0)
+        guard studio.saving && studio.closeGuard.saving else {
+            r.expect(false, message: "close-save did not start an asynchronous render")
+            return
+        }
+        app.catalogService = nil
+        defer { app.catalogService = service }
+        try runBlocking {
+            while studio.saving { await Task.yield() }
+        }
+        r.expect(
+            studio.closeGuard.promptOpen && !studio.closeGuard.saving,
+            message: "superseded save settles the close guard as unsuccessful")
+        let after = try projectFiles()
+        r.expect(before == after, message: "superseded save writes no project files")
+        studio.answerPrompt(answer: 2)
+        r.expect(!studio.closeGuard.promptOpen, message: "the pending close can be cancelled after save settles")
+    } catch {
+        r.expect(false, message: "save cancellation check could not settle: \(error)")
     }
 }
 

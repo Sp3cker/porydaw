@@ -286,6 +286,39 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         report.fail(timelineID, "playable workspace did not open: \(app.lastSaveError)")
         return
     }
+    guard liveAudioUntil({ audio.songLoaded }) else {
+        report.fail(timelineID, "workspace binding did not reach the audio control queue")
+        return
+    }
+    let arpeggiator = page.workspace.arpeggiator
+    arpeggiator.open(track: 0)
+    if arpeggiator.canCopy {
+        arpeggiator.toggleAudition()
+        if case .starting(let operation) = audio.patternState {
+            _ = arpeggiator.pollAudition()
+            arpeggiator.setParameter(name: "transpose", value: 1)
+            report.expect(
+                arpeggiator.isAuditioning, cppID: "arpeggiator/starting",
+                message: "immediate polling and regeneration preserve the starting audition")
+            do {
+                let accepted = try runBlocking { await operation.value }
+                if case .active = audio.patternState {
+                    report.expect(
+                        accepted && arpeggiator.isAuditioning, cppID: "arpeggiator/starting",
+                        message: "the regenerated audition remains active after the starting receipt")
+                } else {
+                    report.fail("arpeggiator/starting", "starting receipt did not activate the regenerated audition")
+                }
+            } catch {
+                report.fail("arpeggiator/starting", "starting receipt did not settle: \(error)")
+            }
+        } else {
+            report.fail("arpeggiator/starting", "audition did not enter starting state synchronously")
+        }
+    } else {
+        report.fail("arpeggiator/starting", "playable workspace produced no arpeggiator draft")
+    }
+    arpeggiator.close()
     let session = page.workspace.session
     let document = session.document
     let originalBytes: [UInt8]
@@ -316,7 +349,13 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     settings.pcmMixRate = 21_024
     settings.analogFilter = !audio.analogFilter
     let beforeSettings = audio.playheadSamples
-    audio.updateSettings(settings)
+    let settingsOperation = audio.updateSettings(settings)
+    do {
+        try runBlocking { await settingsOperation.value }
+    } catch {
+        report.fail(transportID, "settings receipt did not complete: \(error)")
+        return
+    }
     report.expect(
         liveAudioUntil({
             audio.pcmMixerMode == settings.pcmMixer
@@ -377,13 +416,13 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         }
         return remaining.isEmpty
     }
-    func deviceAgrees(after sample: UInt64, revision: UInt64) -> Bool {
-        audio.requestedTransport == AudioTransportState.playing.rawValue
+    func deviceAgrees(after sample: UInt64, identity: UInt64) -> Bool {
+        identity != 0 && audio.requestedTransport == AudioTransportState.playing.rawValue
             && audio.playheadSamples > sample
-            && audio.status.appliedTimelineRevision > revision
+            && audio.status.appliedTimelineIdentity == identity
     }
     let beforeEdit = audio.playheadSamples
-    let revisionBeforeEdit = audio.status.appliedTimelineRevision
+    let identityBeforeEdit = audio.requestedTimelineIdentity
     let ids: [NoteID]
     do {
         ids = try document.addNotes([
@@ -400,11 +439,13 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     document.writeLane(
         track: 0, lane: .controller(7), from: 0, through: 0,
         points: [LaneWrite(tick: 0, value: 100)])
+    let editIdentity = audio.requestedTimelineIdentity
     report.expect(
         document.isDirty, cppID: timelineID,
         message: "live note and controller edits dirty the selected document")
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeEdit, revision: revisionBeforeEdit) })
+        editIdentity != identityBeforeEdit
+            && liveAudioUntil({ deviceAgrees(after: beforeEdit, identity: editIdentity) })
             && matchesCompleteSchedule([
                 expectedEvent(
                     tick: 0, type: 0x9, data0: 60,
@@ -420,10 +461,12 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         message: "inserted C4 note exists at tick zero in the selected document")
 
     let beforeMove = audio.playheadSamples
-    let revisionBeforeMove = audio.status.appliedTimelineRevision
+    let identityBeforeMove = audio.requestedTimelineIdentity
     document.moveNotes([noteID], byTicks: 24, byKeys: 1)
+    let moveIdentity = audio.requestedTimelineIdentity
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeMove, revision: revisionBeforeMove) })
+        moveIdentity != identityBeforeMove
+            && liveAudioUntil({ deviceAgrees(after: beforeMove, identity: moveIdentity) })
             && matchesCompleteSchedule([
                 expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
                 expectedEvent(
@@ -439,7 +482,7 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         message: "moved note exists at tick 24 and key 61 in the selected document")
 
     let beforeUndo = audio.playheadSamples
-    let revisionBeforeUndo = audio.status.appliedTimelineRevision
+    let identityBeforeUndo = audio.requestedTimelineIdentity
     app.requestUndo()
     guard liveAudioUntil({ document.history.undoIndex == initialIndex + 2 }) else {
         report.fail(timelineID, "first live undo did not restore the note move")
@@ -455,8 +498,10 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
         report.fail(timelineID, "third live undo did not restore the note insertion")
         return
     }
+    let undoIdentity = audio.requestedTimelineIdentity
     report.expect(
-        liveAudioUntil({ deviceAgrees(after: beforeUndo, revision: revisionBeforeUndo) })
+        undoIdentity != identityBeforeUndo
+            && liveAudioUntil({ deviceAgrees(after: beforeUndo, identity: undoIdentity) })
             && !document.isDirty && matchesCompleteSchedule([]),
         cppID: timelineID,
         message: "three live Undos restore the clean original event schedule while playback advances")
@@ -497,6 +542,9 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
     report.expect(
         app.songTabs.tabCount == 0, cppID: timelineID,
         message: "final tab closure leaves no open workspace tabs")
+    report.expect(
+        liveAudioUntil({ !audio.songLoaded && audio.status.appliedTimelineIdentity == 0 }),
+        cppID: timelineID, message: "queued unload retires the applied timeline after tab closure")
     let retiredSample = audio.playheadSamples
     let settledAt = clock.now
     _ = liveAudioUntil({ clock.now - settledAt >= .milliseconds(200) }, seconds: 0.3)

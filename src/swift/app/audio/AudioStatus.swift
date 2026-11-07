@@ -12,10 +12,13 @@ public final class AudioStatus: Sendable {
     let activeCgb = Atomic<Int>(0)
     let cpuGeneration = Atomic<UInt64>(0)
     let settingsWord = Atomic<UInt64>(0)
-    let timelineRevision = Atomic<UInt64>(0)
+    let timelineIdentity = Atomic<UInt64>(0)
     let lostTotal = Atomic<UInt64>(0)
 
     public init() {}
+    public func invalidateTelemetry() {
+        cpuGeneration.wrappingAdd(1, ordering: .acquiringAndReleasing)
+    }
 
     public var requestedTransport: AudioTransportState {
         guard let value = AudioTransportState(rawValue: requested.load(ordering: .relaxed)) else {
@@ -37,6 +40,6 @@ public final class AudioStatus: Sendable {
     public var activeCgbChannels: Int { activeCgb.load(ordering: .relaxed) }
     public var telemetryGeneration: UInt64 { cpuGeneration.load(ordering: .acquiring) }
     public var appliedSettingsBits: UInt64 { settingsWord.load(ordering: .acquiring) }
-    public var appliedTimelineRevision: UInt64 { timelineRevision.load(ordering: .acquiring) }
+    public var appliedTimelineIdentity: UInt64 { timelineIdentity.load(ordering: .acquiring) }
     public var polyLostTotal: UInt64 { lostTotal.load(ordering: .relaxed) }
 }

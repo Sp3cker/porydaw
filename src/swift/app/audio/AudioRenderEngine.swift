@@ -51,7 +51,9 @@ public final class AudioRenderEngine {
     private let previewLeft: UnsafeMutablePointer<Float>
     private let previewRight: UnsafeMutablePointer<Float>
 
-    public init(sampleRate: Double, periodFrames: Int) throws {
+    public init(
+        sampleRate: Double, periodFrames: Int, sampleFeedback: SampleAuditionFeedbackCell = .init()
+    ) throws {
         guard let main = m4a_engine_create(Float(sampleRate)) else { throw InitializationError.engine }
         guard let preview = m4a_engine_create(Float(sampleRate)) else {
             m4a_engine_free(main)
@@ -66,7 +68,7 @@ public final class AudioRenderEngine {
         transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames, status: status)
         telemetry = AudioTelemetry(status: status)
         cpuTelemetry = AudioCpuTelemetry(status: status)
-        audition = AudioAudition()
+        audition = AudioAudition(sampleFeedback: sampleFeedback)
         suppression = ResonanceSuppression(sampleRate: Float(sampleRate))
         metronome = Metronome(sampleRate: sampleRate)
         left = .allocate(capacity: capacity)
@@ -106,6 +108,8 @@ public final class AudioRenderEngine {
     public var activeCgbChannels: Int { status.activeCgbChannels }
     public var polyLostTotal: UInt64 { status.polyLostTotal }
     public func polySnapshot() -> AudioPolySnapshot { telemetry.snapshot() }
+    /// CGB channels of the isolated voice and pattern preview engine.
+    public func previewPolySnapshot() -> AudioPolySnapshot { telemetry.previewSnapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] { telemetry.consume() }
     public func consumeCpuFrames() -> AudioCpuBatch { cpuTelemetry.consume() }
     public func resetCpuPeak() { cpuTelemetry.reset() }
@@ -135,8 +139,9 @@ public final class AudioRenderEngine {
 
     /// Cold only: pause the song at its current playhead and replace the isolated loop.
     /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
-    public func startPatternAudition(_ timeline: PlaybackTimeline) {
-        guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return }
+    @discardableResult
+    public func startPatternAudition(_ timeline: PlaybackTimeline) -> Bool {
+        guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return false }
         precondition(timeline.sampleRate == sampleRate, "Pattern timeline must use the device sample rate")
         resetPreview()
         suspendCpuCost()
@@ -145,8 +150,8 @@ public final class AudioRenderEngine {
         _ = m4a_engine_reset(main)
         cpuTelemetry.resetNativeCursor()
         Self.configure(main, voicegroup: voicegroup, settings: settings)
-        Sequencer.chase(engine: main, timeline: song.pointee, position: player.position)
-        Sequencer.primeVoices(engine: main, timeline: song.pointee, position: player.position)
+        Sequencer.chase(engine: main, timeline: song.pointee.timeline, position: player.position)
+        Sequencer.primeVoices(engine: main, timeline: song.pointee.timeline, position: player.position)
         audition.reset()
         transportState.pauseImmediately()
         suppression.reset()
@@ -157,6 +162,7 @@ public final class AudioRenderEngine {
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: timeline.loopStartSample)
         status.patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
         status.patternActive.store(true, ordering: .releasing)
+        return true
     }
 
     /// Publish a replacement loop while auditioning, without stopping rendering. The next
@@ -181,12 +187,12 @@ public final class AudioRenderEngine {
 
     public func bind(
         timeline: PlaybackTimeline,
-        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings
+        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings, identity: UInt64 = 0
     ) {
         suspendCpuCost()
         transportState.reset()
         suppression.reset()
-        handoff.reset(timeline)
+        handoff.reset(timeline, identity: identity)
         self.voicegroup = voicegroup
         self.settings = settings
         m4a_engine_destroy(main)
@@ -205,12 +211,12 @@ public final class AudioRenderEngine {
         telemetry.clear()
         telemetry.publishPoly(main)
         publishAppliedSettings()
-        status.timelineRevision.wrappingAdd(1, ordering: .releasing)
+        status.timelineIdentity.store(identity, ordering: .releasing)
         status.loaded.store(true, ordering: .releasing)
     }
-    public func publish(_ timeline: PlaybackTimeline) {
+    public func publish(_ timeline: PlaybackTimeline, identity: UInt64 = 0) {
         guard songLoaded else { return }
-        handoff.publish(timeline)
+        handoff.publish(timeline, identity: identity)
     }
     public func unload() {
         suspendCpuCost()
@@ -227,6 +233,7 @@ public final class AudioRenderEngine {
         cpuTelemetry.reset()
         telemetry.clear()
         telemetry.publishPoly(main)
+        status.timelineIdentity.store(0, ordering: .releasing)
         status.loaded.store(false, ordering: .releasing)
     }
     public func updateSettings(_ settings: AudioSettings) {
@@ -248,9 +255,9 @@ public final class AudioRenderEngine {
         self.voicegroup = voicegroup
         m4a_engine_set_voicegroup(main, voicegroup)
         if let timeline = handoff.active {
-            Sequencer.chase(engine: main, timeline: timeline.pointee, position: playheadSamples)
-            Sequencer.primeVoices(engine: main, timeline: timeline.pointee, position: playheadSamples)
-            if resumeCpu { startCpuCost(timeline.pointee, continuing: true) }
+            Sequencer.chase(engine: main, timeline: timeline.pointee.timeline, position: playheadSamples)
+            Sequencer.primeVoices(engine: main, timeline: timeline.pointee.timeline, position: playheadSamples)
+            if resumeCpu { startCpuCost(timeline.pointee.timeline, continuing: true) }
         }
         resetPreview()
     }
@@ -299,6 +306,7 @@ public final class AudioRenderEngine {
         _ = m4a_engine_init(preview, Float(sampleRate))
         Self.configure(preview, voicegroup: voicegroup, settings: settings)
         audition.resetPreview()
+        telemetry.publishPreview(preview)
     }
 
     private func suspendCpuCost() {
@@ -349,10 +357,10 @@ public final class AudioRenderEngine {
         suspendCpuCost()
         suppression.reset()
         releaseMainNotes()
-        player.seek(sample, timeline: timeline.pointee)
-        Sequencer.chase(engine: main, timeline: timeline.pointee, position: sample)
-        Sequencer.primeVoices(engine: main, timeline: timeline.pointee, position: sample)
-        if resumeCpu { startCpuCost(timeline.pointee, continuing: true) }
+        player.seek(sample, timeline: timeline.pointee.timeline)
+        Sequencer.chase(engine: main, timeline: timeline.pointee.timeline, position: sample)
+        Sequencer.primeVoices(engine: main, timeline: timeline.pointee.timeline, position: sample)
+        if resumeCpu { startCpuCost(timeline.pointee.timeline, continuing: true) }
         status.playhead.store(sample, ordering: .relaxed)
     }
     private func applyMute() {
@@ -431,18 +439,19 @@ public final class AudioRenderEngine {
             ? timeline.loopStartSample : patternPlayer.position
         status.patternPosition.store(position, ordering: .relaxed)
         telemetry.publish(engine: preview, position: player.position)
+        telemetry.publishPreview(preview)
     }
 
     public func render(_ output: UnsafeMutablePointer<Float>, frames: UInt32) {
-        if let timeline = patternHandoff.acquirePending() { restartPattern(timeline.pointee) }
+        if let timeline = patternHandoff.acquirePending() { restartPattern(timeline.pointee.timeline) }
         if let timeline = patternHandoff.active {
-            renderPattern(timeline.pointee, output: output, frames: frames)
+            renderPattern(timeline.pointee.timeline, output: output, frames: frames)
             return
         }
         transition()
         if let timeline = handoff.acquirePending() {
-            adopt(timeline.pointee)
-            status.timelineRevision.wrappingAdd(1, ordering: .releasing)
+            adopt(timeline.pointee.timeline)
+            status.timelineIdentity.store(timeline.pointee.identity, ordering: .releasing)
         }
         applySeek()
         applyMute()
@@ -453,28 +462,28 @@ public final class AudioRenderEngine {
         while done < Int(frames) {
             let count = min(Int(frames) - done, capacity)
             if transportState.applied == .playing, let timeline = handoff.active {
-                if !cpuRunning { startCpuCost(timeline.pointee, continuing: cpuContinueOnStart) }
+                if !cpuRunning { startCpuCost(timeline.pointee.timeline, continuing: cpuContinueOnStart) }
                 let looping = loopEnabled
                 let start = player.position
                 let cpuDriver = main.pointee.driver
                 let cpuStartCycle = cpuDriver.map { m4a_driver_current_cycle($0) } ?? 0
                 player.render(
-                    engine: main, timeline: timeline.pointee,
+                    engine: main, timeline: timeline.pointee.timeline,
                     left: UnsafeMutableBufferPointer(start: left, count: count),
                     right: UnsafeMutableBufferPointer(start: right, count: count),
                     looping: looping, muteMask: appliedMute, audition: audition)
                 if let cpuDriver {
                     cpuTelemetry.collect(
                         driver: cpuDriver, startCycle: cpuStartCycle, startSample: start,
-                        sampleRate: sampleRate, loopStart: timeline.pointee.loopStartSample,
-                        loopEnd: timeline.pointee.loopEndSample,
-                        looping: looping && timeline.pointee.hasLoop)
+                        sampleRate: sampleRate, loopStart: timeline.pointee.timeline.loopStartSample,
+                        loopEnd: timeline.pointee.timeline.loopEndSample,
+                        looping: looping && timeline.pointee.timeline.hasLoop)
                 }
                 metronome.mix(
                     left: left, right: right, frames: count, from: start,
-                    timeline: timeline.pointee, looping: looping)
-                if !(looping && timeline.pointee.hasLoop)
-                    && player.position > timeline.pointee.lengthSamples + UInt64(3 * sampleRate)
+                    timeline: timeline.pointee.timeline, looping: looping)
+                if !(looping && timeline.pointee.timeline.hasLoop)
+                    && player.position > timeline.pointee.timeline.lengthSamples + UInt64(3 * sampleRate)
                 {
                     transportState.requested = .stopped
                     transition()
@@ -516,6 +525,7 @@ public final class AudioRenderEngine {
         }
         telemetry.publish(engine: main, position: player.position)
         telemetry.publishPoly(main)
+        telemetry.publishPreview(preview)
         publishAppliedSettings()
     }
 }

@@ -325,7 +325,7 @@ public final class PolyphonyPanelPresenter: QmlUncreatable {
         }
     }
 
-    private func makeEvent(_ event: M4APolyEvent) -> PolyphonyEventRow {
+    private func makeEvent(_ event: AudioPolyEvent) -> PolyphonyEventRow {
         let tick = event.tick == UInt32.max ? -1 : Double(event.tick)
         let pos = tick < 0 ? "live" : formatPosition(event.tick)
         let voiceIndex = Int(event.program)

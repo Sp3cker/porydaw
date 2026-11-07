@@ -76,7 +76,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
     @QtIgnored var catalogRefreshApplied: UInt64 = 0
     @QtIgnored
-    var audioReadiness: AudioReadiness = .idle
+    var audioReadiness: AudioReadiness = .idle {
+        didSet { sampleStudioWorkflow?.audioReadinessChanged() }
+    }
     @QtIgnored
     var audioFactory: @Sendable () async throws -> NativeAudio = { try await NativeAudio.make() }
     @QtIgnored

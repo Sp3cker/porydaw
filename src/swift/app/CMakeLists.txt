@@ -30,6 +30,7 @@ add_library(PorydawApp STATIC
     DocumentWorkspace.swift
     arpeggiator/ArpeggiatorPresenter.swift
     NativeAudio.swift
+    audio/AudioControl.swift
     export/WavExportJob.swift
     export/WavExportPresenter.swift
     samplestudio/Sf2ZonePickerModel.swift
@@ -247,6 +248,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioDevice.swift
     audio/AudioRenderEngine.swift
     audio/AudioStatus.swift
+    audio/SampleAuditionLease.swift
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift

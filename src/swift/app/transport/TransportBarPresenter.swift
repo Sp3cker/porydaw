@@ -79,8 +79,9 @@ public final class TransportBarPresenter: QmlUncreatable {
         publish(\.scaleType, scale.scale.rawValue)
         publish(\.scaleHighlight, scale.highlight)
         publish(\.scaleFold, scale.fold)
+        publish(\.masterVolume, session?.selectedDocument?.document.state.config.masterVolume ?? 127)
         guard let session, session.songOpen, let document = session.selectedDocument,
-            let audio = session.transportAudio, audio.songLoaded
+            let audio = session.transportAudio, audio.requestedSongLoaded
         else {
             publish(\.state, 0)
             publish(\.timeText, "0:00.0 / 0:00.0")
@@ -92,8 +93,6 @@ public final class TransportBarPresenter: QmlUncreatable {
             publish(\.cgbText, "")
             publish(\.lostText, "")
             publish(\.lostVisible, false)
-            // Scale remains available on a document even when audio failed to bind.
-            publish(\.masterVolume, 127)
             if let audio = self.session?.transportAudio {
                 publish(\.loopEnabled, audio.loopEnabled)
                 publish(\.resonanceSuppression, audio.resonanceSuppression)
@@ -127,8 +126,6 @@ public final class TransportBarPresenter: QmlUncreatable {
                 + Self.measure(at: timeline.loopEndTick, timeline: timeline)
             : ""
         publish(\.loopBounds, bounds)
-        let volume = document.document.state.config.masterVolume
-        publish(\.masterVolume, volume)
         publish(\.loopEnabled, audio.loopEnabled)
         publish(\.resonanceSuppression, audio.resonanceSuppression)
         let tempoPoint = document.document.state.tempo.last { $0.tick <= tick }

@@ -23,7 +23,11 @@ extension ApplicationSession {
             do {
                 try Task.checkCancellation()
                 let owner = try await factory()
-                await self?.adoptPreparedAudio(owner)
+                if let self {
+                    await self.adoptPreparedAudio(owner)
+                } else {
+                    await owner.shutdown()
+                }
             } catch {
                 await self?.failAudioPreparation(error)
             }
@@ -31,8 +35,11 @@ extension ApplicationSession {
         audioReadiness = .preparing(task)
     }
 
-    private func adoptPreparedAudio(_ owner: NativeAudio) {
-        guard !isDisposed, !Task.isCancelled else { return }
+    private func adoptPreparedAudio(_ owner: NativeAudio) async {
+        guard !isDisposed, !Task.isCancelled else {
+            await owner.shutdown()
+            return
+        }
         adoptAudio(owner)
     }
 
@@ -152,15 +159,22 @@ extension ApplicationSession {
             guard let self, let service = self.catalogService,
                 let group = self.voiceList.voicegroup, self.voiceList.editingEnabled, let audio = self.audio
             else { return }
-            let lease = audio.audition.beginSample()
+            let lease = audio.beginSampleAudition(
+                onEvent: { [weak self] (event: SampleAuditionEvent) in
+                    switch event {
+                    case .finished: self?.pickerAudition?.stop()
+                    case .ended: self?.pickerAudition = nil
+                    case .started: break
+                    }
+                })
             self.pickerAudition = lease
             Task { [weak self, weak group] in
                 let sound = await service.pickerSound(symbol: symbol, kind: kind)
+                guard lease.isCurrent else { return }
                 guard let self, let group, self.voiceList.voicegroup === group,
-                    self.voiceList.editingEnabled,
-                    self.catalogService === service,
-                    !self.isDisposed, lease.isCurrent, let sound
-                else { return }
+                    self.voiceList.editingEnabled, self.catalogService === service,
+                    !self.isDisposed, let sound
+                else { lease.stop(); return }
                 let chosen = AudioADSR(
                     attack: UInt8(truncatingIfNeeded: adsr.attack),
                     decay: UInt8(truncatingIfNeeded: adsr.decay),
@@ -168,32 +182,35 @@ extension ApplicationSession {
                     release: UInt8(truncatingIfNeeded: adsr.release))
                 switch sound {
                 case .sample(let bytes, let frequency, let loopStart, let looped, let toneKey, let envelope):
-                    guard let pcm = SampleAuditionPcm(samples: bytes) else { return }
+                    guard !bytes.isEmpty else { lease.stop(); return }
                     let envelope =
-                        envelope.map {
-                            AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                        envelope.map { (values: (UInt8, UInt8, UInt8, UInt8)) -> AudioADSR in
+                            AudioADSR(attack: values.0, decay: values.1, sustain: values.2, release: values.3)
                         } ?? chosen
-                    _ = lease.publish(
-                        pcm: pcm, frequency: frequency,
-                        loopStart: loopStart, looped: looped,
-                        key: 60, adsr: envelope, toneKey: toneKey)
+                    lease.play { (id: SampleAuditionNoteID) -> SampleAuditionNote in
+                        SampleAuditionNote(
+                            id: id,
+                            source: .pcm(samples: bytes, frequency: frequency, loopStart: loopStart, looped: looped),
+                            key: 60, adsr: envelope, toneKey: toneKey)
+                    }
                 case .wave(let bytes, let envelope):
                     let envelope =
-                        envelope.map {
-                            AudioADSR(attack: $0.0, decay: $0.1, sustain: $0.2, release: $0.3)
+                        envelope.map { (values: (UInt8, UInt8, UInt8, UInt8)) -> AudioADSR in
+                            AudioADSR(attack: values.0, decay: values.1, sustain: values.2, release: values.3)
                         } ?? chosen
-                    _ = lease.publish(wave16: bytes, key: 60, adsr: envelope)
+                    lease.play { (id: SampleAuditionNoteID) -> SampleAuditionNote in
+                        SampleAuditionNote(id: id, source: .wave16(bytes), key: 60, adsr: envelope, toneKey: 60)
+                    }
                 }
             }
         }
         voiceList.onSampleAuditionStopRequested = { [weak self] in
             self?.pickerAudition?.stop()
-            self?.pickerAudition = nil
         }
     }
 
     func playImpl() {
-        guard let audio, audio.songLoaded else { return }
+        guard let audio, audio.requestedSongLoaded else { return }
         if audio.requestedTransport == AudioTransportState.stopped.rawValue,
             let session = workspace?.session
         {
@@ -210,7 +227,7 @@ extension ApplicationSession {
             arpeggiator.toggleAudition()
             return
         }
-        guard let audio, audio.songLoaded else { return }
+        guard let audio, audio.requestedSongLoaded else { return }
         if audio.requestedTransport == SharedPlayheadPolicy.playingTransport {
             audio.pause()
             refreshTransportPresentation()
@@ -234,7 +251,7 @@ extension ApplicationSession {
         let session = workspace.session
         session.editCursor = 0
         _ = workspace.viewport.mutateCamera { $0.setHScroll($0.snapshot.minHScroll) }
-        if let audio, audio.songLoaded,
+        if let audio, audio.requestedSongLoaded,
             audio.requestedTransport != AudioTransportState.stopped.rawValue
         {
             publishSeek(tick: 0, timeline: session.timeline, startPlayback: false)
@@ -257,7 +274,7 @@ extension ApplicationSession {
     /// Fork commitEditCursor egress: commits seek paused/playing playback to
     /// the cursor; stopped commits only move the cursor, background tabs never seek.
     func seekToTick(_ tick: Tick, in origin: DocumentWorkspace) {
-        guard workspace === origin, let audio, audio.songLoaded,
+        guard workspace === origin, let audio, audio.requestedSongLoaded,
             audio.requestedTransport != AudioTransportState.stopped.rawValue
         else { return }
         publishSeek(tick: tick, timeline: origin.session.timeline, startPlayback: false)
@@ -270,7 +287,7 @@ extension ApplicationSession {
     }
 
     func resyncTransportAfterEngineTransition() {
-        guard let audio, audio.songLoaded else { return }
+        guard let audio, audio.requestedSongLoaded else { return }
         guard transportBar.state != Int(audio.requestedTransport) + 1 else { return }
         refreshTransportPresentation()
     }

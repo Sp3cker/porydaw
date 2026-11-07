@@ -729,21 +729,22 @@ public final class KitStudioPresenter: QmlUncreatable {
         guard let address = sliceAddress(id), let source = session.sources.first(where: { $0.id == address.source })
         else { return }
         let slice = source.slices[address.index]
-        let finish: @MainActor (ProcessedSample) -> Void = { [weak self] (sample: ProcessedSample) in
+        let finish: @MainActor (ProcessedSample, Double) -> Void = {
+            [weak self] (sample: ProcessedSample, renderedRate: Double) in
             guard let self else { return }
             self.soundingSlice = (
                 id: id, start: slice.startFrame, end: slice.endFrame,
-                sourceRate: source.sample.sampleRate, renderedRate: source.targetRate
+                sourceRate: source.sample.sampleRate, renderedRate: renderedRate
             )
             completion(sample)
         }
         if let symbol = source.committedSymbol(of: slice), let committed = samples[symbol] {
             session.cancelRender()
-            finish(committed)
+            finish(committed, source.sample.sampleRate)
         } else {
             session.renderSlices([(source: source, slice: slice)]) { (results: [ProcessedSample]) in
                 guard let sample = results.first else { return }
-                finish(sample)
+                finish(sample, sample.outputRate)
             }
         }
     }

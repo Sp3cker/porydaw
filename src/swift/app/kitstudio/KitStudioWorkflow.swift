@@ -39,6 +39,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var savedKeyboardHeight: Double = 0
     @QtIgnored public let closeGuard = KitStudioCloseGuard()
     private weak var session: ApplicationSession?
+    private let beginSampleAudition: (@escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease?
     private var window: KitStudioWindow?
     private let libraryHost: StudioLibraryHost
     private var loadTask: Task<Void, Never>?
@@ -48,7 +49,20 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private let previewPreparation: SampleSourcePreparation
     private var kitAudition: SampleAuditionLease?
 
-    @QtIgnored public init(session: ApplicationSession) {
+    @QtIgnored public convenience init(session: ApplicationSession) {
+        self.init(
+            session: session,
+            beginSampleAudition: {
+                [weak session] (onEvent: @escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease? in
+                session?.audio?.beginSampleAudition(onEvent: onEvent)
+            })
+    }
+
+    @QtIgnored init(
+        session: ApplicationSession,
+        beginSampleAudition: @escaping (@escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease?
+    ) {
+        self.beginSampleAudition = beginSampleAudition
         self.session = session
         let preparation = SampleSourcePreparation()
         previewPreparation = preparation
@@ -135,20 +149,27 @@ public final class KitStudioWorkflow: QmlUncreatable {
             presenter = KitStudioPresenter(waveform: waveform, effects: effects)
         }
         let next = KitStudioWindow(
-            presenter: presenter, footprint: footprint, pcm: PcmAuditionPlayer(audition: libraryHost.audition))
-        next.pcm.onPlayhead = { [weak self, weak next] (frame: Int?) in
-            guard let self, let next, let id = next.playingSlice else { return }
-            let sourceFrame = frame.flatMap { (_: Int) -> Int? in
-                next.presenter.sourceFrame(sliceId: id, renderedPosition: next.pcm.playheadPosition)
-            }
-            next.presenter.waveform?.setPlayhead(frame: sourceFrame)
-            self.auditionPlaying = next.pcm.playing
+            presenter: presenter, footprint: footprint,
+            pcm: PcmAuditionPlayer(
+                beginSampleAudition: beginSampleAudition))
+        next.pcm.onPlayhead = { [weak self, weak next] (frame: Int) in
+            guard let self, let next, self.window === next, let id = next.playingSlice else { return }
+            next.presenter.waveform?.setPlayhead(
+                frame: next.presenter.sourceFrame(sliceId: id, renderedPosition: Double(frame)))
         }
-        next.pcm.onTerminated = { [weak self, weak next] in
+        next.pcm.onLifecycle = { [weak self, weak next] (lifecycle: PcmAuditionPlayer.Lifecycle) in
             guard let self, let next, self.window === next else { return }
-            next.playingSlice = nil
-            next.presenter.waveform?.setPlayhead(frame: nil)
-            self.auditionPlaying = false
+            switch lifecycle {
+            case .starting, .repeatGap:
+                next.presenter.waveform?.setPlayhead(frame: nil)
+                self.auditionPlaying = true
+            case .sounding:
+                self.auditionPlaying = true
+            case .ended:
+                next.playingSlice = nil
+                next.presenter.waveform?.setPlayhead(frame: nil)
+                self.auditionPlaying = false
+            }
         }
         replaceWindow(next)
         if loaded == nil { presenter.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: "new_kit")) }
@@ -175,12 +196,24 @@ public final class KitStudioWorkflow: QmlUncreatable {
             guard let self, let footprint else { return "Split Studio is closed." }
             return self.validateVoicegroupName(name, footprint: footprint)
         }
-        effects.beginKeyAudition = { [weak self] in self?.stopAudition() }
+        effects.beginKeyAudition = { [weak self] in
+            guard let self else { return }
+            self.stopAudition()
+            self.kitAudition = self.beginSampleAudition(
+                { [weak self] (event: SampleAuditionEvent) in
+                    switch event {
+                    case .finished: self?.kitAudition?.stop()
+                    case .ended: self?.kitAudition = nil
+                    case .started: break
+                    }
+                })
+        }
         effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
-            guard let self, let audition = self.session?.audio?.audition else { return false }
-            let lease = audition.beginSample()
-            self.kitAudition = lease
-            return lease.publish(kit: tone, key: key)
+            guard let lease = self?.kitAudition, lease.isCurrent else { return false }
+            lease.play { (id: SampleAuditionNoteID) -> SampleAuditionNote in
+                SampleAuditionNote(id: id, source: .kit(tone), key: key, adsr: AudioADSR(), toneKey: 60)
+            }
+            return true
         }
         effects.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
         return effects
@@ -342,29 +375,38 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private func playSlice(id: Int) {
         guard let window else { return }
         stopAudition()
+        guard let lease = window.pcm.claim() else { return }
         let voice = window.presenter.sliceVoice(id: id)
         window.presenter.renderSlice(id: id) { [weak self, weak window] (rendered: ProcessedSample) in
-            guard let self, let window, self.window === window else { return }
+            guard let self, let window, self.window === window, lease.isCurrent else { return }
+            guard !rendered.s8.isEmpty else {
+                lease.stop()
+                return
+            }
             window.playingSlice = id
-            window.pcm.play(
-                rendered: rendered, looped: rendered.looped, key: voice?.note ?? 60,
-                adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
-            self.auditionPlaying = window.pcm.playing
+            let note = SampleAuditionNote(
+                id: .unassigned,
+                source: .pcm(
+                    samples: rendered.s8, frequency: rendered.freq,
+                    loopStart: rendered.loopStart, looped: rendered.looped),
+                key: voice?.note ?? 60, adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
+            window.pcm.play(note, lease: lease, repeatPolicy: .repeatSame)
         }
     }
     public func tickAudition() {
         window?.pcm.tick()
         auditionPlaying = window?.pcm.playing ?? false
     }
+
+    @QtIgnored func advanceAudition(bySeconds dt: Double) {
+        window?.pcm.advance(bySeconds: dt)
+    }
+
     public func stopAudition() {
         window?.presenter.cancelAuditionRender()
         previewPreparation.cancel()
         window?.pcm.stop()
         kitAudition?.stop()
-        kitAudition = nil
-        window?.presenter.waveform?.setPlayhead(frame: nil)
-        window?.playingSlice = nil
-        auditionPlaying = false
         libraryHost.clearPreview()
     }
 

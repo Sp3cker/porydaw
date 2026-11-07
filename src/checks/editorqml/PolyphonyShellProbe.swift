@@ -64,7 +64,7 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
             steal: Array(repeating: 0, count: Int(MAX_TRACKS)),
             tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)), eventTotal: 3,
             events: Array(
-                repeating: M4APolyEvent(
+                repeating: AudioPolyEvent(
                     type: 0, trackIndex: 0, midiKey: 0,
                     byTrack: 0, program: 0, tick: 0),
                 count: Int(M4A_POLY_EVENT_CAPACITY)))
@@ -76,13 +76,13 @@ public final class PolyphonyShellProbe: QmlInstantiableStatus {
         snapshot.steal[2] = stealCount
         snapshot.tailCut[2] = 1
         snapshot.drop[1] = 1
-        snapshot.events[0] = M4APolyEvent(
+        snapshot.events[0] = AudioPolyEvent(
             type: 1, trackIndex: 2, midiKey: 60,
             byTrack: 4, program: 5, tick: 96)
-        snapshot.events[1] = M4APolyEvent(
+        snapshot.events[1] = AudioPolyEvent(
             type: 2, trackIndex: 2, midiKey: 72,
             byTrack: 0, program: 5, tick: 216)
-        snapshot.events[2] = M4APolyEvent(
+        snapshot.events[2] = AudioPolyEvent(
             type: 0, trackIndex: 1, midiKey: 67,
             byTrack: 1, program: 0, tick: UInt32.max)
         fixture.update(snapshot)

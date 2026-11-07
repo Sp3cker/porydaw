@@ -25,20 +25,20 @@ public final class AudioAudition {
     private let voiceCommand = Atomic<UInt64>(0)
     private var noteGeneration: UInt8 = 0
     private var voiceGeneration: UInt8 = 0
-    // Single UI producer only; independent of callback publication/retirement.
-    private(set) var sampleRequest: UInt64 = 0
     private var appliedNote: UInt32 = 0
     private var appliedVoice: UInt64 = 0
     private var heldSerial: UInt64 = 0
     private var heldOccurrence: UInt64 = 0
     private var voiceKey: Int32 = -1
-    let samples = AudioSampleAudition()
+    let samples: AudioSampleAudition
     private let band = AudioBandAudition(source: .band)
     private let keyboard = AudioBandAudition(source: .keyboard)
     let timed = TimedAuditions()
     let voices = AudioAuditionVoices()
 
-    public init() {}
+    public init(sampleFeedback: SampleAuditionFeedbackCell = .init()) {
+        samples = AudioSampleAudition(feedbackCell: sampleFeedback)
+    }
 
     public func previewNote(track: UInt8, key: UInt8, velocity: UInt8) {
         noteGeneration &+= 1
@@ -71,17 +71,25 @@ public final class AudioAudition {
         timed.publish(track: track, key: key, velocity: velocity, duration: durationSamples)
     }
 
-    /// Claims the shared sample output for a new producer, silencing the previous claim at once.
-    public func beginSample() -> SampleAuditionLease {
-        endSample()
-        return SampleAuditionLease(audition: self, request: sampleRequest)
+    /// Publishes a sample from the single control producer.
+    public func publishSample(_ note: SampleAuditionNote) -> SampleAuditionPublication {
+        samples.publish(note)
     }
 
-    /// Silences the sample output and invalidates every outstanding lease.
-    func endSample() {
-        sampleRequest &+= 1
-        samples.off()
-    }
+    /// Claims the sample output and publishes a new stop boundary for reset identity.
+    public func beginSample() -> UInt64 { samples.begin() }
+
+    /// Releases the sample note without affecting other preview sources.
+    public func stopSample() { samples.off() }
+
+    /// Reclaims retired payloads and reports whether any slots still need retirement.
+    public func reclaimSampleSlots() -> Bool { samples.reclaim() }
+
+    /// Callback-published lifecycle and position state.
+    public var sampleFeedback: SampleAuditionFeedback? { samples.feedbackCell.snapshot() }
+
+    /// The callback feedback cell can be read without retaining the renderer.
+    public var sampleFeedbackCell: SampleAuditionFeedbackCell { samples.feedbackCell }
 
     public func apply(
         main: UnsafeMutablePointer<M4AEngine>,
@@ -125,7 +133,7 @@ public final class AudioAudition {
                 voiceKey = Int32(key)
             }
         }
-        samples.apply(preview)
+        samples.apply(preview, frames: frames)
     }
 
     /// Render the original engine, releasing band occurrences only after their

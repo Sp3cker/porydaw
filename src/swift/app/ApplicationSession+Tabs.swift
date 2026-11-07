@@ -19,8 +19,8 @@ extension ApplicationSession {
         publish(\.headerVoicePickerOpen, pickerOpen)
         polyphony.setContext(session: workspace?.session)
         virtualKeyboard.setContext(session: workspace?.session)
-        transportBar.refresh()
         refreshDocumentState()
+        transportBar.refresh()
         refreshVoicegroupDock()
         persistTabRecipe()
     }
@@ -213,7 +213,7 @@ extension ApplicationSession {
             workspace.drawer.applyChrome(viewport.editorViewState.chrome)
             workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
                 guard let self, let workspace, self.workspace === workspace,
-                    let audio = self.audio, audio.songLoaded
+                    let audio = self.audio, audio.requestedSongLoaded
                 else { return }
                 self.publishSeek(
                     tick: tick, timeline: workspace.session.timeline,

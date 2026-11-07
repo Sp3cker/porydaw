@@ -126,7 +126,85 @@ private func primeSong() -> MidiFile {
         ])
 }
 
+private func checkPcmSourceFrame(_ report: CheckReport) {
+    let id = "swiftcore/Playback::pcmSourceFrame"
+    guard let engine = PlaybackCheckEngine(),
+        let primary = engine.pointer.pointee.driver,
+        let shadow = engine.pointer.pointee.shadowDriver
+    else {
+        report.fail(id, "engine initialization failed")
+        return
+    }
+    var frame: UInt32 = 0
+    report.expect(!pd_audio_pcm_source_frame(engine.pointer, -1, &frame), cppID: id, message: "negative index rejected")
+    report.expect(
+        !pd_audio_pcm_source_frame(engine.pointer, Int32(TOTAL_PCM_CHANNELS), &frame),
+        cppID: id, message: "past-end index rejected")
+    var samples = [Int8](repeating: 32, count: 132)
+    samples.withUnsafeMutableBufferPointer { (buffer: inout UnsafeMutableBufferPointer<Int8>) in
+        var wave = WaveData()
+        wave.data = buffer.baseAddress
+        wave.size = 128
+        wave.loopStart = 32
+        withUnsafeMutablePointer(to: &wave) { (wavePointer: UnsafeMutablePointer<WaveData>) in
+            let pools: [(UnsafeMutablePointer<M4ADriver>, Int32)] = [
+                (primary, 1), (shadow, Int32(MAX_PCM_CHANNELS) + 1),
+            ]
+            let modes: [M4APcmMixerMode] = [M4A_PCM_MIXER_IPATIX, M4A_PCM_MIXER_SAPPY]
+            for (driver, index) in pools {
+                for mode in modes {
+                    driver.pointee.active_pcm_mode = mode
+                    driver.pointee.requested_pcm_mode = mode
+                    driver.pointee.max_pcm_channels = 2
+                    driver.pointee.master_volume = 15
+                    m4a_drv_pcm_reset(driver)
+                    withUnsafeMutablePointer(to: &driver.pointee.pcmChans) { (storage: UnsafeMutablePointer<_>) in
+                        let channel = UnsafeMutableRawPointer(storage)
+                            .assumingMemoryBound(to: M4ADriverPcmChan.self).advanced(by: 1)
+                        defer {
+                            channel.pointee.status = 0
+                            channel.pointee.wav = nil
+                        }
+                        report.expect(
+                            !pd_audio_pcm_source_frame(engine.pointer, index, &frame),
+                            cppID: id, message: "inactive channel has no cursor")
+                        let cases: [(UInt8, UInt32, UInt16, UInt32, UInt32)] = [
+                            (UInt8(VOICE_TYPE_FIX), 0, 0x4000, 0, 16),
+                            (UInt8(VOICE_TYPE_FIX), 120, 0x4000, 120, 40),
+                            (UInt8(VOICE_TYPE_FIX | VOICE_TYPE_REV), 4, 0, 123, 107),
+                        ]
+                        for (type, offset, flags, pending, rendered) in cases {
+                            wavePointer.pointee.status = flags
+                            m4a_drv_pcm_start(driver, channel, wavePointer, type, offset)
+                            channel.pointee.attack = 255
+                            channel.pointee.decay = 255
+                            channel.pointee.sustain = 255
+                            channel.pointee.leftVolume = 255
+                            channel.pointee.rightVolume = 255
+                            report.expect(
+                                pd_audio_pcm_source_frame(engine.pointer, index, &frame) && frame == pending,
+                                cppID: id, message: "pending cursor mode \(mode) pool \(index) offset \(offset)")
+                            _ = m4a_drv_pcm_render(driver, 16)
+                            report.expect(
+                                pd_audio_pcm_source_frame(engine.pointer, index, &frame) && frame == rendered,
+                                cppID: id, message: "rendered cursor mode \(mode) pool \(index) offset \(offset)")
+                        }
+                        wavePointer.pointee.type = 1
+                        m4a_drv_pcm_start(
+                            driver, channel, wavePointer, UInt8(VOICE_TYPE_FIX | VOICE_TYPE_REV), 4)
+                        report.expect(
+                            pd_audio_pcm_source_frame(engine.pointer, index, &frame) && frame == 123,
+                            cppID: id, message: "compressed reverse pending cursor mode \(mode) pool \(index)")
+                        wavePointer.pointee.type = 0
+                    }
+                }
+            }
+        }
+    }
+}
+
 internal func runPairedPrimeChecks(fixtureRoot: String, report: CheckReport) -> Bool {
+    checkPcmSourceFrame(report)
     let primePath = URL(fileURLWithPath: fixtureRoot).appendingPathComponent("swiftcore-prime.mid").path
     guard playbackPairWriteFixture(primeSong(), path: primePath, cppID: primeUnprimedID, report: report),
         let primeTimeline = playbackPairLoadSwiftTimeline(

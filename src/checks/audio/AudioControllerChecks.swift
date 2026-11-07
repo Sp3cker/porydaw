@@ -243,6 +243,8 @@ public func runAudioControllerChecks(_ report: CheckReport) {
         try checkCpuInstrumentationIsObservational(report)
         try checkCpuTrackEndLifecycle(report)
         try checkCpuTrackEndAudioIdentity(report)
+        try checkNativeAudioQueuedOperations(report)
+        try checkNativeSampleLeaseArbitration(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
 }
@@ -570,8 +572,9 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
                 let owner = try runBlocking { try await NativeAudio() }
                 let midi = try MidiFile.decode(song.midiBytes)
                 let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
-                owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                let bind = owner.bind(timeline: timeline, bank: song.bank, config: song.config)
                 owner.play()
+                try runBlocking { await bind.value }
                 if !detachedRelease {
                     report.expect(
                         owner.usingNullBackend && owner.nullBackendForced
@@ -649,7 +652,233 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
         }
         report.expect(
             releasedFacade == nil && releasedBank == nil, cppID: id,
-            message: "isolated deinit joins callback and releases facade and pinned bank")
+            message: "control teardown joins callback and releases facade and pinned bank")
+    }
+}
+
+@MainActor
+private func checkNativeSampleLeaseArbitration(_ report: CheckReport) throws {
+    let id = "swiftcore/AudioAudition::sampleLease"
+    let audio = try runBlocking { try await NativeAudio() }
+    var firstEvents: [SampleAuditionEvent] = []
+    var successorEvents: [SampleAuditionEvent] = []
+    let first = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+        firstEvents.append(event)
+    }
+    let samples = (0..<1024).map { (index: Int) -> Int8 in index & 32 == 0 ? 80 : -80 }
+    func note(_ noteID: SampleAuditionNoteID, key: UInt8) -> SampleAuditionNote {
+        SampleAuditionNote(
+            id: noteID, source: .pcm(samples: samples, frequency: 8363 * 1024, loopStart: 0, looped: true),
+            key: key, adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60)
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(5)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    let firstNote = first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 60)
+    }
+    report.expect(
+        until({ firstEvents.contains(.started(firstNote)) }), cppID: id,
+        message: "the first lease starts through the real null-backend callback")
+
+    let successor = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+        successorEvents.append(event)
+    }
+    report.expect(
+        !first.isCurrent && successor.isCurrent
+            && firstEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.displaced) }.count == 1,
+        cppID: id, message: "claiming a successor immediately invalidates and notifies the displaced lease once")
+    let successorNote = successor.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 64)
+    }
+    report.expect(
+        until({ successorEvents.contains(.started(successorNote)) }), cppID: id,
+        message: "the successor starts a real note after displacing the first lease")
+
+    var staleNoteBuilt = false
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        return note(noteID, key: 72)
+    }
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        return SampleAuditionNote(
+            id: noteID, source: .wave16([UInt8](repeating: 0x5A, count: 16)),
+            key: 72, adsr: AudioADSR(), toneKey: 60)
+    }
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        let square = KitAuditionPsg(
+            kind: 3, key: 60, pan: 0, sweep: 0, duty: 2, period: 0,
+            attack: 0, decay: 0, sustain: 15, release: 0)
+        let kit = KitAuditionTone(
+            mode: .keysplit, children: [.psg(square)], splitTable: [UInt8](repeating: 0, count: 128))
+        return SampleAuditionNote(id: noteID, source: .kit(kit), key: 72, adsr: AudioADSR(), toneKey: 60)
+    }
+    first.stop()
+    let replacement = successor.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 67)
+    }
+    report.expect(
+        !staleNoteBuilt && successor.isCurrent && until({ successorEvents.contains(.started(replacement)) }),
+        cppID: id, message: "stale PCM, wave, kit and stop cannot prevent the successor's next note from starting")
+    successor.stop()
+    successor.stop()
+    first.stop()
+    try runBlocking { await audio.shutdown() }
+    report.expect(
+        !successor.isCurrent
+            && successorEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.stopped) }.count == 1
+            && firstEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.displaced) }.count == 1
+            && !firstEvents.contains(.ended(.stopped)),
+        cppID: id, message: "repeated and stale stops emit exactly one stopped event only to the successor")
+}
+
+@MainActor
+private func checkNativeAudioQueuedOperations(_ report: CheckReport) throws {
+    let id = "swiftcore/NativeAudio::queuedOperations"
+    guard let projectRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "missing real-project audio fixture")
+        return
+    }
+    let service = ProjectService()
+    let song = try runBlocking {
+        try await service.open(root: projectRoot)
+        return try await service.openSong(label: "mus_route101")
+    }
+    let audio = try runBlocking { try await NativeAudio() }
+    let activityID = "swiftcore/NativeAudio::emptyActivityBatchShape"
+    report.expect(
+        audio.usingNullBackend && audio.nullBackendForced, cppID: activityID,
+        message: "activity shape is checked against the real forced null backend")
+    for attempt in 0..<3 {
+        let levels = audio.consumeTrackActivityLevels()
+        report.expect(
+            levels.count == 16
+                && levels.allSatisfy {
+                    (level: AudioActivityLevel) -> Bool in level.left == 0 && level.right == 0
+                },
+            cppID: activityID,
+            message: "empty activity consume \(attempt) returns sixteen silent lanes")
+    }
+    let midi = try MidiFile.decode(song.midiBytes)
+    let timeline = PlaybackTimeline.build(file: midi, sampleRate: audio.sampleRate)
+    let patternFile = MidiFile(chunks: [
+        MidiChunk(
+            events: [
+                .channel(status: 0xC0, data0: 0),
+                .channel(tick: 24, status: 0x90, data0: 60, data1: 100),
+                .channel(tick: 30, status: 0x80, data0: 60),
+            ], endTick: 48)
+    ])
+    let pattern = PlaybackTimeline.build(
+        file: patternFile, sampleRate: audio.sampleRate, loopRange: (start: 24, end: 48))
+    let bind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let published = try audio.publish(timeline)
+    audio.play()
+    try runBlocking { await bind.value }
+    let playDeadline = Date().addingTimeInterval(5)
+    while (audio.playheadSamples == 0 || audio.status.appliedTimelineIdentity != published)
+        && Date() < playDeadline
+    {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    report.expect(
+        audio.songLoaded && audio.playheadSamples > 0 && audio.status.appliedTimelineIdentity == published,
+        cppID: id, message: "publish and Play queued immediately after bind adopt the exact timeline on the callback")
+
+    _ = audio.consumeCpuFrames()
+    audio.resetCpuPeak()
+    let resetBarrier = audio.updateSettings(audio.appliedSettings)
+    try runBlocking { await resetBarrier.value }
+    let afterReset = audio.consumeCpuFrames()
+    report.expect(
+        afterReset.generation == audio.status.telemetryGeneration && afterReset.frames.isEmpty,
+        cppID: id, message: "a telemetry batch queued before reset cannot restore stale CPU history")
+
+    let telemetryUnload = audio.unload()
+    try runBlocking { await telemetryUnload.value }
+    let afterUnload = audio.consumeCpuFrames()
+    report.expect(
+        afterUnload.generation == audio.status.telemetryGeneration && afterUnload.frames.isEmpty,
+        cppID: id, message: "queued pre-unload telemetry cannot repopulate the unloaded CPU history")
+    let telemetryBarrier = audio.updateSettings(audio.appliedSettings)
+    try runBlocking { await telemetryBarrier.value }
+    let afterDrain = audio.consumeCpuFrames()
+    report.expect(
+        afterDrain.generation == audio.status.telemetryGeneration && afterDrain.frames.isEmpty,
+        cppID: id, message: "later unloaded telemetry consumes remain empty in the current generation")
+    let rebound = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    try runBlocking { await rebound.value }
+
+    let start = audio.startPatternAudition(pattern)
+    if case .starting = audio.patternState {
+        report.expect(true, cppID: id, message: "pattern start is visible before its receipt")
+    } else {
+        report.fail(id, "pattern start did not immediately enter starting state")
+    }
+    let accepted = try runBlocking { await start.value }
+    if case .active = audio.patternState {
+        report.expect(accepted, cppID: id, message: "accepted pattern receipt transitions starting to active")
+    } else {
+        report.fail(id, "accepted pattern did not transition to active")
+    }
+
+    let staleStart = audio.startPatternAudition(pattern)
+    let stop = audio.stopPatternAudition()
+    _ = try runBlocking { await staleStart.value }
+    try runBlocking { await stop.value }
+    if case .idle = audio.patternState {
+        report.expect(true, cppID: id, message: "a stopped start cannot restore a stale pattern generation")
+    } else {
+        report.fail(id, "stale pattern completion resurrected a stopped audition")
+    }
+
+    let firstBind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let firstStart = audio.startPatternAudition(pattern)
+    let unload = audio.unload()
+    let startAfterUnload = audio.startPatternAudition(pattern)
+    let outcomes = try runBlocking {
+        let after = await startAfterUnload.value
+        let earlierCompleted = firstBind.isCompleted && firstStart.isCompleted && unload.isCompleted
+        let before = await firstStart.value
+        return (before, after, earlierCompleted)
+    }
+    report.expect(
+        outcomes.0 && !outcomes.1 && outcomes.2 && !audio.songLoaded, cppID: id,
+        message: "the last receipt follows bind, accepted start, and unload receipts in FIFO order")
+
+    let queuedBind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let queuedSettings = audio.updateSettings(AudioSettings())
+    let queuedUnload = audio.unload()
+    try runBlocking {
+        await audio.shutdown()
+        report.expect(
+            queuedBind.isCompleted && queuedSettings.isCompleted && queuedUnload.isCompleted,
+            cppID: id, message: "shutdown settles every earlier queued receipt before returning")
+    }
+    report.expect(
+        !audio.songLoaded && audio.status.appliedTimelineIdentity == 0, cppID: id,
+        message: "shutdown drains queued receipts and tears down the bound timeline")
+
+    var droppedOwner: NativeAudio? = try runBlocking { try await NativeAudio() }
+    weak var releasedOwner = droppedOwner
+    guard let receipt = droppedOwner?.bind(timeline: timeline, bank: song.bank, config: song.config) else {
+        report.fail(id, "could not queue a bind for the last-owner receipt check")
+        return
+    }
+    droppedOwner = nil
+    report.expect(
+        releasedOwner == nil && !receipt.isCompleted, cppID: id,
+        message: "the final facade owner can disappear before its queued receipt is delivered")
+    try runBlocking {
+        await receipt.value
+        report.expect(receipt.isCompleted, cppID: id, message: "queued receipt settles after last facade release")
+        await service.close()
     }
 }
 
@@ -1151,15 +1380,18 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::voicePreviewIsolation",
         message: "released preview and muted main drain to silence")
 
-    let sample = (0..<64).map { Int8((100 * sin(Double($0) * 2 * .pi / 64)).rounded()) }
-    guard let pcm = SampleAuditionPcm(samples: sample) else {
-        report.fail("swiftcore/AudioController::samplePreviewIsolation", "sample storage preparation failed")
-        return
+    let sample = (0..<64).map { (index: Int) -> Int8 in
+        Int8((100 * sin(Double(index) * 2 * .pi / 64)).rounded())
     }
-    let sampleLease = audio.audition.beginSample()
-    let accepted = sampleLease.publish(
-        pcm: pcm, frequency: 8363 * 1024, loopStart: 0, looped: true, key: 60,
-        adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60)
+    let samplePublication = audio.audition.publishSample(
+        SampleAuditionNote(
+            source: .pcm(samples: sample, frequency: 8363 * 1024, loopStart: 0, looped: true),
+            key: 60, adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60))
+    let accepted: Bool
+    switch samplePublication {
+    case .published: accepted = true
+    case .busy, .invalid: accepted = false
+    }
     report.expect(
         accepted, cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sample publication accepted")
     let sampleCursor = audio.playheadSamples
@@ -1175,16 +1407,22 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     report.expectEqual(
         expected: sampleCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", what: "sample preview does not park sequence")
-    sampleLease.stop()
+    audio.audition.stopSample()
     let sampleReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(sampleReleased.suffix(4096)) <= 1 / 32768,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sampleOff silences the looped sample")
 
     let wave = [UInt8](repeating: 0xFF, count: 8) + [UInt8](repeating: 0, count: 8)
-    let waveLease = audio.audition.beginSample()
-    let waveAccepted = waveLease.publish(
-        wave16: wave, key: 60, adsr: AudioADSR(attack: 7, decay: 0, sustain: 15, release: 0))
+    let wavePublication = audio.audition.publishSample(
+        SampleAuditionNote(
+            source: .wave16(wave), key: 60,
+            adsr: AudioADSR(attack: 7, decay: 0, sustain: 15, release: 0), toneKey: 60))
+    let waveAccepted: Bool
+    switch wavePublication {
+    case .published: waveAccepted = true
+    case .busy, .invalid: waveAccepted = false
+    }
     report.expect(
         waveAccepted, cppID: "swiftcore/AudioController::wavePreviewIsolation", message: "wave publication accepted")
     let waved = rig.render(rig.rate)
@@ -1192,7 +1430,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         audioControllerCheckPeak(waved.suffix(4096)) > 0.01 && audio.activeCgbChannels == 0,
         cppID: "swiftcore/AudioController::wavePreviewIsolation",
         message: "CGB wave sounds exclusively through preview engine")
-    waveLease.stop()
+    audio.audition.stopSample()
     let waveReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(waveReleased.suffix(4096)) <= 1 / 32768,

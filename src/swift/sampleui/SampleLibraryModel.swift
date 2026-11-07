@@ -120,14 +120,23 @@ public final class SampleLibraryModel: QmlUncreatable {
     @QtIgnored public var onOpenFileRequested: (() -> Void)?
 
     @QtIgnored
-    public init(preferences: PreferencesStore, palette: GridPalette, audition: AudioAudition?) {
+    public init(
+        preferences: PreferencesStore, palette: GridPalette,
+        beginSampleAudition: @escaping (@escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease?
+    ) {
         self.preferences = preferences
         preview = LibraryPreviewStrip(palette: palette)
-        previewPlayer = PcmAuditionPlayer(audition: audition)
+        previewPlayer = PcmAuditionPlayer(beginSampleAudition: beginSampleAudition)
         let paths = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
         roots = paths.map { FolderNode(path: $0, depth: 0, rootPath: $0) }
-        previewPlayer.onPlayhead = { [weak self] (frame: Int?) in self?.previewPlayheadMoved(frame) }
-        previewPlayer.onTerminated = { [weak self] in self?.setPreviewingPath(path: "") }
+        previewPlayer.onPlayhead = { [weak self] (frame: Int) in self?.previewPlayheadMoved(frame) }
+        previewPlayer.onLifecycle = { [weak self] (lifecycle: PcmAuditionPlayer.Lifecycle) in
+            guard let self else { return }
+            if case .ended = lifecycle {
+                self.setPreviewingPath(path: "")
+                self.previewPlayheadMoved(nil)
+            }
+        }
         persistRoots()
         navigate(to: roots.first)
     }
@@ -256,26 +265,31 @@ public final class SampleLibraryModel: QmlUncreatable {
         return await scan?.value
     }
 
+    @QtIgnored public func claimPreview() -> Optional<SampleAuditionLease> { previewPlayer.claim() }
+
     /// Sounds a prepared preview once at `key`; the end clears `previewing`.
-    @QtIgnored public func playPreview(_ rendered: ProcessedSample, path: String, key: UInt8, toneKey: UInt8) {
-        previewPlayer.play(rendered: rendered, looped: false, key: key, adsr: AudioADSR(), toneKey: toneKey)
+    @QtIgnored public func playPreview(
+        _ rendered: ProcessedSample, path: String, key: UInt8, toneKey: UInt8, lease: SampleAuditionLease
+    ) {
+        guard lease.isCurrent else { return }
         previewFrames = max(1, rendered.s8.count)
-        setPreviewingPath(path: previewPlayer.playing ? path : "")
-        previewPlayheadMoved(previewPlayer.playing ? 0 : nil)
+        let note = SampleAuditionNote(
+            id: .unassigned,
+            source: .pcm(samples: rendered.s8, frequency: rendered.freq, loopStart: rendered.loopStart, looped: false),
+            key: key, adsr: AudioADSR(), toneKey: toneKey)
+        previewPlayer.play(note, lease: lease, repeatPolicy: .once)
+        setPreviewingPath(path: path)
     }
 
     public func tickPreview() { previewPlayer.tick() }
 
     @QtIgnored public func stopPreview() {
         previewPlayer.stop()
-        setPreviewingPath(path: "")
     }
 
     private func previewPlayheadMoved(_ frame: Int?) {
         let drawn = previewingPath == selectedFilePath ? frame : nil
         preview.setPlayhead(fraction: drawn.map { (frame: Int) -> Double in Double(frame) / Double(previewFrames) })
-        // A nil frame while still playing is the one-shot's natural end.
-        if frame == nil, previewPlayer.playing { stopPreview() }
     }
 
     private func scheduleScan() {

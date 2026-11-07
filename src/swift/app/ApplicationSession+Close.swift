@@ -16,8 +16,9 @@ extension ApplicationSession {
         polyphony.setVisible(showing: false)
         polyphony.setContext(session: nil)
         songTabs.releaseAllDetached()
+        drainTabReleases()
         voiceList.releaseVoicegroup()
-        audio?.unload()
+        let unload = audio?.unload()
         refreshDocumentState()
         // Keep the project alive until every released document and any in-flight
         // open have retired, then stop its worker. The workspaces themselves are
@@ -34,6 +35,7 @@ extension ApplicationSession {
         Task {
             _ = await replacementTask?.value
             _ = await closing?.value
+            await unload?.value
             await service?.close()
         }
     }

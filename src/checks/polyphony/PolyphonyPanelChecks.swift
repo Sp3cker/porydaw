@@ -23,7 +23,7 @@ public func runPolyphonyPanelChecks(_ report: CheckReport) {
         tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
         eventTotal: 0,
         events: Array(
-            repeating: M4APolyEvent(
+            repeating: AudioPolyEvent(
                 type: 0, trackIndex: 0, midiKey: 0,
                 byTrack: 0, program: 0, tick: 0),
             count: Int(M4A_POLY_EVENT_CAPACITY)))
@@ -62,13 +62,13 @@ public func runPolyphonyPanelChecks(_ report: CheckReport) {
     report.expect(!panel.showingShadow, cppID: id, message: "normal snapshot hides shadow pool")
 
     let eventID = "swiftcore/PolyphonyPanel::ringAndJump"
-    let oldest = M4APolyEvent(
+    let oldest = AudioPolyEvent(
         type: 1, trackIndex: 2, midiKey: 60,
         byTrack: 4, program: 5, tick: 96)
-    let middle = M4APolyEvent(
+    let middle = AudioPolyEvent(
         type: 2, trackIndex: 2, midiKey: 72,
         byTrack: 0, program: 5, tick: 216)
-    let newest = M4APolyEvent(
+    let newest = AudioPolyEvent(
         type: 0, trackIndex: 1, midiKey: 67,
         byTrack: 1, program: 0, tick: UInt32.max)
     snapshot.events[0] = oldest
@@ -118,7 +118,7 @@ public func runPolyphonyPanelChecks(_ report: CheckReport) {
     for burst in 0..<10 {
         for offset in 0..<60 {
             let index = burst * 60 + offset + 1
-            snapshot.events[index % snapshot.events.count] = M4APolyEvent(
+            snapshot.events[index % snapshot.events.count] = AudioPolyEvent(
                 type: 0, trackIndex: 0, midiKey: 60, byTrack: 0, program: 0,
                 tick: UInt32(index))
         }
@@ -188,7 +188,7 @@ private func positionReadoutBoundaryChecks(_ report: CheckReport, snapshot: Audi
         var sample = snapshot
         sample.eventTotal = UInt32(boundaries.count)
         for (index, boundary) in boundaries.enumerated() {
-            sample.events[index] = M4APolyEvent(
+            sample.events[index] = AudioPolyEvent(
                 type: 0, trackIndex: 0, midiKey: 60, byTrack: 0, program: 0, tick: boundary.tick)
         }
         panel.update(sample)

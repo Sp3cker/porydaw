@@ -1,4 +1,5 @@
 import Foundation
+@testable import PorydawApp
 import PorydawAppAudio
 import PorydawPlayback
 import PorydawKitStudio
@@ -19,6 +20,7 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
     checkKitAsyncAudition(report)
+    checkKitWorkflowAuditionLeases(report)
 }
 
 @MainActor
@@ -621,6 +623,121 @@ private func checkKitAsyncAudition(_ report: CheckReport) {
         return
     }
     r.expect(!stoppedRenderPublished, message: "stop invalidates an in-flight slice render")
+}
+
+@MainActor
+private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::auditionLeases")
+    let app = ApplicationSession()
+    app.projectOpen = true
+    app.projectRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+    let output = SampleAuditionCheckOutput()
+    let studio = KitStudioWorkflow(session: app, beginSampleAudition: output.begin)
+    defer { studio.dispose() }
+    studio.requestOpen()
+    guard let editor = studio.presenter(), let waveform = editor.waveform else {
+        r.expect(false, message: "Split Studio opens with a waveform")
+        return
+    }
+    editor.addSource(
+        ImportedSample(
+            buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
+            sampleRate: 13379, suggestedName: "lease"),
+        autoPlaceFirstSlice: true)
+    waveform.setViewport(width: 320, height: 100)
+    let slice = editor.sliceId(row: 0)
+    editor.playSelectedSlice()
+    guard let pending = output.current else {
+        r.expect(false, message: "slice claims the output before its render lands")
+        return
+    }
+    r.expect(pending.isCurrent && !studio.auditionPlaying, message: "pending slice holds a lease without sounding")
+    let successor = output.begin { (_: SampleAuditionEvent) in }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while editor.sourceFrame(sliceId: slice, renderedPosition: 0) == nil && Date() < deadline {
+                await Task.yield()
+            }
+            if editor.sourceFrame(sliceId: slice, renderedPosition: 0) == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "displaced slice render did not land: \(error)")
+        return
+    }
+    r.expect(
+        !pending.isCurrent && successor?.isCurrent == true && !studio.auditionPlaying
+            && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
+        message: "displaced pending render cannot publish or retake the successor")
+
+    editor.playSelectedSlice()
+    guard let first = output.lastNote() else {
+        r.expect(false, message: "cached slice starts after claiming a new lease")
+        return
+    }
+    output.start(first, frame: 32)
+    let beforeFrame = waveform.displayRevision
+    studio.tickAudition()
+    guard let mappedFrame = editor.sourceFrame(sliceId: slice, renderedPosition: 32) else {
+        r.expect(false, message: "sounding slice has a source-frame mapping")
+        return
+    }
+    let displayedFrame = waveform.displayRevision
+    waveform.setPlayhead(frame: mappedFrame)
+    r.expect(
+        studio.auditionPlaying && displayedFrame > beforeFrame && waveform.displayRevision == displayedFrame,
+        message: "slice playhead follows the engine frame mapped through its sounding render")
+    output.finish(first)
+    let gapRevision = waveform.displayRevision
+    waveform.setPlayhead(frame: nil)
+    r.expect(
+        studio.auditionPlaying && waveform.displayRevision == gapRevision,
+        message: "the repeat gap clears the playhead while retaining playback intent")
+    studio.advanceAudition(bySeconds: 0.51)
+    guard let repeated = output.lastNote() else {
+        r.expect(false, message: "the slice repeats after the gap")
+        return
+    }
+    if case let .pcm(firstSamples, firstFrequency, firstLoopStart, firstLooped) = first.source,
+        case let .pcm(repeatedSamples, repeatedFrequency, repeatedLoopStart, repeatedLooped) = repeated.source
+    {
+        r.expect(
+            repeated.id != first.id && repeatedSamples == firstSamples && repeatedFrequency == firstFrequency
+                && repeatedLoopStart == firstLoopStart && repeatedLooped == firstLooped
+                && repeated.key == first.key && repeated.toneKey == first.toneKey,
+            message: "slice repeat submits the same PCM and pitch under a new note ID")
+    } else {
+        r.expect(false, message: "slice repeat retains its PCM source")
+    }
+    output.start(repeated, frame: 64)
+    studio.tickAudition()
+    let repeatedFrame = waveform.displayRevision
+    waveform.setPlayhead(frame: editor.sourceFrame(sliceId: slice, renderedPosition: 64))
+    r.expect(waveform.displayRevision == repeatedFrame, message: "repeated slice follows the new engine frame")
+
+    editor.playKey(key: 36)
+    guard let tone = output.lastNote(), let toneLease = output.current else {
+        r.expect(false, message: "kit key claims and publishes its tone")
+        return
+    }
+    if case .kit = tone.source {
+        r.expect(tone.key == 36 && toneLease.isCurrent, message: "kit note uses the claimed lease")
+    } else {
+        r.expect(false, message: "kit key publishes a kit tone rather than a slice")
+    }
+    output.start(tone)
+    output.finish(tone)
+    r.expect(!toneLease.isCurrent, message: "natural kit-tone finish ends its lease")
+    editor.playKey(key: 36)
+    guard let displacedTone = output.current else {
+        r.expect(false, message: "second kit key claims a lease")
+        return
+    }
+    let later = output.begin { (_: SampleAuditionEvent) in }
+    studio.stopAudition()
+    r.expect(
+        !displacedTone.isCurrent && later?.isCurrent == true,
+        message: "displaced kit-tone teardown cannot stop its successor")
 }
 
 @MainActor

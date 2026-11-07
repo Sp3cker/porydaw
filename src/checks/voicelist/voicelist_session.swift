@@ -1,7 +1,8 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawCoreCheckNative
+import PorydawAppAudio
 import PorydawDocument
 import PorydawPlayback
 
@@ -13,6 +14,99 @@ import PorydawPlayback
 // re-derives rows/selector/used marks after bank and document changes, and
 // undo restores prior observable state. Mirrors the retired native oracle's
 // owner-driven flow (WorkspaceUi::rebuildVoicegroupPresentation).
+
+@MainActor
+private func checkPickerAuditionLease(_ report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/ApplicationSession::pickerAuditionClaimAndStop"
+    let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-picker-audition-lease")
+    let project = URL(fileURLWithPath: projectDir, isDirectory: true)
+    let samples = project.appendingPathComponent("sound/direct_sound_samples", isDirectory: true)
+    let service = ProjectService()
+    let app = ApplicationSession()
+    app.catalogService = service
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+        do {
+            try runBlocking {
+                await app.audioPreparationSettled()
+                _ = await app.activeReplacementTask?.value
+                _ = await app.retireChain?.value
+                await app.audio?.shutdown()
+            }
+        } catch {
+            report.fail(id, "picker audition audio cleanup failed: \(error)")
+        }
+    }
+    do {
+        try FileManager.default.createDirectory(at: samples, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(
+            at: URL(fileURLWithPath: fixtureRoot)
+                .appendingPathComponent("sound/direct_sound_samples/fixture_loop.bin"),
+            to: samples.appendingPathComponent("fixture_loop.bin"))
+        try """
+        .align 2
+        DirectSoundWaveData_fixture_loop::
+            .incbin "sound/direct_sound_samples/fixture_loop.bin"
+        """.write(
+            to: project.appendingPathComponent("sound/direct_sound_data.inc"),
+            atomically: true, encoding: .utf8)
+        let document = try runBlocking {
+            try await service.open(root: projectDir)
+            return try await DocumentSession.open(service: service, label: "mus_session_test")
+        }
+        let audio = try runBlocking { try await NativeAudio() }
+        app.audioReadiness = .ready(audio)
+        app.voiceList.refresh(from: document)
+        var slots = document.bankSlots
+        slots[3] = BankSlotView(
+            kind: BankSlotKind.editable,
+            voice: BankVoice(
+                macro: BankVoiceMacro.directSound, symbol: "DirectSoundWaveData_fixture_loop",
+                attack: 255, decay: 0, sustain: 255, release: 0))
+        app.voiceList.bindBank(slots: slots, dirty: false, loadName: document.bankLoadName)
+        app.voiceList.selectSlot(slot: 3)
+
+        var displaced = false
+        let previous = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+            if case .ended(.displaced) = event { displaced = true }
+        }
+        app.voiceList.requestSampleAudition(symbol: "DirectSoundWaveData_fixture_loop")
+        guard let pending = app.pickerAudition else {
+            report.fail(id, "picker did not synchronously claim an audition lease")
+            return
+        }
+        report.expect(
+            displaced && !previous.isCurrent && pending.isCurrent, cppID: id,
+            message: "the picker displaces the prior holder before its load task can run")
+        app.voiceList.stopSampleAudition()
+        report.expect(
+            !pending.isCurrent && app.pickerAudition == nil, cppID: id,
+            message: "picker stop ends and clears the lease while the load is pending")
+
+        app.voiceList.requestSampleAudition(symbol: "DirectSoundWaveData_fixture_loop")
+        guard let playing = app.pickerAudition else {
+            report.fail(id, "picker did not claim a lease for the replacement request")
+            return
+        }
+        let sounded = try runBlocking {
+            let deadline = Date().addingTimeInterval(5)
+            while playing.isCurrent && playing.soundingFrame == nil && Date() < deadline {
+                await Task.yield()
+            }
+            return playing.isCurrent && playing.soundingFrame != nil
+        }
+        report.expect(
+            sounded && !pending.isCurrent && app.pickerAudition === playing, cppID: id,
+            message: "a later picker request loads and reaches the audio callback without reviving the stopped lease")
+        app.voiceList.stopSampleAudition()
+        report.expect(
+            !playing.isCurrent && app.pickerAudition == nil, cppID: id,
+            message: "picker stop also ends the asynchronously sounding lease")
+    } catch {
+        report.fail(id, "picker audition fixture failed: \(error)")
+    }
+}
 
 @MainActor
 public func runVoiceListSessionChecks(_ report: CheckReport) {
@@ -561,6 +655,7 @@ public func runVoiceListSessionChecks(_ report: CheckReport) {
     report.expectEqual(
         expected: secondVoice, actual: second.bankSlots[0].voice, cppID: originID,
         what: "undo restores the second tab's original voice")
+    checkPickerAuditionLease(report, fixtureRoot: fixtureRoot)
     runVoiceListNewVoicegroupChecks(report, fixtureRoot: fixtureRoot)
 }
 

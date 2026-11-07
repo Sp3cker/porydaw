@@ -114,7 +114,13 @@ public final class CpuMeterPresenter: QmlUncreatable {
         if historyFrames.count > Self.historyCapacity {
             historyFrames.removeFirst(historyFrames.count - Self.historyCapacity)
         }
-        let isPlaying = audio.requestedTransport == 2 && !audio.isPatternAuditioning
+        let patternIdle: Bool
+        if case .idle = audio.patternState {
+            patternIdle = true
+        } else {
+            patternIdle = false
+        }
+        let isPlaying = audio.requestedTransport == 2 && patternIdle
         let frame = isPlaying && current?.valid == true ? current : nil
         publish(\.loaded, true)
         publish(\.playing, isPlaying)

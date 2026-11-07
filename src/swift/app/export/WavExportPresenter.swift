@@ -39,7 +39,7 @@ public final class WavExportPresenter: QmlUncreatable {
     @QtIgnored
     public var exportAvailable: Bool {
         guard let session else { return false }
-        return session.songOpen && session.audio?.songLoaded == true
+        return session.songOpen && session.audio?.requestedSongLoaded == true
     }
 
     public func open() {
