@@ -83,6 +83,8 @@ function(add_porydaw_check name)
         PorydawSampleUI PorydawKitStudio BinaryParsing)
     # The Python check runner requires mid2agb beside the build-root harnesses.
     add_dependencies(${name} mid2agb)
+    add_dependencies(${name} porydaw-vst3-host
+        porydawtestgen porydawtestcrash porydawtesthang)
 endfunction()
 
 qt_add_executable(porydaw_checks
@@ -102,6 +104,9 @@ set_target_properties(porydaw_checks PROPERTIES
     LINKER_LANGUAGE CXX)
 target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
+add_subdirectory(vstfixture)
+add_dependencies(porydaw_checks porydaw-vst3-host
+    porydawtestgen porydawtestcrash porydawtesthang)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Every core-check module gets these; only SwiftCoreCheck adds the app/render maps
@@ -177,6 +182,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
         playback/LiveInsertChecks.swift
+        pluginhost/PluginHostABIChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift
@@ -242,6 +248,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/voicegroup_creation.swift
         LINK_LIBRARIES swift_core_check_support ${core_check_libraries}
     )
+    target_compile_options(swift_core_check_logic PUBLIC
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/pluginhost/module.modulemap>")
+    target_link_libraries(swift_core_check_logic PRIVATE porydaw_pluginhost)
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
@@ -486,6 +495,15 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
                     "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
             VERBATIM
         )
+        add_custom_target(porydaw_check_pluginhost_runtime
+            COMMAND "${CMAKE_COMMAND}" -E make_directory
+                "$<TARGET_FILE_DIR:porydaw_checks>"
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "$<TARGET_FILE:porydaw-vst3-host>"
+                "$<TARGET_FILE_DIR:porydaw_checks>/porydaw-vst3-host"
+            DEPENDS porydaw-vst3-host
+            VERBATIM)
+        add_dependencies(porydaw_checks porydaw_check_pluginhost_runtime)
     endif()
 endif()
 

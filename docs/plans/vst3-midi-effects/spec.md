@@ -286,6 +286,8 @@ The play/pause binding always reaches Porydaw, including from a focused plugin e
 
 Task 6 owns `src/pluginhost/pluginhost.h` and the headless engine; task 8 adds the editor half. The `porydaw_pluginhost` static library links only into the helper and the checks binary. Swift does not import this ABI. The helper and headless ABI checks use opaque handles `pdph_module`, `pdph_plugin`, `pdph_editor`. `pdph_result` is `int32_t` (`PDPH_OK = 0`, negative `PDPH_ERR_*`); `pdph_error` is `{ char message[512]; }`. No SDK types cross the ABI.
 
+ABI constants: `PDPH_OK=0`, `PDPH_ERR_ARGUMENT=-1`, `PDPH_ERR_STATE=-2`, `PDPH_ERR_SDK=-3`, `PDPH_ERR_INTERNAL=-4`; task 8 reserves `PDPH_ERR_NO_EDITOR=-5` and `PDPH_ERR_UNSUPPORTED_PLATFORM=-6`. Event kinds are `PDPH_EVENT_NOTE_ON=0`, `PDPH_EVENT_NOTE_OFF=1`, `PDPH_EVENT_OTHER=2`. `PDPH_CTX_*` and `PDPH_RESTART_*` retain the SDK bit values unchanged.
+
 ```c
 typedef struct { uint8_t uid[16]; char name[128], category[128], sub_categories[128],
                  vendor[128], version[128], sdk_version[128]; } pdph_class_info;

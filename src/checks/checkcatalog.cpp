@@ -117,6 +117,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-midicodec", "midiCodec");
         swiftSuite("swiftcore-musicalsemantics", "musicalSemantics");
         swiftSuite("swiftcore-playback", "playback");
+        swiftSuite("swiftcore-pluginhost-abi", "pluginHostABI");
         // Independent DSP groups retain every assertion within the runner's 90-second deadline.
         swiftSuite("swiftcore-playback-controller", "audioController");
         swiftSuite("swiftcore-playback-audition", "audioAudition");

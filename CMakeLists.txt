@@ -551,6 +551,7 @@ configure_file(
 set_source_files_properties(${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license} PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
 qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license})
+add_dependencies(porydaw porydaw-vst3-host)
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
     add_custom_command(TARGET porydaw POST_BUILD

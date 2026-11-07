@@ -1,0 +1,83 @@
+#pragma once
+#include "pluginhost.h"
+#include "public.sdk/source/vst/hosting/eventlist.h"
+#include "public.sdk/source/vst/hosting/parameterchanges.h"
+#include "public.sdk/source/vst/hosting/plugprovider.h"
+#include "public.sdk/source/vst/hosting/processdata.h"
+#include "pluginterfaces/base/funknownimpl.h"
+#include "pluginterfaces/vst/ivsteditcontroller.h"
+#include <array>
+#include <atomic>
+#include <memory>
+#include <vector>
+
+namespace pdph {
+constexpr int eventCapacity = 4096;
+static_assert(std::atomic<uint32_t>::is_always_lock_free && std::atomic<bool>::is_always_lock_free,
+    "Plugin processing callbacks require lock-free atomics");
+struct ParameterEdit { Steinberg::Vst::ParamID id; Steinberg::Vst::ParamValue value; };
+class ComponentHandler final : public Steinberg::U::Implements<Steinberg::U::Directly<
+    Steinberg::Vst::IComponentHandler, Steinberg::Vst::IComponentHandler2>> {
+public:
+    explicit ComponentHandler(pdph_host_callbacks callbacks) : callbacks(callbacks) {}
+    Steinberg::tresult PLUGIN_API beginEdit(Steinberg::Vst::ParamID) override;
+    Steinberg::tresult PLUGIN_API performEdit(Steinberg::Vst::ParamID, Steinberg::Vst::ParamValue) override;
+    Steinberg::tresult PLUGIN_API endEdit(Steinberg::Vst::ParamID) override;
+    Steinberg::tresult PLUGIN_API restartComponent(Steinberg::int32) override;
+    Steinberg::tresult PLUGIN_API setDirty(Steinberg::TBool) override;
+    Steinberg::tresult PLUGIN_API requestOpenEditor(Steinberg::FIDString) override;
+    Steinberg::tresult PLUGIN_API startGroupEdit() override;
+    Steinberg::tresult PLUGIN_API finishGroupEdit() override;
+    bool pop(ParameterEdit&);
+    void detach();
+private:
+    template<class F> void notify(F function) {
+        inFlight.fetch_add(1, std::memory_order_seq_cst);
+        if (enabled.load(std::memory_order_seq_cst)) function(callbacks);
+        inFlight.fetch_sub(1, std::memory_order_seq_cst);
+    }
+    const pdph_host_callbacks callbacks;
+    std::atomic<bool> enabled{true};
+    std::atomic<uint32_t> inFlight{0};
+    std::array<ParameterEdit, eventCapacity> edits{};
+    alignas(64) std::atomic<uint32_t> writeIndex{0};
+    alignas(64) std::atomic<uint32_t> readIndex{0};
+};
+class OutputEvents final : public Steinberg::Vst::EventList {
+public:
+    OutputEvents() : EventList(0) {}
+    Steinberg::tresult PLUGIN_API addEvent(Steinberg::Vst::Event& event) override {
+        ++total;
+        return EventList::addEvent(event);
+    }
+    void reset() { clear(); total = 0; }
+    int32_t total = 0;
+};
+struct HeldNote { bool used = false; int32_t id = -1; uint8_t channel = 0, pitch = 0; uint64_t order = 0; };
+pdph_result sdkResult(Steinberg::tresult);
+void error(pdph_error*, const char*);
+}
+struct pdph_module_impl {
+    VST3::Hosting::Module::Ptr module;
+    std::vector<VST3::Hosting::ClassInfo> classes;
+};
+struct pdph_plugin_impl {
+    // Provider dies before handler and module; processor references die before provider.
+    VST3::Hosting::Module::Ptr module;
+    Steinberg::IPtr<pdph::ComponentHandler> handler;
+    std::unique_ptr<Steinberg::Vst::PlugProvider> provider;
+    Steinberg::IPtr<Steinberg::Vst::IComponent> component;
+    Steinberg::IPtr<Steinberg::Vst::IEditController> controller;
+    Steinberg::IPtr<Steinberg::Vst::IAudioProcessor> processor;
+    Steinberg::Vst::HostProcessData data;
+    Steinberg::Vst::EventList inputEvents{0};
+    pdph::OutputEvents outputEvents;
+    Steinberg::Vst::ParameterChanges inputParameters{0};
+    std::vector<Steinberg::Vst::ParamID> parameterIDs;
+    std::array<pdph::HeldNote, pdph::eventCapacity> held{};
+    uint64_t noteOrder = 0;
+    int32_t nextNoteID = 0;
+    int32_t maxBlock = 0;
+    bool setup = false, active = false, processing = false;
+    ~pdph_plugin_impl();
+};

@@ -101,10 +101,21 @@ jobs:
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
           ./linuxdeploy-x86_64.AppImage --appdir AppDir \
             -e build/porydaw \
+            -e build/porydaw-vst3-host \
             -d resources/porydaw.desktop \
             -i resources/porydaw.png \
             --plugin qt \
             --output appimage
+
+      - name: Start packaged Linux helper
+        run: |
+          set +e
+          reason=$(env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u LD_LIBRARY_PATH AppDir/usr/bin/porydaw-vst3-host scan /porydaw-nonexistent.vst3 2>&1)
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test -n "$reason"
+          test "$(printf '%s\n' "$reason" | wc -l)" -eq 1
 
       - name: Set up uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
@@ -196,8 +207,15 @@ jobs:
         # hdiutil create is occasionally flaky on CI runners ("resource
         # busy"), hence the retry loop.
         run: |
-          macdeployqt build/porydaw.app -qmldir=src/ui -codesign=-
+          macdeployqt build/porydaw.app -qmldir=src/ui -executable=build/porydaw.app/Contents/MacOS/porydaw-vst3-host -codesign=-
           codesign --verify --deep --strict --verbose=2 build/porydaw.app
+          set +e
+          reason=$(env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u DYLD_LIBRARY_PATH build/porydaw.app/Contents/MacOS/porydaw-vst3-host scan /porydaw-nonexistent.vst3 2>&1)
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test -n "$reason"
+          test "$(printf '%s\n' "$reason" | wc -l)" -eq 1
           mkdir dmg-root
           cp -R build/porydaw.app dmg-root/
           cp "RUN AFTER INSTALL.txt" dmg-root/
@@ -290,6 +308,17 @@ jobs:
         run: |
           cmake --install build --prefix "$env:BUILD_NAME"
           Copy-Item RELEASE-README.txt "$env:BUILD_NAME/README.txt"
+
+      - name: Start packaged Windows helper
+        shell: pwsh
+        run: |
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+          $helper = Start-Process -FilePath "$env:BUILD_NAME\porydaw-vst3-host.exe" -ArgumentList "scan", "C:\porydaw-nonexistent.vst3" -Wait -PassThru -RedirectStandardError helper-stderr.txt -RedirectStandardOutput helper-stdout.txt
+          if ($helper.ExitCode -ne 1) { throw "Packaged helper did not return scan failure" }
+          $reason = @(Get-Content helper-stderr.txt)
+          if ($reason.Count -ne 1 -or [string]::IsNullOrWhiteSpace($reason[0])) { throw "Expected one scan failure reason" }
+          if ((Get-Item helper-stdout.txt).Length -ne 0) { throw "Failed scan wrote stdout" }
 
       # Proves the staged folder is self-contained: the first QML frame with no Qt or Swift on PATH.
       - name: Launch staged porydaw.exe

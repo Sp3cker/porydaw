@@ -16,6 +16,7 @@ class SwiftCoreTest final : public QObject
     void midiCodec();
     void musicalSemantics();
     void playback();
+    void pluginHostABI();
     void audioController();
     void audioAudition();
     void resonance();

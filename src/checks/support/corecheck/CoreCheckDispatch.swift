@@ -25,6 +25,7 @@ public func pdcSuiteRun(
     case PDC_SUITE_MIDI_CODEC: onMain(report, runMidiCodecSuite)
     case PDC_SUITE_MUSICAL_SEMANTICS: onMain(report, runMusicalSemanticsSuite)
     case PDC_SUITE_PLAYBACK: runPlaybackSuite(report)
+    case PDC_SUITE_PLUGINHOST_ABI: onMain(report, runPluginHostABIChecks)
     case PDC_SUITE_NOTE_EDITS:
         onMain(report) {
             coreEditCorpusLoadCheck($0); runNoteEditsSuite($0)
