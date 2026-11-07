@@ -138,17 +138,30 @@ Swift imports its C module without C++ interop or SDK linkage. MSVC enables
 lock-free atomic sizes, alignment, field offsets and wire size. POSIX backing may
 be page-rounded; mappings still expose only the logical wire extent.
 
-`PorydawPluginHost` provides framed control and processing-channel ownership.
-One non-Sendable producer owns request/reply payload access; a separate
-main-actor mapping monitors atomics and unlinks the name after `Ready`.
-Live and Render must detach/join before transferring producer ownership.
-Swift owns control, watchdog and shutdown deadlines; native teardown never
-adds a competing hang policy. The helper supports both `scan` and
-`host --channel` modes.
+`PorydawPluginHost` owns discovery, framed control, capture and live insertion.
+Its nine Swift sources depend on Core, Playback and the SDK-free C bridge, with
+no C++ interop. Discovery supervises separate scanner children and keeps usable
+cached entries during progressive scans and cancellation.
+
+Each instance lazily launches one helper. One non-Sendable producer owns
+request/reply payload access; a separate main-actor mapping monitors atomics and
+unlinks the name after `Ready`. An atomic reservation excludes the audio callback
+from the dedicated capture worker; detach/join precedes transfer and reclamation.
+Control/state operations are async, never main-actor blocking.
+Swift owns control, watchdog and shutdown deadlines; native teardown never adds
+a competing hang policy. The helper supports both `scan` and `host --channel`.
+
+Live feedback carries actual dispatches, completed positions and boundaries in
+one bounded SPSC ring. Callback-resolved ticks preserve old-timeline endpoints
+and silent tails across seeks and adoption; the main-thread drain never estimates
+them from a later transport snapshot. Loop input offs precede chase at offset
+zero of the first wrapped block, under the new loop context.
 
 Run `uv run --no-sync dev checks --filter swiftcore-pluginbridge` for real-helper
 transport, state, crash, hang and shutdown coverage; add `--asan` for sanitizer
 coverage. `swiftcore-pluginhost-abi` covers the native engine separately.
+Run `uv run --no-sync dev checks --filter swiftcore-pluginhost` for discovery,
+capture, lifecycle, live/take and warmed callback-allocation coverage.
 
 To update the dependency:
 
@@ -427,6 +440,20 @@ expressions (see `.omp/rules/swift-typecheck-complexity.md`).
 `PorydawApp` into smaller modules lowers the floor further; `PorydawDocument`
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild
 when the interface is unchanged.
+
+`PorydawPluginHost` isolates the new SDK-free hosting behavior from the app module.
+Task 7 measured the same warm Debug app probe before and after adding its runtime:
+
+| Hosting runtime | `build:app` samples (s) | Median (s) |
+|---|---|---:|
+| Before task 7 | 7.5, 7.5, 7.5 | 7.5 |
+| After task 7 | 8.3, 7.5, 7.9 | 7.9 |
+
+Each sample touched `src/swift/app/shell/ShellPresenter.swift` then ran
+`uv run --no-sync dev build:app`, without concurrent builds or indexing.
+These are harness-reported build times; median Ninja phases were 7.335 s and
+7.689 s. The app edit floor did not improve; the boundary provides isolation,
+not a measured app-compilation speedup.
 
 `PorydawAppHistory` owns the history presenter and retained row type; `PorydawApp`
 only supplies session context and shell callbacks. Replay and labels stay in

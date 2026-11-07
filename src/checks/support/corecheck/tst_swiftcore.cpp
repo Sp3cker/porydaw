@@ -49,6 +49,11 @@ void SwiftCoreTest::pluginBridge()
     pdc_suite_run(PDC_SUITE_PLUGINBRIDGE, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::pluginHost()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINHOST, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::audioController()
 {
     pdc_suite_run(PDC_SUITE_AUDIO_CONTROLLER, reportSwiftCheck, this);

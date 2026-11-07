@@ -184,6 +184,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         playback/LiveInsertChecks.swift
         pluginhost/PluginHostABIChecks.swift
         pluginhost/BridgeChecks.swift
+        pluginhost/PluginCatalogChecks.swift
+        pluginhost/PluginHostChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift

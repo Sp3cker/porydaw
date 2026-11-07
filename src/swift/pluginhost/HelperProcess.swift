@@ -27,11 +27,12 @@ enum HelperProcessError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
-struct HelperBuses: Equatable, Sendable {
-    let eventIn: Int32
-    let eventOut: Int32
-    let audioIn: Int32
-    let audioOut: Int32
+/// Bus topology reported by the helper after plugin creation.
+public struct HelperBuses: Equatable, Sendable {
+    public let eventIn: Int32
+    public let eventOut: Int32
+    public let audioIn: Int32
+    public let audioOut: Int32
 }
 
 enum HelperEvent: Equatable, Sendable {
@@ -164,6 +165,10 @@ final class HelperProcess {
     private let channelName: String
     private let monitor: HelperMonitor
     var processIdentifier: Int32 { process.processIdentifier }
+    var bridgeSnapshot: BridgeSnapshot? {
+        guard lifecycle == .ready else { return nil }
+        return monitor.snapshot
+    }
     var onEvent: ((HelperEvent) -> Void)?
     var onFailure: ((HelperProcessError) -> Void)?
     private(set) var failure: HelperProcessError?

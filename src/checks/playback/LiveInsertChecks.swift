@@ -140,7 +140,14 @@ private func checkLiveWindowsAndDispatch(_ report: CheckReport) {
     report.expectEqual(
         expected: [UInt8(60), 64], actual: fake.calls[0].input.map(\.key),
         cppID: liveInsertID, what: "only insert track notes enter input")
-    let notes = fake.take.filter { (event: LiveTakeEvent) -> Bool in !event.isSegmentBoundary }
+    let notes = fake.take.filter { (event: LiveTakeEvent) -> Bool in event.kind == .note }
+    let progress = fake.take.filter { (event: LiveTakeEvent) -> Bool in event.kind == .position }
+    report.expectEqual(
+        expected: [UInt64(1500)], actual: progress.map(\.sample), cppID: liveInsertID,
+        what: "completed playing chunk publishes an authoritative endpoint")
+    report.expectEqual(
+        expected: [1.5], actual: progress.map(\.tick), cppID: liveInsertID,
+        what: "progress carries the callback's adopted timeline tick including silence")
     report.expectEqual(
         expected: [UInt64(11), 13, 13, 17, 20, 23], actual: notes.map(\.sample),
         cppID: liveInsertID, what: "sample-exact output and retrigger release; stale off swallowed")
@@ -193,7 +200,7 @@ private func checkLiveWindowsAndDispatch(_ report: CheckReport) {
         fake.calls[0].tempo == 120 && fake.calls[1].tick == 1.5,
         cppID: liveInsertID, message: "call transport uses actual sample-to-tick conversion")
     let onIndex = fake.take.firstIndex { (event: LiveTakeEvent) -> Bool in
-        !event.isSegmentBoundary && event.sample == 1500 && event.note.velocity > 0
+        event.kind == .note && event.sample == 1500 && event.note.velocity > 0
     }
     if let onIndex {
         report.expectEqual(
@@ -274,12 +281,24 @@ private func checkLiveDiscontinuities(_ report: CheckReport) {
         cppID: liveInsertID, message: "wrap exposes real cycle and destination")
     report.expect(
         wrap.take.contains { (event: LiveTakeEvent) -> Bool in
-            !event.isSegmentBoundary && event.sample == 3000 && event.note.key == 70 && event.note.velocity == 0
+            event.kind == .note && event.sample == 3000 && event.note.key == 70 && event.note.velocity == 0
         }, cppID: liveInsertID, message: "wrap releases live-held output at loop end")
     report.expect(
         wrap.take.contains { (event: LiveTakeEvent) -> Bool in
-            event.isSegmentBoundary && event.sample == 3000 && event.discontinuity.contains(.wrap)
+            event.kind == .boundary && event.sample == 3000 && event.discontinuity.contains(.wrap)
         }, cppID: liveInsertID, message: "take records loop end segment boundary")
+    let boundaryIndex = wrap.take.firstIndex { (event: LiveTakeEvent) in event.kind == .boundary && event.sample == 3000
+    }
+    let positionIndex = wrap.take.firstIndex { (event: LiveTakeEvent) in
+        event.kind == .position && event.sample == 3000 && event.tick == 3
+    }
+    if let positionIndex, let boundaryIndex {
+        report.expect(
+            positionIndex < boundaryIndex, cppID: liveInsertID,
+            message: "completed old-source loop endpoint precedes release and boundary feedback")
+    } else {
+        report.fail(liveInsertID, "missing completed loop position or segment boundary")
+    }
     let spanning = FakeLiveInsert()
     loopSequencer.seek(2990, timeline: loop)
     renderLiveCheck(&loopSequencer, engine: engine.pointer, timeline: loop, frames: 20, inserts: [spanning], loop: true)
@@ -299,7 +318,7 @@ private func checkMutedAndOfflineLive(_ report: CheckReport) {
     let timeline = liveTimeline()
     renderLiveCheck(&sequencer, engine: engine.pointer, timeline: timeline, frames: 32, inserts: [fake], mute: 1)
     report.expect(
-        !fake.take.contains { (event: LiveTakeEvent) -> Bool in !event.isSegmentBoundary },
+        !fake.take.contains { (event: LiveTakeEvent) -> Bool in event.kind == .note },
         cppID: liveInsertID, message: "muted output is not recorded")
     report.expectEqual(
         expected: [UInt8(72)], actual: playbackCheckPcmKeys(engine.pointer), cppID: liveInsertID,
@@ -374,7 +393,7 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     _ = rig.render(32)
     report.expect(
         fake.calls.count == count + 1 && fake.calls.last?.flags.contains(.arm) == true
-            && !fake.take.dropFirst(recorded).contains { (event: LiveTakeEvent) -> Bool in !event.isSegmentBoundary },
+            && !fake.take.dropFirst(recorded).contains { (event: LiveTakeEvent) -> Bool in event.kind == .note },
         cppID: liveInsertID, message: "reattach starts clean and swallows old owner's off")
     fake.script += [[LiveOutputEvent(key: 70, velocity: 100, noteId: 10)]]
     _ = rig.render(256)
@@ -386,7 +405,7 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     report.expect(
         !rig.sustaining(70) && !rig.sustaining(71)
             && fake.take.dropFirst(beforeMute).allSatisfy { (event: LiveTakeEvent) -> Bool in
-                event.isSegmentBoundary || event.note.velocity == 0
+                event.kind != .note || event.note.velocity == 0
             }, cppID: liveInsertID, message: "mute releases held live output and records no muted ons")
     rig.renderer.setMix(muted: [], soloed: [])
     fake.script += [[LiveOutputEvent(key: 73, velocity: 100, noteId: 12)]]

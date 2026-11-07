@@ -65,6 +65,7 @@ enum PdcSuite {
     PDC_SUITE_KIT_DRAFT = 57,
     PDC_SUITE_PLUGINHOST_ABI = 58,
     PDC_SUITE_PLUGINBRIDGE = 59,
+    PDC_SUITE_PLUGINHOST = 60,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

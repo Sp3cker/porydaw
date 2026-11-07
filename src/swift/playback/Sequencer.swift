@@ -185,6 +185,9 @@ public struct Sequencer: ~Copyable {
                 render(
                     engine: engine, source: source, left: leftBase + done, right: rightBase + done,
                     frames: count, looping: looping, muteMask: muteMask, audition: audition, liveMask: liveMask)
+                for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+                    reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .position)
+                }
                 if looping && source.hasLoop && position == source.loopEndSample {
                     dispatchDueEvents(
                         engine: engine, source: source, loop: true, muteMask: muteMask,
@@ -328,7 +331,7 @@ private struct SwiftTimelineSource: TimelineSource {
     var trackEndCount: Int { trackEnds.count }
     func trackEnd(at index: Int) -> PlaybackTrackEnd { trackEnds[index] }
 
-    var hasDefaultMeter: Bool { signatures.first?.tick != 0 }
+    var hasDefaultMeter: Bool { signatures.count == 0 || signatures[0].tick != 0 }
     var meterCount: Int { signatures.count + (hasDefaultMeter ? 1 : 0) }
 
     func meter(at index: Int) -> PlaybackTimeSignature {
@@ -500,18 +503,19 @@ extension Sequencer {
 
     private func reportLive(
         track: Int, sample: UInt64, tick: Double, note: LiveOutputEvent = LiveOutputEvent(),
-        boundary: Bool = false, flags: LiveDiscontinuity = []
+        kind: LiveTakeEvent.Kind = .note, flags: LiveDiscontinuity = []
     ) {
         guard let sink = liveCalls[track].takeSink else { return }
         var event = LiveTakeEvent(
-            sample: sample, tick: tick, note: note, isSegmentBoundary: boundary, discontinuity: flags)
+            sample: sample, tick: tick, note: note, kind: kind, discontinuity: flags)
         withUnsafePointer(to: &event) { (pointer: UnsafePointer<LiveTakeEvent>) in
             sink(liveCalls[track].takeContext, UnsafeRawPointer(pointer))
         }
     }
 
     private mutating func releaseLiveNotes<Source: TimelineSource>(
-        engine: UnsafeMutablePointer<M4AEngine>, track: Int, source: Source, audition: AudioAudition?
+        engine: UnsafeMutablePointer<M4AEngine>, track: Int, source: Source, audition: AudioAudition?,
+        flags: LiveDiscontinuity
     ) {
         for key in 0..<128 {
             let index = track * 128 + key
@@ -519,7 +523,7 @@ extension Sequencer {
             Self.releaseSequencedNote(engine: engine, track: Int32(track), key: UInt8(key), audition: audition)
             reportLive(
                 track: track, sample: position, tick: source.tick(for: position),
-                note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]))
+                note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: flags)
             liveOwners[index] = 0
             liveHeld[index] = false
             keyedOn[index] = 0
@@ -538,7 +542,7 @@ extension Sequencer {
             if liveHeld[index] {
                 reportLive(
                     track: track, sample: position, tick: tick,
-                    note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]))
+                    note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: discontinuity)
             }
             liveOwners[index] = 0
             liveHeld[index] = false
@@ -554,7 +558,7 @@ extension Sequencer {
                 index += 1
             }
         }
-        reportLive(track: track, sample: position, tick: tick, boundary: true, flags: discontinuity)
+        reportLive(track: track, sample: position, tick: tick, kind: .boundary, flags: discontinuity)
         liveFlags[track].formUnion(discontinuity)
         liveCalls[track] = LiveInsertCall()
         liveIndices[track] = 0
@@ -570,6 +574,9 @@ extension Sequencer {
             prepareLive(
                 engine: engine, source: source, frames: frames, playing: false,
                 looping: looping, slots: liveSlots, liveMask: liveMask, audition: nil)
+            for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+                reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .position)
+            }
         }
     }
 
@@ -595,7 +602,7 @@ extension Sequencer {
             }
             let flags = liveFlags[track]
             if !flags.isEmpty {
-                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition)
+                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: flags)
             }
             var call = LiveInsertCall()
             call.track = Int32(track)
@@ -692,13 +699,13 @@ extension Sequencer {
             liveCalls[track] = call
             liveFlags[track] = []
             if !flags.isEmpty {
-                reportLive(track: track, sample: position, tick: call.tick, boundary: true, flags: flags)
+                reportLive(track: track, sample: position, tick: call.tick, kind: .boundary, flags: flags)
             }
             if call.missed {
-                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition)
+                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: .missed)
                 liveCalls[track].outputCount = 0
                 liveFlags[track].insert(.missed)
-                reportLive(track: track, sample: position, tick: call.tick, boundary: true, flags: .missed)
+                reportLive(track: track, sample: position, tick: call.tick, kind: .boundary, flags: .missed)
             }
             if !playing { liveCalls[track].outputCount = 0 }
         }
@@ -1045,8 +1052,8 @@ extension Sequencer {
         engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?, liveMask: UInt32 = 0
     ) {
         for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
-            releaseLiveNotes(engine: engine, track: track, source: source, audition: audition)
-            reportLive(track: track, sample: position, tick: source.tick(for: position), boundary: true, flags: .wrap)
+            releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: .wrap)
+            reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .boundary, flags: .wrap)
             signalLiveDiscontinuity(.wrap, track: track)
         }
         for index in 0..<pendingReleaseCount {

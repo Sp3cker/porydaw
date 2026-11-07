@@ -8,13 +8,27 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <thread>
+#include <type_traits>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
 namespace {
+constexpr uint32 diagnosticMagic = 0x44584450u, diagnosticVersion = 1;
+constexpr std::size_t diagnosticBytes = 112;
+// Diagnostic opt-in uses fault bit 30; component word 8 stays reserved for task8 keysReceived.
+constexpr uint32 diagnosticFlag = 0x40000000u;
 struct Pending { bool used = false; int64 sample = 0; uint64 order = 0; Event event{}; };
+struct Diagnostics {
+    uint64 calls = 0;
+    int32 maxFrames = 0, lastFrames = 0;
+    ProcessContext context = {};
+    int32 inCount = 0, firstInKind = -1, firstInOffset = -1, firstInNoteId = -1;
+};
+static_assert(std::is_trivially_copyable_v<Diagnostics> && sizeof(double) == 8);
 class TestGen final : public SingleComponentEffect {
 public:
     explicit TestGen(int variant) : variant(variant) {}
@@ -51,6 +65,8 @@ public:
         auto oldLatency = latency;
         latency = std::max(0, field(4));
         fault = read >= 16 ? field(12) : 0;
+        diagnostics = {};
+        delayPending = faultCode() == 3;
         setParamNormalized(0, offset / 12.);
         if (variant == 1 && latency != oldLatency && componentHandler) componentHandler->restartComponent(kLatencyChanged);
         return kResultOk;
@@ -70,11 +86,23 @@ public:
         }
         return setState(stream);
     }
-    tresult PLUGIN_API setEditorState(IBStream* stream) override { return variant == 2 ? kNotImplemented : setState(stream); }
-    tresult PLUGIN_API getEditorState(IBStream* stream) override { return variant == 2 ? kNotImplemented : getState(stream); }
+    tresult PLUGIN_API setEditorState(IBStream* stream) override {
+        if (diagnosticsEnabled()) return setDiagnosticState(stream);
+        return variant == 2 ? kNotImplemented : setState(stream);
+    }
+    tresult PLUGIN_API getEditorState(IBStream* stream) override {
+        if (diagnosticsEnabled()) return getDiagnosticState(stream);
+        return variant == 2 ? kNotImplemented : getState(stream);
+    }
     tresult PLUGIN_API process(ProcessData& data) override {
-        if (fault == 1) std::abort();
-        if (fault == 2) for (;;) std::this_thread::sleep_for(std::chrono::hours(24));
+        const auto code = faultCode();
+        if (code == 1) std::abort();
+        if (code == 2) for (;;) std::this_thread::sleep_for(std::chrono::hours(24));
+        if (delayPending) {
+            delayPending = false;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        if (diagnosticsEnabled()) recordDiagnostics(data);
         if (data.inputParameterChanges) for (int32 i = 0; i < data.inputParameterChanges->getParameterCount(); ++i) {
             auto queue = data.inputParameterChanges->getParameterData(i);
             int32 sample = 0; ParamValue value = 0;
@@ -129,6 +157,88 @@ public:
         return kResultOk;
     }
 private:
+    uint32 faultCode() const { return static_cast<uint32>(fault) & ~diagnosticFlag; }
+    bool diagnosticsEnabled() const { return (static_cast<uint32>(fault) & diagnosticFlag) != 0; }
+    void recordDiagnostics(const ProcessData& data) {
+        ++diagnostics.calls;
+        diagnostics.maxFrames = (std::max)(diagnostics.maxFrames, data.numSamples);
+        diagnostics.lastFrames = data.numSamples;
+        diagnostics.context = data.processContext ? *data.processContext : ProcessContext{};
+        diagnostics.inCount = data.inputEvents ? data.inputEvents->getEventCount() : 0;
+        diagnostics.firstInKind = -1; diagnostics.firstInOffset = -1; diagnostics.firstInNoteId = -1;
+        Event event = {};
+        if (diagnostics.inCount > 0 && data.inputEvents->getEvent(0, event) == kResultOk) {
+            diagnostics.firstInKind = event.type;
+            diagnostics.firstInOffset = event.sampleOffset;
+            if (event.type == Event::kNoteOnEvent) diagnostics.firstInNoteId = event.noteOn.noteId;
+            else if (event.type == Event::kNoteOffEvent) diagnostics.firstInNoteId = event.noteOff.noteId;
+        }
+    }
+    tresult getDiagnosticState(IBStream* stream) {
+        std::array<uint8, diagnosticBytes> bytes = {};
+        const auto write32 = [&](int index, uint32 value) {
+            for (int byte = 0; byte < 4; ++byte) bytes[index + byte] = static_cast<uint8>(value >> (8 * byte));
+        };
+        const auto write64 = [&](int index, uint64 value) {
+            for (int byte = 0; byte < 8; ++byte) bytes[index + byte] = static_cast<uint8>(value >> (8 * byte));
+        };
+        const auto writeDouble = [&](int index, double value) {
+            uint64 bits = 0;
+            std::memcpy(&bits, &value, sizeof(bits)); write64(index, bits);
+        };
+        write32(0, diagnosticMagic); write32(4, diagnosticVersion); write64(8, diagnostics.calls);
+        write32(16, diagnostics.maxFrames); write32(20, diagnostics.lastFrames);
+        const auto& context = diagnostics.context;
+        write32(24, context.state); write32(28, 0);
+        writeDouble(32, context.sampleRate); writeDouble(40, context.tempo);
+        writeDouble(48, context.projectTimeMusic); writeDouble(56, context.barPositionMusic);
+        writeDouble(64, context.cycleStartMusic); writeDouble(72, context.cycleEndMusic);
+        write32(80, context.timeSigNumerator); write32(84, context.timeSigDenominator);
+        write64(88, static_cast<uint64>(context.projectTimeSamples));
+        write32(96, diagnostics.inCount); write32(100, diagnostics.firstInKind);
+        write32(104, diagnostics.firstInOffset); write32(108, diagnostics.firstInNoteId);
+        int32 written = 0;
+        return stream && stream->write(bytes.data(), static_cast<int32>(bytes.size()), &written) == kResultOk &&
+            written == static_cast<int32>(bytes.size()) ? kResultOk : kResultFalse;
+    }
+    tresult setDiagnosticState(IBStream* stream) {
+        std::array<uint8, diagnosticBytes> bytes = {};
+        int32 read = 0;
+        if (!stream || stream->read(bytes.data(), static_cast<int32>(bytes.size()), &read) != kResultOk ||
+            read != static_cast<int32>(bytes.size())) return kResultFalse;
+        uint8 extra = 0;
+        if (stream->read(&extra, 1, &read) != kResultOk || read != 0) return kResultFalse;
+        const auto read32 = [&](int index) {
+            uint32 value = 0;
+            for (int byte = 0; byte < 4; ++byte) value |= uint32(bytes[index + byte]) << (8 * byte);
+            return value;
+        };
+        const auto read64 = [&](int index) {
+            uint64 value = 0;
+            for (int byte = 0; byte < 8; ++byte) value |= uint64(bytes[index + byte]) << (8 * byte);
+            return value;
+        };
+        const auto readDouble = [&](int index) {
+            const uint64 bits = read64(index);
+            double value = 0;
+            std::memcpy(&value, &bits, sizeof(value)); return value;
+        };
+        if (read32(0) != diagnosticMagic || read32(4) != diagnosticVersion || read32(28) != 0) return kResultFalse;
+        Diagnostics restored = {};
+        restored.calls = read64(8);
+        restored.maxFrames = static_cast<int32>(read32(16)); restored.lastFrames = static_cast<int32>(read32(20));
+        auto& context = restored.context;
+        context.state = read32(24);
+        context.sampleRate = readDouble(32); context.tempo = readDouble(40);
+        context.projectTimeMusic = readDouble(48); context.barPositionMusic = readDouble(56);
+        context.cycleStartMusic = readDouble(64); context.cycleEndMusic = readDouble(72);
+        context.timeSigNumerator = static_cast<int32>(read32(80)); context.timeSigDenominator = static_cast<int32>(read32(84));
+        context.projectTimeSamples = static_cast<int64>(read64(88));
+        restored.inCount = static_cast<int32>(read32(96)); restored.firstInKind = static_cast<int32>(read32(100));
+        restored.firstInOffset = static_cast<int32>(read32(104)); restored.firstInNoteId = static_cast<int32>(read32(108));
+        diagnostics = restored;
+        return kResultOk;
+    }
     void schedule(const Event& event, int64 sample) {
         for (auto& item : pending) if (!item.used) { item = {true, sample, order++, event}; return; }
     }
@@ -136,6 +246,8 @@ private:
     int32 offset = 0, latency = 128, fault = 0, nextID = 100000;
     uint64 order = 0;
     bool wasPlaying = false;
+    bool delayPending = false;
+    Diagnostics diagnostics = {};
     std::array<Pending, 4096> pending{};
 };
 }

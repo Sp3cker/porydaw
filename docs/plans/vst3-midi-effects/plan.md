@@ -16,6 +16,8 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 | D8 | The built-in arpeggiator is unchanged. It keeps its own panel, Copy Notes and solo audition, and is not a track-effect kind. | Reworking it into a live effect: scope; its generate-then-copy flow already matches D1. |
 | D9 | Crash or hang detaches the insert, cancels Render and marks the effect stopped without changing the document. A manual Reload Plug-in restores the last recorded state and re-arms Live if previously armed. | Automatic restart: the user must control recovery. Modal alert: interrupts the session. |
 
+Execution ruling approved by the user: loop-wrap input offs precede chased ons at offset 0 of the first wrapped block; both use the new loop context. Keep exact boundary timing and one bridge request per chunk. Task 7 also repairs the Playback take seam with completed-position records and explicitly flagged discontinuity releases, so silent tails and old-timeline endpoints remain exact.
+
 ## Gates
 
 - G1 — approved by the user (out-of-process wording). Task 5 applies this AGENTS.md "Native boundary" amendment verbatim:
@@ -29,7 +31,7 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 - Follow spec.md exactly. Implementers never invent names; a missing decision is NEEDS_CONTEXT.
 - Do not include external product names, links, logos or vendor assets in committed content, except the open-source host names cited as technical precedent in this plan. No VST logo in the UI.
 - The song is the truth: the `.mid`, WAV export, CPU profile, backups, clipboard sources and every editing surface read `SongDocument` state, which never contains plugin output (D1). Only the audio callback's live path sounds plugin output.
-- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 is the only task that edits `Sequencer`/`AudioRenderEngine`; `AudioDevice` is untouched.
+- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 owns `Sequencer`/`AudioRenderEngine`; task 7's bounded correction may extend only the take-event seam, `Sequencer` feedback and its existing checks to preserve exact segment endpoints. `AudioDevice` is untouched.
 - Threads: every VST3 call runs inside the helper. Its Qt main thread dispatches control, editor windows, Linux `IRunLoop` and key interception; its RT thread processes requests. A stdin reader posts control frames to the main thread. Porydaw's main actor sends control frames; plugin callbacks only flip atomics or enqueue.
 - QML: follow rule://qtbridge-surface and rule://text-contrast. Geometry comes from the resolved base font through existing layout policies; no hard-coded pixels. Persistent chrome never claims bare `Space`; Space reaches `transport.play_pause` from the main window and from plugin editor windows (D6).
 - Swift: rule://swift-standards, rule://swift-locality, rule://swift-typecheck-complexity. Explicit closure types. Comments are at most 2 lines.

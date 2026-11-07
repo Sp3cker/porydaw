@@ -37,13 +37,25 @@ public struct LiveDiscontinuity: OptionSet, Sendable {
 public typealias LiveInsertProcess = @convention(c) (UnsafeMutableRawPointer?, UnsafeMutableRawPointer) -> Void
 public typealias LiveTakeSink = @convention(c) (UnsafeMutableRawPointer?, UnsafeRawPointer) -> Void
 
-/// Borrowed only during the sink call; segment markers have `isSegmentBoundary` set.
-public struct LiveTakeEvent {
+/// Borrowed only during the sink call. Position records carry completed callback time, including silence.
+public struct LiveTakeEvent: Sendable {
+    public enum Kind: Sendable, Equatable { case note, position, boundary }
     public var sample: UInt64
     public var tick: Double
     public var note: LiveOutputEvent
-    public var isSegmentBoundary: Bool
+    public var kind: Kind
     public var discontinuity: LiveDiscontinuity
+
+    public init(
+        sample: UInt64 = 0, tick: Double = 0, note: LiveOutputEvent = LiveOutputEvent(),
+        kind: Kind = .note, discontinuity: LiveDiscontinuity = []
+    ) {
+        self.sample = sample
+        self.tick = tick
+        self.note = note
+        self.kind = kind
+        self.discontinuity = discontinuity
+    }
 }
 
 /// Borrowed for one process call. Output must be sample-ordered; excess output is counted, not written.

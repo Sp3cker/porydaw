@@ -18,6 +18,7 @@ class SwiftCoreTest final : public QObject
     void playback();
     void pluginHostABI();
     void pluginBridge();
+    void pluginHost();
     void audioController();
     void audioAudition();
     void resonance();

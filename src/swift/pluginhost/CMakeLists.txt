@@ -28,6 +28,13 @@ endif()
 add_library(PorydawPluginHost STATIC
     HelperProcess.swift
     BridgeChannel.swift
+    PluginCatalog.swift
+    PluginInstance.swift
+    CaptureTransport.swift
+    CaptureDriver.swift
+    LiveInsert.swift
+    LiveTakeRing.swift
+    LiveTake.swift
 )
 set_target_properties(PorydawPluginHost PROPERTIES
     Swift_MODULE_NAME PorydawPluginHost
@@ -40,7 +47,7 @@ set_target_properties(PorydawPluginHost PROPERTIES
 target_include_directories(PorydawPluginHost INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawPluginHost,Swift_MODULE_DIRECTORY>>"
 )
-target_link_libraries(PorydawPluginHost PUBLIC PorydawPluginBridge)
+target_link_libraries(PorydawPluginHost PUBLIC PorydawCore PorydawPlayback PorydawPluginBridge)
 porydaw_enable_swift_batch_mode(PorydawPluginHost)
 if(PORYDAW_BUILD_CHECKS)
     target_compile_options(PorydawPluginHost PRIVATE
