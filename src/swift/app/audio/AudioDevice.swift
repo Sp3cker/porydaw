@@ -1,6 +1,7 @@
 import Foundation
 import PorydawAudioDeviceNative
 import PorydawPlayback
+import Synchronization
 
 /// Owns the output device and its renderer. Lifecycle/cold calls are serialized by
 /// the facade on its control thread, never made from the audio callback.
@@ -15,8 +16,8 @@ public final class AudioDevice {
 
     /// Programming invariant: the facade must not access the renderer after shutdown.
     public var renderer: AudioRenderEngine {
-        precondition(retainedRenderer != nil, "AudioDevice renderer accessed after shutdown")
-        return retainedRenderer!
+        precondition(target != nil, "AudioDevice renderer accessed after shutdown")
+        return target!.renderer
     }
     public private(set) var sampleRate: Double = 0
     public private(set) var backendName = ""
@@ -71,20 +72,25 @@ public final class AudioDevice {
             usingNullBackend = backend == ma_backend_null
             periodSizeFrames = Int(device.pointee.playback.internalPeriodSizeInFrames)
             periodCount = Int(device.pointee.playback.internalPeriods)
-            retainedRenderer = try AudioRenderEngine(
-                sampleRate: sampleRate, periodFrames: periodSizeFrames, sampleFeedback: sampleFeedback)
-            device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
+            let target = AudioCallbackTarget(
+                renderer: try AudioRenderEngine(
+                    sampleRate: sampleRate, periodFrames: periodSizeFrames, sampleFeedback: sampleFeedback))
+            self.target = target
+            device.pointee.pUserData = Unmanaged.passUnretained(target).toOpaque()
         } catch {
             shutdown()
             throw error
         }
     }
 
-    /// Control parks and restarts rendering synchronously for cold operations.
-    public func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
-        let wasRunning = isRunning
-        if wasRunning, let device { _ = ma_device_stop(device); isRunning = false }
-        defer { if wasRunning { _ = start() } }
+    /// Control runs cold changes between callback blocks; the device keeps running and a
+    /// block that arrives meanwhile renders silence instead of waiting.
+    public func withRenderingExcluded<T>(_ body: () throws -> T) rethrows -> T {
+        guard let target else { return try body() }
+        while !target.gate.compareExchange(expected: .open, desired: .excluded, ordering: .acquiring).exchanged {
+            Thread.sleep(forTimeInterval: 0.000_05)
+        }
+        defer { target.gate.store(.open, ordering: .releasing) }
         return try body()
     }
 
@@ -110,7 +116,7 @@ public final class AudioDevice {
             deviceInitialized = false
             isRunning = false
         }
-        retainedRenderer = nil
+        target = nil
         if let context {
             _ = ma_context_uninit(context)
             context.deallocate()
@@ -120,7 +126,7 @@ public final class AudioDevice {
 
     deinit { shutdown() }
 
-    private var retainedRenderer: AudioRenderEngine?
+    private var target: AudioCallbackTarget?
     private var device: UnsafeMutablePointer<ma_device>?
     private var context: UnsafeMutablePointer<ma_context>?
     private var deviceInitialized = false
@@ -171,12 +177,27 @@ public final class AudioDevice {
     #endif
 }
 
-/// Playback guarantees non-null output; pUserData borrows the renderer until uninit returns.
+/// The callback's borrowed renderer and the gate control closes around cold changes.
+private final class AudioCallbackTarget {
+    enum Gate: UInt8, AtomicRepresentable { case open, rendering, excluded }
+    let renderer: AudioRenderEngine
+    let gate = Atomic<Gate>(.open)
+
+    init(renderer: AudioRenderEngine) { self.renderer = renderer }
+}
+
+/// Playback guarantees non-null output; pUserData borrows the target until uninit returns.
 /// No captures, allocations, locks, reclamation, or dispatch in this trampoline.
 private func audioDeviceRender(
     _ device: UnsafeMutablePointer<ma_device>?, _ output: UnsafeMutableRawPointer?,
     _ input: UnsafeRawPointer?, _ frames: UInt32
 ) {
-    Unmanaged<AudioRenderEngine>.fromOpaque(device!.pointee.pUserData!)
-        .takeUnretainedValue().render(output!.assumingMemoryBound(to: Float.self), frames: frames)
+    let target = Unmanaged<AudioCallbackTarget>.fromOpaque(device!.pointee.pUserData!).takeUnretainedValue()
+    let samples = output!.assumingMemoryBound(to: Float.self)
+    guard target.gate.compareExchange(expected: .open, desired: .rendering, ordering: .acquiring).exchanged else {
+        samples.update(repeating: 0, count: Int(frames) * 2)
+        return
+    }
+    target.renderer.render(samples, frames: frames)
+    target.gate.store(.open, ordering: .releasing)
 }

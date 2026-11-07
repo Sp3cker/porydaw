@@ -265,7 +265,7 @@ actor AudioControl {
         case .initialize:
             preconditionFailure("Audio device initialized twice")
         case .bind(let timeline, let bank, let settings, let identity, let operation):
-            device.withRenderingStopped {
+            device.withRenderingExcluded {
                 renderer.bind(timeline: timeline, voicegroup: bank.engineVoices, settings: settings, identity: identity)
                 bankLease = bank
             }
@@ -275,18 +275,18 @@ actor AudioControl {
         case .publish(let timeline, let identity):
             renderer.publish(timeline, identity: identity)
         case .unload(let operation):
-            device.withRenderingStopped {
+            device.withRenderingExcluded {
                 renderer.unload()
                 bankLease = nil
             }
             processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
         case .settings(let settings, let operation):
-            device.withRenderingStopped { renderer.updateSettings(settings) }
+            device.withRenderingExcluded { renderer.updateSettings(settings) }
             processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
         case .voicegroup(let bank, let operation):
-            device.withRenderingStopped {
+            device.withRenderingExcluded {
                 renderer.updateVoicegroup(bank.engineVoices)
                 bankLease = bank
             }
@@ -307,13 +307,13 @@ actor AudioControl {
                     epoch, renderer.consumeCpuFrames(), renderer.consumeTrackActivityLevels(), renderer.polySnapshot(),
                     includePreview ? renderer.previewPolySnapshot() : nil))
         case .startPattern(let timeline, let operation):
-            let prepared = device.withRenderingStopped { renderer.startPatternAudition(timeline) }
+            let prepared = device.withRenderingExcluded { renderer.startPatternAudition(timeline) }
             processSampleFeedback(renderer)
             let started = prepared && startDevice(device)
             continuation.yield(.completed(operation, started))
         case .replacePattern(let timeline): renderer.replacePatternAudition(timeline)
         case .stopPattern(let operation):
-            device.withRenderingStopped { renderer.stopPatternAudition() }
+            device.withRenderingExcluded { renderer.stopPatternAudition() }
             processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))
         case .sample(let command):

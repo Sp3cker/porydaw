@@ -411,6 +411,8 @@ endpoints directly when main owns the producer. While a cold receipt or queued h
 write is outstanding, they use control's FIFO; main acquires the final queued write
 before resuming direct production. Start readiness and producer ownership are
 cached only across this explicit handover, not inferred from callback state.
+Cold operations never stop the device: control closes a callback gate, waits out
+at most the block in flight, and applies the change; blocks arriving meanwhile render silence.
 One main-actor task consumes completions, sample events and telemetry. Control
 drains CPU frames and activity peaks; main coalesces delivered batches. Telemetry
 epochs and generations discard late batches after invalidation.
