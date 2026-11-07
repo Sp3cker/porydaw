@@ -95,6 +95,19 @@ DialogWindow {
             event.accepted = true
         }
     }
+    // A focused TextInput claims Undo/Redo before window shortcuts, so committed history-backed
+    // fields step the studio history here; a pending draft keeps its own text history.
+    function handleHistory(event: KeyEvent, committed: bool): void {
+        if (!committed)
+            return
+        if (event.matches(StandardKey.Undo))
+            dialog.editor.undo()
+        else if (event.matches(StandardKey.Redo))
+            dialog.editor.redo()
+        else
+            return
+        event.accepted = true
+    }
     component AuditionTextField: TextField {
         Keys.priority: Keys.BeforeItem
         Keys.onPressed: event => dialog.handleSpace(event)
@@ -480,6 +493,12 @@ DialogWindow {
                                     if (!activeFocus && editText !== dialog.editor.rateText)
                                         dialog.editor.commitRateText(editText)
                                 }
+                                Connections {
+                                    target: rate.contentItem.Keys
+                                    function onPressed(event: KeyEvent): void {
+                                        dialog.handleHistory(event, rate.editText === dialog.editor.rateText)
+                                    }
+                                }
                             }
                         }
                         RowLayout {
@@ -513,11 +532,19 @@ DialogWindow {
                             spacing: dialog.spacing
                             FieldLabel { text: qsTr("Fine tune") }
                             AuditionValidatedField {
+                                id: fineTune
+                                objectName: "sampleStudioFineTune"
                                 Layout.fillWidth: true
                                 colors: dialog.colors
                                 text: dialog.editor.fineTuneText
                                 invalid: dialog.editor.fineTuneInvalid
                                 onEditingFinished: dialog.editor.commitFineTuneCentsText(text)
+                                Connections {
+                                    target: fineTune.Keys
+                                    function onPressed(event: KeyEvent): void {
+                                        dialog.handleHistory(event, fineTune.text === dialog.editor.fineTuneText)
+                                    }
+                                }
                             }
                             Label { text: qsTr("cents"); color: dialog.colors.windowText }
                         }

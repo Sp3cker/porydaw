@@ -374,6 +374,7 @@ enum ShellQmlRegistry {
                     "ShellSampleStudio::test_dragZoomScrollSplitterAndSpace",
                     "ShellSampleStudio::test_flacOpensEditor",
                     "ShellSampleStudio::test_menuRouteAndCancel",
+                    "ShellSampleStudio::test_committedFieldsUndoStudioHistory",
                 ]),
             Entry(
                 name: "shell-sample-studio-commit", inputFileName: "tst_ShellSampleStudio.qml",

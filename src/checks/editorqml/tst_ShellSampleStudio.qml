@@ -212,4 +212,43 @@ ShellLaneSupport {
         verify(child("sampleStudioFileName").text.indexOf("tone") !== -1,
                "FLAC decodes through mounted source route")
     }
+    function test_committedFieldsUndoStudioHistory() {
+        const presenter = openProject()
+        const editor = editorFor(rootPath + "/samplesources/hires_tone.wav")
+        const state = presenter.session.sampleStudio().editor()
+        child("sampleStudioAdvanced").checked = true
+        const tune = findChild(editor, "sampleStudioFineTune")
+        const originalTune = String(state.fineTuneText)
+        tune.forceActiveFocus()
+        verify(waitForNative(function() { return tune.visible && tune.width > 0 && tune.activeFocus }, 2000),
+               "the advanced fine-tune field is laid out and focused")
+        tune.selectAll()
+        keyClick(Qt.Key_1)
+        keyClick(Qt.Key_2)
+        keyClick(Qt.Key_Return)
+        verify(tune.activeFocus && state.fineTuneText === "12.00" && state.canUndo,
+               "Return commits fine tune and keeps the field focused")
+        keyClick(Qt.Key_End)
+        keyClick(Qt.Key_5)
+        keySequence(StandardKey.Undo)
+        verify(tune.text === "12.00" && state.fineTuneText === "12.00",
+               "Undo in a pending fine-tune draft edits only the draft")
+        keySequence(StandardKey.Undo)
+        compare(state.fineTuneText, originalTune, "Undo in the committed fine-tune field steps studio history")
+        keySequence(StandardKey.Redo)
+        compare(state.fineTuneText, "12.00", "Redo in the committed fine-tune field steps studio history")
+
+        const rate = findChild(editor, "sampleStudioRate")
+        const rateText = rate.contentItem
+        const originalRate = String(state.rateText)
+        mouseClick(rateText)
+        verify(rateText.activeFocus, "clicking the rate text focuses its editor")
+        keySequence(StandardKey.SelectAll)
+        for (const digit of "10512")
+            keyClick(digit.charCodeAt(0))
+        keyClick(Qt.Key_Return)
+        verify(rateText.activeFocus && state.rateText === "10512", "Return commits the typed rate")
+        keySequence(StandardKey.Undo)
+        compare(state.rateText, originalRate, "Undo in the committed rate box steps studio history")
+    }
 }
