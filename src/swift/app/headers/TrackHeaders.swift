@@ -361,6 +361,14 @@ public final class TrackHeadersPresenter {
         if !session.soloedTracks.insert(track).inserted { session.soloedTracks.remove(track) }
     }
 
+    /// Opens MIDI effects setup after selecting the requested current track.
+    /// - Parameter track: Engine track in the attached document.
+    public func activateMidiEffects(track: Int) {
+        guard validTrack(track) else { return }
+        selectTrack(track: track)
+        onMidiEffectsRequested?(track)
+    }
+
     public func activateAddTrack() {
         guard let session, !session.isClosed, session.document.engineTracks.usedTrackCount > 0,
             session.document.canAddTrack
@@ -457,7 +465,7 @@ public final class TrackHeadersPresenter {
             session.document.deleteTrack(target.track)
             refreshFromDocument()
         case 6: onArpeggiatorRequested?(target.track)
-        case 7: onMidiEffectsRequested?(target.track)
+        case 7: activateMidiEffects(track: target.track)
         default: break
         }
     }
@@ -594,6 +602,8 @@ public final class TrackHeaderRowHandle {
     public var mutePressed: Bool = false
     public var soloHovered: Bool = false
     public var soloPressed: Bool = false
+    public var effectHovered: Bool = false
+    public var effectPressed: Bool = false
     public var addHovered: Bool = false
     public var addPressed: Bool = false
     public var activityDimColor: QmlColor = .clear
@@ -632,6 +642,8 @@ public final class TrackHeaderRowHandle {
         publish(\.mutePressed, row.mutePressed)
         publish(\.soloHovered, row.soloHovered)
         publish(\.soloPressed, row.soloPressed)
+        publish(\.effectHovered, row.effectHovered)
+        publish(\.effectPressed, row.effectPressed)
         publish(\.addHovered, row.addHovered)
         publish(\.addPressed, row.addPressed)
         publish(\.activityDimColor, row.activityDimColor)

@@ -49,6 +49,8 @@ struct TrackHeaderSnapshot: Equatable {
     var mutePressed = false
     var soloHovered = false
     var soloPressed = false
+    var effectHovered = false
+    var effectPressed = false
     var addHovered = false
     var addPressed = false
     var activityDimColor = QmlColor.clear
@@ -117,19 +119,25 @@ struct TrackHeadersGeometry {
             width: max(0, width - Double(renameEditorRight)),
             height: Double(renameEditorHeight))
     }
-    func textRects(width: Double, metrics: HeaderTextMetrics?) -> (HeaderRect, HeaderRect) {
-        guard rowHeight > 0, let metrics else { return (HeaderRect(), HeaderRect()) }
+    func textRects(width: Double, metrics: HeaderTextMetrics?) -> (HeaderRect, HeaderRect, HeaderRect) {
+        guard rowHeight > 0, let metrics else { return (HeaderRect(), HeaderRect(), HeaderRect()) }
         let primaryHeight = max(metrics.title, metrics.bold)
-        let total = primaryHeight + spaceHalf + metrics.subtitle
-        let y = (max(0, rowHeight - separatorWidth) - total) / 2
+        let effectHeight = metrics.subtitle
+        let available = Double(max(0, rowHeight - separatorWidth))
+        let total = Double(primaryHeight + metrics.subtitle + effectHeight)
+        let gap = min(Double(spaceHalf), max(0, (available - total) / 2))
+        let y = max(0, (available - total - 2 * gap) / 2)
         let textWidth = max(0, Int(width.rounded()) - buttonColumnWidth - textLeft - spaceOne)
         let title = HeaderRect(
-            x: Double(textLeft), y: Double(y),
+            x: Double(textLeft), y: y,
             width: Double(textWidth), height: Double(primaryHeight))
         let subtitle = HeaderRect(
-            x: Double(textLeft), y: Double(y + primaryHeight + spaceHalf),
+            x: Double(textLeft), y: y + Double(primaryHeight) + gap,
             width: Double(textWidth), height: Double(metrics.subtitle))
-        return (title, subtitle)
+        let effect = HeaderRect(
+            x: Double(textLeft), y: subtitle.y + subtitle.height + gap,
+            width: Double(textWidth), height: Double(effectHeight))
+        return (title, subtitle, effect)
     }
 
 }
@@ -265,16 +273,11 @@ extension TrackHeadersPresenter {
         row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1
+        row.effectRect = rects.2
         if let effect = session.document.effect(onTrack: track) {
             row.effectName = effect.config.plugin.name
             row.liveArmed = effects?.isLive(effect.id) == true
             if let status = effects?.status(effect.id), case .crashed = status { row.effectStopped = true }
-            let available = Double(max(0, geometry.rowHeight - geometry.separatorWidth))
-            let gap = min(Double(geometry.spaceHalf), max(0, (available - rects.0.height - 2 * rects.1.height) / 2))
-            row.titleRect.y = max(0, (available - rects.0.height - 2 * rects.1.height - 2 * gap) / 2)
-            row.subtitleRect.y = row.titleRect.y + rects.0.height + gap
-            row.effectRect = row.subtitleRect
-            row.effectRect.y += row.subtitleRect.height + gap
         }
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
         let scoped = !primary && session.selectedTracks.contains(track)

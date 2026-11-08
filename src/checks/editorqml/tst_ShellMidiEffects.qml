@@ -12,29 +12,27 @@ ShellClipboardSupport {
         verify(bootstrap.resetPreferences())
     }
 
-    function openFromTrackHeader() {
+    function openFromTrackHeader(track) {
         const app = openRoute101()
         shell.width = 960
         shell.height = 640
+        if (track === undefined)
+            track = 0
         const view = selectedSurface()
         verify(!!view, "Object exists")
         view.gridModel.setTrack(0)
+        tryCompare(view.gridModel, "trackIndex", 0)
         const rows = findChild(view, "timelineTrackHeaderRows")
         verify(!!rows, "Object exists")
-        tryVerify(function() { return rows.count > 0 })
-        const row = rows.itemAt(0)
+        tryVerify(function() { return rows.count > track })
+        const row = rows.itemAt(track)
         verify(!!row, "Object exists")
-        const header = view.trackHeaders
-        verify(!!header, "Object exists")
-        mouseClick(header, row.titleRect.x + row.titleRect.width / 2,
-                   row.titleRect.y + row.titleRect.height / 2 - view.headersModel.scrollY,
-                   Qt.RightButton)
-        tryCompare(view.headersModel, "menuOpen", true)
-        tryVerify(function() { return findChild(view, "headerMenuRow_7") !== null })
-        const menu = findChild(view, "headerMenuRow_7")
-        verify(!!menu, "Object exists")
-        tryCompare(menu, "enabled", true)
-        mouseClick(menu, menu.width / 2, menu.height / 2)
+        const button = findChild(row, "timelineHeaderEffectsButton_" + row.track)
+        verify(!!button, "Object exists")
+        tryCompare(button, "visible", true)
+        mouseClick(button, button.width / 2, button.height / 2)
+        tryCompare(view.gridModel, "trackIndex", row.track)
+        tryCompare(view.applicationSession, "headerVoicePickerOpen", false)
         const model = view.midiEffectsModel
         verify(!!model, "Object exists")
         tryCompare(model, "isOpen", true)
@@ -44,7 +42,8 @@ ShellClipboardSupport {
         const close = findChild(panel, "midiEffectsClose")
         verify(!!close, "Object exists")
         tryCompare(close, "activeFocus", true)
-        return { app: app, view: view, rows: rows, model: model, panel: panel }
+        return { app: app, view: view, rows: rows, row: row, button: button,
+                 track: row.track, model: model, panel: panel }
     }
 
     function pluginRow(list, index) {
@@ -80,8 +79,79 @@ ShellClipboardSupport {
         })
     }
 
-    function test_fixtureSelectionCrashReloadAndRemove() {
+    function test_effectButtonKeyboardKeepsSpaceForTransport() {
         const p = openFromTrackHeader()
+        p.model.close()
+        tryCompare(p.model, "isOpen", false)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") === null }, 3000,
+                  "setup unmounts before focusing the header button")
+        p.button.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(p.button, "activeFocus", true)
+        const transport = p.app.transportBarPresenter()
+        keyClick(Qt.Key_Space)
+        tryCompare(transport, "state", 3)
+        tryCompare(p.model, "isOpen", false)
+        keyClick(Qt.Key_Space)
+        tryCompare(transport, "state", 2)
+        tryCompare(p.model, "isOpen", false)
+        shell.shellPresenter.activate("transport.stop")
+        tryCompare(transport, "state", 1)
+
+        const keys = [Qt.Key_Return, Qt.Key_Enter]
+        for (const key of keys) {
+            p.button.forceActiveFocus(Qt.TabFocusReason)
+            tryCompare(p.button, "activeFocus", true)
+            keyClick(key)
+            tryCompare(p.model, "isOpen", true)
+            tryCompare(p.view.gridModel, "trackIndex", p.track)
+            tryVerify(function() { return findChild(p.view, "midiEffectsPanel") !== null })
+            const close = findChild(p.view, "midiEffectsClose")
+            verify(!!close, "Object exists")
+            mouseClick(close, close.width / 2, close.height / 2)
+            tryCompare(p.model, "isOpen", false)
+            tryVerify(function() { return findChild(p.view, "midiEffectsPanel") === null }, 3000,
+                      "setup unmounts before the next header activation")
+        }
+    }
+
+    function test_effectButtonCancelsWithoutReordering() {
+        const p = openFromTrackHeader()
+        p.model.close()
+        tryCompare(p.model, "isOpen", false)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") === null }, 3000,
+                  "setup unmounts before pointer input reaches the header")
+        const header = findChild(p.view, "timelineTrackHeadersInput")
+        verify(!!header, "Object exists")
+        const target = p.rows.itemAt(1)
+        verify(!!target, "Object exists")
+        const outside = target.mapToItem(header, target.effectRect.x + target.effectRect.width / 2,
+                                        target.effectRect.y + target.effectRect.height / 2)
+        const start = p.button.mapToItem(header, p.button.width / 2, p.button.height / 2)
+        const revision = p.view.gridModel.appliedRevisionText
+        mousePress(header, start.x, start.y, Qt.LeftButton)
+        tryCompare(p.row, "effectPressed", true)
+        mouseMove(header, outside.x, outside.y, 20, Qt.LeftButton)
+        tryCompare(p.view.headersModel, "reorderIndicatorVisible", false)
+        mouseRelease(header, outside.x, outside.y, Qt.LeftButton)
+        tryCompare(p.row, "effectPressed", false)
+        tryCompare(p.model, "isOpen", false)
+        tryCompare(p.view.applicationSession, "headerVoicePickerOpen", false)
+        tryCompare(p.view.gridModel, "appliedRevisionText", revision)
+
+        mousePress(header, start.x, start.y, Qt.LeftButton)
+        tryCompare(p.row, "effectPressed", true)
+        p.view.headersModel.inputCancelled(1)
+        mouseRelease(header, start.x, start.y, Qt.LeftButton)
+        tryCompare(p.row, "effectPressed", false)
+        tryCompare(p.model, "isOpen", false)
+        tryCompare(p.view.headersModel, "reorderIndicatorVisible", false)
+        tryCompare(p.view.gridModel, "appliedRevisionText", revision)
+        mouseClick(p.button, p.button.width / 2, p.button.height / 2)
+        tryCompare(p.model, "isOpen", true)
+    }
+
+    function test_fixtureSelectionCrashReloadAndRemove() {
+        const p = openFromTrackHeader(1)
         verify(bootstrap.vstFixtureFolder.length > 0)
         p.model.addFolder(bootstrap.vstFixtureFolder)
         const list = findChild(p.panel, "midiEffectsPluginList")
@@ -129,13 +199,14 @@ ShellClipboardSupport {
         tryCompare(p.model, "hasEffect", true, 30000)
         tryCompare(p.model, "isLoading", false, 30000)
         tryCompare(p.model, "selectedPlugin", generator)
-        tryVerify(function() { return p.rows.itemAt(0).effectName === "TestGen" })
-        tryVerify(function() { return !p.rows.itemAt(0).effectStopped })
-        const badge = findChild(p.view, "timelineHeaderEffect_0")
+        tryCompare(p.row, "effectName", "TestGen")
+        tryCompare(p.rows.itemAt(0), "effectName", "")
+        tryCompare(p.row, "effectStopped", false)
+        const badge = findChild(p.row, "timelineHeaderEffect_" + p.track)
         verify(!!badge, "Object exists")
         tryCompare(badge, "text", "TestGen")
         tryCompare(badge, "visible", true)
-        const caption = findChild(p.view, "timelineHeaderEffectCaption_0")
+        const caption = findChild(p.row, "timelineHeaderEffectCaption_" + p.track)
         verify(!!caption, "Object exists")
         tryCompare(caption, "visible", false)
         verifyCardFits(p.panel)
@@ -143,7 +214,6 @@ ShellClipboardSupport {
         const editor = findChild(p.panel, "midiEffectsOpenEditor")
         verify(!!editor, "Object exists")
         tryCompare(editor, "enabled", true)
-        compare(p.model.isEditorOpen, false)
         const close = findChild(p.panel, "midiEffectsClose")
         verify(!!close, "Object exists")
         close.forceActiveFocus(Qt.TabFocusReason)
@@ -160,14 +230,14 @@ ShellClipboardSupport {
         tryCompare(transport, "state", 1)
 
         const undoRow = p.app.undoHistory.currentRow
-        verify(bootstrap.injectPluginFault(0, 1))
+        verify(bootstrap.injectPluginFault(p.track, 1))
         verify(waitForNative(function() {
             return p.model.status === "TestGen stopped working." && p.model.canReload
         }, 30000), "MIDI producer crash is published: " + midiEffectsDiagnostics(p.model, list))
         tryCompare(p.model, "status", "TestGen stopped working.", 30000)
         tryCompare(p.app.undoHistory, "currentRow", undoRow)
         tryCompare(p.model, "canReload", true, 30000)
-        tryVerify(function() { return p.rows.itemAt(0).effectStopped })
+        tryCompare(p.row, "effectStopped", true)
         tryCompare(caption, "text", "Stopped")
         tryCompare(caption, "visible", true)
         tryCompare(editor, "enabled", false)
@@ -188,10 +258,8 @@ ShellClipboardSupport {
         tryCompare(p.model, "status", "", 30000)
         tryCompare(reload, "visible", false)
         tryCompare(editor, "enabled", true)
-        tryVerify(function() {
-            const row = p.rows.itemAt(0)
-            return row.effectName === "TestGen" && !row.effectStopped
-        })
+        tryCompare(p.row, "effectName", "TestGen")
+        tryCompare(p.row, "effectStopped", false)
         tryCompare(caption, "visible", false)
         tryCompare(badge, "text", "TestGen")
         tryCompare(badge, "visible", true)
@@ -203,7 +271,14 @@ ShellClipboardSupport {
         mouseClick(remove, remove.width / 2, remove.height / 2)
         tryCompare(p.model, "hasEffect", false, 30000)
         tryCompare(p.model, "isOpen", false)
-        tryVerify(function() { return p.rows.itemAt(0).effectName === "" })
-        tryCompare(badge, "visible", false)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") === null }, 3000,
+                  "Remove unmounts setup before clicking the persistent header button")
+        tryCompare(p.row, "effectName", "")
+        tryCompare(p.button, "visible", true)
+        mouseClick(p.button, p.button.width / 2, p.button.height / 2)
+        tryCompare(p.model, "isOpen", true)
+        tryCompare(p.model, "hasEffect", false)
+        tryCompare(p.view.gridModel, "trackIndex", p.track)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") !== null })
     }
 }

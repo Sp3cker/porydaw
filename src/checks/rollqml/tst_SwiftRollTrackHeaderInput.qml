@@ -236,12 +236,13 @@ SwiftRollTrackHeadersSupport {
                 "mounted rename closes its editor after commit")
         tryCompare(item("swiftRollInput"), "activeFocus", true, 5000,
                    "committing the mounted rename returns focus to the roll input")
+        var dropY = h.rowHeight * 1.5
         mousePress(input, x, y, Qt.LeftButton)
-        mouseMove(input, x, y + h.rowHeight, 10, Qt.LeftButton)
+        mouseMove(input, x, dropY, 10, Qt.LeftButton)
         tryCompare(item("timelineTrackHeaderReorderMarker"), "visible", true)
         compare(h.reorderIndicatorY, h.rowHeight * 2,
                 "mounted drag targets the slot after the second track")
-        mouseRelease(input, x, y + h.rowHeight, Qt.LeftButton)
+        mouseRelease(input, x, dropY, Qt.LeftButton)
         tryCompare(rows.itemAt(1), "title", "2 · Renamed", 5000,
                    "reorder commits from a mounted drag")
     }

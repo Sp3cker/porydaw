@@ -5,6 +5,7 @@ import EditorQmlCheck 1.0
 import Porydaw.Ui
 import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerPixelSupport.js" as PixelSupport
+import "NativeWait.js" as NativeWait
 
 import "TextContrastAudit.js" as TextContrastAudit
 EditorDrawerTestSupport {
@@ -32,12 +33,13 @@ EditorDrawerTestSupport {
             return text && text.visible && text.width > 0 && text.height > 0
         }, 3000)
         verify(visible, context + " is visible: " + (text ? JSON.stringify({
-            visible: text.visible, width: text.width, height: text.height,
-            parentWidth: text.parent.width, badgeWidth: text.parent.parent.width,
-            effectName: text.parent.parent.parent.effectName,
-            effectRectWidth: text.parent.parent.parent.effectRect.width
+            objectName: text.objectName, visible: text.visible,
+            width: text.width, height: text.height,
+            contentWidth: text.contentWidth, contentHeight: text.contentHeight
         }) : "missing text item"))
-        waitForRendering(text)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) },
+                                                text.Window.window, 5000),
+               context + " submits before contrast capture")
         const root = TextContrastAudit.sceneRoot(text)
         const record = TextContrastAudit.measure(text, grabImage(root), root)
         verify(record !== null, context + " actually paints text pixels")
@@ -61,34 +63,54 @@ EditorDrawerTestSupport {
             const rows = findChild(band, "timelineTrackHeaderRows")
             tryVerify(function() { return rows && rows.count > 0 }, 2000)
             const row = rows.itemAt(0)
+            const button = findChild(row, "timelineHeaderEffectsButton_0")
+            verify(!!button, "Object exists")
             const name = findChild(row, "timelineHeaderEffect_0")
             const caption = findChild(row, "timelineHeaderEffectCaption_0")
             tryCompare(name, "text", "TestGen")
             verify(row.titleRect.y + row.titleRect.height <= row.subtitleRect.y,
                    "the title leaves the retained voice subtitle unobscured")
             verify(row.subtitleRect.y + row.subtitleRect.height <= row.effectRect.y,
-                   "the effect badge has its own third line")
+                   "the effects button has its own third line")
             verify(row.effectRect.y + row.effectRect.height <= row.height,
-                   "the badge stays inside the unchanged row height")
+                   "the effects button stays inside the unchanged row height")
             const input = findChild(band, "timelineTrackHeadersInput")
             const beforeVoice = bootstrap.headerEffectVoiceRequests()
             const voice = row.mapToItem(input, row.subtitleRect.x + row.subtitleRect.width / 2,
                                        row.subtitleRect.y + row.subtitleRect.height / 2)
             mouseDoubleClickSequence(input, voice.x, voice.y, Qt.LeftButton)
-            compare(bootstrap.headerEffectVoiceRequests(), beforeVoice + 1,
-                    "the actual shifted voice rectangle still activates the voice command")
+            tryVerify(function() { return bootstrap.headerEffectVoiceRequests() === beforeVoice + 1 },
+                      2000, "the actual shifted voice rectangle still activates the voice command")
             const modes = ["vanilla", "dark-neutral-high", "immaterial"]
             for (let i = 0; i < modes.length; ++i) {
                 verify(bootstrap.setHeaderEffectTheme(modes[i]), bootstrap.headerEffectsError)
+                mouseMove(input, voice.x, voice.y)
+                input.forceActiveFocus()
+                tryCompare(row, "effectHovered", false)
                 verify(bootstrap.setHeaderEffectLive(true), bootstrap.headerEffectsError)
                 tryCompare(caption, "text", "Live")
                 tryCompare(caption, "visible", true)
-                assertEffectInk(name, modes[i] + " effect badge")
+                assertEffectInk(name, modes[i] + " effect button")
                 assertEffectInk(caption, modes[i] + " Live caption")
+                button.forceActiveFocus(Qt.TabFocusReason)
+                tryCompare(button, "activeFocus", true)
+                assertEffectInk(name, modes[i] + " focused effect button")
+                assertEffectInk(caption, modes[i] + " focused Live caption")
+                mouseMove(button, button.width / 2, button.height / 2)
+                tryCompare(row, "effectHovered", true)
+                assertEffectInk(name, modes[i] + " hovered effect button")
+                assertEffectInk(caption, modes[i] + " hovered Live caption")
+                mousePress(button, button.width / 2, button.height / 2, Qt.LeftButton)
+                tryCompare(row, "effectPressed", true)
+                assertEffectInk(name, modes[i] + " pressed effect button")
+                assertEffectInk(caption, modes[i] + " pressed Live caption")
+                mouseMove(input, voice.x, voice.y, 20, Qt.LeftButton)
+                mouseRelease(input, voice.x, voice.y, Qt.LeftButton)
+                tryCompare(row, "effectPressed", false)
                 verify(bootstrap.crashHeaderEffect(), bootstrap.headerEffectsError)
                 tryCompare(caption, "text", "Stopped")
                 tryCompare(caption, "visible", true)
-                assertEffectInk(name, modes[i] + " stopped effect badge")
+                assertEffectInk(name, modes[i] + " stopped effect button")
                 assertEffectInk(caption, modes[i] + " Stopped caption")
                 verify(bootstrap.reloadHeaderEffect(), bootstrap.headerEffectsError)
                 tryCompare(caption, "text", "Live")
@@ -126,6 +148,20 @@ EditorDrawerTestSupport {
         tryVerify(function() { return rows.count > 1 }, 2000, "the song publishes its header rows")
         compare(testCase.surface.headersModel.contentHeight,
                 rows.count * testCase.surface.headersModel.rowHeight)
+        for (let index = 0; index < rows.count; ++index) {
+            const headerRow = rows.itemAt(index)
+            if (headerRow.isAddTrack) {
+                compare(headerRow.effectRect.height, 0)
+                continue
+            }
+            const button = findChild(headerRow, "timelineHeaderEffectsButton_" + headerRow.track)
+            verify(!!button, "Object exists")
+            tryCompare(button, "visible", true)
+            verify(headerRow.effectRect.width > 0 && headerRow.effectRect.height > 0)
+            verify(headerRow.titleRect.y + headerRow.titleRect.height <= headerRow.subtitleRect.y)
+            verify(headerRow.subtitleRect.y + headerRow.subtitleRect.height <= headerRow.effectRect.y)
+            verify(headerRow.effectRect.y + headerRow.effectRect.height <= headerRow.height)
+        }
         waitForRendering(band)
         var image = grabImage(testCase.surface)
         var row = rows.itemAt(0)
@@ -298,6 +334,12 @@ EditorDrawerTestSupport {
         wait(0)
         compare(findChild(testCase.surface, "timelineTrackHeaderToolTip"), null,
                 "hovering a header title does not create a tooltip")
+        const button = findChild(row, "timelineHeaderEffectsButton_" + row.track)
+        verify(!!button, "Object exists")
+        mouseMove(button, button.width / 2, button.height / 2)
+        tryCompare(row, "effectHovered", true)
+        compare(findChild(testCase.surface, "timelineTrackHeaderToolTip"), null,
+                "hovering the direct effects button does not create a tooltip")
     }
 
     function test_headerCtrlScopeKeepsPrimaryAndRendersOverlay() {

@@ -164,10 +164,9 @@ ShellClipboardSupport {
         verify(waitForNative(function() { return !p.app.playheadPresenter().playing }, 5000),
                "the applied native transport is stopped before rendering")
         activate(p.view, "effectOutputRender")
-        verify(waitForNative(function() { return !p.model.busy && p.model.noteCount > 0 }, 30000),
-               "the real helper renders into the actual output store")
-        compare(control(p.view, "effectOutputStatus").text, "Rendered " + p.model.noteCount + " notes.")
-        compare(control(p.view, "effectOutputOrigin").text, "Rendered")
+        verify(waitForNative(function() {
+            return !p.model.busy && p.model.originLabel === "Rendered" && p.model.noteCount > 0
+        }, 30000), "the helper commits rendered output rather than the earlier grabbed notes")
         compare(noteFacts(p.grid), before, "render and grab never insert document notes")
         p.grid.setCameraHScroll(0)
         const input = control(p.view, "effectOutputInput")

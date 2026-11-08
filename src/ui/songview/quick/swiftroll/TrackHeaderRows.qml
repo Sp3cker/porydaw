@@ -140,6 +140,8 @@ Item {
                 required property bool mutePressed
                 required property bool soloHovered
                 required property bool soloPressed
+                required property bool effectHovered
+                required property bool effectPressed
                 required property bool addHovered
                 required property bool addPressed
                 required property color activityDimColor
@@ -265,28 +267,61 @@ Item {
 
                 Item {
                     id: effectBadge
+                    objectName: "timelineHeaderEffectsButton_" + trackHeaderRow.track
 
                     x: trackHeaderRow.effectRect.x
                     y: trackHeaderRow.effectRect.y
                     width: trackHeaderRow.effectRect.width
                     height: trackHeaderRow.effectRect.height
-                    visible: !trackHeaderRow.isAddTrack && trackHeaderRow.effectName.length > 0
+                    visible: !trackHeaderRow.isAddTrack
+                    activeFocusOnTab: true
                     readonly property real padding: trackHeaderRow.subtitleFont.pixelSize / 4
                     readonly property real gap: caption.visible ? padding : 0
+                    readonly property color stateBackground: trackHeaderRow.effectPressed
+                        ? root.appearance.buttonPressedBackground
+                        : trackHeaderRow.effectHovered
+                          ? root.appearance.buttonHoverBackground : root.appearance.buttonBackground
+                    readonly property color stateText: trackHeaderRow.effectPressed
+                        ? root.appearance.buttonPressedText
+                        : trackHeaderRow.effectHovered
+                          ? root.appearance.buttonHoverText : root.appearance.buttonText
+                    readonly property color stateOutline: effectBadge.activeFocus
+                        ? root.appearance.focusOutline : root.appearance.buttonOutline
+
+                    function activate(): void {
+                        root.headersModel.activateMidiEffects(trackHeaderRow.track)
+                    }
+
+                    function activateFromKeyboard(event: KeyEvent): void {
+                        activate()
+                        event.accepted = true
+                    }
+
+                    Keys.onReturnPressed: (event) => effectBadge.activateFromKeyboard(event)
+                    Keys.onEnterPressed: (event) => effectBadge.activateFromKeyboard(event)
+
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("MIDI effects for %1").arg(trackHeaderRow.title)
+                    Accessible.description: qsTr("Open MIDI effects setup for this track")
+                    Accessible.focusable: true
+                    Accessible.onPressAction: effectBadge.activate()
 
                     Rectangle {
                         width: Math.max(0, effectBadge.width - caption.width - effectBadge.gap)
                         height: parent.height
-                        color: root.appearance.buttonBackground
+                        color: effectBadge.stateBackground
+                        border.color: effectBadge.stateOutline
+                        border.width: 1
 
                         Text {
                             objectName: "timelineHeaderEffect_" + trackHeaderRow.track
                             x: effectBadge.padding
                             width: Math.max(0, parent.width - 2 * effectBadge.padding)
                             height: parent.height
-                            color: root.appearance.buttonText
+                            color: effectBadge.stateText
                             font: trackHeaderRow.subtitleFont
-                            text: trackHeaderRow.effectName
+                            text: trackHeaderRow.effectName.length > 0
+                                ? trackHeaderRow.effectName : qsTr("MIDI Effects...")
                             textFormat: Text.PlainText
                             renderType: Text.NativeRendering
                             elide: Text.ElideRight
@@ -304,6 +339,8 @@ Item {
                         height: parent.height
                         visible: trackHeaderRow.effectStopped || trackHeaderRow.liveArmed
                         color: root.appearance.buttonPressedBackground
+                        border.color: effectBadge.stateOutline
+                        border.width: 1
 
                         Text {
                             id: captionText

@@ -445,12 +445,37 @@ ShellLaneSupport {
         const result = Audit.audit(item, grab)
         record(context, result)
         auditPopups(context, result.popups)
+        return result
     }
 
     function auditMidiEffects(context) {
         const surface = selectedSurface()
         const model = surface.midiEffectsModel
-        model.open(surface.gridModel.trackIndex)
+        surface.gridModel.setTrack(0)
+        surface.headersModel.scrollY = 0
+        const row = findChild(surface, "timelineHeaderRow_0")
+        verify(!!row, "Object exists")
+        const button = findChild(row, "timelineHeaderEffectsButton_0")
+        verify(!!button, "Object exists")
+        tryCompare(button, "visible", true)
+        const header = findChild(surface, "timelineTrackHeadersInput")
+        verify(!!header, "Object exists")
+        const outside = row.mapToItem(header, row.titleRect.x + row.titleRect.width / 2,
+                                      row.titleRect.y + row.titleRect.height / 2)
+        mouseMove(header, outside.x, outside.y)
+        header.forceActiveFocus()
+        tryCompare(row, "effectHovered", false)
+        verify(auditMidiSurface(context + " empty MIDI effects button", button).measured > 0)
+        button.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(button, "activeFocus", true)
+        verify(auditMidiSurface(context + " focused empty MIDI effects button", button).measured > 0)
+        mouseMove(button, button.width / 2, button.height / 2)
+        tryCompare(row, "effectHovered", true)
+        verify(auditMidiSurface(context + " hovered empty MIDI effects button", button).measured > 0)
+        mousePress(button, button.width / 2, button.height / 2, Qt.LeftButton)
+        tryCompare(row, "effectPressed", true)
+        verify(auditMidiSurface(context + " pressed empty MIDI effects button", button).measured > 0)
+        mouseRelease(button, button.width / 2, button.height / 2, Qt.LeftButton)
         tryCompare(model, "isOpen", true)
         tryVerify(function() { return findChild(surface, "midiEffectsPanel") !== null }, 5000)
         const panel = findChild(surface, "midiEffectsPanel")

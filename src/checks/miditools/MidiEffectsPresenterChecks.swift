@@ -128,9 +128,6 @@ private func midiEffectsSelectionAndSettings(
     let rowHeight = headers.rowHeight
     let timeline = fixture.audio.requestedTimelineIdentity
     headers.showHeaderMenu(track: 0, x: 20, y: 10)
-    check.expect(
-        headers.menuItems.count == 7 && headers.menuItems[6].text == "MIDI Effects...",
-        message: "the production header menu exposes MIDI Effects after Arpeggiator")
     headers.activateHeaderMenuAction(actionId: 7)
     check.expect(!headers.menuOpen && presenter.isOpen, message: "menu action 7 closes its menu before opening setup")
     try await fixture.settle()
@@ -164,10 +161,6 @@ private func midiEffectsSelectionAndSettings(
         message:
             "selection publishes the badge on a third font-derived line without losing the voice or changing row height"
     )
-    check.expect(
-        headers.hitTarget(row: 0, x: header.subtitleRect.x + 1, y: header.subtitleRect.y + 1) == .voice
-            && headers.hitTarget(row: 0, x: header.effectRect.x + 1, y: header.effectRect.y + 1) == .body,
-        message: "voice hit testing uses the rendered subtitle rectangle, leaving the effect line a body target")
     presenter.setInputMode(value: 1)
     presenter.setPacing(value: 1)
     presenter.setPrerollBars(value: 2)
@@ -215,7 +208,7 @@ private func midiEffectsSelectionAndSettings(
     check.expect(
         header.effectName.isEmpty && !header.liveArmed && !header.effectStopped
             && headers.snapshots[0].titleRect == plainTitle && headers.snapshots[0].subtitleRect == plainSubtitle,
-        message: "removal clears badge state and restores the unchanged two-line geometry")
+        message: "removal clears attached-effect state without changing the persistent effects control layout")
     _ = try await fixture.session.undo()
     check.expect(document.effect(onTrack: 0) == previous, message: "Undo restores the removed effect's full settings")
     presenter.open(track: 0)

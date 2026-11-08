@@ -81,7 +81,9 @@ Porydaw hosts VST3 plug-ins that **generate MIDI notes**, not VST instruments
 or audio effects. The generated notes play through the track's project
 voicegroup; plug-in audio output is not mixed into the song.
 
-1. Right-click a track header and choose **MIDI Effects...**.
+1. Click **MIDI Effects...** beneath the voice name in a track header. After
+   adding a plug-in, that same button shows its name. Right-clicking the
+   header and choosing **MIDI Effects...** is an optional alternate route.
 2. Choose a MIDI-producing plug-in. Use **Add Folder** for another VST3 folder
    or **Rescan** to refresh the catalog.
 3. Configure **Input**, **Pacing**, and **Pre-roll**. **Track notes** sends the
