@@ -7,6 +7,12 @@ public enum PluginHostError: Error, Equatable, Sendable, CustomStringConvertible
     case native(String)
     case stoppedResponding(String)
 
+    /// Preserves classified failures and lifts other errors with their original diagnostic.
+    /// - Parameter error: The failure crossing the host's error boundary.
+    public init(bridging error: some Error) {
+        self = (error as? Self) ?? .native(String(describing: error))
+    }
+
     public var description: String {
         switch self {
         case .native(let text), .stoppedResponding(let text): text

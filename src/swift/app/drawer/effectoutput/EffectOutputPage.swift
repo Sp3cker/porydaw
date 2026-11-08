@@ -622,8 +622,14 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
                 timeline: session.timeline, track: track, range: range, input: effect.config.plugin.input,
                 pacing: effect.config.plugin.pacing, prerollBars: effect.config.plugin.prerollBars)
             let transport = try CaptureTransport(request)
-            let seconds = Int(ceil(Double(transport.endSample - transport.startSample) / CaptureTransport.sampleRate))
-            renderMessage = "Rendering in real time (about \(seconds) s)"
+            switch request.pacing {
+            case .offline:
+                renderMessage = "Rendering..."
+            case .realtime:
+                let seconds = Int(
+                    ceil(Double(transport.endSample - transport.startSample) / CaptureTransport.sampleRate))
+                renderMessage = "Rendering in real time (about \(seconds) s)"
+            }
             begin(.render(range))
         } catch {
             message = String(describing: error)

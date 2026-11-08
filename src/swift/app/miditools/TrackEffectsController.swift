@@ -261,7 +261,7 @@ public final class TrackEffectsController {
         entry.load = load
         do { try await load.value } catch {
             if current(entry) {
-                failed(entry, error: (error as? PluginHostError) ?? .native(String(describing: error)))
+                failed(entry, error: PluginHostError(bridging: error))
             }
             throw error
         }
@@ -575,7 +575,7 @@ public final class TrackEffectsController {
                         try await entry.recorder.restore(next.pluginState)
                     } catch {
                         if self.current(entry) {
-                            self.failed(entry, error: (error as? PluginHostError) ?? .native(String(describing: error)))
+                            self.failed(entry, error: PluginHostError(bridging: error))
                         }
                     }
                 }

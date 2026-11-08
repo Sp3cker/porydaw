@@ -299,7 +299,7 @@ public final class CaptureDriver {
             if token != generation || Task.isCancelled { throw CancellationError() }
             if error is CancellationError { throw error }
             if submitted { instance.reportFailure(error) }
-            throw (error as? PluginHostError) ?? PluginHostError.native(String(describing: error))
+            throw PluginHostError(bridging: error)
         }
     }
 }
