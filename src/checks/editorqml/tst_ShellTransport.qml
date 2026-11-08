@@ -81,6 +81,7 @@ ShellTransportSupport {
         parity(6, true)
 
         mouseClick(button(1), button(1).width / 2, button(1).height / 2)
+        compare(transport.state, 3, "Play publishes requested state in the input turn")
         tryCompare(transport, "state", 3, 3000,
                    "Play button starts real audio playback")
         parity(1, false)
@@ -305,6 +306,7 @@ ShellTransportSupport {
                 "song master volume does dirty the document")
         master.focusInput(Qt.OtherFocusReason)
         keyClick(Qt.Key_Space)
+        compare(bar.presenter.state, 3, "Space publishes requested state in the input turn")
         tryCompare(bar.presenter, "state", 3, 3000,
                    "Space still starts playback with the volume field focused")
         compare(master.value, 87, "Space does not insert into the numeric field")

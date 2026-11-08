@@ -124,8 +124,40 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     runTrackHeadersChecks(report, session: session, service: service)
     runTrackHeadersInputChecks(report, session: session, service: service)
     runEffectPersistenceChecks(report, session: session, service: service)
+    runTrackEffectsControllerChecks(report, session: session, service: service)
 
     sessionLifetime(report: report, session: session, service: service)
+}
+
+@MainActor
+public func runTrackEffectsControllerEditorSuite(_ report: CheckReport) {
+    let checkID = "no-row/miditools/controller-editor"
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(checkID, "missing --swiftcore fixture root")
+        return
+    }
+    PreferencesStore.stageShared(
+        plistPath: URL(fileURLWithPath: fixtureRoot, isDirectory: true)
+            .appendingPathComponent("settings.plist").path)
+    let projectDir = stageTestProject(in: fixtureRoot, projectName: "swiftcore-trackeffects-editor")
+    let service = ProjectService()
+    do {
+        try runBlocking { try await service.open(root: projectDir) }
+        defer {
+            do { try runBlocking { await service.close() } } catch {
+                report.fail(checkID, "editor fixture project close failed: \(error)")
+            }
+        }
+        let session = try runBlocking {
+            try await DocumentSession.open(service: service, label: "mus_session_test", sampleRate: 48_000)
+        }
+        defer {
+            do { try runBlocking { _ = await session.close() } } catch {
+                report.fail(checkID, "editor fixture document close failed: \(error)")
+            }
+        }
+        runTrackEffectsControllerEditorChecks(report, session: session, service: service)
+    } catch { report.fail(checkID, "editor fixture open failed: \(error)") }
 }
 
 // MARK: - Bank History Suite

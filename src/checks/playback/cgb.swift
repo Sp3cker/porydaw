@@ -28,10 +28,10 @@ func checkControllerCgbPublication(_ report: CheckReport) throws {
             cgbRig.renderer.activeCgbChannels >= 1, cppID: id,
             message: "CGB channel count confirms sounding precondition")
         let next = cgbPublicationTimeline(replacement: true, preview: preview)
-        cgbRig.renderer.publish(next)
+        cgbRig.renderer.publish(next, identity: 301)
         _ = cgbRig.render(512)
         report.expect(
-            cgbRig.renderer.timeline?.events == next.events && cgbRig.sustaining(60), cppID: id,
+            cgbRig.renderer.status.appliedTimelineIdentity == 301 && cgbRig.sustaining(60), cppID: id,
             message: "replacement chase must not replay destructive historical controls")
         report.expect(
             cgbRig.renderer.activeCgbChannels >= 1, cppID: id,

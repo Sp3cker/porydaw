@@ -21,7 +21,7 @@ func checkAudioVolumeClamps(_ audio: AudioRenderEngine, _ report: CheckReport) {
 }
 
 private func checkAudioActivityTelemetry(_ report: CheckReport) {
-    let telemetry = AudioTelemetry()
+    let telemetry = AudioTelemetry(status: AudioStatus())
     let fresh = telemetry.consume()
     report.expectEqual(
         expected: Int(MAX_TRACKS), actual: fresh.count,

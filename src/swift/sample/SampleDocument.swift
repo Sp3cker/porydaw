@@ -4,6 +4,7 @@ public struct SampleDocument: Sendable {
     public let source: ImportedSample
     public private(set) var params: SampleEditParams
     private var cached: ProcessedSample?
+    public var prepared: ProcessedSample? { cached }
 
     public init(source: ImportedSample) {
         self.source = source

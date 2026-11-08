@@ -136,6 +136,18 @@ public struct Sequencer: ~Copyable {
         }
     }
 
+    private mutating func transitionAfterLoopDispatch<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?, liveMask: UInt32
+    ) {
+        if costHooks, let driver = engine.pointee.driver {
+            m4a_driver_cpu_loop_point(driver, true)
+        }
+        wrapNotes(engine: engine, source: source, audition: audition, liveMask: liveMask)
+        position = source.loopStartSample
+        cursor = lowerBound(in: source, sample: position)
+        if costHooks { seekCpuMeterMarks(source) }
+    }
+
     /// Render scheduled events with an optional shared interactive owner. Without
     /// that owner, offline rendering uses the original native ingress and DSP path.
     public mutating func render(
@@ -169,11 +181,8 @@ public struct Sequencer: ~Copyable {
                     dispatchDueEvents(
                         engine: engine, source: source, loop: true, muteMask: muteMask,
                         liveMask: liveMask, audition: audition)
-                    if costHooks, let driver = engine.pointee.driver { m4a_driver_cpu_loop_point(driver, true) }
-                    wrapNotes(engine: engine, source: source, audition: audition, liveMask: liveMask)
-                    position = source.loopStartSample
-                    cursor = lowerBound(in: source, sample: position)
-                    if costHooks { seekCpuMeterMarks(source) }
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
                 }
                 var count = min(8192, left.count - done)
                 if looping && source.hasLoop {
@@ -192,11 +201,8 @@ public struct Sequencer: ~Copyable {
                     dispatchDueEvents(
                         engine: engine, source: source, loop: true, muteMask: muteMask,
                         liveMask: liveMask, audition: audition)
-                    if costHooks, let driver = engine.pointee.driver { m4a_driver_cpu_loop_point(driver, true) }
-                    wrapNotes(engine: engine, source: source, audition: audition, liveMask: liveMask)
-                    position = source.loopStartSample
-                    cursor = lowerBound(in: source, sample: position)
-                    if costHooks { seekCpuMeterMarks(source) }
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
                 }
                 done += count
             }
@@ -992,13 +998,8 @@ extension Sequencer {
                     liveMask: liveMask, audition: audition)
 
                 if loop && position >= source.loopEndSample {
-                    if costHooks, let driver = engine.pointee.driver {
-                        m4a_driver_cpu_loop_point(driver, true)
-                    }
-                    wrapNotes(engine: engine, source: source, audition: audition, liveMask: liveMask)
-                    position = source.loopStartSample
-                    cursor = lowerBound(in: source, sample: position)
-                    if costHooks { seekCpuMeterMarks(source) }
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
                     continue
                 }
                 break

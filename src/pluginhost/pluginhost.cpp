@@ -18,6 +18,11 @@ class PorydawHost final : public HostApplication {
         UString(name, 128).fromAscii("Porydaw");
         return kResultOk;
     }
+public:
+    tresult PLUGIN_API queryInterface(const TUID iid, void** object) override {
+        if (pdph::hostQuery && pdph::hostQuery(iid, object) == kResultOk) return kResultOk;
+        return HostApplication::queryInterface(iid, object);
+    }
 };
 HostApplication& hostContext() {
     static PorydawHost host;
@@ -46,6 +51,7 @@ pdph_result sdkFailure(pdph_error* error, const char* operation, tresult result)
 }
 }
 namespace pdph {
+tresult (*hostQuery)(const TUID, void**) = nullptr;
 pdph_result sdkResult(tresult result) { return result == kResultOk ? PDPH_OK : PDPH_ERR_SDK; }
 void error(pdph_error* out, const char* message) {
     if (out) std::snprintf(out->message, sizeof(out->message), "%s", message);
@@ -81,12 +87,16 @@ tresult PLUGIN_API ComponentHandler::setDirty(TBool dirty) {
 tresult PLUGIN_API ComponentHandler::requestOpenEditor(FIDString) { return kNotImplemented; }
 tresult PLUGIN_API ComponentHandler::startGroupEdit() { return kResultOk; }
 tresult PLUGIN_API ComponentHandler::finishGroupEdit() { return kResultOk; }
+void ComponentHandler::editorClosed() {
+    notify([](const pdph_host_callbacks& c) { if (c.editor_closed) c.editor_closed(c.user); });
+}
 void ComponentHandler::detach() {
     enabled.store(false, std::memory_order_seq_cst);
     while (inFlight.load(std::memory_order_seq_cst) != 0) std::this_thread::yield();
 }
 }
 pdph_plugin_impl::~pdph_plugin_impl() {
+    if (editor && closeEditor) closeEditor(editor);
     if (handler) handler->detach();
     try {
         if (controller) controller->setComponentHandler(nullptr);
@@ -182,6 +192,9 @@ pdph_result pdph_plugin_create(pdph_module module, const uint8_t uid[16], pdph_h
             state.seek(0, IBStream::kIBSeekSet, nullptr);
             result = plugin->controller->setComponentState(&state);
             if (!stateSucceeded(result)) return sdkFailure(error, "IEditController::setComponentState", result);
+        }
+        if (plugin->prepareParameters() != PDPH_OK) {
+            pdph::error(error, "Could not prepare plugin parameter queues"); return PDPH_ERR_SDK;
         }
         *out = plugin.release();
         return PDPH_OK;

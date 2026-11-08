@@ -186,6 +186,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         pluginhost/BridgeChecks.swift
         pluginhost/PluginCatalogChecks.swift
         pluginhost/PluginHostChecks.swift
+        pluginhost/PluginHostEditorChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift
@@ -288,7 +289,6 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         samplecheck/SampleChecks.swift
         samplecheck/SoundFontChecks.swift
         samplecheck/SourceReplacementChecks.swift
-        samplecheck/StudioLifecycleChecks.swift
         samplecheck/WaveformChecks.swift
         themecolor/ThemeColorChecks.swift
         themecolor/ThemeColorPresets.swift
@@ -441,6 +441,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ExportChecks.swift
         workspace/SessionChecks.swift
         workspace/EffectPersistenceChecks.swift
+        miditools/TrackEffectsControllerChecks.swift
         workspace/bank_sharing.swift
         workspace/bank_undo_publication.swift
         workspace/editor_view_state_checks.swift
@@ -456,6 +457,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/startup_checks.swift
         workspace/transport_checks.swift
         kitstudio/KitDraftChecks.swift
+        kitstudio/KitSourceLoadingChecks.swift
         kitstudio/KitSourceSessionChecks.swift
         support/corecheck/CoreCheckDispatch.swift
         lanes/SwiftCoreCheckLane.swift

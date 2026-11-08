@@ -157,6 +157,19 @@ public final class LiveInsert: @unchecked Sendable {
         }
     }
 
+    // A false result denotes held-capacity exhaustion; emit accounts for wire-capacity overflow.
+    private func ingest(_ note: HeldInput, offset: Int32, call: inout LiveInsertCall) -> Bool {
+        if note.velocity > 0 {
+            guard remember(note) else { return false }
+            if !emit(note, offset: offset, on: true, call: &call) {
+                forget(id: note.id, pitch: note.pitch)
+            }
+        } else if emit(note, offset: offset, on: false, call: &call) {
+            forget(id: note.id, pitch: note.pitch)
+        }
+        return true
+    }
+
     private func flush(call: inout LiveInsertCall) {
         for index in 0..<4096 where held[index].id != 0 {
             _ = emit(held[index], offset: 0, on: false, call: &call)
@@ -196,7 +209,7 @@ public final class LiveInsert: @unchecked Sendable {
     }
 
     func processRender(
-        frames: Int32, context: CaptureContext, input: borrowing Span<pdph_midi_event>,
+        frames: Int32, context: CaptureContext, input: borrowing Span<CaptureInput>,
         output: inout MutableSpan<pdph_midi_event>
     ) throws -> BridgeReply {
         precondition(reservation.load(ordering: .acquiring) == 2)
@@ -212,16 +225,9 @@ public final class LiveInsert: @unchecked Sendable {
         }
         for index in 0..<input.count {
             let event = input[index]
-            let on = event.kind == PDPH_EVENT_NOTE_ON && event.velocity > 0
-            let velocity = on ? UInt8(max(1, min(127, event.velocity * 127)).rounded()) : 0
-            let note = HeldInput(id: event.note_id, pitch: event.pitch, velocity: velocity)
-            if on {
-                guard remember(note) else { throw PluginHostError.native("Plugin input-held capacity exceeded.") }
-                if !emit(note, offset: event.sample_offset, on: true, call: &accounting) {
-                    forget(id: note.id, pitch: note.pitch)
-                }
-            } else if emit(note, offset: event.sample_offset, on: false, call: &accounting) {
-                forget(id: note.id, pitch: note.pitch)
+            let note = HeldInput(id: event.id, pitch: event.pitch, velocity: event.velocity)
+            guard ingest(note, offset: Int32(max(0, event.sample - context.sample)), call: &accounting) else {
+                throw PluginHostError.native("Plugin input-held capacity exceeded.")
             }
         }
         guard accounting.inputOverflow == 0 else {
@@ -295,16 +301,8 @@ public final class LiveInsert: @unchecked Sendable {
                     continue
                 }
                 let note = HeldInput(id: id, pitch: min(127, event.key), velocity: min(127, event.velocity))
-                if event.velocity > 0 {
-                    guard remember(note) else {
-                        call.inputOverflow &+= 1
-                        continue
-                    }
-                    if !emit(note, offset: event.sampleOffset, on: true, call: &call) {
-                        forget(id: id, pitch: note.pitch)
-                    }
-                } else if emit(note, offset: event.sampleOffset, on: false, call: &call) {
-                    forget(id: id, pitch: note.pitch)
+                if !ingest(note, offset: event.sampleOffset, call: &call) {
+                    call.inputOverflow &+= 1
                 }
             }
         }

@@ -62,6 +62,12 @@ pdph_result pdph_plugin_set_processing(pdph_plugin, int32_t processing);
 pdph_result pdph_plugin_process(pdph_plugin, int32_t frames, const pdph_process_context*,
     const pdph_midi_event* in, int32_t in_count, pdph_midi_event* out, int32_t out_capacity,
     int32_t* out_written, int32_t* out_total);
+// Helper GUI thread only; editor implementation is not linked into the headless engine.
+pdph_result pdph_editor_open(pdph_plugin, const char* utf8_title, pdph_editor*, pdph_error*);
+void pdph_editor_raise(pdph_editor);
+void pdph_editor_close(pdph_editor);
+pdph_result pdph_editor_set_shortcuts(const int32_t* qt_strokes, int32_t count,
+    void (*on_shortcut)(void*, int32_t), void* user);
 #ifdef __cplusplus
 }
 #endif

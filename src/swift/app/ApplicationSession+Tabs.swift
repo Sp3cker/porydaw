@@ -19,8 +19,8 @@ extension ApplicationSession {
         publish(\.headerVoicePickerOpen, pickerOpen)
         polyphony.setContext(session: workspace?.session)
         virtualKeyboard.setContext(session: workspace?.session)
-        transportBar.refresh()
         refreshDocumentState()
+        transportBar.refresh()
         refreshVoicegroupDock()
         persistTabRecipe()
     }
@@ -87,7 +87,9 @@ extension ApplicationSession {
             _ = await prior?.value
             // Component.onDestruction precedes child destruction. Retire on the
             // existing async boundary, after the QML destruction stack unwinds.
+            await tab.workspace.effects.shutdown()
             tab.workspace.teardown()
+            await tab.workspace.awaitAudioRelease()
             _ = await tab.workspace.session.close()
         }
     }
@@ -203,7 +205,7 @@ extension ApplicationSession {
             let viewport = DocumentViewport(session: session)
             viewport.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(
-                viewport: viewport, audio: audio, playhead: playhead,
+                viewport: viewport, audio: audio, pluginCatalog: pluginCatalog, playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
             viewport.onEditorViewStateChanged = { [weak self, weak viewport] state in
@@ -213,7 +215,7 @@ extension ApplicationSession {
             workspace.drawer.applyChrome(viewport.editorViewState.chrome)
             workspace.pitchBend.onAuditionFromTick = { [weak self, weak workspace] tick in
                 guard let self, let workspace, self.workspace === workspace,
-                    let audio = self.audio, audio.songLoaded
+                    let audio = self.audio, audio.requestedSongLoaded
                 else { return }
                 self.publishSeek(
                     tick: tick, timeline: workspace.session.timeline,
@@ -251,7 +253,9 @@ extension ApplicationSession {
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
                 if let pending { songTabs.cancelReload(tabId: pending.tabId) }
+                await workspace.effects.shutdown()
                 workspace.teardown()
+                await workspace.awaitAudioRelease()
                 _ = await session.close()
                 return
             }
@@ -267,7 +271,9 @@ extension ApplicationSession {
                         songTabs.tab(id: pending.tabId).map {
                             !pending.matches($0)
                         } ?? false
+                    await workspace.effects.shutdown()
                     workspace.teardown()
+                    await workspace.awaitAudioRelease()
                     _ = await session.close()
                     if changedWhileLoading {
                         failOpen("The song changed while reloading; its original tab was kept.")

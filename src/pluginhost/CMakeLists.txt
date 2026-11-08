@@ -52,7 +52,6 @@ target_compile_definitions(porydaw_vst3_sdk PUBLIC
 # smtg_create_public_sdk_hosting_target links sdk_common; its platform ThreadChecker
 # implementation backs ConnectionProxy's thread checks.
 if(APPLE)
-    enable_language(OBJCXX)
     target_sources(porydaw_vst3_sdk PRIVATE
         "${porydaw_vst3_sdk_root}/public.sdk/source/vst/hosting/module_mac.mm"
         "${porydaw_vst3_sdk_root}/public.sdk/source/common/threadchecker_mac.mm")
@@ -93,16 +92,19 @@ qt_add_executable(porydaw-vst3-host
     helper/host.h
     helper/host_main.cpp
     helper/host_rt.cpp
-    helper/host_control.cpp)
+    helper/host_control.cpp
+    helper/editor.h
+    helper/editor.cpp
+    helper/keys.cpp)
 set_target_properties(porydaw-vst3-host PROPERTIES
     CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
-    AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+    AUTOMOC ON AUTOUIC OFF AUTORCC OFF
     RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
 target_link_libraries(porydaw-vst3-host PRIVATE
     porydaw_pluginhost porydaw_vst3_sdk PorydawPluginBridge Qt6::Gui)
 if(APPLE)
-    target_sources(porydaw-vst3-host PRIVATE helper/host_mac.mm)
-    set_source_files_properties(helper/host_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_sources(porydaw-vst3-host PRIVATE helper/host_mac.mm helper/editor_mac.mm)
+    set_source_files_properties(helper/host_mac.mm helper/editor_mac.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
     set_target_properties(porydaw-vst3-host PROPERTIES
         OBJCXX_STANDARD 17 OBJCXX_STANDARD_REQUIRED ON OBJCXX_EXTENSIONS OFF)
     target_link_libraries(porydaw-vst3-host PRIVATE "-framework Cocoa")
@@ -118,5 +120,9 @@ elseif(WIN32)
     target_link_libraries(porydaw-vst3-host PRIVATE shell32 avrt)
     install(TARGETS porydaw-vst3-host RUNTIME DESTINATION .)
 else()
+    find_package(X11 REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(PORYDAW_XCB REQUIRED IMPORTED_TARGET GLOBAL xcb)
+    target_link_libraries(porydaw-vst3-host PRIVATE X11::X11 PkgConfig::PORYDAW_XCB)
     target_link_libraries(porydaw-vst3-host PRIVATE Threads::Threads rt)
 endif()

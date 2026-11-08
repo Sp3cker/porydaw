@@ -442,7 +442,8 @@ expressions (see `.omp/rules/swift-typecheck-complexity.md`).
 when the interface is unchanged.
 
 `PorydawPluginHost` isolates the new SDK-free hosting behavior from the app module.
-Task 7 measured the same warm Debug app probe before and after adding its runtime:
+Task 7 measured the same warm Debug app probe before and after adding its runtime,
+before the later off-main audio integration:
 
 | Hosting runtime | `build:app` samples (s) | Median (s) |
 |---|---|---:|
@@ -480,23 +481,9 @@ dependencies, C interop only via `voicegroup_asset_batch.h`) was split out of
 AppPresentation → App still recompile). The split pays for itself through
 isolation and the benchmark below, not the floor.
 
-`PorydawSampleUI` (`src/swift/sampleui/`) holds the sample library model, audition
-arbiter and PCM audition player shared by Sample Studio and Split Studio. It sits
-on Sample, AppAudio, AppPresentation and QtBridge; `PorydawApp` links it.
-
-Each audition player caches native PCM by `ProcessedSample.pcmRevision`, preparing
-new content off-main and sharing it across note retriggers and release tails. Pitch/ADSR changes,
-repeat and slot retries reuse the prepared bytes. Cold preparation is asynchronous
-and latest-request-only; an owner reservation prevents stopped or displaced requests
-from publishing late. The four-slot callback handoff retains separate wave headers
-without callback ARC. Native PCM storage is reclaimed on a utility executor, not
-the main actor or audio callback. A portable `DispatchQueue`-backed `SerialExecutor`
-owns isolated destruction on every platform; its FIFO drain waits for previously
-queued reclamation without relying on Darwin's `DispatchSerialQueue`.
-A private `@unchecked Sendable` lifetime token bridges non-Darwin `DispatchData`
-ownership into the actor without exposing payload access. Native borrowers must
-retain the allocation until retirement; the conformance covers retention and
-release, not concurrent mutation of the underlying bytes.
+`PorydawSampleUI` (`src/swift/sampleui/`) holds the sample library model and the PCM
+audition player shared by Sample Studio and Split Studio. It sits on Sample, AppAudio,
+AppPresentation and QtBridge; `PorydawApp` links it.
 
 | `SampleLibraryModel.swift` placement | Warm build samples (s) | Median (s) |
 |---|---|---:|
@@ -515,6 +502,67 @@ Swift incremental state is mtime-based: `touch`, `git checkout` across branches,
 `git stash pop` recompile whole modules even when content is identical. Changing a
 module's compile flags (including via `-D` defines) drops its objects (see
 `reconcile_swift_objects`), which is intended.
+
+## Audio execution and sample previews
+
+Main owns intent, presentation and preview arbitration. `AudioControl` is an actor
+on a dedicated serial queue; it owns the device, renderer and project bank lease.
+Device preparation starts off main; the first rendering command starts the device.
+The audio callback does the realtime work. `AudioStatus` exposes atomic scalar
+state, including requested and applied transport, settings, positions and telemetry generation.
+
+Bind, unload, settings, voicegroup and pattern start/stop return awaitable
+`AudioOperation` receipts. Hot transport and preview commands write lifetime-stable
+endpoints directly when main owns the producer. While a cold receipt or queued hot
+write is outstanding, they use control's FIFO; main acquires the final queued write
+before resuming direct production. Start readiness and producer ownership are
+cached only across this explicit handover, not inferred from callback state.
+Cold operations never stop the device: control closes a callback gate, waits out
+at most the block in flight, and applies the change; blocks arriving meanwhile render silence.
+One main-actor task consumes completions, sample events and telemetry. Control
+drains CPU frames and activity peaks; main coalesces delivered batches. Telemetry
+epochs and generations discard late batches after invalidation.
+
+VST Live attachment uses the same cold FIFO and receipts. Commands carry a retained
+`LiveInsert` owner; control installs its borrowed slot under callback exclusion.
+Detach matches exact owner identity, so late cleanup cannot remove a successor,
+and clears notes, take state and the slot before acknowledging. Host awaits that
+receipt before transferring the bridge producer to Render or reclaiming storage.
+Main never dereferences the slot. The dedicated control executor uses portable
+`DispatchQueue`/`SerialExecutor`, including queue isolation checks for direct submits.
+
+Render timeouts return typed data to the MainActor helper owner, which records
+stopped-responding before terminating the process; later EOF cannot replace the
+first cause. The armed 50 ms take/watchdog drain never awaits helper IPC.
+Digest polling coalesces into one owned task per instance and is awaited during
+cleanup, independently of that drain.
+
+`NativeAudio.beginSampleAudition` claims a main-actor `SampleAuditionLease`; a new
+lease displaces the old holder. Leases submit value notes (PCM, wave or kit) to
+control, which prepares and reuses PCM and kit assets, retries busy slots and
+reclaims retired storage. Callback progress signals a semaphore-backed waiter;
+unchanged notes and retired idle slots do not wake control. Callback feedback
+identifies adoption and natural completion: `.started` means adopted, `.finished`
+means ended, and `soundingFrame` reports the current note's callback-published
+position. Lease and note identities reject stale events.
+
+`PcmAuditionPlayer` moves through idle, starting, sounding and repeat-gap states.
+Its policies are `.once` for library previews, `.repeatSame` for Split Studio
+slices and `.repeatFresh` for Sample Studio; repeating waits 0.5 seconds after
+completion. Its playhead reads `soundingFrame`, not an estimated playback clock.
+
+Studio DSP runs off main as latest-work-wins jobs (edit renders, loop tools, slice
+and key renders, save renders, Split Studio source decoding); stale results are rejected.
+Sample Studio publishes waveform state and republishes an active audition from
+the same landed render revision in one main-actor turn. Split Studio rerenders the
+active slice on boundary edits and republishes it with its playhead mapping; a key
+audition whose draft revision changed never sounds. Both map the engine's
+actual sounding frame onto their waveform.
+
+The shell close barrier awaits audio shutdown. Control joins the device and tears
+it down while retaining the bank lease; project retirement waits for queued audio
+unload. This does not guarantee off-main bank destruction: `Bank.deinit` may still
+free memory on main.
 
 ## Voicegroup loading: parity and performance gate
 

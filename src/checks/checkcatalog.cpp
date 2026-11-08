@@ -120,6 +120,22 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-pluginhost-abi", "pluginHostABI");
         swiftSuite("swiftcore-pluginbridge", "pluginBridge");
         swiftSuite("swiftcore-pluginhost", "pluginHost");
+        result.push_back({.name = "swiftcore-pluginhost-editor",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "pluginHostEditor"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = swiftCoreFixtures,
+                          .windowing = Windowing::WindowSystem,
+                          .platforms = Platform::MacOS});
+        result.push_back({.name = "swiftcore-trackeffects-editor",
+                          .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "trackEffectsEditor"}),
+                          .handler = swiftCore,
+                          .scratchKind = ScratchKind::ExistingDirectory,
+                          .fixtureRootKind = FixtureRootKind::DecompProject,
+                          .fixtureFiles = swiftCoreFixtures,
+                          .windowing = Windowing::WindowSystem,
+                          .platforms = Platform::MacOS});
         // Independent DSP groups retain every assertion within the runner's 90-second deadline.
         swiftSuite("swiftcore-playback-controller", "audioController");
         swiftSuite("swiftcore-playback-audition", "audioAudition");

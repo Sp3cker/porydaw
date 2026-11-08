@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawDocument
+import PorydawPlayback
 import PorydawProject
 import PorydawVoicegroup
 import QtBridge
@@ -8,6 +9,7 @@ import PorydawAppAudio
 import PorydawAppCommands
 import PorydawAppHistory
 import PorydawAppPresentation
+import PorydawPluginHost
 
 @MainActor
 @QtBridgeable
@@ -58,6 +60,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
     @QtTracked public let virtualKeyboard: VirtualKeyboardPresenter = VirtualKeyboardPresenter()
     private var undoHistoryVisible = false
+    @QtIgnored public let pluginCatalog: PluginCatalog
 
     @QtIgnored
     public internal(set) var projectRoot = ""
@@ -77,7 +80,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var catalogRefreshIssued: UInt64 = 0
     @QtIgnored var catalogRefreshApplied: UInt64 = 0
     @QtIgnored
-    var audioReadiness: AudioReadiness = .idle
+    var audioReadiness: AudioReadiness = .idle {
+        didSet { sampleStudioWorkflow?.audioReadinessChanged() }
+    }
     @QtIgnored
     var audioFactory: @Sendable () async throws -> NativeAudio = { try await NativeAudio.make() }
     @QtIgnored
@@ -127,11 +132,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     let songDock = SongDockController()
     @QtIgnored
-    var pickerAuditionRevision = 0
-    @QtIgnored
-    var pickerAuditionRequest: UInt64?
-    @QtIgnored
-    weak var pickerAuditionAudio: NativeAudio?
+    var pickerAudition: SampleAuditionLease?
     @QtIgnored
     let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
@@ -185,7 +186,29 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored
     var pendingSaveConflictTabId = -1
 
+    private static func pluginCacheDirectory() -> URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let data: URL
+        #if os(macOS)
+            data = home.appendingPathComponent("Library/Application Support", isDirectory: true)
+        #elseif os(Windows)
+            if let local = ProcessInfo.processInfo.environment["LOCALAPPDATA"], !local.isEmpty {
+                data = URL(fileURLWithPath: local, isDirectory: true)
+            } else {
+                data = home.appendingPathComponent("AppData/Local", isDirectory: true)
+            }
+        #else
+            if let xdg = ProcessInfo.processInfo.environment["XDG_DATA_HOME"], xdg.hasPrefix("/") {
+                data = URL(fileURLWithPath: xdg, isDirectory: true)
+            } else {
+                data = home.appendingPathComponent(".local/share", isDirectory: true)
+            }
+        #endif
+        return data.appendingPathComponent("porydaw/Plugins", isDirectory: true)
+    }
+
     public required init() {
+        pluginCatalog = PluginCatalog(cacheDirectory: Self.pluginCacheDirectory())
         let palette = GridPalette()
         self.palette = palette
         songTabs = SongTabsController(palette: palette)
@@ -237,6 +260,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         transportBar.attach(session: self)
         wavExport.attach(session: self)
         songDock.attach(session: self)
+        pluginCatalog.onChanged = { [weak self] in
+            guard let self, !self.isDisposed else { return }
+            for tab in self.songTabs.tabs { tab.workspace.effects.catalogDidChange() }
+        }
     }
 
     public func configureTypography(baseFontPx: Int) {
@@ -584,6 +611,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// the document-bound owners until the host acknowledges scene removal
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
+        pluginCatalog.cancelScan()
+        pluginCatalog.onChanged = nil
         hostClosingImpl()
     }
 

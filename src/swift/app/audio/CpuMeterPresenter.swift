@@ -114,7 +114,13 @@ public final class CpuMeterPresenter: QmlUncreatable {
         if historyFrames.count > Self.historyCapacity {
             historyFrames.removeFirst(historyFrames.count - Self.historyCapacity)
         }
-        let isPlaying = audio.transport == 2 && !audio.isPatternAuditioning
+        let patternIdle: Bool
+        if case .idle = audio.patternState {
+            patternIdle = true
+        } else {
+            patternIdle = false
+        }
+        let isPlaying = audio.requestedTransport == 2 && patternIdle
         let frame = isPlaying && current?.valid == true ? current : nil
         publish(\.loaded, true)
         publish(\.playing, isPlaying)
@@ -142,9 +148,10 @@ public final class CpuMeterPresenter: QmlUncreatable {
         }
         publish(\.historyMax, maximum)
         publish(\.historyOver, over)
-        publish(\.mixRate, Int(audio.pcmMixRate.rounded()))
-        publish(\.maxPcmChannels, audio.maxPcmChannels)
-        publish(\.hqMixer, audio.pcmMixerMode == M4A_PCM_MIXER_IPATIX)
+        let appliedSettings = audio.appliedSettings
+        publish(\.mixRate, Int(appliedSettings.pcmMixRate.rounded()))
+        publish(\.maxPcmChannels, Int(appliedSettings.maxPcmChannels))
+        publish(\.hqMixer, appliedSettings.pcmMixer == M4A_PCM_MIXER_IPATIX)
     }
 
     private func clear() {
@@ -172,7 +179,7 @@ public final class CpuMeterPresenter: QmlUncreatable {
             return
         }
         let lease = document.bankLease
-        let audioSettings = audio.songSettings(for: document.document.state.config)
+        let audioSettings = audio.appliedSettings
         let key = ProfileKey(
             tab: session.songTabs.selectedId, revision: document.document.revision,
             bankOwner: lease.publicationOwner, bankRevision: lease.publicationRevision,

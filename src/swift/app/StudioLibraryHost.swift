@@ -1,5 +1,6 @@
 import Foundation
 import PorydawAppAudio
+import PorydawPlayback
 import PorydawSample
 import PorydawSampleUI
 
@@ -13,9 +14,6 @@ final class StudioLibraryHost {
     private let onPreviewFailure: (StudioLibraryHost) -> Void
     private let preparation: SampleSourcePreparation
     private(set) var pane: SampleLibraryModel?
-    private var auditionLane: SampleAuditionArbiter?
-    // Bumped by every preview and stop, so a preview still awaiting its decode never plays late.
-    private var previewGeneration = 0
     var onLoad: ((String) -> Void)?
     var onOpenFile: (() -> Void)?
     var onPreview: ((String) -> Void)?
@@ -41,7 +39,12 @@ final class StudioLibraryHost {
     func library() -> SampleLibraryModel? {
         if let pane { return pane }
         guard let session else { return nil }
-        let pane = SampleLibraryModel(preferences: session.preferences, palette: session.palette, lane: lane())
+        let pane = SampleLibraryModel(
+            preferences: session.preferences, palette: session.palette,
+            beginSampleAudition: {
+                [weak session] (onEvent: @escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease? in
+                session?.audio?.beginSampleAudition(onEvent: onEvent)
+            })
         pane.onLoadRequested = { [weak self] (path: String) in self?.onLoad?(path) }
         pane.onOpenFileRequested = { [weak self] in self?.onOpenFile?() }
         pane.onPreviewRequested = { [weak self] (path: String) in self?.onPreview?(path) }
@@ -61,13 +64,7 @@ final class StudioLibraryHost {
         return URL(filePath: path, directoryHint: .notDirectory).standardizedFileURL
     }
 
-    func lane() -> SampleAuditionArbiter? {
-        if let auditionLane { return auditionLane }
-        guard let session else { return nil }
-        let lane = SampleAuditionArbiter(output: session.audio)
-        auditionLane = lane
-        return lane
-    }
+    var audioAvailable: Bool { session?.audio != nil }
 
     /// Prepares and sounds `path` once; a nil `key` plays the file at its own pitch.
     func preview(path: String, accept: @escaping () -> Bool, key: @escaping () -> Int?) {
@@ -80,17 +77,21 @@ final class StudioLibraryHost {
             pane.showMessage(text: "Cannot read \(path).")
             return
         }
+        guard let lease = pane.claimPreview() else {
+            pane.showMessage(text: "Audio is unavailable.")
+            return
+        }
         pane.setPreviewingPath(path: previewLabel(path, url))
-        previewGeneration += 1
-        let generation = previewGeneration
         Task { [weak self] in
             let decoded = await pane.decodedSample(path: path)
-            guard let self, generation == self.previewGeneration else { return }
+            guard lease.isCurrent else { return }
+            guard let self, accept() else { lease.stop(); return }
             let input: SampleSourcePreparation.Input =
                 decoded.map { (sample: ImportedSample) in .previewDecoded(sample, path: url.path) }
                 ?? .file(path: url.path, preview: true)
             self.preparation.submit(input) { [weak self] (result: Result<SampleSourcePreparation.Output, Error>) in
-                guard let self, accept() else { return }
+                guard lease.isCurrent else { return }
+                guard let self, accept() else { lease.stop(); return }
                 guard case .success(.prepared(var document, _, _)) = result else {
                     self.onPreviewFailure(self)
                     if case .failure(let error) = result {
@@ -98,29 +99,25 @@ final class StudioLibraryHost {
                     }
                     return
                 }
-                self.play(document.processed, path: path, key: key())
+                self.play(document.processed, path: path, key: key(), lease: lease)
             }
         }
     }
 
-    private func play(_ rendered: ProcessedSample, path: String, key: Int?) {
+    private func play(_ rendered: ProcessedSample, path: String, key: Int?, lease: SampleAuditionLease) {
         guard let pane else { return }
         guard !rendered.s8.isEmpty else {
             clearPreview()
             pane.showMessage(text: "\"\(URL(fileURLWithPath: path).lastPathComponent)\" renders no audio.")
             return
         }
-        guard let lane = lane(), lane.isAvailable else {
-            clearPreview()
-            pane.showMessage(text: "Audio is unavailable.")
-            return
-        }
+        guard lease.isCurrent else { return }
         let toneKey = UInt8(clamping: min(rendered.unityNote, 127))
-        pane.playPreview(rendered, path: path, key: key.map { UInt8(clamping: $0) } ?? toneKey, toneKey: toneKey)
+        pane.playPreview(
+            rendered, path: path, key: key.map { UInt8(clamping: $0) } ?? toneKey, toneKey: toneKey, lease: lease)
     }
 
     func clearPreview() {
-        previewGeneration += 1
         pane?.stopPreview()
     }
 }

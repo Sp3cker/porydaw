@@ -15,6 +15,15 @@ public struct AudioCpuFrame: Equatable, Sendable {
 public struct AudioCpuBatch: Sendable {
     public let generation: UInt64
     public let frames: [AudioCpuFrame]
+
+    public init(generation: UInt64, frames: [AudioCpuFrame]) {
+        self.generation = generation
+        self.frames = frames
+    }
+
+    public func matching(generation: UInt64) -> AudioCpuBatch? {
+        self.generation == generation ? self : nil
+    }
 }
 
 /// One audio producer and one UI consumer. Each slot is atomically versioned so
@@ -26,11 +35,12 @@ final class AudioCpuTelemetry {
     private let slots: UnsafeMutablePointer<Atomic<UInt64>>
     private let native: UnsafeMutablePointer<M4AFrameCost>
     private let published = Atomic<UInt64>(0)
-    private let generation = Atomic<UInt64>(0)
+    private let status: AudioStatus
     private var nativeCursor: UInt64 = 0
     private var consumerCursor: UInt64 = 0
 
-    init() {
+    init(status: AudioStatus) {
+        self.status = status
         slots = .allocate(capacity: Self.capacity * Self.stride)
         for index in 0..<(Self.capacity * Self.stride) {
             (slots + index).initialize(to: Atomic(0))
@@ -47,7 +57,7 @@ final class AudioCpuTelemetry {
     }
 
     /// A reset is an atomic generation change, never a write into the producer's ring.
-    func reset() { generation.wrappingAdd(1, ordering: .acquiringAndReleasing) }
+    func reset() { status.cpuGeneration.wrappingAdd(1, ordering: .acquiringAndReleasing) }
 
     /// Cold only: the old driver has been destroyed or its callback is parked.
     func resetNativeCursor() { nativeCursor = 0 }
@@ -57,7 +67,7 @@ final class AudioCpuTelemetry {
         driver: UnsafeMutablePointer<M4ADriver>, startCycle: UInt64, startSample: UInt64, sampleRate: Double,
         loopStart: UInt64, loopEnd: UInt64, looping: Bool
     ) {
-        let epoch = generation.load(ordering: .acquiring)
+        let epoch = status.cpuGeneration.load(ordering: .acquiring)
         while true {
             let count = m4a_driver_cpu_read(driver, &nativeCursor, native, Self.nativeCapacity)
             if count == 0 { return }
@@ -93,7 +103,7 @@ final class AudioCpuTelemetry {
 
     /// Control thread only. Array allocation and history maintenance happen here.
     func consume() -> AudioCpuBatch {
-        let epoch = generation.load(ordering: .acquiring)
+        let epoch = status.cpuGeneration.load(ordering: .acquiring)
         let end = published.load(ordering: .acquiring)
         if end &- consumerCursor > UInt64(Self.capacity) {
             consumerCursor = end &- UInt64(Self.capacity)

@@ -30,6 +30,8 @@ public:
     Steinberg::tresult PLUGIN_API finishGroupEdit() override;
     bool pop(ParameterEdit&);
     void detach();
+    void editorClosed();
+    bool hasPendingEdits() const { return readIndex.load(std::memory_order_acquire) != writeIndex.load(std::memory_order_acquire); }
 private:
     template<class F> void notify(F function) {
         inFlight.fetch_add(1, std::memory_order_seq_cst);
@@ -56,6 +58,7 @@ public:
 struct HeldNote { bool used = false; int32_t id = -1; uint8_t channel = 0, pitch = 0; uint64_t order = 0; };
 pdph_result sdkResult(Steinberg::tresult);
 void error(pdph_error*, const char*);
+extern Steinberg::tresult (*hostQuery)(const Steinberg::TUID, void**);
 }
 struct pdph_module_impl {
     VST3::Hosting::Module::Ptr module;
@@ -79,5 +82,8 @@ struct pdph_plugin_impl {
     int32_t nextNoteID = 0;
     int32_t maxBlock = 0;
     bool setup = false, active = false, processing = false;
+    pdph_editor editor = nullptr;
+    void (*closeEditor)(pdph_editor) = nullptr;
+    pdph_result prepareParameters();
     ~pdph_plugin_impl();
 };

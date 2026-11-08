@@ -3,7 +3,7 @@ import PorydawPluginBridge
 import Synchronization
 
 struct BridgeReply: Equatable, Sendable {
-    enum Outcome: Equatable, Sendable { case replied, missed, crashed }
+    enum Outcome: Equatable, Sendable { case replied, missed, timedOut, crashed }
     let outcome: Outcome
     let status: Int32
     let written: Int
@@ -22,7 +22,6 @@ final class BridgeChannel {
     private static let nextInstance = Atomic<UInt32>(0)
     let name: String
     private let handle: OpaquePointer
-    private var helperPID: UInt32 = 0
 
     init() throws {
         let instance = Self.nextInstance.wrappingAdd(1, ordering: .relaxed).newValue
@@ -40,11 +39,6 @@ final class BridgeChannel {
     }
 
     deinit { pdpb_channel_close(handle) }
-
-    func bindHelper(pid: Int32) {
-        precondition(helperPID == 0 && pid > 0)
-        helperPID = UInt32(pid)
-    }
 
     var snapshot: BridgeSnapshot {
         BridgeSnapshot(
@@ -74,8 +68,9 @@ final class BridgeChannel {
         let wait = pdpb_wait_reply(handle, sequence, timeoutMicroseconds)
         guard wait == PDPB_OK, pdpb_reply_sequence(handle) == sequence else {
             if render {
-                if helperPID != 0 { _ = pdpb_terminate_process(helperPID) }
-                return BridgeReply(outcome: .crashed, status: Int32(PDPB_ERROR), written: 0, total: 0)
+                return BridgeReply(
+                    outcome: wait == PDPB_TIMEOUT ? .timedOut : .crashed,
+                    status: Int32(PDPB_ERROR), written: 0, total: 0)
             }
             return BridgeReply(outcome: .missed, status: 0, written: 0, total: 0)
         }
@@ -109,7 +104,6 @@ final class BridgeChannel {
         frames: Int32, context: pdph_process_context, input: borrowing Span<pdph_midi_event>,
         output: inout MutableSpan<pdph_midi_event>
     ) -> BridgeReply {
-        precondition(helperPID != 0, "Bind the helper before transferring the Render producer.")
         return exchange(
             frames: frames, context: context, input: input, output: &output,
             timeoutMicroseconds: 10_000_000, render: true)

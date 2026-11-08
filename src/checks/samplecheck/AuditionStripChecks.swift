@@ -1,42 +1,126 @@
 import Foundation
 import PorydawApp
 import PorydawAppAudio
+import PorydawAppPresentation
 import PorydawPlayback
 import PorydawSample
 @testable import PorydawSampleUI
+import SwiftCoreCheckSupport
 @testable import SwiftCoreCheckLogic
 
-extension AudioRenderEngine: SampleAuditionOutput {
-    public func beginSampleRequest() -> UInt64 { audition.beginSampleRequest() }
-
-    public func sampleRequestIsCurrent(_ request: UInt64) -> Bool { audition.sampleRequestIsCurrent(request) }
-
-    public func auditionSample(
-        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
-        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
-    ) -> Bool {
-        audition.publishSample(
-            request: request, pcm: pcm, frequency: frequency, loopStart: loopStart,
-            looped: looped, key: key, adsr: adsr, toneKey: toneKey)
+@MainActor
+private func checkStudioOwnership(
+    _ report: CheckReport, presenter: SampleStudioPresenter, source: ImportedSample, output: SampleAuditionCheckOutput
+) throws {
+    let audio = report.scoped(cppID: "swiftcore/SampleStudioAudition::sharedOutputOwnership")
+    let otherPresenter = SampleStudioPresenter(
+        document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
+    try runBlocking { await otherPresenter.waitForRender() }
+    let first = SampleStudioAudition(
+        presenter: presenter, beginSampleAudition: output.begin,
+        isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+    let second = SampleStudioAudition(
+        presenter: otherPresenter, beginSampleAudition: output.begin,
+        isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+    first.toggle()
+    guard let firstNote = output.lastNote() else {
+        audio.expect(false, message: "First owner submits its PCM")
+        return
     }
-
-    public func auditionSampleOff(request: UInt64) { audition.sampleOff(request: request) }
+    output.start(firstNote)
+    audio.expect(first.playing, message: "First owner is playing after engine adoption")
+    second.toggle()
+    guard let secondNote = output.lastNote() else {
+        audio.expect(false, message: "New owner submits replacement PCM")
+        return
+    }
+    output.start(secondNote)
+    let successor = output.current
+    audio.expect(
+        !first.playing && first.playText == "Listen" && second.playing && successor?.isCurrent == true,
+        message: "displacement clears the editor holder without silencing its successor")
+    first.setAuditionKey(key: 61)
+    audio.expect(
+        !first.playing && second.playing && successor?.isCurrent == true
+            && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
+        message: "a displaced editor's key change cannot revive its stopped player")
+    first.close()
+    first.toggle()
+    audio.expect(
+        !first.available && !first.playing && first.playText == "Listen" && successor?.isCurrent == true,
+        message: "closing the displaced editor leaves the current owner intact and cannot restart")
+    second.close()
+    audio.expect(successor?.isCurrent == false && !second.playing, message: "closing the active editor ends its lease")
 }
 
 @MainActor
-internal func awaitAuditionStart(
-    _ audition: SampleStudioAudition, perform action: @escaping @MainActor () -> Void
-) throws {
-    try runBlocking {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let previous = audition.onStarted
-            audition.onStarted = {
-                audition.onStarted = previous
-                previous?()
-                continuation.resume()
-            }
-            action()
+private func checkStudioLoopMode(_ report: CheckReport, source: ImportedSample) throws {
+    let scope = report.scoped(cppID: "swiftcore/SampleStudioAudition::loopModeFollowsRender")
+    for initialLooped in [false, true] {
+        let presenter = SampleStudioPresenter(
+            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
+        presenter.setLoopOn(enabled: initialLooped)
+        try runBlocking { await presenter.waitForRender() }
+        let output = SampleAuditionCheckOutput()
+        let audition = SampleStudioAudition(
+            presenter: presenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+        defer { audition.close() }
+        audition.toggle()
+        guard let initial = output.lastNote(), case let .pcm(_, _, _, initialNoteLooped) = initial.source else {
+            scope.expect(false, message: "initial audition publishes PCM")
+            continue
         }
+        scope.expect(
+            presenter.processed.looped == initialLooped && initialNoteLooped == initialLooped,
+            message: "initial note follows the landed loop mode")
+        output.start(initial)
+        presenter.setLoopOn(enabled: !initialLooped)
+        try runBlocking { await presenter.waitForRender() }
+        guard let changed = output.lastNote(), case let .pcm(samples, _, _, changedLooped) = changed.source else {
+            scope.expect(false, message: "loop mode change republishes PCM")
+            continue
+        }
+        scope.expect(
+            presenter.processed.looped == !initialLooped && changedLooped == !initialLooped
+                && samples == presenter.processed.s8
+                && audition.lastPublishedRenderRevision == presenter.renderRevision,
+            message: "loop mode change republishes the landed render in both directions")
+        output.start(changed)
+        var finished = changed
+        if !initialLooped {
+            presenter.setLoopOn(enabled: false)
+            try runBlocking { await presenter.waitForRender() }
+            guard let unlooped = output.lastNote(), case let .pcm(_, _, _, looped) = unlooped.source else {
+                scope.expect(false, message: "disabling looping republishes PCM")
+                continue
+            }
+            scope.expect(!looped, message: "disabling looping restores one-shot playback")
+            output.start(unlooped)
+            finished = unlooped
+        }
+        output.finish(finished)
+        audition.advance(bySeconds: 0.51)
+        guard let repeated = output.lastNote(), case let .pcm(_, _, _, repeatLooped) = repeated.source else {
+            scope.expect(false, message: "one-shot render repeats with fresh PCM")
+            continue
+        }
+        scope.expect(
+            !repeatLooped && repeated.id != finished.id && audition.playing,
+            message: "one-shot after a loop mode change repeats with a fresh unlooped note")
+        output.start(repeated)
+        output.finish(repeated)
+        presenter.setLoopOn(enabled: true)
+        try runBlocking { await presenter.waitForRender() }
+        audition.advance(bySeconds: 0.51)
+        guard let fresh = output.lastNote(), case let .pcm(freshSamples, _, _, freshLooped) = fresh.source else {
+            scope.expect(false, message: "loop mode change during the repeat gap publishes fresh PCM")
+            continue
+        }
+        scope.expect(
+            freshLooped && presenter.processed.looped && freshSamples == presenter.processed.s8
+                && fresh.id != repeated.id,
+            message: "fresh repeat uses the looped render landed during the repeat gap")
     }
 }
 
@@ -45,96 +129,169 @@ internal func runAuditionStripChecks(_ report: CheckReport) {
     let scope = report.scoped(cppID: "samplecheck/SampleProcessingTest::spaceAudition")
     do {
         let source = try SampleImport.decode(hiResSampleWav(), sourcePath: "fix/hires_tone.wav")
-        scope.expect(source.frameCount == 12_000, message: "A116 high resolution source decodes")
-        let presenter = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
-        let unavailable = SampleStudioAudition(presenter: presenter, lane: nil, destinationAdsr: nil)
+        try checkStudioLoopMode(report, source: source)
+        let presenter = SampleStudioPresenter(
+            document: SampleDocument(source: source), validateName: { (_: String) -> String? in nil })
+        try runBlocking { await presenter.waitForRender() }
+        let palette = GridPalette()
+        ShellAppearance.apply(to: palette, mode: "vanilla", contrast: 50)
+        let waveform = MarkerWaveformModel(palette: palette)
+        let tools = SampleLoopTools(presenter: presenter)
+        tools.publishWaveform(waveform, sourceChanged: true)
+        presenter.addRenderObserver { [weak tools, weak waveform] in
+            guard let tools, let waveform else { return }
+            tools.publishWaveform(waveform, sourceChanged: false)
+        }
+        let output = SampleAuditionCheckOutput()
+        output.available = false
+        let unavailable = SampleStudioAudition(
+            presenter: presenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
         let strip = report.scoped(cppID: "samplecheck/SampleProcessingTest::editorAuditionStrip")
+        unavailable.toggle()
         strip.expect(
-            source.sourcePath == "fix/hires_tone.wav" && source.sampleRate == 44_100,
-            message: "A087 editor-strip high resolution source imports")
-        strip.expect(!unavailable.available, message: "A088 unavailable audio disables Play")
-        let engineResult = Result { try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512) }
-        scope.expect(
-            {
-                if case .success = engineResult { return true }; return false
-            }(),
-            message: "A117 audition engine initializes")
-        guard case .success(let renderer) = engineResult else { return }
+            !unavailable.available && !unavailable.playing && unavailable.playText == "Listen",
+            message: "A088 unavailable audio disables Play")
+        output.available = true
+        unavailable.refreshAvailability()
+        unavailable.toggle()
+        strip.expect(
+            unavailable.available && unavailable.playing && unavailable.playText == "Stop",
+            message: "the same studio sees output that becomes available later")
+        unavailable.stop()
+        _ = output.drain()
+        let renderer = try AudioRenderEngine(sampleRate: 48_000, periodFrames: 512, sampleFeedback: output.feedback)
         defer { renderer.unload() }
-        let lane = SampleAuditionArbiter(output: renderer)
-        let audition = SampleStudioAudition(presenter: presenter, lane: lane, destinationAdsr: nil)
-        scope.expect(
-            audition.available && !audition.playing && audition.playText == "Listen",
-            message: "A121 idle audition is stopped")
+        let audition = SampleStudioAudition(
+            presenter: presenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+        var observedLockstep: [Bool] = []
+        presenter.addRenderObserver { [weak presenter, weak tools, weak audition] in
+            guard let presenter, let tools, let audition else { return }
+            observedLockstep.append(
+                tools.lastWaveformRenderRevision == presenter.renderRevision
+                    && audition.lastPublishedRenderRevision == presenter.renderRevision)
+        }
         var pcm = [Float](repeating: 0, count: 48_000 * 2)
-        pcm.withUnsafeMutableBufferPointer { buffer in
-            renderer.render(buffer.baseAddress!, frames: 48_000)
+        var published: (note: SampleAuditionNote, generation: UInt64)?
+        var adoptedGeneration: UInt64 = 0
+        func render() {
+            pcm.withUnsafeMutableBufferPointer { (buffer: inout UnsafeMutableBufferPointer<Float>) in
+                guard let base = buffer.baseAddress else { return }
+                renderer.render(base, frames: 48_000)
+            }
+            guard let feedback = renderer.audition.sampleFeedback else { return }
+            if let published, feedback.adoptedGeneration == published.generation,
+                adoptedGeneration != published.generation
+            {
+                adoptedGeneration = published.generation
+                output.current?.deliver(.started(published.note.id))
+            }
         }
-        scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "idle audition renders digital silence")
+        func applyCommands() {
+            for command in output.drain() {
+                switch command {
+                case .begin: _ = renderer.audition.beginSample()
+                case let .play(_, note):
+                    _ = renderer.audition.reclaimSampleSlots()
+                    if case let .published(generation) = renderer.audition.publishSample(note) {
+                        published = (note, generation)
+                        output.status.publish(lease: output.current?.id ?? 0, note: note.id, generation: generation)
+                    } else {
+                        scope.expect(false, message: "renderer accepts the audition note")
+                    }
+                case .stop: renderer.audition.stopSample()
+                }
+            }
+        }
+        render()
+        scope.expect(
+            pcm.allSatisfy { (value: Float) -> Bool in abs(value) <= 1e-7 },
+            message: "idle audition renders digital silence")
         var playhead: Int?
-        audition.onPlayhead = { playhead = $0 }
-        try awaitAuditionStart(audition) {
-            audition.toggle()
-            audition.advance(bySeconds: 10)
-            scope.expect(playhead == nil, message: "cold preparation does not advance or finish the audition")
-            audition.setAuditionKey(key: 57)
-            audition.setAuditionKey(key: 60)
-        }
+        audition.onPlayhead = { (frame: Int?) in playhead = frame }
+        audition.toggle()
         scope.expect(audition.playing && audition.playText == "Stop", message: "A123 Listen changes to Stop")
-        pcm.withUnsafeMutableBufferPointer { buffer in
-            renderer.render(buffer.baseAddress!, frames: 48_000)
-        }
-        let peak = pcm.reduce(Float.zero) { max($0, abs($1)) }
-        let rms = sqrt(pcm.reduce(0.0) { $0 + Double($1) * Double($1) } / Double(pcm.count))
+        applyCommands()
+        render()
+        let peak = pcm.reduce(Float.zero) { (maximum: Float, value: Float) -> Float in max(maximum, abs(value)) }
+        let rms = sqrt(
+            pcm.reduce(0.0) { (sum: Double, value: Float) -> Double in sum + Double(value) * Double(value) }
+                / Double(pcm.count))
         scope.expect(peak >= 0.01 && rms >= 0.001, message: "A122 audition renders audible PCM")
-        audition.advance(bySeconds: 0.05)
-        scope.expect(playhead != nil, message: "looped playhead follows rendered frames")
+        audition.tick()
+        scope.expect(playhead != nil, message: "adopted playhead follows the engine frame")
         let oldBytes = presenter.processed.s8
-        try awaitAuditionStart(audition) {
-            presenter.beginMarkerGesture()
-            presenter.dragMarkers(
-                cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
-                loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
-            presenter.endMarkerGesture()
-        }
+        presenter.beginMarkerGesture()
+        presenter.dragMarkers(
+            cropStart: presenter.cropStart, cropEnd: presenter.cropEnd,
+            loopStart: presenter.loopStart + 32, loopEnd: presenter.loopEnd - 16)
+        presenter.endMarkerGesture()
+        try runBlocking { await presenter.waitForRender() }
+        scope.expect(
+            observedLockstep == [true] && tools.lastWaveformRenderRevision == audition.lastPublishedRenderRevision
+                && audition.lastPublishedRenderRevision == presenter.renderRevision,
+            message: "waveform and sounding audition publish the same landed render")
         scope.expect(
             presenter.processed.s8 != oldBytes && audition.playing,
             message: "loop marker drag republishes changed render while sounding")
-        audition.advance(bySeconds: 10)
+        applyCommands()
+        render()
+        audition.tick()
         scope.expect(
-            playhead.map { $0 >= presenter.cropStart && $0 < presenter.loopEnd } == true,
-            message: "looped playhead wraps inside source loop")
+            playhead.map { (frame: Int) -> Bool in frame >= presenter.cropStart && frame < presenter.loopEnd } == true,
+            message: "looped playhead remains inside source loop")
         audition.stop()
         scope.expect(!audition.playing && audition.playText == "Listen", message: "A125 Stop restores Listen text")
-        pcm.withUnsafeMutableBufferPointer { buffer in
-            renderer.render(buffer.baseAddress!, frames: 48_000)
-            renderer.render(buffer.baseAddress!, frames: 48_000)
-        }
-        scope.expect(pcm.allSatisfy { abs($0) <= 1e-7 }, message: "A124 stopped audition reaches digital silence")
-        try awaitAuditionStart(audition) { audition.toggle() }
+        applyCommands()
+        render()
+        render()
+        scope.expect(
+            pcm.allSatisfy { (value: Float) -> Bool in abs(value) <= 1e-7 },
+            message: "A124 stopped audition reaches digital silence")
+        audition.toggle()
         audition.setAuditionKey(key: 57)
         scope.expect(audition.auditionKey == 57 && audition.playing, message: "key choice restarts sounding audition")
-        audition.advance(bySeconds: 0.05)
-        let expectedAdvance =
-            0.05 * Double(presenter.processed.freq) / 1024
-            * pow(2, -3.0 / 12.0) * source.sampleRate / presenter.processed.outputRate
-        scope.expect(
-            playhead.map { abs(Double($0 - presenter.cropStart) - expectedAdvance) <= 1 } == true,
-            message: "non-C4 audition key advances playhead at audible pitch")
-        audition.close()
-        scope.expect(
-            !audition.available && !audition.playing && playhead == nil,
-            message: "close releases the audition owner and playhead")
-        let oneShot = SampleStudioPresenter(document: SampleDocument(source: source), validateName: { _ in nil })
-        oneShot.setLoopOn(enabled: false)
-        let repeating = SampleStudioAudition(presenter: oneShot, lane: lane, destinationAdsr: nil)
-        try awaitAuditionStart(repeating) { repeating.toggle() }
-        repeating.advance(bySeconds: 10)
-        repeating.advance(bySeconds: 0.51)
-        pcm.withUnsafeMutableBufferPointer { buffer in
-            renderer.render(buffer.baseAddress!, frames: 48_000)
+        guard let pitched = output.lastNote() else {
+            scope.expect(false, message: "key choice publishes a note")
+            return
         }
-        scope.expect(pcm.contains { abs($0) >= 0.01 }, message: "one-shot repeats after half-second gap")
+        scope.expect(pitched.key == 57, message: "non-C4 audition sends the selected audible pitch to the engine")
+        if case let .published(generation) = renderer.audition.publishSample(pitched) {
+            published = (pitched, generation)
+            output.status.publish(lease: output.current?.id ?? 0, note: pitched.id, generation: generation)
+            render()
+        } else {
+            scope.expect(false, message: "renderer accepts the pitched note")
+        }
+        audition.tick()
+        scope.expect(
+            playhead.map { (frame: Int) -> Bool in frame >= presenter.cropStart } == true,
+            message: "pitched playhead uses the adopted engine frame")
+        audition.close()
+        audition.toggle()
+        scope.expect(
+            !audition.available && !audition.playing && audition.playText == "Listen" && playhead == nil,
+            message: "close releases the audition owner and playhead")
+        try checkStudioOwnership(report, presenter: presenter, source: source, output: output)
+        presenter.setLoopOn(enabled: false)
+        try runBlocking { await presenter.waitForRender() }
+        let repeating = SampleStudioAudition(
+            presenter: presenter, beginSampleAudition: output.begin,
+            isAudioAvailable: { () -> Bool in output.available }, destinationAdsr: nil)
+        repeating.toggle()
+        guard let first = output.lastNote() else {
+            scope.expect(false, message: "one-shot submits its first note")
+            return
+        }
+        output.start(first)
+        output.finish(first)
+        repeating.advance(bySeconds: 0.51)
+        guard let repeated = output.lastNote() else {
+            scope.expect(false, message: "one-shot repeats after half-second gap")
+            return
+        }
+        scope.expect(repeated.id != first.id, message: "one-shot repeats with a fresh note identity")
         repeating.close()
     } catch {
         report.fail("swiftcore/SampleStudioAudition::fixture", "audition fixture failed: \(error)")

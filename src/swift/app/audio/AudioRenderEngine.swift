@@ -13,6 +13,31 @@ public struct AudioSettings: Sendable {
     public init() {}
 }
 
+public final class AudioRenderEndpoint: Sendable {
+    public let transport: AudioTransportEndpoint
+    public let audition: AudioAuditionEndpoint
+    let loop = Atomic<Bool>(true)
+    let mute = Atomic<UInt32>(0)
+    let solo = Atomic<UInt32>(0)
+
+    init(status: AudioStatus, audition: AudioAuditionEndpoint) {
+        transport = AudioTransportEndpoint(status: status)
+        self.audition = audition
+    }
+
+    public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
+        mute.store(Self.trackMask(muted), ordering: .relaxed)
+        solo.store(Self.trackMask(soloed), ordering: .relaxed)
+    }
+
+    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
+        tracks.reduce(into: UInt32(0)) { mask, track in
+            if (0..<16).contains(track) { mask |= UInt32(1) << track }
+        }
+    }
+}
+
 /// Device-independent production callback. Cold APIs require the device owner to quiesce rendering.
 /// Timelines are owned by the handoff; the voicegroup is borrowed until cold unload/rebind returns.
 public final class AudioRenderEngine {
@@ -25,20 +50,18 @@ public final class AudioRenderEngine {
     private let preview: UnsafeMutablePointer<M4AEngine>
     private var player = Sequencer(liveInserts: true)
     private var patternPlayer = Sequencer()
-    private let patternPosition = Atomic<UInt64>(0)
+    public let status: AudioStatus
+    public let endpoint: AudioRenderEndpoint
     private let handoff = AudioTimelineHandoff()
     /// Isolated loop; the callback borrows its storage without copying Array owners.
     private let patternHandoff = AudioTimelineHandoff()
     let transportState: AudioTransport
-    private let telemetry = AudioTelemetry()
-    private let cpuTelemetry = AudioCpuTelemetry()
+    private let telemetry: AudioTelemetry
+    private let cpuTelemetry: AudioCpuTelemetry
     private let cpuTrackBudget = Atomic<Int>(10)
     private var cpuRunning = false
     private var cpuContinueOnStart = false
     private let metronome: Metronome
-    private let loop = Atomic<Bool>(true)
-    private let mute = Atomic<UInt32>(0)
-    private let solo = Atomic<UInt32>(0)
     private let live = Atomic<UInt32>(0)
     private let liveSlots: UnsafeMutablePointer<Atomic<UnsafeMutableRawPointer?>>
     private let callbackSlots: UnsafeMutablePointer<UnsafeMutablePointer<LiveInsertSlot>?>
@@ -54,7 +77,9 @@ public final class AudioRenderEngine {
     private let previewLeft: UnsafeMutablePointer<Float>
     private let previewRight: UnsafeMutablePointer<Float>
 
-    public init(sampleRate: Double, periodFrames: Int) throws {
+    public init(
+        sampleRate: Double, periodFrames: Int, sampleFeedback: SampleAuditionFeedbackCell = .init()
+    ) throws {
         guard let main = m4a_engine_create(Float(sampleRate)) else { throw InitializationError.engine }
         guard let preview = m4a_engine_create(Float(sampleRate)) else {
             m4a_engine_free(main)
@@ -64,8 +89,16 @@ public final class AudioRenderEngine {
         self.preview = preview
         self.sampleRate = sampleRate
         periodSizeFrames = periodFrames
-        transportState = AudioTransport(sampleRate: sampleRate, periodFrames: periodFrames)
-        audition = AudioAudition()
+        let status = AudioStatus()
+        self.status = status
+        let audition = AudioAudition(sampleFeedback: sampleFeedback)
+        self.audition = audition
+        let endpoint = AudioRenderEndpoint(status: status, audition: audition.endpoint)
+        self.endpoint = endpoint
+        transportState = AudioTransport(
+            sampleRate: sampleRate, periodFrames: periodFrames, status: status, endpoint: endpoint.transport)
+        telemetry = AudioTelemetry(status: status)
+        cpuTelemetry = AudioCpuTelemetry(status: status)
         suppression = ResonanceSuppression(sampleRate: Float(sampleRate))
         metronome = Metronome(sampleRate: sampleRate)
         left = .allocate(capacity: capacity)
@@ -80,6 +113,7 @@ public final class AudioRenderEngine {
         callbackSlots = .allocate(capacity: TrackLimits.hardwareCapacity)
         callbackSlots.initialize(repeating: nil, count: TrackLimits.hardwareCapacity)
         for track in 0..<TrackLimits.hardwareCapacity { (liveSlots + track).initialize(to: Atomic(nil)) }
+        publishAppliedSettings()
     }
     deinit {
         m4a_engine_free(main)
@@ -99,19 +133,12 @@ public final class AudioRenderEngine {
         callbackSlots.deallocate()
     }
 
-    public var songLoaded: Bool { handoff.active != nil }
-    /// Control-thread snapshot; the callback borrows handoff storage directly.
-    public var timeline: PlaybackTimeline? { handoff.active?.pointee }
-    public var transport: AudioTransportState { transportState.requested }
-    public var loopEnabled: Bool { loop.load(ordering: .relaxed) }
+    public var songLoaded: Bool { status.songLoaded }
+    public var requestedTransport: AudioTransportState { status.requestedTransport }
+    public var loopEnabled: Bool { endpoint.loop.load(ordering: .relaxed) }
     public var outputVolume: Int { transportState.outputVolume }
     public var resonanceSuppression: Bool { suppression.enabled }
     public var polyDebugInvert: Bool { invert.load(ordering: .relaxed) }
-    public var playheadSamples: UInt64 { telemetry.playhead.load(ordering: .relaxed) }
-    /// Producer-owned: cold start publishes and every cancellation path clears the loop.
-    public var isPatternAuditioning: Bool { patternHandoff.isPublished }
-    /// Absolute position in the applied loop timeline, or zero when stopped.
-    public var patternAuditionPositionSamples: UInt64 { patternPosition.load(ordering: .relaxed) }
     public var liveMask: UInt32 { live.load(ordering: .acquiring) }
 
     /// Cold only. The caller owns the slot until a matching detach returns.
@@ -127,51 +154,44 @@ public final class AudioRenderEngine {
     public func detachLiveInsert(track: Int) {
         guard (0..<TrackLimits.hardwareCapacity).contains(track) else { return }
         m4a_engine_all_notes_off(main, Int32(track))
-        player.clearLiveTrack(track, tick: handoff.active?.pointee.tick(for: player.position))
+        player.clearLiveTrack(track, tick: handoff.active?.pointee.timeline.tick(for: player.position))
         live.store(liveMask & ~(1 << UInt32(track)), ordering: .releasing)
         liveSlots[track].store(nil, ordering: .releasing)
         callbackSlots[track] = nil
+        telemetry.publishPoly(main)
     }
-    public var activePcmChannels: Int { telemetry.activePcm.load(ordering: .relaxed) }
-    public var activeCgbChannels: Int { telemetry.activeCgb.load(ordering: .relaxed) }
-    public var pcmMixerMode: M4APcmMixerMode { settings.pcmMixer }
-    public var appliedSongVolume: Int { Int(settings.songVolume) }
-    public var maxPcmChannels: Int { Int(settings.maxPcmChannels) }
-    public var pcmMixRate: Float { settings.pcmMixRate }
-    public var analogFilter: Bool { settings.analogFilter }
-    public var polyLostTotal: UInt64 { AudioTelemetry.lostTotal(main) }
-    public func polySnapshot() -> AudioPolySnapshot { AudioTelemetry.snapshot(main) }
+    public var playheadSamples: UInt64 { status.playheadSamples }
+    public var isPatternAuditioning: Bool { status.isPatternAuditioning }
+    public var patternAuditionPositionSamples: UInt64 { status.patternAuditionPositionSamples }
+    public var activePcmChannels: Int { status.activePcmChannels }
+    public var activeCgbChannels: Int { status.activeCgbChannels }
+    public var polyLostTotal: UInt64 { status.polyLostTotal }
+    public func polySnapshot() -> AudioPolySnapshot { telemetry.snapshot() }
+    /// CGB channels of the isolated voice and pattern preview engine.
+    public func previewPolySnapshot() -> AudioPolySnapshot { telemetry.previewSnapshot() }
     public func consumeTrackActivityLevels() -> [AudioActivityLevel] { telemetry.consume() }
     public func consumeCpuFrames() -> AudioCpuBatch { cpuTelemetry.consume() }
     public func resetCpuPeak() { cpuTelemetry.reset() }
     public func setCpuTrackBudget(_ count: Int) {
         cpuTrackBudget.store(min(16, max(0, count)), ordering: .relaxed)
     }
-    public func play() {
-        guard songLoaded else { return }
-        if transportState.requested == .stopped { cpuTelemetry.reset() }
-        transportState.requested = .playing
-    }
-    public func pause() { if transport == .playing { transportState.requested = .paused } }
-    public func stop() { transportState.stop() }
-    public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
-    public func setMix(muted: Set<Int>, soloed: Set<Int>) {
-        mute.store(Self.trackMask(muted), ordering: .relaxed)
-        solo.store(Self.trackMask(soloed), ordering: .relaxed)
-    }
+    public func play() { endpoint.transport.play() }
+    public func pause() { endpoint.transport.pause() }
+    public func stop() { endpoint.transport.stop() }
+    public func setLoopEnabled(_ enabled: Bool) { endpoint.setLoopEnabled(enabled) }
+    public func setMix(muted: Set<Int>, soloed: Set<Int>) { endpoint.setMix(muted: muted, soloed: soloed) }
     public func setOutputVolume(_ percent: Int) { transportState.outputVolume = percent }
     public func setResonanceSuppression(_ enabled: Bool) { suppression.setEnabled(enabled) }
     public func setMetronomeEnabled(_ enabled: Bool) { metronome.setEnabled(enabled) }
     public func setPolyDebugInvert(_ enabled: Bool) { invert.store(enabled, ordering: .relaxed) }
     public func resetPolyStats() { polyReset.wrappingAdd(1, ordering: .relaxed) }
-    public func seek(_ sample: UInt64) {
-        if songLoaded { transportState.pendingSeek.store(sample, ordering: .releasing) }
-    }
+    public func seek(_ sample: UInt64) { endpoint.transport.seek(sample) }
 
     /// Cold only: pause the song at its current playhead and replace the isolated loop.
     /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
-    public func startPatternAudition(_ timeline: PlaybackTimeline) {
-        guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return }
+    @discardableResult
+    public func startPatternAudition(_ timeline: PlaybackTimeline) -> Bool {
+        guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return false }
         precondition(timeline.sampleRate == sampleRate, "Pattern timeline must use the device sample rate")
         resetPreview()
         suspendCpuCost()
@@ -181,8 +201,8 @@ public final class AudioRenderEngine {
         clearLiveTracks()
         cpuTelemetry.resetNativeCursor()
         Self.configure(main, voicegroup: voicegroup, settings: settings)
-        Sequencer.chase(engine: main, timeline: song.pointee, position: player.position)
-        Sequencer.primeVoices(engine: main, timeline: song.pointee, position: player.position)
+        Sequencer.chase(engine: main, timeline: song.pointee.timeline, position: player.position)
+        Sequencer.primeVoices(engine: main, timeline: song.pointee.timeline, position: player.position)
         audition.reset()
         transportState.pauseImmediately()
         suppression.reset()
@@ -191,7 +211,9 @@ public final class AudioRenderEngine {
         patternPlayer.seek(timeline.loopStartSample, timeline: timeline)
         Sequencer.chase(engine: preview, timeline: timeline, position: timeline.loopStartSample)
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: timeline.loopStartSample)
-        patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
+        status.patternPosition.store(timeline.loopStartSample, ordering: .relaxed)
+        status.patternActive.store(true, ordering: .releasing)
+        return true
     }
 
     /// Publish a replacement loop while auditioning, without stopping rendering. The next
@@ -208,21 +230,16 @@ public final class AudioRenderEngine {
         if isPatternAuditioning { resetPreview() }
     }
 
-    private static func trackMask(_ tracks: Set<Int>) -> UInt32 {
-        tracks.reduce(into: UInt32(0)) { mask, track in
-            if (0..<16).contains(track) { mask |= UInt32(1) << track }
-        }
-    }
 
     public func bind(
         timeline: PlaybackTimeline,
-        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings
+        voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings, identity: UInt64 = 0
     ) {
         suspendCpuCost()
         clearLiveTracks()
         transportState.reset()
         suppression.reset()
-        handoff.reset(timeline)
+        handoff.reset(timeline, identity: identity)
         self.voicegroup = voicegroup
         self.settings = settings
         m4a_engine_destroy(main)
@@ -234,15 +251,19 @@ public final class AudioRenderEngine {
         Sequencer.primeVoices(engine: main, timeline: timeline, position: 0)
         resetPreview()
         audition.clearMainPreviews()
-        mute.store(0, ordering: .relaxed)
-        solo.store(0, ordering: .relaxed)
+        endpoint.mute.store(0, ordering: .relaxed)
+        endpoint.solo.store(0, ordering: .relaxed)
         appliedMute = 0
         player.reset()
         telemetry.clear()
+        telemetry.publishPoly(main)
+        publishAppliedSettings()
+        status.timelineIdentity.store(identity, ordering: .releasing)
+        status.loaded.store(true, ordering: .releasing)
     }
-    public func publish(_ timeline: PlaybackTimeline) {
+    public func publish(_ timeline: PlaybackTimeline, identity: UInt64 = 0) {
         guard songLoaded else { return }
-        handoff.publish(timeline)
+        handoff.publish(timeline, identity: identity)
     }
     public func unload() {
         suspendCpuCost()
@@ -259,6 +280,9 @@ public final class AudioRenderEngine {
         cpuTelemetry.resetNativeCursor()
         cpuTelemetry.reset()
         telemetry.clear()
+        telemetry.publishPoly(main)
+        status.timelineIdentity.store(0, ordering: .releasing)
+        status.loaded.store(false, ordering: .releasing)
     }
     public func updateSettings(_ settings: AudioSettings) {
         transportState.resetCut()
@@ -268,6 +292,7 @@ public final class AudioRenderEngine {
         // A mix-rate change rebuilds the reverb, so only a changed rate is applied.
         if changedRate { m4a_engine_set_pcm_mix_rate(main, settings.pcmMixRate) }
         resetPreview()
+        publishAppliedSettings()
     }
     public func updateVoicegroup(_ voicegroup: UnsafeMutablePointer<ToneData>?) {
         transportState.resetCut()
@@ -279,12 +304,27 @@ public final class AudioRenderEngine {
         self.voicegroup = voicegroup
         m4a_engine_set_voicegroup(main, voicegroup)
         if let timeline = handoff.active {
-            Sequencer.chase(engine: main, timeline: timeline.pointee, position: playheadSamples)
-            Sequencer.primeVoices(engine: main, timeline: timeline.pointee, position: playheadSamples)
-            if resumeCpu { startCpuCost(timeline.pointee, continuing: true) }
+            Sequencer.chase(engine: main, timeline: timeline.pointee.timeline, position: playheadSamples)
+            Sequencer.primeVoices(engine: main, timeline: timeline.pointee.timeline, position: playheadSamples)
+            if resumeCpu { startCpuCost(timeline.pointee.timeline, continuing: true) }
         }
         resetPreview()
     }
+    private func publishAppliedSettings() {
+        let mixerIsHq =
+            main.pointee.driver.map { (driver: UnsafeMutablePointer<M4ADriver>) in
+                m4a_driver_get_pcm_mixer_mode(driver) == M4A_PCM_MIXER_IPATIX
+            } ?? false
+        let bits =
+            UInt64(main.pointee.pcmMixRate.bitPattern)
+            | UInt64(main.pointee.maxPcmChannels) << 32
+            | UInt64(main.pointee.songMasterVolume) << 40
+            | UInt64(main.pointee.reverbAmount) << 48
+            | (main.pointee.analogFilter ? UInt64(1) << 56 : 0)
+            | (mixerIsHq ? UInt64(1) << 57 : 0)
+        status.settingsWord.store(bits, ordering: .releasing)
+    }
+
     /// Configures a freshly initialized engine; the mix rate goes last because it rebuilds the reverb.
     public static func configure(
         _ engine: UnsafeMutablePointer<M4AEngine>,
@@ -307,7 +347,8 @@ public final class AudioRenderEngine {
             patternHandoff.reset()
             player.signalLiveDiscontinuity(.patternReturn)
             patternPlayer.reset()
-            patternPosition.store(0, ordering: .relaxed)
+            status.patternPosition.store(0, ordering: .relaxed)
+            status.patternActive.store(false, ordering: .releasing)
             audition.reset()
             suppression.reset()
             metronome.silence()
@@ -315,6 +356,7 @@ public final class AudioRenderEngine {
         _ = m4a_engine_init(preview, Float(sampleRate))
         Self.configure(preview, voicegroup: voicegroup, settings: settings)
         audition.resetPreview()
+        telemetry.publishPreview(preview)
     }
 
     private func suspendCpuCost() {
@@ -334,7 +376,7 @@ public final class AudioRenderEngine {
 
     private func clearLiveTracks() {
         let mask = liveMask
-        let tick = handoff.active?.pointee.tick(for: player.position)
+        let tick = handoff.active?.pointee.timeline.tick(for: player.position)
         for track in 0..<TrackLimits.hardwareCapacity where mask & (1 << UInt32(track)) != 0 {
             player.clearLiveTrack(track, tick: tick)
         }
@@ -353,14 +395,14 @@ public final class AudioRenderEngine {
     private func adopt(_ timeline: borrowing PlaybackTimeline) {
         let resumeCpu = transportState.applied == .playing
         suspendCpuCost()
-        let pending = transportState.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
+        let pending = endpoint.transport.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
         let seeking = pending != UInt64.max
         let position = seeking ? pending : player.position
         if seeking {
             releaseMainNotes()
             player.seek(position, timeline: timeline)
             player.signalLiveDiscontinuity(.timelineAdoption)
-            telemetry.playhead.store(position, ordering: .relaxed)
+            status.playhead.store(position, ordering: .relaxed)
         } else {
             player.replaceTimeline(position, timeline: timeline)
         }
@@ -369,21 +411,21 @@ public final class AudioRenderEngine {
         if resumeCpu { startCpuCost(timeline, continuing: true) }
     }
     private func applySeek() {
-        let sample = transportState.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
+        let sample = endpoint.transport.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
         guard sample != UInt64.max, let timeline = handoff.active else { return }
         let resumeCpu = transportState.applied == .playing
         suspendCpuCost()
         suppression.reset()
         releaseMainNotes()
-        player.seek(sample, timeline: timeline.pointee)
-        Sequencer.chase(engine: main, timeline: timeline.pointee, position: sample)
-        Sequencer.primeVoices(engine: main, timeline: timeline.pointee, position: sample)
-        if resumeCpu { startCpuCost(timeline.pointee, continuing: true) }
-        telemetry.playhead.store(sample, ordering: .relaxed)
+        player.seek(sample, timeline: timeline.pointee.timeline)
+        Sequencer.chase(engine: main, timeline: timeline.pointee.timeline, position: sample)
+        Sequencer.primeVoices(engine: main, timeline: timeline.pointee.timeline, position: sample)
+        if resumeCpu { startCpuCost(timeline.pointee.timeline, continuing: true) }
+        status.playhead.store(sample, ordering: .relaxed)
     }
     private func applyMute() {
-        let soloMask = solo.load(ordering: .relaxed)
-        let muted = mute.load(ordering: .relaxed)
+        let soloMask = endpoint.solo.load(ordering: .relaxed)
+        let muted = endpoint.mute.load(ordering: .relaxed)
         let mask = (soloMask != 0 ? (muted | ~soloMask) : muted) & 0xFFFF
         guard mask != appliedMute else { return }
         let newlyMuted = mask & ~appliedMute
@@ -391,7 +433,7 @@ public final class AudioRenderEngine {
             m4a_engine_all_notes_off(main, track)
             if liveMask & (1 << UInt32(track)) != 0 {
                 player.clearLiveTrack(
-                    Int(track), discontinuity: [], tick: handoff.active?.pointee.tick(for: player.position))
+                    Int(track), discontinuity: [], tick: handoff.active?.pointee.timeline.tick(for: player.position))
             }
         }
         appliedMute = mask
@@ -413,7 +455,7 @@ public final class AudioRenderEngine {
         patternPlayer.seek(start, timeline: timeline)
         Sequencer.chase(engine: preview, timeline: timeline, position: start)
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: start)
-        patternPosition.store(start, ordering: .relaxed)
+        status.patternPosition.store(start, ordering: .relaxed)
         suppression.reset()
         metronome.silence()
     }
@@ -459,18 +501,22 @@ public final class AudioRenderEngine {
         let position =
             patternPlayer.position == timeline.loopEndSample
             ? timeline.loopStartSample : patternPlayer.position
-        patternPosition.store(position, ordering: .relaxed)
+        status.patternPosition.store(position, ordering: .relaxed)
         telemetry.publish(engine: preview, position: player.position)
+        telemetry.publishPreview(preview)
     }
 
     public func render(_ output: UnsafeMutablePointer<Float>, frames: UInt32) {
-        if let timeline = patternHandoff.acquirePending() { restartPattern(timeline.pointee) }
+        if let timeline = patternHandoff.acquirePending() { restartPattern(timeline.pointee.timeline) }
         if let timeline = patternHandoff.active {
-            renderPattern(timeline.pointee, output: output, frames: frames)
+            renderPattern(timeline.pointee.timeline, output: output, frames: frames)
             return
         }
         transition()
-        if let timeline = handoff.acquirePending() { adopt(timeline.pointee) }
+        if let timeline = handoff.acquirePending() {
+            adopt(timeline.pointee.timeline)
+            status.timelineIdentity.store(timeline.pointee.identity, ordering: .releasing)
+        }
         applySeek()
         applyMute()
         applyPolyDebug()
@@ -486,13 +532,13 @@ public final class AudioRenderEngine {
         while done < Int(frames) {
             let count = min(Int(frames) - done, capacity)
             if transportState.applied == .playing, let timeline = handoff.active {
-                if !cpuRunning { startCpuCost(timeline.pointee, continuing: cpuContinueOnStart) }
+                if !cpuRunning { startCpuCost(timeline.pointee.timeline, continuing: cpuContinueOnStart) }
                 let looping = loopEnabled
                 let start = player.position
                 let cpuDriver = main.pointee.driver
                 let cpuStartCycle = cpuDriver.map { m4a_driver_current_cycle($0) } ?? 0
                 player.render(
-                    engine: main, timeline: timeline.pointee,
+                    engine: main, timeline: timeline.pointee.timeline,
                     left: UnsafeMutableBufferPointer(start: left, count: count),
                     right: UnsafeMutableBufferPointer(start: right, count: count),
                     looping: looping, muteMask: appliedMute, audition: audition,
@@ -500,15 +546,15 @@ public final class AudioRenderEngine {
                 if let cpuDriver {
                     cpuTelemetry.collect(
                         driver: cpuDriver, startCycle: cpuStartCycle, startSample: start,
-                        sampleRate: sampleRate, loopStart: timeline.pointee.loopStartSample,
-                        loopEnd: timeline.pointee.loopEndSample,
-                        looping: looping && timeline.pointee.hasLoop)
+                        sampleRate: sampleRate, loopStart: timeline.pointee.timeline.loopStartSample,
+                        loopEnd: timeline.pointee.timeline.loopEndSample,
+                        looping: looping && timeline.pointee.timeline.hasLoop)
                 }
                 metronome.mix(
                     left: left, right: right, frames: count, from: start,
-                    timeline: timeline.pointee, looping: looping)
-                if !(looping && timeline.pointee.hasLoop)
-                    && player.position > timeline.pointee.lengthSamples + UInt64(3 * sampleRate)
+                    timeline: timeline.pointee.timeline, looping: looping)
+                if !(looping && timeline.pointee.timeline.hasLoop)
+                    && player.position > timeline.pointee.timeline.lengthSamples + UInt64(3 * sampleRate)
                 {
                     transportState.requested = .stopped
                     transition()
@@ -516,7 +562,7 @@ public final class AudioRenderEngine {
             } else {
                 if let timeline = handoff.active, insertMask != 0 {
                     player.processStoppedLive(
-                        engine: main, timeline: timeline.pointee, frames: count, looping: loopEnabled,
+                        engine: main, timeline: timeline.pointee.timeline, frames: count, looping: loopEnabled,
                         liveMask: insertMask, liveSlots: inserts)
                 }
                 audition.render(main: main, left: left, right: right, frames: count)
@@ -555,5 +601,8 @@ public final class AudioRenderEngine {
             done += count
         }
         telemetry.publish(engine: main, position: player.position)
+        telemetry.publishPoly(main)
+        telemetry.publishPreview(preview)
+        publishAppliedSettings()
     }
 }

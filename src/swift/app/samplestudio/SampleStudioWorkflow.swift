@@ -5,6 +5,7 @@ import PorydawVoicegroup
 import PorydawCore
 import PorydawDocument
 import PorydawProject
+import PorydawPlayback
 import PorydawSample
 import PorydawSampleUI
 import QtBridge
@@ -74,7 +75,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
             pickerURL: { (directory: String) -> URL in
                 URL(fileURLWithPath: directory.isEmpty ? NSHomeDirectory() : directory, isDirectory: true)
             }, rejectNonFileScheme: true,
-            previewAllowed: { (host: StudioLibraryHost) -> Bool in host.lane()?.isAvailable == true },
+            previewAllowed: { (host: StudioLibraryHost) -> Bool in host.audioAvailable },
             previewLabel: { (path: String, _: URL) -> String in path },
             onPreviewFailure: { (host: StudioLibraryHost) in host.clearPreview() })
         libraryHost.onLoad = { [weak self] (path: String) in self?.loadLibrarySample(path: path) }
@@ -82,6 +83,8 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         libraryHost.onPreview = { [weak self] (path: String) in self?.previewLibrarySample(path: path) }
         libraryHost.onStop = { [weak self] in self?.stopLibraryPreview() }
     }
+
+    func audioReadinessChanged() { player?.refreshAvailability() }
 
     public func library() -> Optional<SampleLibraryModel> { libraryHost.library() }
 
@@ -102,7 +105,6 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     public func previewLibrarySample(path: String) {
         guard editorOpen, !committing, library() != nil, let session else { return }
         invalidateSourcePreparation()
-        player?.stop()
         libraryHost.clearPreview()
         libraryHost.preview(
             path: path, accept: sourceAcceptance(session: session),
@@ -276,7 +278,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let destination = destination
         let root = session.projectRoot
         let provenanceStore = SampleProvenanceStore(preferences: session.preferences)
-        let request = SampleCommitRequest(name: name, wav: presenter.wavBytes(), update: editing)
+        let commitDocument = presenter.document
         let generation = sessionGeneration
         pendingTask = Task { [weak self] in
             defer {
@@ -286,6 +288,9 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                 }
             }
             do {
+                let wav = await SampleStudioPresenter.wavBytes(for: commitDocument)
+                guard !Task.isCancelled, self?.sessionGeneration == generation else { return }
+                let request = SampleCommitRequest(name: name, wav: wav, update: editing)
                 try await service.commitSample(request)
                 if keepsProvenance {
                     provenanceStore.save(provenance, projectRoot: root, name: name)
@@ -502,10 +507,14 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                     sustain: voice.sustain, release: voice.release)
         }
         let player = SampleStudioAudition(
-            presenter: presenter, lane: libraryHost.lane(),
+            presenter: presenter,
+            beginSampleAudition: {
+                [weak session] (onEvent: @escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease? in
+                session?.audio?.beginSampleAudition(onEvent: onEvent)
+            },
+            isAudioAvailable: { [weak session] () -> Bool in session?.audio != nil },
             destinationAdsr: destinationAdsr)
-        player.onPlayhead = { [weak wave] frame in wave?.setPlayhead(frame: frame) }
-        player.onStarted = { [weak self] in self?.stopLibraryPreview() }
+        player.onPlayhead = { [weak wave] (frame: Int?) in wave?.setPlayhead(frame: frame) }
         self.presenter = presenter
         self.tools = tools
         self.wave = wave

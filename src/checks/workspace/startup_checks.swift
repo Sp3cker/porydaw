@@ -71,6 +71,7 @@ internal func runWorkspaceStartupChecks(_ report: CheckReport) {
     startupPendingEngineSettings(report)
     startupPreparationFailureRetainsCause(report)
     startupClosingWaitsForPreparation(report)
+    startupShellCloseWaitsForPreparation(report)
 }
 
 @MainActor
@@ -269,6 +270,39 @@ private func startupClosingWaitsForPreparation(_ report: CheckReport) {
         } catch {
             report.fail(id, "close-during-preparation scenario failed: \(error)")
         }
+    }
+}
+
+@MainActor
+private func startupShellCloseWaitsForPreparation(_ report: CheckReport) {
+    let id = "swiftcore/Shell::closeWaitsForAudioShutdown"
+    let shell = ShellPresenter()
+    let gate = StartupAudioGate()
+    shell.session.audioFactory = { try await gate.makeAudio() }
+    defer { gate.release() }
+    do {
+        try runBlocking {
+            shell.session.prepareAudio()
+            try await gate.waitUntilConstructed()
+            _ = shell.beginClose()
+            shell.allTabsClosed()
+            shell.sceneDestroyed()
+            guard let settlement = shell.closeSettlementTask else {
+                report.fail(id, "scene destruction did not start the shell close barrier")
+                return
+            }
+            await Task.yield()
+            report.expect(
+                !shell.closeReady && gate.owner != nil, cppID: id,
+                message: "close stays blocked while the real prepared device is held before adoption")
+            gate.release()
+            await settlement.value
+            report.expect(
+                shell.closeReady && gate.owner == nil && shell.session.audio == nil, cppID: id,
+                message: "close becomes ready only after late preparation and its audio shutdown settle")
+        }
+    } catch {
+        report.fail(id, "close barrier scenario failed: \(error)")
     }
 }
 

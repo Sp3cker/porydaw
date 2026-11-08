@@ -8,9 +8,6 @@
 #include <atomic>
 #include <cstdint>
 #include <thread>
-#if defined(__linux__)
-namespace Steinberg { class FUnknown; }
-#endif
 namespace pdph::helper {
 struct Frame { uint32_t type = 0, request = 0; QByteArray payload; };
 struct CallbackEvent { uint32_t type = 0, value = 0; };
@@ -35,6 +32,9 @@ struct Host {
     std::atomic<uint32_t> callbackWrite{0};
     uint32_t callbackRead = 0;
     std::atomic<bool> callbacksOverflowed{false};
+    std::atomic<bool> parameterFlushRequested{false};
+    std::atomic<bool> parameterFlushComplete{false};
+    int32_t parameterFlushResult = PDPH_OK;
     bool processing = false;
     double sampleRate = 48000;
     uint32_t periodFrames = 256, maxBlock = 1024;
@@ -42,6 +42,7 @@ struct Host {
     bool (*editorAction)(Host&, const Frame&, QByteArray&, QString&) = nullptr;
     bool quiesce();
     void resume();
+    bool flushParameters();
     void enqueue(uint32_t type, uint32_t value);
     void drainCallbacks();
     void stop(int status);
@@ -54,8 +55,5 @@ void setRealtimePriority(double rate, uint32_t periodFrames);
 int run(int argc, char** argv);
 #ifdef __APPLE__
 void setAccessoryPolicy();
-#endif
-#if defined(__linux__)
-Steinberg::FUnknown* linuxRunLoop();
 #endif
 }

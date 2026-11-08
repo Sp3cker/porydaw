@@ -1,9 +1,9 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppAudio
 import PorydawCore
 import PorydawDocument
-@testable import PorydawPlayback
+import PorydawPlayback
 import PorydawPlaybackNative
 import PorydawProject
 import PorydawVoicegroup
@@ -243,6 +243,8 @@ public func runAudioControllerChecks(_ report: CheckReport) {
         try checkCpuInstrumentationIsObservational(report)
         try checkCpuTrackEndLifecycle(report)
         try checkCpuTrackEndAudioIdentity(report)
+        try checkNativeAudioQueuedOperations(report)
+        try checkNativeSampleLeaseArbitration(report)
         try checkNativeAudioLifetime(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
 }
@@ -308,6 +310,11 @@ private func checkCpuMeterPlayback(_ report: CheckReport) throws {
     report.expect(
         reset.generation != sought.generation && reset.frames.isEmpty,
         cppID: id, message: "peak/history reset discards the prior run without touching playback")
+    report.expect(
+        sought.matching(generation: audio.status.telemetryGeneration) == nil
+            && reset.matching(generation: audio.status.telemetryGeneration) != nil,
+        cppID: "swiftcore/AudioController::staleCpuBatch",
+        message: "a delivered pre-reset batch cannot repopulate cleared history")
     _ = rig.render(rig.rate / 4)
     let afterReset = audio.consumeCpuFrames()
     report.expect(
@@ -563,9 +570,14 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
             }
             do {
                 let owner = try runBlocking { try await NativeAudio() }
+                report.expect(!owner.isDeviceRunning, cppID: id, message: "initialization leaves the device stopped")
                 let midi = try MidiFile.decode(song.midiBytes)
                 let timeline = PlaybackTimeline.build(file: midi, sampleRate: owner.sampleRate)
-                owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                let bind = owner.bind(timeline: timeline, bank: song.bank, config: song.config)
+                try runBlocking { await bind.value }
+                report.expect(
+                    owner.isDeviceRunning && owner.lastDeviceError == nil, cppID: id,
+                    message: "first bind starts the device without requiring play")
                 owner.play()
                 if !detachedRelease {
                     report.expect(
@@ -590,6 +602,15 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
                 report.expect(
                     sounding, cppID: id,
                     message: "real bank sounds through the null-backend callback before teardown")
+                let snapshots = (0..<64).map { (_: Int) in owner.polySnapshot() }
+                report.expect(
+                    snapshots.allSatisfy { (snapshot: AudioPolySnapshot) in
+                        snapshot.maxPcmChannels > 0 && snapshot.pcm.count == Int(TOTAL_PCM_CHANNELS)
+                            && snapshot.cgb.count == Int(TOTAL_CGB_CHANNELS)
+                            && snapshot.drop.count == Int(MAX_TRACKS)
+                            && snapshot.events.count == Int(M4A_POLY_EVENT_CAPACITY)
+                    }, cppID: "swiftcore/NativeAudio::concurrentPolySnapshot",
+                    message: "poly diagnostics remain complete while the null device renders")
                 releasedBank = song.bank
                 releasedFacade = owner
                 facade = owner
@@ -635,7 +656,335 @@ private func checkNativeAudioLifetime(_ report: CheckReport) throws {
         }
         report.expect(
             releasedFacade == nil && releasedBank == nil, cppID: id,
-            message: "isolated deinit joins callback and releases facade and pinned bank")
+            message: "control teardown joins callback and releases facade and pinned bank")
+    }
+}
+
+@MainActor
+private func checkNativeSampleLeaseArbitration(_ report: CheckReport) throws {
+    let id = "swiftcore/AudioAudition::sampleLease"
+    let audio = try runBlocking { try await NativeAudio() }
+    report.expect(
+        !audio.songLoaded && !audio.isDeviceRunning, cppID: id,
+        message: "an unbound audition begins with an initialized but stopped device")
+    var firstEvents: [SampleAuditionEvent] = []
+    var successorEvents: [SampleAuditionEvent] = []
+    let first = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+        firstEvents.append(event)
+    }
+    let samples = (0..<1024).map { (index: Int) -> Int8 in index & 32 == 0 ? 80 : -80 }
+    func note(_ noteID: SampleAuditionNoteID, key: UInt8) -> SampleAuditionNote {
+        SampleAuditionNote(
+            id: noteID, source: .pcm(samples: samples, frequency: 8363 * 1024, loopStart: 0, looped: true),
+            key: key, adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60)
+    }
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(5)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    let firstNote = first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 60)
+    }
+    report.expect(
+        until({ firstEvents.contains(.started(firstNote)) }) && audio.isDeviceRunning && !audio.songLoaded,
+        cppID: id, message: "audition without a bound song starts through the callback")
+
+    let successor = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+        successorEvents.append(event)
+    }
+    report.expect(
+        !first.isCurrent && successor.isCurrent
+            && firstEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.displaced) }.count == 1,
+        cppID: id, message: "claiming a successor immediately invalidates and notifies the displaced lease once")
+    let successorNote = successor.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 64)
+    }
+    report.expect(
+        until({ successorEvents.contains(.started(successorNote)) }), cppID: id,
+        message: "the successor starts a real note after displacing the first lease")
+
+    var staleNoteBuilt = false
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        return note(noteID, key: 72)
+    }
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        return SampleAuditionNote(
+            id: noteID, source: .wave16([UInt8](repeating: 0x5A, count: 16)),
+            key: 72, adsr: AudioADSR(), toneKey: 60)
+    }
+    first.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        staleNoteBuilt = true
+        let square = KitAuditionPsg(
+            kind: 3, key: 60, pan: 0, sweep: 0, duty: 2, period: 0,
+            attack: 0, decay: 0, sustain: 15, release: 0)
+        let kit = KitAuditionTone(
+            mode: .keysplit, children: [.psg(square)], splitTable: [UInt8](repeating: 0, count: 128))
+        return SampleAuditionNote(id: noteID, source: .kit(kit), key: 72, adsr: AudioADSR(), toneKey: 60)
+    }
+    first.stop()
+    let replacement = successor.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        note(noteID, key: 67)
+    }
+    report.expect(
+        !staleNoteBuilt && successor.isCurrent && until({ successorEvents.contains(.started(replacement)) }),
+        cppID: id, message: "stale PCM, wave, kit and stop cannot prevent the successor's next note from starting")
+    var latest = SampleAuditionNoteID.unassigned
+    for index in 0..<128 {
+        latest = successor.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+            note(noteID, key: UInt8(48 + index % 24))
+        }
+    }
+    report.expect(
+        until({ successorEvents.contains(.started(latest)) }), cppID: id,
+        message: "the latest note in a slot-filling burst starts after callback retirement wakes the retry")
+    successor.stop()
+    successor.stop()
+    first.stop()
+    try runBlocking { await audio.shutdown() }
+    report.expect(!audio.isDeviceRunning, cppID: id, message: "shutdown joins the callback and feedback waiter")
+    report.expect(
+        !successor.isCurrent
+            && successorEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.stopped) }.count == 1
+            && firstEvents.filter { (event: SampleAuditionEvent) -> Bool in event == .ended(.displaced) }.count == 1
+            && !firstEvents.contains(.ended(.stopped)),
+        cppID: id, message: "repeated and stale stops emit exactly one stopped event only to the successor")
+}
+
+@MainActor
+private func checkNativeAudioQueuedOperations(_ report: CheckReport) throws {
+    let id = "swiftcore/NativeAudio::queuedOperations"
+    guard let projectRoot = CheckEnvironment.fixtureRoot else {
+        report.fail(id, "missing real-project audio fixture")
+        return
+    }
+    let service = ProjectService()
+    let song = try runBlocking {
+        try await service.open(root: projectRoot)
+        return try await service.openSong(label: "mus_route101")
+    }
+    let audio = try runBlocking { try await NativeAudio() }
+    let activityID = "swiftcore/NativeAudio::emptyActivityBatchShape"
+    report.expect(
+        audio.usingNullBackend && audio.nullBackendForced, cppID: activityID,
+        message: "activity shape is checked against the real forced null backend")
+    for attempt in 0..<3 {
+        let levels = audio.consumeTrackActivityLevels()
+        report.expect(
+            levels.count == 16
+                && levels.allSatisfy {
+                    (level: AudioActivityLevel) -> Bool in level.left == 0 && level.right == 0
+                },
+            cppID: activityID,
+            message: "empty activity consume \(attempt) returns sixteen silent lanes")
+    }
+    let midi = try MidiFile.decode(song.midiBytes)
+    let timeline = PlaybackTimeline.build(file: midi, sampleRate: audio.sampleRate)
+    let patternFile = MidiFile(chunks: [
+        MidiChunk(
+            events: [
+                .channel(status: 0xC0, data0: 0),
+                .channel(tick: 24, status: 0x90, data0: 60, data1: 100),
+                .channel(tick: 30, status: 0x80, data0: 60),
+            ], endTick: 48)
+    ])
+    let pattern = PlaybackTimeline.build(
+        file: patternFile, sampleRate: audio.sampleRate, loopRange: (start: 24, end: 48))
+    let bind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let published = try audio.publish(timeline)
+    audio.play()
+    try runBlocking { await bind.value }
+    let playDeadline = Date().addingTimeInterval(5)
+    while (audio.playheadSamples == 0 || audio.status.appliedTimelineIdentity != published)
+        && Date() < playDeadline
+    {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+    report.expect(
+        audio.songLoaded && audio.playheadSamples > 0 && audio.status.appliedTimelineIdentity == published,
+        cppID: id, message: "publish and Play queued immediately after bind adopt the exact timeline on the callback")
+
+    _ = audio.consumeCpuFrames()
+    audio.resetCpuPeak()
+    let resetBarrier = audio.updateSettings(audio.appliedSettings)
+    try runBlocking { await resetBarrier.value }
+    let afterReset = audio.consumeCpuFrames()
+    report.expect(
+        afterReset.generation == audio.status.telemetryGeneration && afterReset.frames.isEmpty,
+        cppID: id, message: "a telemetry batch queued before reset cannot restore stale CPU history")
+
+    let telemetryUnload = audio.unload()
+    try runBlocking { await telemetryUnload.value }
+    let afterUnload = audio.consumeCpuFrames()
+    report.expect(
+        afterUnload.generation == audio.status.telemetryGeneration && afterUnload.frames.isEmpty,
+        cppID: id, message: "queued pre-unload telemetry cannot repopulate the unloaded CPU history")
+    let telemetryBarrier = audio.updateSettings(audio.appliedSettings)
+    try runBlocking { await telemetryBarrier.value }
+    let afterDrain = audio.consumeCpuFrames()
+    report.expect(
+        afterDrain.generation == audio.status.telemetryGeneration && afterDrain.frames.isEmpty,
+        cppID: id, message: "later unloaded telemetry consumes remain empty in the current generation")
+    let rebound = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    try runBlocking { await rebound.value }
+
+    func until(_ predicate: () -> Bool) -> Bool {
+        let deadline = Date().addingTimeInterval(5)
+        while !predicate() && Date() < deadline {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+        }
+        return predicate()
+    }
+    func sounding() -> Bool { audio.activePcmChannels > 0 || audio.activeCgbChannels > 0 }
+    audio.stop()
+    report.expect(
+        until({ audio.status.appliedTransport == .stopped && !sounding() }), cppID: id,
+        message: "transport and voices settle before checking preview routing")
+
+    let directID = "swiftcore/NativeAudio::previewDirectWhileControlBlocked"
+    let directEntered = DispatchSemaphore(value: 0)
+    let directRelease = DispatchSemaphore(value: 0)
+    audio.control.queue.async {
+        directEntered.signal()
+        directRelease.wait()
+    }
+    if directEntered.wait(timeout: .now() + 5) == .success {
+        audio.previewNote(track: 0, key: 60, velocity: 127)
+        report.expect(
+            until({ sounding() }), cppID: directID,
+            message: "preview reaches the callback while the control queue is held")
+    } else {
+        report.fail(directID, "control queue did not enter the held barrier")
+    }
+    directRelease.signal()
+    audio.previewNote(track: 0, key: 60, velocity: 0)
+    report.expect(until({ !sounding() }), cppID: directID, message: "direct preview releases")
+
+    let orderedID = "swiftcore/NativeAudio::previewAfterPendingCold"
+    let clock = audio.beginSampleAudition { (_: SampleAuditionEvent) in }
+    let clockSamples = [Int8](repeating: 32, count: 32_768)
+    clock.play { (noteID: SampleAuditionNoteID) -> SampleAuditionNote in
+        SampleAuditionNote(
+            id: noteID, source: .pcm(samples: clockSamples, frequency: 8363 * 1024, loopStart: 0, looped: true),
+            key: 60, adsr: AudioADSR(), toneKey: 60)
+    }
+    report.expect(until({ clock.soundingFrame != nil }), cppID: orderedID, message: "callback clock starts")
+    let orderedEntered = DispatchSemaphore(value: 0)
+    let orderedRelease = DispatchSemaphore(value: 0)
+    audio.control.queue.async {
+        orderedEntered.signal()
+        orderedRelease.wait()
+    }
+    if orderedEntered.wait(timeout: .now() + 5) == .success {
+        let swap = audio.updateVoicegroup(song.bank)
+        audio.previewNote(track: 0, key: 64, velocity: 127)
+        let previousFrame = clock.soundingFrame
+        let callbackAdvanced = until({
+            guard let previousFrame, let frame = clock.soundingFrame else { return false }
+            return frame != previousFrame
+        })
+        report.expect(
+            callbackAdvanced && !sounding() && !swap.isCompleted, cppID: orderedID,
+            message: "a running callback cannot adopt the preview before the pending bank operation")
+        orderedRelease.signal()
+        try runBlocking { await swap.value }
+        report.expect(
+            until({ sounding() }), cppID: orderedID,
+            message: "preview survives the cold bank reset and sounds after it")
+        audio.previewNote(track: 0, key: 64, velocity: 0)
+    } else {
+        orderedRelease.signal()
+        report.fail(orderedID, "control queue did not enter the held barrier")
+    }
+    clock.stop()
+
+    report.expect(until({ !sounding() }), cppID: orderedID, message: "ordered preview releases before handover")
+    let reclaimedEntered = DispatchSemaphore(value: 0)
+    let reclaimedRelease = DispatchSemaphore(value: 0)
+    audio.control.queue.async {
+        reclaimedEntered.signal()
+        reclaimedRelease.wait()
+    }
+    if reclaimedEntered.wait(timeout: .now() + 5) == .success {
+        audio.previewNote(track: 0, key: 67, velocity: 127)
+        report.expect(
+            until({ sounding() }), cppID: orderedID,
+            message: "main reclaims direct production after the queued hot write completes")
+    } else {
+        report.fail(orderedID, "control queue did not enter the reclaimed-producer barrier")
+    }
+    reclaimedRelease.signal()
+    audio.previewNote(track: 0, key: 67, velocity: 0)
+    report.expect(until({ !sounding() }), cppID: orderedID, message: "reclaimed direct preview releases")
+
+    let start = audio.startPatternAudition(pattern)
+    if case .starting = audio.patternState {
+        report.expect(true, cppID: id, message: "pattern start is visible before its receipt")
+    } else {
+        report.fail(id, "pattern start did not immediately enter starting state")
+    }
+    let accepted = try runBlocking { await start.value }
+    if case .active = audio.patternState {
+        report.expect(accepted, cppID: id, message: "accepted pattern receipt transitions starting to active")
+    } else {
+        report.fail(id, "accepted pattern did not transition to active")
+    }
+
+    let staleStart = audio.startPatternAudition(pattern)
+    let stop = audio.stopPatternAudition()
+    _ = try runBlocking { await staleStart.value }
+    try runBlocking { await stop.value }
+    if case .idle = audio.patternState {
+        report.expect(true, cppID: id, message: "a stopped start cannot restore a stale pattern generation")
+    } else {
+        report.fail(id, "stale pattern completion resurrected a stopped audition")
+    }
+
+    let firstBind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let firstStart = audio.startPatternAudition(pattern)
+    let unload = audio.unload()
+    let startAfterUnload = audio.startPatternAudition(pattern)
+    let outcomes = try runBlocking {
+        let after = await startAfterUnload.value
+        let earlierCompleted = firstBind.isCompleted && firstStart.isCompleted && unload.isCompleted
+        let before = await firstStart.value
+        return (before, after, earlierCompleted)
+    }
+    report.expect(
+        outcomes.0 && !outcomes.1 && outcomes.2 && !audio.songLoaded, cppID: id,
+        message: "the last receipt follows bind, accepted start, and unload receipts in FIFO order")
+
+    let queuedBind = audio.bind(timeline: timeline, bank: song.bank, config: song.config)
+    let queuedSettings = audio.updateSettings(AudioSettings())
+    let queuedUnload = audio.unload()
+    try runBlocking {
+        await audio.shutdown()
+        report.expect(
+            queuedBind.isCompleted && queuedSettings.isCompleted && queuedUnload.isCompleted,
+            cppID: id, message: "shutdown settles every earlier queued receipt before returning")
+    }
+    report.expect(
+        !audio.songLoaded && audio.status.appliedTimelineIdentity == 0, cppID: id,
+        message: "shutdown drains queued receipts and tears down the bound timeline")
+
+    var droppedOwner: NativeAudio? = try runBlocking { try await NativeAudio() }
+    weak var releasedOwner = droppedOwner
+    guard let receipt = droppedOwner?.bind(timeline: timeline, bank: song.bank, config: song.config) else {
+        report.fail(id, "could not queue a bind for the last-owner receipt check")
+        return
+    }
+    droppedOwner = nil
+    report.expect(
+        releasedOwner == nil && !receipt.isCompleted, cppID: id,
+        message: "the final facade owner can disappear before its queued receipt is delivered")
+    try runBlocking {
+        await receipt.value
+        report.expect(receipt.isCompleted, cppID: id, message: "queued receipt settles after last facade release")
+        await service.close()
     }
 }
 
@@ -979,12 +1328,18 @@ private func checkControllerTailMatrix(_ report: CheckReport) throws {
             _ = rig.render(rig.ramp * 3 + rig.settle)
             if songLoops && enabled {
                 report.expect(
-                    rig.renderer.transport == .playing && rig.renderer.playheadSamples < timeline.loopEndSample,
+                    rig.renderer.requestedTransport == .playing
+                        && rig.renderer.playheadSamples < timeline.loopEndSample,
                     cppID: id, message: "enabled song loop wraps instead of stopping")
             } else {
                 report.expect(
-                    rig.renderer.transport == .stopped && rig.renderer.playheadSamples == 0,
+                    rig.renderer.requestedTransport == .stopped && rig.renderer.playheadSamples == 0,
                     cppID: id, message: "without an effective loop the expired tail stops and rewinds")
+                report.expect(
+                    rig.renderer.status.requestedTransport == .stopped
+                        && rig.renderer.status.appliedTransport == .stopped,
+                    cppID: "swiftcore/AudioController::naturalEndRequestedTransport",
+                    message: "natural song end updates both requested and applied transport")
             }
         }
     }
@@ -1013,7 +1368,8 @@ private func checkControllerSettingsAndBank(_ report: CheckReport) throws {
     audio.updateSettings(settings)
     let rateChanged = rig.render(rig.rate)
     report.expect(
-        audio.transport == .playing && audioControllerCheckPeak(rateChanged.suffix(4096)) > 0.001 && rig.sustaining(60),
+        audio.requestedTransport == .playing && audioControllerCheckPeak(rateChanged.suffix(4096)) > 0.001
+            && rig.sustaining(60),
         cppID: "swiftcore/AudioController::settingsMixRate", message: "mix-rate update preserves the sounding song")
     // Native rate reconfiguration resets the PCM FIFO; it is a cold discontinuity,
     // not a promised click-free crossfade. The sequence itself must not restart.
@@ -1057,8 +1413,8 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
             report.expect(
                 audioControllerCheckPeak(previous.suffix(4096)) > 0.01
                     && audioControllerCheckPeak(unloaded.suffix(4096)) <= 1 / 32768
-                    && !audio.songLoaded && audio.timeline == nil
-                    && audio.transport == .stopped && audio.playheadSamples == 0,
+                    && !audio.songLoaded
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0,
                 cppID: id, message: "unloading a sounding renderer removes its song and previous program preview")
 
             // Restore only the bank: no timeline bind or sequencer start is allowed.
@@ -1082,8 +1438,8 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
                 message: "no-song program audition renders the replacement \(family) timbre, not the unloaded bank")
             let sounding = audio.polySnapshot()
             report.expect(
-                !audio.songLoaded && audio.timeline == nil
-                    && audio.transport == .stopped && audio.playheadSamples == 0
+                !audio.songLoaded
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0
                     && audio.activePcmChannels == 0 && audio.activeCgbChannels == 0
                     && sounding.pcm.allSatisfy { !$0.on } && sounding.cgb.allSatisfy { !$0.on },
                 cppID: id,
@@ -1095,7 +1451,7 @@ private func checkControllerOrphanVoicegroupPreview(_ report: CheckReport) throw
             report.expect(
                 audioControllerCheckPeak(released.suffix(4096)) <= 1 / 32768
                     && settled.pcm.allSatisfy { !$0.on } && settled.cgb.allSatisfy { !$0.on }
-                    && audio.transport == .stopped && audio.playheadSamples == 0 && !audio.songLoaded,
+                    && audio.requestedTransport == .stopped && audio.playheadSamples == 0 && !audio.songLoaded,
                 cppID: id,
                 message:
                     "program release drains preview output to silence without leaving a held song voice or advancing the sequence"
@@ -1130,21 +1486,23 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         cppID: "swiftcore/AudioController::voicePreviewIsolation",
         message: "released preview and muted main drain to silence")
 
-    let sample = (0..<64).map { Int8((100 * sin(Double($0) * 2 * .pi / 64)).rounded()) }
-    guard let pcm = SampleAuditionPcm(samples: sample) else {
-        report.fail("swiftcore/AudioController::samplePreviewIsolation", "sample storage preparation failed")
-        return
+    let sample = (0..<64).map { (index: Int) -> Int8 in
+        Int8((100 * sin(Double(index) * 2 * .pi / 64)).rounded())
     }
-    let sampleRequest = audio.audition.beginSampleRequest()
-    let accepted = audio.audition.publishSample(
-        request: sampleRequest, pcm: pcm, frequency: 8363 * 1024,
-        loopStart: 0, looped: true, key: 60,
-        adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60)
+    let samplePublication = audio.audition.publishSample(
+        SampleAuditionNote(
+            source: .pcm(samples: sample, frequency: 8363 * 1024, loopStart: 0, looped: true),
+            key: 60, adsr: AudioADSR(attack: 255, decay: 0, sustain: 255, release: 0), toneKey: 60))
+    let accepted: Bool
+    switch samplePublication {
+    case .published: accepted = true
+    case .busy, .invalid: accepted = false
+    }
     report.expect(
         accepted, cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sample publication accepted")
     let sampleCursor = audio.playheadSamples
     report.expect(
-        audio.transport == .playing && sampleCursor > 0,
+        audio.requestedTransport == .playing && sampleCursor > 0,
         cppID: "swiftcore/AudioController::samplePreviewIsolation",
         message: "sequence is actively playing before sample audition")
     let sampled = rig.render(rig.rate)
@@ -1155,17 +1513,22 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
     report.expectEqual(
         expected: sampleCursor + UInt64(rig.rate), actual: audio.playheadSamples,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", what: "sample preview does not park sequence")
-    audio.audition.sampleOff(request: sampleRequest)
+    audio.audition.stopSample()
     let sampleReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(sampleReleased.suffix(4096)) <= 1 / 32768,
         cppID: "swiftcore/AudioController::samplePreviewIsolation", message: "sampleOff silences the looped sample")
 
     let wave = [UInt8](repeating: 0xFF, count: 8) + [UInt8](repeating: 0, count: 8)
-    let waveRequest = audio.audition.beginSampleRequest()
-    let waveAccepted = audio.audition.publishWave(
-        request: waveRequest, wave16: wave, key: 60,
-        adsr: AudioADSR(attack: 7, decay: 0, sustain: 15, release: 0))
+    let wavePublication = audio.audition.publishSample(
+        SampleAuditionNote(
+            source: .wave16(wave), key: 60,
+            adsr: AudioADSR(attack: 7, decay: 0, sustain: 15, release: 0), toneKey: 60))
+    let waveAccepted: Bool
+    switch wavePublication {
+    case .published: waveAccepted = true
+    case .busy, .invalid: waveAccepted = false
+    }
     report.expect(
         waveAccepted, cppID: "swiftcore/AudioController::wavePreviewIsolation", message: "wave publication accepted")
     let waved = rig.render(rig.rate)
@@ -1173,7 +1536,7 @@ private func checkControllerPreviewIsolation(_ report: CheckReport) throws {
         audioControllerCheckPeak(waved.suffix(4096)) > 0.01 && audio.activeCgbChannels == 0,
         cppID: "swiftcore/AudioController::wavePreviewIsolation",
         message: "CGB wave sounds exclusively through preview engine")
-    audio.audition.sampleOff(request: waveRequest)
+    audio.audition.stopSample()
     let waveReleased = rig.render(rig.rate)
     report.expect(
         audioControllerCheckPeak(waveReleased.suffix(4096)) <= 1 / 32768,

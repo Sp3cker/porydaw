@@ -2,14 +2,27 @@ import Foundation
 import PorydawCore
 import PorydawPlayback
 
-public enum PluginHostError: Error, Equatable, Sendable {
+/// A recovery classification carrying the original human-readable failure diagnostic.
+public enum PluginHostError: Error, Equatable, Sendable, CustomStringConvertible {
     case native(String)
+    case stoppedResponding(String)
+
+    public var description: String {
+        switch self {
+        case .native(let text), .stoppedResponding(let text): text
+        }
+    }
 }
 
 /// One lazily spawned helper, one exclusive payload producer and one capture Thread.
 @MainActor
 public final class PluginInstance {
-    private enum ControlOperation { case restore, arm }
+    private enum ControlOperation { case restore, arm, render }
+
+    private struct LiveCallbacks {
+        let attach: @MainActor (LiveInsert) async -> Void
+        let detach: @MainActor (LiveInsert) async -> Void
+    }
 
     public let entry: PluginCatalogEntry
     public private(set) var buses: HelperBuses?
@@ -17,6 +30,8 @@ public final class PluginInstance {
     public private(set) var failure: PluginHostError?
     public var onEdit: (() -> Void)?
     public var onFailure: ((PluginHostError) -> Void)?
+    public var onEditorClosed: (() -> Void)?
+    public private(set) var isEditorOpen = false
     public private(set) var liveInsert: LiveInsert?
     public private(set) var isLiveArmed = false
     public private(set) var isLivePlaying = false
@@ -26,6 +41,8 @@ public final class PluginInstance {
     private var helper: HelperProcess?
     private var startup: Task<Void, any Error>?
     private var reloadTask: Task<Void, any Error>?
+    private var editorOperation: Task<Void, any Error>?
+    private var editorRevision: UInt64 = 0
     private var generation: UInt64 = 1
     private var stopped = false
     private var shutdownFinished = false
@@ -38,7 +55,9 @@ public final class PluginInstance {
     private var livePeriod: UInt32 = 256
     private var liveInput: EffectInput = .none
     private var liveRevision: UInt64 = 0
-    private var attachment: (@MainActor (UnsafeMutablePointer<LiveInsertSlot>?) -> Void)?
+    private var liveCallbacks: LiveCallbacks?
+    private var activeAttachment: (insert: LiveInsert, callbacks: LiveCallbacks)?
+    private var liveHandoff: Task<Void, Never>?
     private var renderReserved = false
     private var restoreLiveAfterRender = false
     private var controlOperation: ControlOperation?
@@ -61,12 +80,75 @@ public final class PluginInstance {
         if let failure { throw failure }
     }
 
+    private func beginLiveDetach() -> Task<Void, Never>? {
+        guard let activeAttachment else { return liveHandoff }
+        self.activeAttachment = nil
+        let previous = liveHandoff
+        let task = Task { @MainActor in
+            if let previous { await previous.value }
+            await activeAttachment.callbacks.detach(activeAttachment.insert)
+            activeAttachment.insert.detach()
+        }
+        liveHandoff = task
+        return task
+    }
+
+    private func detachLive() async {
+        if let handoff = beginLiveDetach() { await handoff.value }
+    }
+
+    private func attachLive(
+        _ insert: LiveInsert, callbacks: LiveCallbacks, generation token: UInt64, revision: UInt64
+    ) async throws {
+        try validate(token)
+        try Task.checkCancellation()
+        guard revision == liveRevision, isLiveArmed else { throw CancellationError() }
+        try insert.attach()
+        activeAttachment = (insert, callbacks)
+        let previous = liveHandoff
+        let task = Task { @MainActor in
+            if let previous { await previous.value }
+            await callbacks.attach(insert)
+        }
+        liveHandoff = task
+        await task.value
+        do {
+            try validate(token)
+            try Task.checkCancellation()
+            guard revision == liveRevision, isLiveArmed else { throw CancellationError() }
+        } catch {
+            await detachLive()
+            throw error
+        }
+    }
+
     func reportFailure(_ error: any Error) {
+        // Commit the Render timeout before termination can replace its cause with stdout EOF.
+        // Even during shutdown, retire the timed-out helper without publishing a late instance failure.
+        defer {
+            if (error as? HelperProcessError) == .stoppedResponding { helper?.reportRenderTimeout() }
+        }
         guard !stopped, failure == nil else { return }
-        let reason = (error as? PluginHostError) ?? .native(String(describing: error))
+        let reason: PluginHostError
+        if let hostError = error as? PluginHostError {
+            reason = hostError
+        } else if let helperError = error as? HelperProcessError {
+            switch helperError {
+            case .stoppedResponding, .timeout:
+                reason = .stoppedResponding(helperError.description)
+            case .scannerMissing, .channelCreation, .channelUnlink, .invalidPayload, .notReady, .eof,
+                .launch, .native, .terminated:
+                reason = .native(helperError.description)
+            }
+        } else {
+            reason = .native(String(describing: error))
+        }
         failure = reason
+        editorRevision &+= 1
+        isEditorOpen = false
+        if let helper { PluginEditorShortcuts.unregister(helper) }
         capture.failed(reason)
-        detachLive()
+        _ = beginLiveDetach()
         onFailure?(reason)
     }
 
@@ -83,7 +165,13 @@ public final class PluginInstance {
             if flags & 1 != 0 {
                 scheduleComponentReload()
             }
-        case .ready, .setDirty(false), .editorClosed, .shortcut, .log, .eof, .terminated: break
+        case .editorClosed:
+            editorRevision &+= 1
+            isEditorOpen = false
+            onEditorClosed?()
+        case .shortcut(let index):
+            if isEditorOpen { PluginEditorShortcuts.receive(index) }
+        case .ready, .setDirty(false), .log, .eof, .terminated: break
         }
     }
 
@@ -107,7 +195,11 @@ public final class PluginInstance {
             do {
                 try await process.start()
                 try self.validate(token)
-                channel.bindHelper(pid: process.processIdentifier)
+                try await PluginEditorShortcuts.register(process) { [weak self] (error: any Error) in
+                    guard let self, self.generation == token, !self.stopped else { return }
+                    self.reportFailure(error)
+                }
+                try self.validate(token)
                 let buses = try await process.createPlugin(
                     modulePath: self.entry.modulePath, classUID: self.entry.classUID)
                 try self.validate(token)
@@ -115,6 +207,7 @@ public final class PluginInstance {
                 self.buses = buses
                 self.helper = process
             } catch {
+                PluginEditorShortcuts.unregister(process)
                 await process.shutdown()
                 throw error
             }
@@ -150,7 +243,11 @@ public final class PluginInstance {
                 let component = try await old.getState(which: 0)
                 let controller = try await old.getState(which: 1)
                 try self.validate(token)
-                self.detachLive()
+                await self.detachLive()
+                try self.validate(token)
+                await self.closeEditor()
+                try self.validate(token)
+                PluginEditorShortcuts.unregister(old)
                 old.onEvent = nil
                 old.onFailure = nil
                 await old.shutdown()
@@ -164,7 +261,10 @@ public final class PluginInstance {
                 guard let helper = self.helper else { throw PluginHostError.native("Plugin unavailable.") }
                 try await helper.setState(which: 0, bytes: component)
                 if !controller.isEmpty { try await helper.setState(which: 1, bytes: controller) }
-                if self.isLiveArmed, let attachment = self.attachment, let insert = self.liveInsert {
+                let replacementToken = self.generation
+                try self.validate(replacementToken)
+                if self.isLiveArmed, let callbacks = self.liveCallbacks, let insert = self.liveInsert {
+                    let revision = self.liveRevision
                     try insert.reserveRender()
                     do {
                         insert.configure(input: self.liveInput)
@@ -174,11 +274,11 @@ public final class PluginInstance {
                         throw error
                     }
                     insert.releaseRender()
-                    try insert.attach()
-                    attachment(insert.slot)
+                    try await self.attachLive(
+                        insert, callbacks: callbacks, generation: replacementToken, revision: revision)
                 }
             } catch {
-                if !self.stopped { self.reportFailure(error) }
+                if !self.stopped, !(error is CancellationError) { self.reportFailure(error) }
                 throw error
             }
         }
@@ -187,6 +287,60 @@ public final class PluginInstance {
     private func ready() async throws {
         if let reloadTask { try await reloadTask.value }
         try await ensureStarted()
+    }
+
+    /// Opens the native editor, or raises its existing helper window.
+    /// - Parameter title: The helper window's title.
+    /// - Throws: A helper error when the plugin cannot provide an editor.
+    public func openEditor(title: String) async throws {
+        let revision = editorRevision
+        try await ready()
+        guard revision == editorRevision else { throw CancellationError() }
+        guard let helper else { throw PluginHostError.native("Plugin unavailable.") }
+        let token = generation
+        let previous = editorOperation
+        let task = Task { @MainActor [weak self] in
+            if let previous { _ = await previous.result }
+            guard let self else { throw CancellationError() }
+            try self.validate(token)
+            guard revision == self.editorRevision else { throw CancellationError() }
+            try await PluginEditorShortcuts.synchronize(helper)
+            try self.validate(token)
+            guard revision == self.editorRevision else { throw CancellationError() }
+            if self.isEditorOpen {
+                try await helper.raiseEditor()
+            } else {
+                try await helper.openEditor(title: title)
+            }
+            try self.validate(token)
+            guard revision == self.editorRevision else { throw CancellationError() }
+            self.isEditorOpen = true
+        }
+        editorOperation = task
+        try await task.value
+    }
+
+    /// Closes the editor without notifying the user-close callback.
+    public func closeEditor() async {
+        editorRevision &+= 1
+        isEditorOpen = false
+        let previous = editorOperation
+        guard let helper else {
+            if let previous { _ = await previous.result }
+            return
+        }
+        let token = generation
+        let task = Task<Void, any Error> { @MainActor [weak self] in
+            if let previous { _ = await previous.result }
+            guard let self, token == self.generation, self.helper === helper else { return }
+            do {
+                try await helper.closeEditor()
+            } catch {
+                if !self.stopped { self.reportFailure(error) }
+            }
+        }
+        editorOperation = task
+        _ = await task.result
     }
 
     private func setup(realtime: Bool, sampleRate: Double, period: UInt32) async throws {
@@ -250,13 +404,20 @@ public final class PluginInstance {
 
     public func restore(_ state: PluginStateBlob) async throws {
         try await ready()
+        if case .render? = controlOperation {
+            capture.cancel()
+            await capture.idle()
+            try await ready()
+        }
         guard controlOperation == nil else { throw PluginHostError.native("Plugin is being configured.") }
         controlOperation = .restore
         defer { finishControlOperation() }
+        let token = generation
         capture.cancel()
         await capture.idle()
+        if let liveHandoff { await liveHandoff.value }
+        try validate(token)
         guard let helper else { throw PluginHostError.native("Plugin unavailable.") }
-        let token = generation
         try await helper.setState(which: 0, bytes: state.component)
         try validate(token)
         if !state.controller.isEmpty { try await helper.setState(which: 1, bytes: state.controller) }
@@ -264,24 +425,34 @@ public final class PluginInstance {
         liveInsert?.signalDiscontinuity()
     }
 
-    /// Attachment is the audio owner's rendering-stopped attach/detach operation, never a worker hop.
+    /// Attachment callbacks acknowledge audio ownership before this host transfers its producer.
     public func armLive(
         input: EffectInput, sampleRate: Double, periodFrames: UInt32,
-        attachment: @escaping @MainActor (UnsafeMutablePointer<LiveInsertSlot>?) -> Void
+        attach: @escaping @MainActor (LiveInsert) async -> Void,
+        detach: @escaping @MainActor (LiveInsert) async -> Void
     ) async throws {
         guard sampleRate.isFinite, sampleRate > 0, periodFrames > 0 else {
             throw PluginHostError.native("Invalid audio setup.")
         }
         try await ready()
+        if case .render? = controlOperation {
+            capture.cancel()
+            await capture.idle()
+            try await ready()
+        }
         guard controlOperation == nil else { throw PluginHostError.native("Plugin is being configured.") }
         controlOperation = .arm
         defer { finishControlOperation() }
+        liveRevision &+= 1
         let revision = liveRevision
         capture.cancel()
         await capture.idle()
         guard revision == liveRevision, !stopped else { throw CancellationError() }
         guard let insert = liveInsert else { throw PluginHostError.native("Plugin unavailable.") }
-        detachLive()
+        let token = generation
+        await detachLive()
+        try validate(token)
+        guard revision == liveRevision else { throw CancellationError() }
         try insert.reserveRender()
         do {
             insert.configure(input: input)
@@ -292,13 +463,18 @@ public final class PluginInstance {
             throw error
         }
         insert.releaseRender()
-        self.attachment = attachment
+        let callbacks = LiveCallbacks(attach: attach, detach: detach)
+        liveCallbacks = callbacks
         liveRate = sampleRate
         livePeriod = periodFrames
         liveInput = input
         isLiveArmed = true
-        try insert.attach()
-        attachment(insert.slot)
+        do {
+            try await attachLive(insert, callbacks: callbacks, generation: token, revision: revision)
+        } catch {
+            if revision == liveRevision { isLiveArmed = false }
+            throw error
+        }
     }
 
     public func setLivePlaying(_ playing: Bool) { isLivePlaying = playing }
@@ -306,23 +482,19 @@ public final class PluginInstance {
     /// Called by the armed owner's main-thread watchdog timer.
     public func pollWatchdog() { helper?.pollWatchdog(armed: isLiveArmed) }
 
-    private func detachLive() {
-        guard let insert = liveInsert, insert.isAttached else { return }
-        attachment?(nil)
-        insert.detach()
-    }
-
     public func disarmLive() async throws {
         liveRevision &+= 1
+        let revision = liveRevision
         isLiveArmed = false
         isLivePlaying = false
-        detachLive()
+        await detachLive()
         if controlOperation != nil {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
                 controlWaiters.append(continuation)
             }
         }
         if let reloadTask { try await reloadTask.value }
+        guard revision == liveRevision, !stopped else { return }
         if !renderReserved { try await helper?.setProcessing(false) }
     }
 
@@ -333,12 +505,19 @@ public final class PluginInstance {
         guard controlOperation == nil else { throw PluginHostError.native("Plugin is being configured.") }
         guard reloadTask == nil else { throw CancellationError() }
         try await ensureStarted()
+        guard controlOperation == nil else { throw PluginHostError.native("Plugin is being configured.") }
+        guard reloadTask == nil else { throw CancellationError() }
+        controlOperation = .render
+        defer { finishControlOperation() }
         guard let insert = liveInsert else { throw PluginHostError.native("Plugin unavailable.") }
         if isLiveArmed && (isLivePlaying || insert.isPlaying) {
             throw PluginHostError.native("Stop playback to render")
         }
         restoreLiveAfterRender = isLiveArmed
-        detachLive()
+        let token = generation
+        await detachLive()
+        try validate(token)
+        try Task.checkCancellation()
         try insert.reserveRender()
         renderReserved = true
         do {
@@ -353,21 +532,26 @@ public final class PluginInstance {
 
     private func finishRenderControls() async throws {
         guard renderReserved, let insert = liveInsert else { return }
-        defer { renderReserved = false }
+        var ownsReservation = true
+        defer {
+            if ownsReservation { insert.releaseRender() }
+            renderReserved = false
+        }
         do {
             try await helper?.setProcessing(false)
-            if restoreLiveAfterRender && isLiveArmed && !stopped && failure == nil {
+            if restoreLiveAfterRender && isLiveArmed && !stopped && failure == nil, let callbacks = liveCallbacks {
+                let token = generation
+                let revision = liveRevision
                 insert.configure(input: liveInput)
                 try await setup(realtime: true, sampleRate: liveRate, period: livePeriod)
+                try validate(token)
+                guard revision == liveRevision, isLiveArmed else { return }
                 insert.releaseRender()
-                try insert.attach()
-                attachment?(insert.slot)
-            } else {
-                insert.releaseRender()
+                ownsReservation = false
+                try await attachLive(insert, callbacks: callbacks, generation: token, revision: revision)
             }
         } catch {
-            insert.releaseRender()
-            reportFailure(error)
+            if !(error is CancellationError) { reportFailure(error) }
             throw error
         }
     }
@@ -377,6 +561,7 @@ public final class PluginInstance {
         try await cleanup.value
     }
 
+    /// Detaches audio, awaits capture/control quiescence, stops processing, then closes the editor and helper.
     public func shutdown() async {
         if stopped {
             if !shutdownFinished {
@@ -390,17 +575,29 @@ public final class PluginInstance {
         generation &+= 1
         startup?.cancel()
         reloadTask?.cancel()
-        detachLive()
+        await detachLive()
         isLiveArmed = false
         await capture.shutdown()
         if let startup { _ = await startup.result }
         if let reloadTask { _ = await reloadTask.result }
+        if controlOperation != nil {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                controlWaiters.append(continuation)
+            }
+        }
+        await detachLive()
+        // Best-effort cleanup: a failed helper must still have its editor and process reclaimed.
+        try? await helper?.setProcessing(false)
+        await closeEditor()
+        if let helper { PluginEditorShortcuts.unregister(helper) }
         await helper?.shutdown()
         helper?.onEvent = nil
         helper?.onFailure = nil
         helper = nil
         liveInsert = nil
-        attachment = nil
+        liveCallbacks = nil
+        liveHandoff = nil
+        editorOperation = nil
         shutdownFinished = true
         for waiter in shutdownWaiters { waiter.resume() }
         shutdownWaiters.removeAll()

@@ -5,6 +5,7 @@ import PorydawProject
 import PorydawVoicegroup
 import PorydawVoicegroupNative
 import PorydawSample
+import SwiftCoreCheckSupport
 @testable import SwiftCoreCheckLogic
 
 @MainActor
@@ -65,6 +66,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             message: "A013 prepared source imports")
         let defaultPresenter = SampleStudioPresenter(
             document: SampleDocument(source: defaultSource), validateName: validator)
+        try runBlocking { await defaultPresenter.waitForRender() }
         let initial = defaultPresenter.processed
         defaults.expect(
             initial.freq == 15_000_000 && initial.size == 64 && initial.looped && initial.loopStart == 8,
@@ -85,11 +87,13 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         let pitchPresenter = SampleStudioPresenter(
             document: SampleDocument(source: pitchSource), validateName: validator)
         pitchPresenter.setBaseKey(key: 59)
+        try runBlocking { await pitchPresenter.waitForRender() }
         pitch.expect(
             pitchPresenter.params.baseKey == 59 && pitchPresenter.params.exactPitchOverride == 0
                 && pitchPresenter.processed.freq != 15_000_000,
             message: "A020 key edit flows into the render and drops the override")
         pitchPresenter.setBaseKey(key: 58)
+        try runBlocking { await pitchPresenter.waitForRender() }
         pitch.expect(
             pitchPresenter.processed.freq == 15_000_000, message: "A021 restoring source key restores verbatim agbp")
 
@@ -98,6 +102,7 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         rate.expect(rateSource.gbaReady && rateSource.hasLoop, message: "A025 rate source imports")
         let ratePresenter = SampleStudioPresenter(document: SampleDocument(source: rateSource), validateName: validator)
         ratePresenter.setLoopOn(enabled: false)
+        try runBlocking { await ratePresenter.waitForRender() }
         rate.expect(!ratePresenter.processed.looped, message: "A027 rate fixture is in one-shot mode")
         let beforeTyping = ratePresenter.renderRevision
         ratePresenter.rateText = "6689.5"
@@ -105,18 +110,18 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             ratePresenter.params.targetRate != 6689.5 && ratePresenter.renderRevision == beforeTyping,
             message: "A028 typing a rate does not re-render per keystroke")
         ratePresenter.commitRateText(text: ratePresenter.rateText)
+        try runBlocking { await ratePresenter.waitForRender() }
         rate.expect(ratePresenter.params.targetRate == 6689.5, message: "A029 committed fractional target rate")
         rate.expect(
             ratePresenter.processed.declaredRate == 6690, message: "A030 fractional rate rounds declared WAV rate")
         rate.expect(ratePresenter.params.exactPitchOverride == 0, message: "A031 rate edit drops verbatim agbp")
         let romBefore = ratePresenter.romText
         ratePresenter.chooseRate(index: 1)
+        try runBlocking { await ratePresenter.waitForRender() }
         rate.expect(
             ratePresenter.romText != romBefore
                 && ratePresenter.romText
-                    == SampleStudioReadouts.romSize(
-                        bytes: SampleStudioReadouts.romBytes(
-                            SampleRender.render(source: rateSource, params: ratePresenter.params))),
+                    == SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(ratePresenter.processed)),
             message: "ROM text changes when the target rate changes")
         ratePresenter.chooseRate(index: 0)
         rate.expect(
@@ -132,8 +137,10 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         let cropPresenter = SampleStudioPresenter(document: SampleDocument(source: cropSource), validateName: validator)
         cropPresenter.setLoopOn(enabled: false)
         cropPresenter.setCropEnd(value: 32)
+        try runBlocking { await cropPresenter.waitForRender() }
         crop.expect(cropPresenter.processed.size == 32, message: "A035 crop end trims one-shot render")
         cropPresenter.setNormalizeMode(index: 2)
+        try runBlocking { await cropPresenter.waitForRender() }
         crop.expect(
             cropPresenter.params.normalizeMode == .oneShot && cropPresenter.processed.normalizeGain != 1,
             message: "A036 normalize mode applies gain to render")
@@ -166,7 +173,8 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         commitPresenter.setSampleName(name: "phase3_tone")
         let incPath = root + "/sound/direct_sound_data.inc"
         let incBefore = try Data(contentsOf: URL(filePath: incPath))
-        let committedWav = commitPresenter.wavBytes()
+        let committedWav = try runBlocking { await commitPresenter.wavBytes() }
+        try runBlocking { await commitPresenter.waitForRender() }
         let registrationResult = Result {
             try SampleRegistrar.register(projectRoot: root, name: commitPresenter.sampleName, wav: committedWav)
         }
@@ -236,9 +244,22 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
         var observed: [Int] = []
         gesture.addRenderObserver { observed.append(1) }
         gesture.addRenderObserver { observed.append(2) }
+        try runBlocking { await gesture.waitForRender() }
+        let landed = gesture.processed
+        observed.removeAll()
         gesture.setCropStart(value: 100)
         gesture.setCropStart(value: 200)
-        state.expect(observed == [1, 2, 1, 2], message: "render observers notify in registration order")
+        state.expect(
+            gesture.processed == landed && observed.isEmpty,
+            message: "pending edits retain the last landed render without notifying observers")
+        try runBlocking { await gesture.waitForRender() }
+        state.expect(observed == [1, 2], message: "only the newest render notifies observers in registration order")
+        state.expect(
+            gesture.renderedParams.cropStart == 200
+                && gesture.processed
+                    == SampleRender.render(
+                        source: hiRes, params: gesture.params),
+            message: "superseded render cannot replace the newest canonical result")
         gesture.undo()
         state.expect(
             gesture.cropStart == 0 && !gesture.canUndo && gesture.canRedo,
@@ -282,11 +303,12 @@ internal func runEditorPresenterChecks(_ report: CheckReport) {
             tuned.fineTuneCents == 12.5 && tuned.fineTuneText == "12.50",
             message: "cents text commits decimals and keeps current on exponent text")
         let returning = SampleStudioPresenter(document: SampleDocument(source: hiRes), validateName: validator)
-        let baselineBytes = returning.wavBytes()
+        let baselineBytes = try runBlocking { await returning.wavBytes() }
         returning.setFineTuneCents(value: 10)
         returning.setFineTuneCents(value: returning.source.fracSemitone * 100)
+        let returnedBytes = try runBlocking { await returning.wavBytes() }
         state.expect(
-            !returning.canUndo && returning.wavBytes() == baselineBytes,
+            !returning.canUndo && returnedBytes == baselineBytes,
             message: "merged tuning run returning to base drops obsolete undo entry")
     } catch {
         report.scoped(cppID: "swiftcore/SampleStudioPresenter::fixture").expect(

@@ -75,10 +75,11 @@ private func checkUnloadedVoicegroupLifetime(_ report: CheckReport) throws {
     let id = "transportcheck/TransportTest::unloadWhilePlayingCutsSongVoices"
     var bank: AudioControllerCheckFixture? = try AudioControllerCheckFixture(square: true)
     for program in 0..<128 { bank!.voices[program].release = 254 }
-    bank!.renderer.bind(timeline: bank!.timeline(velocity: 127), voicegroup: bank!.voices, settings: AudioSettings())
+    let timeline = bank!.timeline(velocity: 127)
+    bank!.renderer.bind(timeline: timeline, voicegroup: bank!.voices, settings: AudioSettings())
     let audio = bank!.renderer
     report.expect(audio.songLoaded, cppID: id, message: "heap-bank note song loaded")
-    report.expectEqual(expected: 1, actual: audio.timeline!.usedTrackCount, cppID: id, what: "one song track")
+    report.expectEqual(expected: 1, actual: timeline.usedTrackCount, cppID: id, what: "one song track")
     audio.play()
     _ = bank!.render(12_000)
     report.expect(audio.activePcmChannels >= 1, cppID: id, message: "heap-bank note sounds")

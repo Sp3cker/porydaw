@@ -244,7 +244,6 @@ public final class ShellPresenter: QmlInstantiableStatus {
             let store = PreferencesStore()
             store.setBool(key: "cpuMeter.visible", value: cpuMeterVisible)
             store.synchronize()
-            cpuMeter.poll()
         case "view.cpu_profile":
             cpuProfileVisible.toggle()
             let store = PreferencesStore()
@@ -367,13 +366,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
     public func sceneDestroyed() {
         guard closing, !closeReady, closeSettlementTask == nil else { return }
         session.acknowledgeGridDetached()
-        guard case .preparing = session.audioReadiness else {
-            closeReady = true
-            return
-        }
         let session = session
         closeSettlementTask = Task { @MainActor [weak self] in
             await session.audioPreparationSettled()
+            _ = await session.activeReplacementTask?.value
+            _ = await session.retireChain?.value
+            await session.audio?.shutdown()
             guard let self, self.closing, !self.closeReady else { return }
             self.closeReady = true
             self.closeSettlementTask = nil

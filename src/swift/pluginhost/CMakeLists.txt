@@ -30,6 +30,7 @@ add_library(PorydawPluginHost STATIC
     BridgeChannel.swift
     PluginCatalog.swift
     PluginInstance.swift
+    PluginEditorShortcuts.swift
     CaptureTransport.swift
     CaptureDriver.swift
     LiveInsert.swift

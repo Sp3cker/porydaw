@@ -1,4 +1,5 @@
 #include "host.h"
+#include "editor.h"
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QMetaObject>
@@ -17,61 +18,10 @@
 #include <poll.h>
 #include <unistd.h>
 #endif
-#if defined(__linux__)
-#include "pluginterfaces/gui/iplugview.h"
-#include "pluginterfaces/base/funknownimpl.h"
-#include <QSocketNotifier>
-#include <map>
-#include <memory>
-#endif
 
 namespace pdph::helper {
 namespace {
 using namespace std::chrono_literals;
-#if defined(__linux__)
-class RunLoop final : public Steinberg::U::Implements<Steinberg::U::Directly<Steinberg::Linux::IRunLoop>> {
-    struct Event { Steinberg::IPtr<Steinberg::Linux::IEventHandler> handler; std::unique_ptr<QSocketNotifier> notifier; };
-    struct Timer { Steinberg::IPtr<Steinberg::Linux::ITimerHandler> handler; std::unique_ptr<QTimer> timer; };
-    std::map<int, Event> events;
-    std::map<Steinberg::Linux::ITimerHandler*, Timer> timers;
-public:
-    Steinberg::tresult PLUGIN_API registerEventHandler(Steinberg::Linux::IEventHandler* handler, int fd) override {
-        if (!handler || fd < 0 || events.count(fd)) return Steinberg::kInvalidArgument;
-        auto notifier = std::make_unique<QSocketNotifier>(fd, QSocketNotifier::Read, QCoreApplication::instance());
-        QObject::connect(notifier.get(), &QSocketNotifier::activated, QCoreApplication::instance(),
-            [handler, fd] { Steinberg::IPtr<Steinberg::Linux::IEventHandler> retained(handler); retained->onFDIsSet(fd); });
-        events.emplace(fd, Event{handler, std::move(notifier)});
-        return Steinberg::kResultOk;
-    }
-    Steinberg::tresult PLUGIN_API unregisterEventHandler(Steinberg::Linux::IEventHandler* handler) override {
-        bool removed = false;
-        for (auto it = events.begin(); it != events.end();) {
-            if (it->second.handler.get() != handler) { ++it; continue; }
-            auto* notifier = it->second.notifier.release();
-            notifier->setEnabled(false); notifier->disconnect(); notifier->deleteLater();
-            it = events.erase(it); removed = true;
-        }
-        return removed ? Steinberg::kResultOk : Steinberg::kInvalidArgument;
-    }
-    Steinberg::tresult PLUGIN_API registerTimer(Steinberg::Linux::ITimerHandler* handler, Steinberg::Linux::TimerInterval interval) override {
-        if (!handler || !interval || interval > INT32_MAX || timers.count(handler)) return Steinberg::kInvalidArgument;
-        auto timer = std::make_unique<QTimer>(QCoreApplication::instance());
-        QObject::connect(timer.get(), &QTimer::timeout, QCoreApplication::instance(),
-            [handler] { Steinberg::IPtr<Steinberg::Linux::ITimerHandler> retained(handler); retained->onTimer(); });
-        timer->start(std::chrono::milliseconds(interval));
-        timers.emplace(handler, Timer{handler, std::move(timer)});
-        return Steinberg::kResultOk;
-    }
-    Steinberg::tresult PLUGIN_API unregisterTimer(Steinberg::Linux::ITimerHandler* handler) override {
-        const auto it = timers.find(handler);
-        if (it == timers.end()) return Steinberg::kInvalidArgument;
-        auto* timer = it->second.timer.release();
-        timer->stop(); timer->disconnect(); timer->deleteLater(); timers.erase(it);
-        return Steinberg::kResultOk;
-    }
-};
-RunLoop* currentRunLoop = nullptr;
-#endif
 bool readExact(Host& host, char* bytes, size_t size) {
     while (size && !host.stopping.load(std::memory_order_acquire)) {
 #ifdef _WIN32
@@ -107,11 +57,9 @@ static bool inputClosed() {
     return poll(&input, 1, 0) > 0 && (input.revents & (POLLHUP | POLLERR | POLLNVAL));
 #endif
 }
-#if defined(__linux__)
-Steinberg::FUnknown* linuxRunLoop() { return currentRunLoop; }
-#endif
 Host::Host() {
     for (uint32_t index = 0; index < callbackSlots.size(); ++index) callbackSlots[index].sequence.store(index, std::memory_order_relaxed);
+    installEditors(*this);
     QObject::connect(&callbackTimer, &QTimer::timeout, &context, [this] { drainCallbacks(); });
     callbackTimer.start(10ms);
 }
@@ -121,6 +69,7 @@ Host::~Host() {
     if (reader.joinable()) reader.join();
     if (realtime.joinable()) realtime.join();
     if (plugin) pdph_plugin_destroy(plugin);
+    shutdownEditors();
     if (module) pdph_module_close(module);
     pdpb_channel_close(channel);
 }
@@ -165,10 +114,6 @@ int run(int argc, char** argv) {
 #ifdef __APPLE__
     setAccessoryPolicy();
 #endif
-#if defined(__linux__)
-    auto runLoop = Steinberg::owned(new RunLoop);
-    currentRunLoop = runLoop.get();
-#endif
     int result = 1;
     {
         Host host;
@@ -185,9 +130,6 @@ int run(int argc, char** argv) {
         app.exec();
         result = host.exitStatus.load(std::memory_order_relaxed);
     }
-#if defined(__linux__)
-    currentRunLoop = nullptr;
-#endif
     return result;
 }
 }

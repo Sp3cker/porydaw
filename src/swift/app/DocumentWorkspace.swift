@@ -3,6 +3,7 @@ import PorydawCore
 import PorydawDocument
 import PorydawAppCommands
 import PorydawAppPresentation
+import PorydawPluginHost
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
 /// The application replaces and tears down this object as a single unit;
@@ -60,6 +61,7 @@ public final class DocumentWorkspace {
     public let trackHeaders: TrackHeadersPresenter
     public let headerVoicePicker: HeaderVoicePicker
     public let arpeggiator: ArpeggiatorPresenter
+    public let effects: TrackEffectsController
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
@@ -85,9 +87,10 @@ public final class DocumentWorkspace {
     private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
     private var isActive = false
     private var isTornDown = false
+    private var audioRelease: AudioOperation<Void>?
 
     public init(
-        viewport: DocumentViewport, audio: NativeAudio,
+        viewport: DocumentViewport, audio: NativeAudio, pluginCatalog: PluginCatalog,
         playhead: SharedPlayheadPresenter,
         playheadGuides: PlayheadGuidesPresenter,
         eventList: EventListPresenter, palette: GridPalette,
@@ -96,6 +99,7 @@ public final class DocumentWorkspace {
         self.viewport = viewport
         let session = viewport.session
         appliedSongConfig = session.document.state.config
+        effects = TrackEffectsController(session: session, audio: audio, catalog: pluginCatalog)
         self.audio = audio
         self.playhead = playhead
         self.playheadGuides = playheadGuides
@@ -231,14 +235,14 @@ public final class DocumentWorkspace {
         audio.bind(
             timeline: session.timeline, bank: session.bankLease,
             config: session.document.state.config)
+        effects.activate()
         grid.onBandAudition = { [weak audio] notes in
             audio?.updateBandAudition(notes)
         }
         audio.setMix(muted: session.mutedTracks, soloed: session.soloedTracks)
         appliedSongConfig = session.document.state.config
-        // The engine is bound before the publication is reinstalled, so no
-        // timeline of this document can be published onto another document's
-        // voices. `deactivate()` cleared the closure this restores.
+        // FIFO submission binds this document before any restored publication.
+        // `deactivate()` cleared the closure this restores.
         installPlaybackPublication()
         playhead.onPresentation = { [weak self] presentation in
             self?.present(playhead: presentation)
@@ -314,6 +318,7 @@ public final class DocumentWorkspace {
     /// scene has already released. Idempotent with `teardown`, which clears
     /// the same closures.
     public func suspendCallbacks() {
+        effects.suspend()
         arpeggiator.close()
         viewport.onCameraChangeDetailed = nil
         session.onChange = nil
@@ -334,6 +339,7 @@ public final class DocumentWorkspace {
     /// first, and the stop-and-unload here would strand that bind.
     public func deactivate() {
         guard isActive else { return }
+        effects.suspend()
         isActive = false
         arpeggiator.close()
         rulerMenu.close()
@@ -349,7 +355,7 @@ public final class DocumentWorkspace {
         drawer.detachSection(voiceChangesPage)
         drawer.detachSection(velocityPage)
         audio.stop()
-        audio.unload()
+        audioRelease = audio.unload()
         session.onPlayback = nil
     }
 
@@ -389,6 +395,10 @@ public final class DocumentWorkspace {
         trackHeaders.detach()
         grid.onPitchBendRequested = nil
         grid.detach()
+    }
+
+    func awaitAudioRelease() async {
+        await audioRelease?.value
     }
 
     private func installPlaybackPublication() {
@@ -478,6 +488,7 @@ public final class DocumentWorkspace {
 
     private func sessionDidChange(_ change: SessionChange) {
         rulerMenu.sessionDidChange(change)
+        if !change.domains.intersection([.document, .effects]).isEmpty { effects.documentDidChange() }
         if change.domains.contains(.document) || change.domains.contains(.bank) {
             arpeggiator.close()
         }

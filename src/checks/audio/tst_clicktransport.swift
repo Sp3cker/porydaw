@@ -92,8 +92,8 @@ func checkControllerCuts(_ report: CheckReport) throws {
         cppID: "clickcheck/ClickTest::timedPreviewCutDefersCommands",
         what: "cut immediately drains active timed previews")
     report.expectEqual(
-        expected: audio.audition.timed.write.load(ordering: .acquiring),
-        actual: audio.audition.timed.read.load(ordering: .acquiring),
+        expected: audio.audition.timed.write.value.load(ordering: .acquiring),
+        actual: audio.audition.timed.read.value.load(ordering: .acquiring),
         cppID: "clickcheck/ClickTest::timedPreviewCutDefersCommands",
         what: "cut immediately drains queued timed previews")
     audio.audition.previewNoteTimed(track: 0, key: 61, velocity: 100, durationSamples: 4096)
@@ -114,7 +114,7 @@ func checkControllerCuts(_ report: CheckReport) throws {
     let before = audio.playheadSamples
     _ = rig.render(1)
     report.expect(
-        audio.transport == .playing && audio.playheadSamples == before + 1,
+        audio.requestedTransport == .playing && audio.playheadSamples == before + 1,
         cppID: "clickcheck/ClickTest::rapidRetargetKeepsNewestTransport", message: "retarget must finish and advance")
     try checkReloadAfterInterruptedFadeStartsLoud(report)
 }

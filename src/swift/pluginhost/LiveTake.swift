@@ -1,4 +1,3 @@
-import Foundation
 import PorydawCore
 
 /// Session-only dispatched notes, drained by the owner's 50 ms armed timer.
@@ -116,24 +115,5 @@ public struct LiveTake {
             }
         }
         if finish { finishSegment(at: segmentEnd) }
-    }
-
-    /// Grab uses the sole Core normalizer and an outward bar-snapped range.
-    public mutating func grab(
-        track: Int, timeline: PlaybackTimeline
-    ) throws -> (notes: [NewNote], report: NormalizationReport) {
-        finishSegment(at: segmentEnd)
-        guard let span else { throw NormalizationError.invalidRange }
-        let request = CaptureRequest(
-            timeline: timeline, track: track, range: span, input: .none, pacing: .offline, prerollBars: 0)
-        let transport = try CaptureTransport(request)
-        let context = transport.context(at: transport.sample(for: Double(span.startTick)))
-        let start = Tick(max(0, (context.barStartPPQ * Double(timeline.ticksPerBeat)).rounded(.down)))
-        let last = max(transport.startSample, transport.sample(for: Double(span.endTick)) - 1)
-        let end = Tick(
-            min(Double(TimeDefaults.noTick - 1), transport.tick(for: transport.nextBar(after: last)).rounded()))
-        let range = TimeRange(startTick: start, endTick: end)
-        let lattice = try EngineNoteLattice(ticksPerBeat: timeline.ticksPerBeat, playbackSettings: timeline.settings)
-        return try EngineNoteNormalizer.normalize(events, track: track, range: range, lattice: lattice)
     }
 }

@@ -412,14 +412,252 @@ private final class HostLiveScript {
 }
 
 @MainActor
+private final class HostHandoffGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+    private(set) var entered = false
+
+    func wait() async {
+        entered = true
+        if released { return }
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            self.continuation = continuation
+        }
+    }
+
+    func release() {
+        released = true
+        continuation?.resume()
+        continuation = nil
+    }
+}
+
+@MainActor
+private final class HostAudioBorrow {
+    private(set) var installed: LiveInsert?
+    private(set) var attaches = 0
+    private(set) var detaches = 0
+    private(set) var wrongOwner = false
+    var attachGate: HostHandoffGate?
+    var detachGate: HostHandoffGate?
+
+    func attach(_ insert: LiveInsert) async {
+        if installed != nil { wrongOwner = true }
+        installed = insert
+        attaches += 1
+        if let gate = attachGate {
+            attachGate = nil
+            await gate.wait()
+        }
+    }
+
+    func detach(_ insert: LiveInsert) async {
+        if installed !== insert { wrongOwner = true }
+        detaches += 1
+        if let gate = detachGate {
+            detachGate = nil
+            await gate.wait()
+        }
+        if installed === insert { installed = nil }
+    }
+
+    func process(playing: Bool = false) throws -> (Bool, [LiveOutputEvent]) {
+        guard let installed else { throw HostCheckError.fixture }
+        return HostLiveScript(insert: installed, timeline: hostTimeline()).process(position: 0, playing: playing)
+    }
+}
+
+@MainActor
+private func checkDeferredAudioHandoff(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
+    try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
+        let borrow = HostAudioBorrow()
+        let attachGate = HostHandoffGate()
+        let detachGate = HostHandoffGate()
+        defer {
+            attachGate.release()
+            detachGate.release()
+        }
+        borrow.attachGate = attachGate
+        borrow.detachGate = detachGate
+        var armFinished = false
+        let arming = Task { @MainActor in
+            defer { armFinished = true }
+            try await instance.armLive(
+                input: .none, sampleRate: 48_000, periodFrames: 256,
+                attach: borrow.attach, detach: borrow.detach)
+        }
+        try await hostWait { attachGate.entered }
+        guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
+        let attachedReply = try borrow.process()
+        check.expect(
+            !armFinished && insert.isAttached && borrow.installed === insert && !attachedReply.0,
+            message: "producer is callback-ready for the real helper while audio attachment acknowledgment is pending")
+        arming.cancel()
+        var disarmStarted = false
+        var disarmFinished = false
+        let disarming = Task { @MainActor in
+            disarmStarted = true
+            defer { disarmFinished = true }
+            try await instance.disarmLive()
+        }
+        try await hostWait { disarmStarted }
+        check.expect(
+            !disarmFinished && borrow.detaches == 0 && insert.isAttached,
+            message: "disarm cannot detach or finish ahead of the pending audio attachment acknowledgment")
+        attachGate.release()
+        try await hostWait { detachGate.entered }
+        let pendingReply = try borrow.process()
+        check.expect(
+            !disarmFinished && insert.isAttached && !pendingReply.0 && !borrow.wrongOwner,
+            message: "cancelled attachment retains the exact old owner and working bridge until detach acknowledgment")
+        do {
+            try insert.reserveRender()
+            insert.releaseRender()
+            check.fail("pending audio detach must keep the callback producer reserved")
+        } catch {
+            check.expect(insert.isAttached, message: "Render reservation refuses the still-borrowed callback producer")
+        }
+        detachGate.release()
+        try await disarming.value
+        if case .failure(let error) = await arming.result {
+            check.expect(
+                error is CancellationError, message: "cancelled attachment completes only after cleanup acknowledgment")
+        } else {
+            check.fail("cancelled attachment must not report a successful arm")
+        }
+        check.expect(
+            !insert.isAttached && borrow.installed == nil && borrow.detaches == 1 && !instance.isLiveArmed,
+            message: "acknowledged cancellation clears the one installed owner exactly once")
+        try insert.reserveRender()
+        insert.releaseRender()
+
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: borrow.attach, detach: borrow.detach)
+        let renderGate = HostHandoffGate()
+        defer { renderGate.release() }
+        borrow.detachGate = renderGate
+        var renderFinished = false
+        let rendering = Task { @MainActor in
+            defer { renderFinished = true }
+            return try await instance.capture.render(hostRequest(hostTimeline())) { (_: CaptureProgress) in }
+        }
+        try await hostWait { renderGate.entered }
+        guard let before = instance.bridgeSnapshot else { throw HostCheckError.fixture }
+        let borrowedReply = try borrow.process()
+        guard let after = instance.bridgeSnapshot else { throw HostCheckError.fixture }
+        check.expect(
+            !renderFinished && insert.isAttached && borrow.installed === insert && !borrowedReply.0
+                && after.request != before.request && after.request == after.reply,
+            message: "pending Render detach still permits the actual callback bridge exchange, not worker ownership")
+        do {
+            try insert.reserveRender()
+            insert.releaseRender()
+            check.fail("Render must not reserve the bridge before the audio detach acknowledgment")
+        } catch {
+            check.expect(insert.isAttached, message: "delayed Render handoff preserves callback reservation")
+        }
+        renderGate.release()
+        let captured = try await rendering.value
+        check.expect(
+            captured.events.contains { (event: RawNoteEvent) in event.isOn && event.pitch == 60 }
+                && insert.isAttached && borrow.installed === insert && !borrow.wrongOwner,
+            message: "acknowledged handoff runs real offline capture and reinstalls the same callback-ready producer")
+        let replacement = HostAudioBorrow()
+        let rearmGate = HostHandoffGate()
+        defer { rearmGate.release() }
+        borrow.detachGate = rearmGate
+        let oldDetaches = borrow.detaches
+        let rearming = Task { @MainActor in
+            try await instance.armLive(
+                input: .none, sampleRate: 96_000, periodFrames: 512,
+                attach: replacement.attach, detach: replacement.detach)
+        }
+        try await hostWait { rearmGate.entered }
+        let oldReply = try borrow.process()
+        check.expect(
+            borrow.installed === insert && replacement.installed == nil && insert.isAttached && !oldReply.0,
+            message: "replacement callbacks cannot take the producer before the old callback's detach acknowledges")
+        rearmGate.release()
+        try await rearming.value
+        check.expect(
+            borrow.installed == nil && borrow.detaches == oldDetaches + 1 && replacement.installed === insert
+                && replacement.attaches == 1 && replacement.detaches == 0 && !replacement.wrongOwner,
+            message: "rearm acknowledges the old owner through its original callback before installing new callbacks")
+    }
+    try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
+        let borrow = HostAudioBorrow()
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: borrow.attach, detach: borrow.detach)
+        weak let retained = instance.liveInsert
+        let gate = HostHandoffGate()
+        defer { gate.release() }
+        borrow.detachGate = gate
+        var finished = false
+        let shuttingDown = Task { @MainActor in
+            await instance.shutdown()
+            finished = true
+        }
+        try await hostWait { gate.entered }
+        let reply = try borrow.process()
+        check.expect(
+            !finished && retained != nil && retained?.isAttached == true && instance.liveInsert === retained
+                && !reply.0,
+            message: "shutdown keeps the actual helper, channel and borrowed slot alive until audio detach acknowledges"
+        )
+        gate.release()
+        await shuttingDown.value
+        try await hostWait { retained == nil }
+        check.expect(
+            finished && instance.liveInsert == nil && borrow.installed == nil && !borrow.wrongOwner,
+            message: "shutdown reclaims the insert only after acknowledged removal from the audio borrower")
+    }
+    try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
+        let borrow = HostAudioBorrow()
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: borrow.attach, detach: borrow.detach)
+        let gate = HostHandoffGate()
+        defer { gate.release() }
+        borrow.detachGate = gate
+        weak let retained = instance.liveInsert
+        var failures = 0
+        instance.onFailure = { (_: PluginHostError) in failures += 1 }
+        try await instance.restore(hostState(fault: 1))
+        _ = try borrow.process(playing: true)
+        try await hostWait { failures == 1 && gate.entered }
+        var finished = false
+        var shutdownStarted = false
+        let shuttingDown = Task { @MainActor in
+            shutdownStarted = true
+            await instance.shutdown()
+            finished = true
+        }
+        try await hostWait { shutdownStarted }
+        check.expect(
+            !finished && retained?.isAttached == true && instance.liveInsert === retained && borrow.detaches == 1,
+            message:
+                "actual helper failure publishes immediately but shutdown waits for its owned asynchronous detach tail")
+        gate.release()
+        await shuttingDown.value
+        try await hostWait { retained == nil }
+        check.expect(
+            failures == 1 && borrow.installed == nil && borrow.detaches == 1 && !borrow.wrongOwner,
+            message: "failed helper cleanup acknowledges the exact old owner once before reclaiming storage")
+    }
+}
+
+@MainActor
 private func checkLiveCapture(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         let timeline = hostTimeline()
         let offline = try await instance.capture.render(hostRequest(timeline)) { (_: CaptureProgress) in }
         var transitions: [Bool] = []
-        try await instance.armLive(input: .trackNotes, sampleRate: 48_000, periodFrames: 256) {
-            (slot: UnsafeMutablePointer<LiveInsertSlot>?) in transitions.append(slot != nil)
-        }
+        try await instance.armLive(
+            input: .trackNotes, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in transitions.append(true) },
+            detach: { (_: LiveInsert) in transitions.append(false) })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         let script = HostLiveScript(insert: insert, timeline: timeline)
         var live: [RawNoteEvent] = []
@@ -484,9 +722,10 @@ private func checkLiveCapture(_ entries: [PluginCatalogEntry], _ check: CheckRep
         check.expect(
             !stopped.0 && stopped.1.isEmpty, message: "stopped callbacks continue processing with kPlaying clear")
         let rearm = Task { @MainActor in
-            try await instance.armLive(input: .none, sampleRate: 96_000, periodFrames: 512) {
-                (slot: UnsafeMutablePointer<LiveInsertSlot>?) in transitions.append(slot != nil)
-            }
+            try await instance.armLive(
+                input: .none, sampleRate: 96_000, periodFrames: 512,
+                attach: { (_: LiveInsert) in transitions.append(true) },
+                detach: { (_: LiveInsert) in transitions.append(false) })
         }
         try await hostWait { transitions.last == false }
         try await instance.disarmLive()
@@ -501,9 +740,9 @@ private func checkLiveCapture(_ entries: [PluginCatalogEntry], _ check: CheckRep
     }
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         let timeline = hostTimeline(mixed: true)
-        try await instance.armLive(input: .trackNotes, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .trackNotes, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         let script = HostLiveScript(insert: insert, timeline: timeline)
         let initial = script.process(position: 6_000, flags: .arm).1.filter { (event: LiveOutputEvent) in
@@ -599,15 +838,6 @@ private func checkTakeStorage(_ check: CheckReport.Scoped) throws {
     check.expect(
         heard.events.count == 2 && heard.events.first?.pitch == 65 && heard.events.last?.tick == 24 && !heard.degraded,
         message: "subsequent drained segment replaces the old span and closes its open note without degradation")
-    var grabbed = LiveTake()
-    grabbed.commitSegment(
-        span: TimeRange(startTick: 0, endTick: 26),
-        events: [RawNoteEvent(tick: 0, pitch: 70, velocity: 100, isOn: true)])
-    let normalized = try grabbed.grab(track: 0, timeline: hostTimeline(exactGate: false))
-    check.expectEqual(
-        expected: [NewNote(track: 0, tick: 0, pitch: 70, duration: 28, velocity: 100)],
-        actual: normalized.notes,
-        what: "Grab snaps span outward to 3/4 bars before Core's later-tie fixed-point duration normalization")
 }
 
 #if canImport(Darwin)
@@ -633,9 +863,9 @@ private func checkHostAllocations(_ entries: [PluginCatalogEntry], _ check: Chec
             return
         }
         try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
-            try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-                (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-            }
+            try await instance.armLive(
+                input: .none, sampleRate: 48_000, periodFrames: 256,
+                attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
             guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
             var output = [LiveOutputEvent](repeating: LiveOutputEvent(), count: 4096)
             var call = LiveInsertCall()
@@ -713,9 +943,9 @@ private func checkRealDispatch(_ entries: [PluginCatalogEntry], _ check: CheckRe
     let engine = raw.assumingMemoryBound(to: M4AEngine.self)
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         let timeline = hostTimeline(mixed: true)
-        try await instance.armLive(input: .trackNotes, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .trackNotes, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         var sequencer = Sequencer(liveInserts: true)
         let slots: [UnsafeMutablePointer<LiveInsertSlot>?] = [insert.slot]
@@ -817,21 +1047,21 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
     for end in [7000, 11_000] {
         for seek in [true, false] {
             try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
-                try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-                    (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-                }
+                try await instance.armLive(
+                    input: .none, sampleRate: 48_000, periodFrames: 256,
+                    attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
                 guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
                 var sequencer = Sequencer(liveInserts: true)
                 hostRenderFrames(&sequencer, engine: engine, timeline: old, insert: insert, frames: end)
                 var take = LiveTake()
                 take.drain(insert.ring)
-                var grabbed = take
-                _ = try grabbed.grab(track: 0, timeline: old)
+                var completed = take
+                completed.drain(insert.ring, finish: true)
                 let endpoint = Tick(end / 1000)
                 check.expect(
-                    grabbed.span == TimeRange(startTick: 0, endTick: endpoint),
+                    completed.span == TimeRange(startTick: 0, endTick: endpoint),
                     message:
-                        "Grab's current span comes from completed playing time, including silence after the last output"
+                        "completed take span comes from playing time, including silence after the last output"
                 )
                 if seek {
                     m4a_engine_all_notes_off(engine, 0)
@@ -861,9 +1091,9 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
     for detach in [false, true] {
         try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
             var sequencer = Sequencer(liveInserts: true)
-            try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-                (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-            }
+            try await instance.armLive(
+                input: .none, sampleRate: 48_000, periodFrames: 256,
+                attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
             guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
             hostRenderFrames(&sequencer, engine: engine, timeline: old, insert: insert, frames: 7000)
             var take = LiveTake()
@@ -889,9 +1119,9 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
         }
     }
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
-        try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         var sequencer = Sequencer(liveInserts: true)
         sequencer.seek(71_000, timeline: old)
@@ -923,9 +1153,9 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
 private func checkObservedContexts(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         try await instance.restore(hostState(diagnosticMode: 1))
-        try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         let script = HostLiveScript(insert: insert, timeline: hostTimeline())
         let chunk = script.process(position: 0, frames: 8192)
@@ -954,9 +1184,9 @@ private func checkObservedContexts(_ entries: [PluginCatalogEntry], _ check: Che
         check.expect(
             stopped.integer(24, count: 4) & UInt64(PDPH_CTX_PLAYING) == 0 && stopped.integer(8) == 9,
             message: "stopped callback still reaches the plugin with playing clear")
-        try await instance.armLive(input: .none, sampleRate: 96_000, periodFrames: 512) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .none, sampleRate: 96_000, periodFrames: 512,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         let highRate = HostLiveScript(insert: insert, timeline: hostTimeline(sampleRate: 96_000))
         check.expect(
             !highRate.process(position: 1024).0,
@@ -977,9 +1207,9 @@ private func checkObservedContexts(_ entries: [PluginCatalogEntry], _ check: Che
     }
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         try await instance.restore(hostState(diagnosticMode: 1, fault: 3))
-        try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         let script = HostLiveScript(insert: insert, timeline: hostTimeline())
         check.expect(
@@ -1046,9 +1276,9 @@ private func checkWrappedInputBoundary(_ entries: [PluginCatalogEntry], _ check:
         settings: PlaybackSettings(exactGate: true), loopRange: (start: 6, end: 72))
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         try await instance.restore(hostState(diagnosticMode: 1))
-        try await instance.armLive(input: .trackNotes, sampleRate: 48_000, periodFrames: 256) {
-            (_: UnsafeMutablePointer<LiveInsertSlot>?) in
-        }
+        try await instance.armLive(
+            input: .trackNotes, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })
         guard let insert = instance.liveInsert else { throw HostCheckError.fixture }
         let script = HostLiveScript(insert: insert, timeline: timeline)
         let before = script.process(position: 71_744, flags: .arm)
@@ -1115,11 +1345,44 @@ private func checkConcurrentRing(_ check: CheckReport.Scoped) async {
 
 @MainActor
 private func checkRuntimeFailure(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
+    let failures: [(input: any Error, expected: PluginHostError)] = [
+        (HelperProcessError.stoppedResponding, .stoppedResponding(HelperProcessError.stoppedResponding.description)),
+        (HelperProcessError.timeout(19), .stoppedResponding(HelperProcessError.timeout(19).description)),
+        (HelperProcessError.eof, .native(HelperProcessError.eof.description)),
+        (HelperProcessError.terminated(7), .native(HelperProcessError.terminated(7).description)),
+        (HelperProcessError.native("native timeout diagnostic"), .native("native timeout diagnostic")),
+        (
+            PluginHostError.native("preserved stopped responding diagnostic"),
+            .native("preserved stopped responding diagnostic")
+        ),
+        (
+            PluginHostError.stoppedResponding("preserved hang diagnostic"),
+            .stoppedResponding("preserved hang diagnostic")
+        ),
+    ]
+    for (input, expected) in failures {
+        try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
+            var published: [PluginHostError] = []
+            instance.onFailure = { (error: PluginHostError) in published.append(error) }
+            instance.reportFailure(input)
+            instance.reportFailure(HelperProcessError.eof)
+            check.expect(
+                instance.failure == expected,
+                message: "typed host failure remains authoritative for \(input)")
+            check.expectEqual(
+                expected: [expected], actual: published,
+                what: "host publishes the normalized failure exactly once for \(input)")
+            check.expectEqual(
+                expected: String(describing: input), actual: String(describing: expected),
+                what: "host classification preserves human-readable diagnostic text")
+        }
+    }
     try await hostInstance(entries, "TestGen") { (instance: PluginInstance) in
         var attachment: [Bool] = []
-        try await instance.armLive(input: .none, sampleRate: 48_000, periodFrames: 256) {
-            (slot: UnsafeMutablePointer<LiveInsertSlot>?) in attachment.append(slot != nil)
-        }
+        try await instance.armLive(
+            input: .none, sampleRate: 48_000, periodFrames: 256,
+            attach: { (_: LiveInsert) in attachment.append(true) },
+            detach: { (_: LiveInsert) in attachment.append(false) })
         try await instance.restore(hostState(fault: 1))
         do {
             _ = try await instance.capture.render(hostRequest(hostTimeline())) { (_: CaptureProgress) in }
@@ -1153,6 +1416,7 @@ public func runPluginHostChecks(_ report: CheckReport) {
         try runBlocking { try await checkOfflineCapture(entries, check) }
         try runBlocking { try await checkRealtimeLifecycle(entries, check) }
         try runBlocking { try await checkLiveCapture(entries, check) }
+        try runBlocking { try await checkDeferredAudioHandoff(entries, check) }
         try runBlocking { try await checkRealDispatch(entries, check) }
         try runBlocking { try await checkTakeEndpoints(entries, check) }
         try runBlocking { try await checkHostAllocations(entries, check) }

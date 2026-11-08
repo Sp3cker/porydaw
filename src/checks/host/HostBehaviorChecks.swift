@@ -802,13 +802,13 @@ private func hostBandGeometry(
     let firstSample = audio.playheadSamples
     app.play()
     let playbackDeadline = Date().addingTimeInterval(5)
-    while (audio.transport != AudioTransportState.playing.rawValue
+    while (audio.requestedTransport != AudioTransportState.playing.rawValue
         || audio.playheadSamples <= firstSample + UInt64(audio.sampleRate / 20))
         && Date() < playbackDeadline
     {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
     }
-    guard audio.transport == AudioTransportState.playing.rawValue,
+    guard audio.requestedTransport == AudioTransportState.playing.rawValue,
         audio.playheadSamples > firstSample + UInt64(audio.sampleRate / 20)
     else {
         report.fail(id, "copied song did not reach steady null-backend playback")

@@ -66,6 +66,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxcb1-dev libx11-dev
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:

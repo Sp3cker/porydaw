@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.24)
 # InlineArray (core, playback, sample) sets the floor at macOS 26.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0)
 project(porydaw VERSION 1.0.5 LANGUAGES C CXX)
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
 
 find_package(Git QUIET)
 if(Git_FOUND)

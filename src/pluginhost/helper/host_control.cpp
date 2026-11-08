@@ -1,4 +1,5 @@
 #include "host.h"
+#include "pluginhost_internal.h"
 #include <QCoreApplication>
 #include <algorithm>
 #include <chrono>
@@ -86,6 +87,17 @@ void Host::resume() {
     controlPending.store(false, std::memory_order_release);
     processingOwner.store(0, std::memory_order_release);
 }
+bool Host::flushParameters() {
+    if (!plugin || !plugin->handler->hasPendingEdits()) return true;
+    parameterFlushComplete.store(false, std::memory_order_relaxed);
+    parameterFlushRequested.store(true, std::memory_order_release);
+    processingOwner.store(0, std::memory_order_release);
+    while (!parameterFlushComplete.load(std::memory_order_acquire)) {
+        if (stopping.load(std::memory_order_acquire)) return false;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return parameterFlushResult == PDPH_OK;
+}
 void Host::enqueue(uint32_t type, uint32_t value) {
     uint32_t position = callbackWrite.load(std::memory_order_relaxed);
     for (uint32_t attempt = 0; attempt < PDPB_MAX_EVENTS; ++attempt) {
@@ -102,6 +114,13 @@ void Host::enqueue(uint32_t type, uint32_t value) {
 }
 void Host::drainCallbacks() {
     if (stopping.load(std::memory_order_acquire)) { QCoreApplication::quit(); return; }
+    const auto& next = callbackSlots[callbackRead % PDPB_MAX_EVENTS];
+    if (plugin && next.sequence.load(std::memory_order_acquire) == callbackRead + 1) {
+        if (!quiesce()) return;
+        const bool flushed = flushParameters();
+        resume();
+        if (!flushed) { stop(1); return; }
+    }
     for (uint32_t count = 0; count < PDPB_MAX_EVENTS; ++count) {
         auto& slot = callbackSlots[callbackRead % PDPB_MAX_EVENTS];
         if (slot.sequence.load(std::memory_order_acquire) != callbackRead + 1) break;
@@ -122,8 +141,11 @@ void dispatch(Host& host, Frame frame) {
     Payload input = {frame.payload}; QByteArray output; QString error;
     auto operation = [&](int32_t result) { if (result != PDPH_OK) error = sdkError(result); return result == PDPH_OK; };
     const auto malformed = [&] { error = QStringLiteral("Malformed control payload"); };
-    if (frame.type != PDPB_CREATE_PLUGIN && frame.type != PDPB_QUIT && !host.plugin) {
+    if (frame.type != PDPB_CREATE_PLUGIN && frame.type != PDPB_QUIT && frame.type != PDPB_SET_SHORTCUTS && !host.plugin) {
         reply(host, frame, {}, QStringLiteral("No plugin has been created")); return;
+    }
+    if ((frame.type == PDPB_GET_STATE || frame.type == PDPB_GET_STATE_DIGEST || frame.type == PDPB_SET_STATE) && !host.flushParameters()) {
+        reply(host, frame, {}, QStringLiteral("Could not flush plugin parameter edits")); return;
     }
     switch (frame.type) {
     case PDPB_CREATE_PLUGIN: {
@@ -202,6 +224,8 @@ void dispatch(Host& host, Frame frame) {
     default:
         error = QStringLiteral("Unknown control request"); break;
     }
+    if (frame.type == PDPB_OPEN_EDITOR && error.isEmpty() && !host.flushParameters())
+        error = QStringLiteral("Could not flush plugin parameter edits");
     reply(host, frame, output, error);
     if (frame.type == PDPB_QUIT && error.isEmpty()) host.stop(0);
 }

@@ -144,7 +144,7 @@ Item {
                     baseFontPx: body.root.chromeBaseFontPx
                 }
                 Timer {
-                    running: polyDock.visible && body.shell.session.songOpen
+                    running: polyDock.visible
                     repeat: true
                     interval: 100
                     onTriggered: body.shell.session.polyphony.poll()

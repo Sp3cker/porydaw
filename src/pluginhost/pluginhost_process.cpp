@@ -41,6 +41,26 @@ void pairNote(pdph_plugin plugin, pdph_midi_event& event) {
     }
 }
 }
+pdph_result pdph_plugin_impl::prepareParameters() {
+    parameterIDs.clear();
+    const auto count = controller->getParameterCount();
+    if (count < 0) return PDPH_ERR_SDK;
+    parameterIDs.reserve(count);
+    for (int32 index = 0; index < count; ++index) {
+        ParameterInfo info{};
+        if (controller->getParameterInfo(index, info) != kResultOk) return PDPH_ERR_SDK;
+        parameterIDs.push_back(info.id);
+    }
+    inputParameters.setMaxParameters(count);
+    inputParameters.clearQueue();
+    for (auto id : parameterIDs) {
+        int32 index = 0;
+        auto* queue = inputParameters.addParameterData(id, index);
+        queue->addPoint(0, 0., index);
+    }
+    inputParameters.clearQueue();
+    return PDPH_OK;
+}
 extern "C" {
 pdph_result pdph_plugin_setup_processing(pdph_plugin plugin, int32_t realtime, double sampleRate, int32_t maxBlock) {
     if (!plugin || !std::isfinite(sampleRate) || sampleRate <= 0 || maxBlock <= 0) return PDPH_ERR_ARGUMENT;
@@ -66,22 +86,7 @@ pdph_result pdph_plugin_setup_processing(pdph_plugin plugin, int32_t realtime, d
         plugin->data.processMode = setup.processMode;
         plugin->inputEvents.setMaxSize(pdph::eventCapacity);
         plugin->outputEvents.setMaxSize(pdph::eventCapacity);
-        plugin->parameterIDs.clear();
-        auto count = plugin->controller->getParameterCount();
-        plugin->parameterIDs.reserve(count);
-        for (int32 index = 0; index < count; ++index) {
-            ParameterInfo info{};
-            if (plugin->controller->getParameterInfo(index, info) != kResultOk) return PDPH_ERR_SDK;
-            plugin->parameterIDs.push_back(info.id);
-        }
-        plugin->inputParameters.setMaxParameters(count);
-        plugin->inputParameters.clearQueue();
-        for (auto id : plugin->parameterIDs) {
-            int32 index = 0;
-            auto queue = plugin->inputParameters.addParameterData(id, index);
-            queue->addPoint(0, 0., index);
-        }
-        plugin->inputParameters.clearQueue();
+        if (plugin->prepareParameters() != PDPH_OK) return PDPH_ERR_SDK;
         plugin->data.inputEvents = &plugin->inputEvents;
         plugin->data.outputEvents = &plugin->outputEvents;
         plugin->data.inputParameterChanges = &plugin->inputParameters;
@@ -125,7 +130,8 @@ pdph_result pdph_plugin_process(pdph_plugin plugin, int32_t frames, const pdph_p
     if (!plugin || !context || !written || !total || frames < 0 || inCount < 0 ||
         inCount > pdph::eventCapacity || capacity < 0 || (inCount && !input) || (capacity && !output)) return PDPH_ERR_ARGUMENT;
     *written = 0; *total = 0;
-    if (!plugin->processing || frames > plugin->maxBlock) return PDPH_ERR_STATE;
+    if (frames == 0 && inCount != 0) return PDPH_ERR_ARGUMENT;
+    if (frames > 0 && (!plugin->processing || frames > plugin->maxBlock)) return PDPH_ERR_STATE;
     try {
         plugin->inputEvents.clear(); plugin->outputEvents.reset(); plugin->inputParameters.clearQueue();
         pdph::ParameterEdit edit{};
@@ -134,6 +140,14 @@ pdph_result pdph_plugin_process(pdph_plugin plugin, int32_t frames, const pdph_p
             int32 index = 0;
             auto queue = plugin->inputParameters.addParameterData(edit.id, index);
             queue->addPoint(0, edit.value, index);
+        }
+        if (frames == 0) {
+            if (!plugin->inputParameters.getParameterCount()) return PDPH_OK;
+            ProcessData flush{};
+            flush.processMode = plugin->setup ? plugin->data.processMode : kRealtime;
+            flush.symbolicSampleSize = kSample32;
+            flush.inputParameterChanges = &plugin->inputParameters;
+            return pdph::sdkResult(plugin->processor->process(flush));
         }
         for (int32 i = 0; i < inCount; ++i) {
             const auto& source = input[i];

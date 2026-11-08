@@ -8,23 +8,10 @@ import PorydawSample
 @testable import SwiftCoreCheckLogic
 
 @MainActor
-private final class AcceptingAuditionOutput: SampleAuditionOutput {
-    private let audition = AudioAudition()
-    func beginSampleRequest() -> UInt64 { audition.beginSampleRequest() }
-    func sampleRequestIsCurrent(_ request: UInt64) -> Bool { audition.sampleRequestIsCurrent(request) }
-    func auditionSample(
-        request: UInt64, pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
-        looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
-    ) -> Bool { audition.sampleRequestIsCurrent(request) }
-    func auditionSampleOff(request: UInt64) { audition.sampleOff(request: request) }
-}
-
-@MainActor
 internal func runLibraryModelChecks(_ report: CheckReport) {
-    let output = AcceptingAuditionOutput()
+    let audition = SampleAuditionCheckOutput()
     func makeModel(_ preferences: PreferencesStore) -> SampleLibraryModel {
-        SampleLibraryModel(
-            preferences: preferences, palette: GridPalette(), lane: SampleAuditionArbiter(output: output))
+        SampleLibraryModel(preferences: preferences, palette: GridPalette(), beginSampleAudition: audition.begin)
     }
     let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
     let library = base.appendingPathComponent("Library Ω", isDirectory: true)
@@ -204,30 +191,44 @@ internal func runLibraryModelChecks(_ report: CheckReport) {
         var tone = ProcessedSample()
         tone.s8 = [0, 64, -64, 32, -32, 0, 16, -16]
         tone.freq = 8 * 1024
-        var started = false
-        model.previewPlayer.onStarted = { started = true }
-        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60)
-        strip.expect(
-            pump(seconds: 5, until: { () -> Bool in started }),
-            message: "prepared library preview starts")
+        guard let firstLease = model.claimPreview() else {
+            strip.expect(false, message: "a preview request claims the shared output")
+            return
+        }
+        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60, lease: firstLease)
+        guard let firstNote = audition.lastNote() else {
+            strip.expect(false, message: "a claimed preview submits its note")
+            return
+        }
+        audition.start(firstNote, frame: 3)
+        model.previewPlayer.tick()
         strip.expect(
             model.previewing && model.preview.displayList(list: 0) != still,
             message: "a sounding preview of the selection draws its playhead over the waveform")
-        model.previewPlayer.advance(bySeconds: 2)
+        audition.finish(firstNote)
         strip.expect(
             !model.previewing && model.preview.displayList(list: 0) == still,
             message: "a preview sounds once; its end removes the playhead and keeps the waveform")
-        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60)
-        let successor = output.beginSampleRequest()
-        model.previewPlayer.advance(bySeconds: 0)
+        guard let displacedLease = model.claimPreview() else {
+            strip.expect(false, message: "a second preview claims the output")
+            return
+        }
+        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60, lease: displacedLease)
+        let successor = audition.begin { (_: SampleAuditionEvent) in }
         strip.expect(
-            !model.previewing && !model.previewPlayer.playing && output.sampleRequestIsCurrent(successor),
+            !model.previewing && !model.previewPlayer.playing && successor?.isCurrent == true,
             message: "displacement clears library preview state without stopping the shared-output successor")
         model.stopPreview()
+        strip.expect(successor?.isCurrent == true, message: "a displaced library Stop cannot silence its successor")
+        guard let latest = model.claimPreview() else {
+            strip.expect(false, message: "a later request can reclaim the output")
+            return
+        }
+        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60, lease: displacedLease)
         strip.expect(
-            output.sampleRequestIsCurrent(successor),
-            message: "a displaced library Stop cannot silence its successor")
-        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60)
+            latest.isCurrent && !model.previewing,
+            message: "a stale decode cannot replace the latest requested lease")
+        model.playPreview(tone, path: tonePath, key: 60, toneKey: 60, lease: latest)
         model.previewPlayer.close()
         strip.expect(!model.previewing, message: "closing the player clears the library's preview state")
 

@@ -1,7 +1,73 @@
 import Dispatch
-import Foundation
 import PorydawPlaybackNative
 import Synchronization
+
+/// Lock-free callback feedback shared with readers independently of the renderer lifetime.
+public final class SampleAuditionFeedbackCell: Sendable {
+    private let version = Atomic<UInt64>(0)
+    private let adopted = Atomic<UInt64>(0)
+    private let finished = Atomic<UInt64>(0)
+    private let reset = Atomic<UInt64>(0)
+    private let resetPublication = Atomic<UInt64>(0)
+    private let sounding = Atomic<UInt64>(0)
+    private let frame = Atomic<Int>(-1)
+    private let wake = DispatchSemaphore(value: 0)
+    private let stopped = Atomic<Bool>(false)
+
+    public func waitForProgress(until deadline: DispatchTime = .distantFuture) -> Bool {
+        guard wake.wait(timeout: deadline) == .success else { return false }
+        return !stopped.load(ordering: .acquiring)
+    }
+
+    public func wakeForProgress() { wake.signal() }
+
+    public func stopWaiting() {
+        stopped.store(true, ordering: .releasing)
+        wake.signal()
+    }
+
+    public init() {}
+
+    /// Latest reset epoch, for establishing a nonblocking control-side baseline.
+    public var currentResetGeneration: UInt64 { reset.load(ordering: .sequentiallyConsistent) }
+
+    /// Returns a coherent callback snapshot, or nil when a callback update overlaps the read.
+    public func snapshot() -> SampleAuditionFeedback? {
+        for _ in 0..<3 {
+            let start = version.load(ordering: .sequentiallyConsistent)
+            if start & 1 != 0 { continue }
+            let adopted = adopted.load(ordering: .sequentiallyConsistent)
+            let finished = finished.load(ordering: .sequentiallyConsistent)
+            let reset = reset.load(ordering: .sequentiallyConsistent)
+            let resetPublication = resetPublication.load(ordering: .sequentiallyConsistent)
+            let sounding = sounding.load(ordering: .sequentiallyConsistent)
+            let frame = frame.load(ordering: .sequentiallyConsistent)
+            if start == version.load(ordering: .sequentiallyConsistent) {
+                return SampleAuditionFeedback(
+                    adoptedGeneration: adopted, finishedGeneration: finished, resetGeneration: reset,
+                    resetPublicationGeneration: resetPublication, soundingGeneration: sounding,
+                    soundingFrame: frame >= 0 ? frame : nil)
+            }
+        }
+        return nil
+    }
+
+    /// Publishes feedback from the callback, or from control only while the callback is parked.
+    public func publish(
+        adoptedGeneration: UInt64, finishedGeneration: UInt64, resetGeneration: UInt64,
+        resetPublicationGeneration: UInt64, soundingGeneration: UInt64, soundingFrame: Int?
+    ) {
+        let current = version.load(ordering: .sequentiallyConsistent)
+        version.store(current &+ 1, ordering: .sequentiallyConsistent)
+        adopted.store(adoptedGeneration, ordering: .sequentiallyConsistent)
+        finished.store(finishedGeneration, ordering: .sequentiallyConsistent)
+        reset.store(resetGeneration, ordering: .sequentiallyConsistent)
+        resetPublication.store(resetPublicationGeneration, ordering: .sequentiallyConsistent)
+        sounding.store(soundingGeneration, ordering: .sequentiallyConsistent)
+        frame.store(soundingFrame ?? -1, ordering: .sequentiallyConsistent)
+        version.store(current &+ 2, ordering: .sequentiallyConsistent)
+    }
+}
 
 /// Four producer-owned storage slots. Publication transfers read access to the
 /// callback; acknowledgement returns write access only after all channels retire.
@@ -13,6 +79,21 @@ final class AudioSampleAudition {
         var byteCount: Int = 0
         var generation: UInt64 = 0
     }
+    private final class KitAsset {
+        let source: KitAuditionTone
+        let bytes: UnsafeMutableRawPointer
+        let count: Int
+        var tone = ToneData()
+        var childWaves: UnsafeMutablePointer<WaveData>?
+
+        init(source: KitAuditionTone, count: Int) {
+            self.source = source
+            self.count = count
+            bytes = .allocate(byteCount: count, alignment: 16)
+        }
+
+        deinit { bytes.deallocate() }
+    }
     private let slots = UnsafeMutablePointer<Slot>.allocate(capacity: 4)
     private let waves = UnsafeMutablePointer<WaveData>.allocate(capacity: 4)
     private let adoptedWaves = UnsafeMutablePointer<UnsafeMutablePointer<UInt32>?>.allocate(capacity: 4)
@@ -21,20 +102,32 @@ final class AudioSampleAudition {
     private var adoptedKitEnd = InlineArray<4, UInt>(repeating: 0)
     private let publication = Atomic<UInt64>(0)
     private let acknowledgement = Atomic<UInt64>(0)
+    let feedbackCell: SampleAuditionFeedbackCell
     private var generation: UInt64 = 0
     private var adopted: UInt64 = 0
+    private var acknowledged: UInt64 = 0
     private var retainedPcm = InlineArray<4, SampleAuditionPcm?>(repeating: nil)
-    // Producer-only ownership; callback slots retain only trivial borrowed pointers.
-    private(set) var retainedBytes = InlineArray<4, SampleAuditionPcm.Allocation?>(repeating: nil)
+    private var prepared: (samples: [Int8], pcm: SampleAuditionPcm)?
+    private var preparedKit: KitAsset?
+    private var retainedKit = InlineArray<4, KitAsset?>(repeating: nil)
+    private var soundingSlot: Int = -1
+    private var soundingObserved = false
+    private var renderedSinceAdoption = false
+    private var lastAdopted: UInt64 = 0
+    private var lastFinished: UInt64 = 0
+    private var resetCount: UInt64 = 0
+    private var resetPublication: UInt64 = 0
     private var soundingKey: Int = -1
 
-    init() {
+    init(feedbackCell: SampleAuditionFeedbackCell) {
+        self.feedbackCell = feedbackCell
         slots.initialize(repeating: Slot(), count: 4)
         waves.initialize(repeating: WaveData(), count: 4)
         adoptedWaves.initialize(repeating: nil, count: 4)
     }
 
     deinit {
+        for index in 0..<4 where retainedKit[index] == nil { slots[index].bytes?.deallocate() }
         slots.deinitialize(count: 4)
         slots.deallocate()
         waves.deinitialize(count: 4)
@@ -43,42 +136,137 @@ final class AudioSampleAudition {
         adoptedWaves.deallocate()
     }
 
-    private func retiredSlot() -> Int? {
+    /// Frees the storage of every slot the callback has retired and returns the first of them.
+    private func claimRetiredSlot() -> Int? {
         let ack = acknowledgement.load(ordering: .acquiring)
-        var available: Int?
+        var claimed: Int?
         for index in 0..<4 {
             let gen = slots[index].generation
-            if gen == 0 || (gen <= ack >> 8 && (ack & (1 << index)) == 0) {
-                retainedPcm[index] = nil
-                if available == nil { available = index }
+            guard gen == 0 || (gen <= ack >> 8 && (ack & (1 << index)) == 0) else { continue }
+            if retainedKit[index] == nil { slots[index].bytes?.deallocate() }
+            slots[index].bytes = nil
+            slots[index].childWaves = nil
+            slots[index].byteCount = 0
+            retainedPcm[index] = nil
+            retainedKit[index] = nil
+            slots[index].generation = 0
+            if claimed == nil { claimed = index }
+        }
+        return claimed
+    }
+
+    func reclaim() -> Bool {
+        _ = claimRetiredSlot()
+        return (0..<4).contains { (index: Int) -> Bool in slots[index].generation != 0 }
+    }
+
+    private func validKit(_ kit: KitAuditionTone) -> Bool {
+        guard kit.children.count <= 128 else { return false }
+        if kit.mode == .drumkit {
+            guard kit.children.count == 128 else { return false }
+        } else {
+            guard let table = kit.splitTable, table.count == 128,
+                table.allSatisfy({ Int($0) < kit.children.count })
+            else { return false }
+        }
+        for child in kit.children {
+            switch child {
+            case .sample(let pcm, _, _, _, _, let kind, _, let loopStart):
+                guard
+                    pcm.isEmpty
+                        || (pcm.count <= Int(UInt32.max)
+                            && UInt32(exactly: loopStart) != nil && UInt8(exactly: kind) != nil)
+                else { return false }
+            case .psg(let voice):
+                if (3...10).contains(voice.kind), UInt8(exactly: voice.key) == nil { return false }
+                if (voice.kind == 3 || voice.kind == 4), UInt8(exactly: voice.sweep) == nil { return false }
+                if voice.kind == 7 || voice.kind == 8, let wave = voice.progWave, wave.count != 4 {
+                    return false
+                }
             }
         }
-        return available
+        return true
     }
 
-    private func clearBytes(_ index: Int) {
-        slots[index].bytes = nil
-        slots[index].childWaves = nil
-        slots[index].byteCount = 0
-        retainedBytes[index] = nil
-    }
-
-    private func replaceBytes(_ index: Int, count: Int) -> UnsafeMutableRawPointer {
-        clearBytes(index)
-        retainedPcm[index] = nil
-        guard let bytes = malloc(count) else {
-            preconditionFailure("Unable to allocate audition tone storage")
+    private func sameSamples(_ lhs: [Int8], _ rhs: [Int8]) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        let sameStorage = lhs.withUnsafeBufferPointer { (left: UnsafeBufferPointer<Int8>) -> Bool in
+            rhs.withUnsafeBufferPointer { (right: UnsafeBufferPointer<Int8>) -> Bool in
+                left.baseAddress == right.baseAddress
+            }
         }
-        retainedBytes[index] = SampleAuditionPcm.Allocation.retaining(
-            DispatchData(
-                bytesNoCopy: UnsafeRawBufferPointer(start: bytes, count: count), deallocator: .free))
+        return sameStorage || lhs == rhs
+    }
+    private func sameKit(_ lhs: KitAuditionTone, _ rhs: KitAuditionTone) -> Bool {
+        guard lhs.mode == rhs.mode, lhs.splitTable == rhs.splitTable, lhs.children.count == rhs.children.count
+        else { return false }
+        for (left, right) in zip(lhs.children, rhs.children) {
+            switch (left, right) {
+            case let (.psg(a), .psg(b)):
+                if a != b { return false }
+            case let (.sample(a, af, ak, ap, aa, at, al, as_), .sample(b, bf, bk, bp, ba, bt, bl, bs)):
+                if af != bf || ak != bk || ap != bp || at != bt || al != bl || as_ != bs
+                    || aa.attack != ba.attack || aa.decay != ba.decay
+                    || aa.sustain != ba.sustain || aa.release != ba.release || !sameSamples(a, b)
+                {
+                    return false
+                }
+            default:
+                return false
+            }
+        }
+        return true
+    }
+
+    private func publishKit(_ asset: KitAsset, in index: Int, key: UInt8) {
+        retainedKit[index] = asset
+        slots[index].bytes = asset.bytes
+        slots[index].byteCount = asset.count
+        slots[index].childWaves = asset.childWaves
+        slots[index].tone = asset.tone
+        publish(index, key: key)
+    }
+
+    private func prepare(_ samples: [Int8]) -> SampleAuditionPcm? {
+        if let prepared, sameSamples(prepared.samples, samples) { return prepared.pcm }
+        guard let pcm = SampleAuditionPcm(samples: samples) else { return nil }
+        prepared = (samples, pcm)
+        return pcm
+    }
+
+    func publish(_ note: SampleAuditionNote) -> SampleAuditionPublication {
+        let accepted: Bool
+        switch note.source {
+        case .pcm(let samples, let frequency, let loopStart, let looped):
+            guard !samples.isEmpty, samples.count <= Int(UInt32.max) else { return .invalid }
+            guard let pcm = prepare(samples) else { return .invalid }
+            accepted = publish(
+                pcm: pcm, frequency: frequency, loopStart: loopStart, looped: looped,
+                key: note.key, adsr: note.adsr, toneKey: note.toneKey)
+        case .wave16(let wave):
+            guard wave.count == 16 else { return .invalid }
+            accepted = publish(wave16: wave, key: note.key, adsr: note.adsr)
+        case .kit(let kit):
+            guard validKit(kit) else { return .invalid }
+            accepted = publishKitTone(kit, key: note.key)
+        }
+        return accepted ? .published(generation) : .busy
+    }
+
+    private func allocateBytes(_ index: Int, count: Int) -> UnsafeMutableRawPointer {
+        let bytes = UnsafeMutableRawPointer.allocate(byteCount: count, alignment: 16)
         slots[index].bytes = bytes
         slots[index].byteCount = count
         return bytes
     }
 
+    private func advanceGeneration() {
+        precondition(generation < UInt64.max >> 16, "Sample audition publication generation exhausted")
+        generation += 1
+    }
+
     private func publish(_ index: Int, key: UInt8) {
-        generation &+= 1
+        advanceGeneration()
         slots[index].generation = generation
         publication.store(
             generation << 16 | UInt64(index) << 8 | UInt64(key & 127),
@@ -101,12 +289,10 @@ final class AudioSampleAudition {
         pcm: SampleAuditionPcm, frequency: UInt32, loopStart: UInt32,
         looped: Bool, key: UInt8, adsr: AudioADSR, toneKey: UInt8
     ) -> Bool {
-        guard let index = retiredSlot() else { return false }
-        clearBytes(index)
-        let bytes = pcm.data
+        guard let index = claimRetiredSlot() else { return false }
         retainedPcm[index] = pcm
         configureWave(
-            waves.advanced(by: index), data: bytes, count: pcm.count,
+            waves.advanced(by: index), data: pcm.data, count: pcm.count,
             frequency: frequency, loopStart: loopStart, looped: looped)
         slots[index].tone = ToneData()
         slots[index].tone.type = 0  // VOICE_DIRECTSOUND
@@ -121,10 +307,10 @@ final class AudioSampleAudition {
     }
 
     func publish(wave16: [UInt8], key: UInt8, adsr: AudioADSR) -> Bool {
-        guard wave16.count == 16, let index = retiredSlot() else { return false }
+        guard wave16.count == 16, let index = claimRetiredSlot() else { return false }
         // Allocate word-aligned storage and bind as words, as required by the
         // declared CGB wave pointer. Byte copying preserves packed nibble order.
-        let bytes = replaceBytes(index, count: 16)
+        let bytes = allocateBytes(index, count: 16)
         let words = bytes.bindMemory(to: UInt32.self, capacity: 4)
         words.initialize(repeating: 0, count: 4)
         wave16.withUnsafeBytes { bytes.copyMemory(from: $0.baseAddress!, byteCount: 16) }
@@ -142,15 +328,12 @@ final class AudioSampleAudition {
     }
 
     func publishKitTone(_ kit: KitAuditionTone, key: UInt8) -> Bool {
-        guard kit.children.count <= 128 else { return false }
-        if kit.mode == .drumkit {
-            guard kit.children.count == 128 else { return false }
-        } else {
-            guard let table = kit.splitTable, table.count == 128,
-                table.allSatisfy({ Int($0) < kit.children.count })
-            else { return false }
+        guard validKit(kit) else { return false }
+        guard let index = claimRetiredSlot() else { return false }
+        if let preparedKit, sameKit(preparedKit.source, kit) {
+            publishKit(preparedKit, in: index, key: key)
+            return true
         }
-        guard let index = retiredSlot() else { return false }
         let waveOffset = MemoryLayout<ToneData>.stride * 128
         let tableOffset = waveOffset + MemoryLayout<WaveData>.stride * 128
         let assetOffset = (tableOffset + 128 + 15) & ~15
@@ -166,12 +349,13 @@ final class AudioSampleAudition {
                 }
             }
         }
-        let bytes = replaceBytes(index, count: count)
+        let asset = KitAsset(source: kit, count: count)
+        let bytes = asset.bytes
         let children = bytes.bindMemory(to: ToneData.self, capacity: 128)
         children.initialize(repeating: ToneData(), count: 128)
         let childWaves = bytes.advanced(by: waveOffset).bindMemory(to: WaveData.self, capacity: 128)
         childWaves.initialize(repeating: WaveData(), count: 128)
-        slots[index].childWaves = childWaves
+        asset.childWaves = childWaves
         let table = bytes.advanced(by: tableOffset).bindMemory(to: UInt8.self, capacity: 128)
         table.initialize(repeating: 0, count: 128)
         if kit.mode == .keysplit, let split = kit.splitTable {
@@ -248,28 +432,46 @@ final class AudioSampleAudition {
             }
             children[ordinal] = tone
         }
-        slots[index].tone = ToneData()
-        slots[index].tone.type = UInt8(kit.mode == .drumkit ? VOICE_KEYSPLIT_ALL : VOICE_KEYSPLIT)
-        slots[index].tone.subGroup = UnsafeMutableRawPointer(children)
-        if kit.mode == .keysplit { slots[index].tone.keySplitTable = table }
-        publish(index, key: key)
+        asset.tone.type = UInt8(kit.mode == .drumkit ? VOICE_KEYSPLIT_ALL : VOICE_KEYSPLIT)
+        asset.tone.subGroup = UnsafeMutableRawPointer(children)
+        if kit.mode == .keysplit { asset.tone.keySplitTable = table }
+        preparedKit = asset
+        publishKit(asset, in: index, key: key)
         return true
+    }
+
+    func begin() -> UInt64 {
+        advanceGeneration()
+        publication.store(generation << 16 | 0x80, ordering: .releasing)
+        return generation
     }
 
     func off() {
         guard generation != 0 else { return }
-        generation &+= 1
-        publication.store(generation << 16 | 0x80, ordering: .releasing)
+        _ = begin()
     }
 
-    func apply(_ engine: UnsafeMutablePointer<M4AEngine>) {
+    private func publishFeedback(sounding: UInt64, frame: Int?) {
+        feedbackCell.publish(
+            adoptedGeneration: lastAdopted, finishedGeneration: lastFinished, resetGeneration: resetCount,
+            resetPublicationGeneration: resetPublication, soundingGeneration: sounding, soundingFrame: frame)
+    }
+
+    func apply(_ engine: UnsafeMutablePointer<M4AEngine>, frames: UInt32) {
+        let previousAcknowledgement = acknowledged
+        let previousAdopted = lastAdopted
+        let previousFinished = lastFinished
         let command = publication.load(ordering: .acquiring)
         let gen = command >> 16
+        if gen == adopted, acknowledged & 15 == 0, soundingSlot < 0 { return }
         if gen != adopted {
             if soundingKey >= 0 {
                 m4a_engine_note_off(engine, 1, UInt8(soundingKey))
                 soundingKey = -1
             }
+            soundingSlot = -1
+            soundingObserved = false
+            renderedSinceAdoption = false
             if command & 0x80 == 0 {
                 let index = Int((command >> 8) & 255) % 4
                 engine.pointee.tracks.1.currentVoice = slots[index].tone
@@ -278,6 +480,8 @@ final class AudioSampleAudition {
                 let key = UInt8(command & 127)
                 m4a_engine_note_on(engine, 1, key, 127)
                 soundingKey = Int(key)
+                soundingSlot = index
+                lastAdopted = gen
                 adoptedWaves[index] = slots[index].tone.type == 3 ? slots[index].tone.wavePointer : nil
                 adoptedChildren[index] = slots[index].childWaves
                 if slots[index].childWaves != nil, let bytes = slots[index].bytes {
@@ -291,21 +495,40 @@ final class AudioSampleAudition {
             adopted = gen
         }
         var mask: UInt64 = 0
+        var sounding = false
+        var soundingFrame: Int?
         withUnsafePointer(to: &engine.pointee.pcmChannels) { storage in
             storage.withMemoryRebound(to: M4APCMChannel.self, capacity: Int(TOTAL_PCM_CHANNELS)) {
                 channels in
                 for index in 0..<Int(TOTAL_PCM_CHANNELS) {
                     let channel = channels[index]
                     guard channel.status & 0xC7 != 0, let wave = channel.wav else { continue }
+                    var matching: UInt64 = 0
                     for slot in 0..<4 {
-                        if wave == waves.advanced(by: slot) { mask |= 1 << slot }
+                        var matches = wave == waves.advanced(by: slot)
                         if let children = adoptedChildren[slot] {
                             let address = UInt(bitPattern: wave)
                             let start = UInt(bitPattern: children)
-                            if address >= start && address < start + UInt(MemoryLayout<WaveData>.stride * 128) {
-                                mask |= 1 << slot
-                            }
+                            matches =
+                                matches
+                                || (address >= start
+                                    && address < start + UInt(MemoryLayout<WaveData>.stride * 128))
                         }
+                        if matches { matching |= 1 << slot }
+                    }
+                    guard matching != 0 else { continue }
+                    if soundingSlot >= 0 && matching & (1 << soundingSlot) != 0
+                        && channel.audition && channel.trackIndex == 1
+                        && Int(channel.midiKey) == soundingKey && channel.status & 0x40 == 0
+                    {
+                        mask |= 1 << soundingSlot
+                        sounding = true
+                        var frame: UInt32 = 0
+                        if pd_audio_pcm_source_frame(engine, Int32(index), &frame) {
+                            soundingFrame = Int(frame)
+                        }
+                    } else {
+                        mask |= 1 << matching.trailingZeroBitCount
                     }
                 }
             }
@@ -315,12 +538,29 @@ final class AudioSampleAudition {
                 channels in
                 for index in 0..<Int(TOTAL_CGB_CHANNELS) {
                     let channel = channels[index]
-                    guard channel.status & 0xC7 != 0, let wave = channel.wavePointer else { continue }
+                    guard channel.status & 0xC7 != 0 else { continue }
+                    if soundingSlot >= 0 && channel.audition && channel.trackIndex == 1
+                        && Int(channel.midiKey) == soundingKey && channel.status & 0x40 == 0
+                    {
+                        sounding = true
+                    }
+                    guard let wave = channel.wavePointer else { continue }
+                    var matching: UInt64 = 0
                     for slot in 0..<4 {
-                        if wave == adoptedWaves[slot] { mask |= 1 << slot }
+                        if wave == adoptedWaves[slot] { matching |= 1 << slot }
                         let address = UInt(bitPattern: wave)
                         if address >= adoptedKitStart[slot] && address < adoptedKitEnd[slot] {
-                            mask |= 1 << slot
+                            matching |= 1 << slot
+                        }
+                    }
+                    if matching != 0 {
+                        if soundingSlot >= 0 && matching & (1 << soundingSlot) != 0
+                            && channel.audition && channel.trackIndex == 1
+                            && Int(channel.midiKey) == soundingKey && channel.status & 0x40 == 0
+                        {
+                            mask |= 1 << soundingSlot
+                        } else {
+                            mask |= 1 << matching.trailingZeroBitCount
                         }
                     }
                 }
@@ -332,19 +572,43 @@ final class AudioSampleAudition {
             adoptedKitStart[slot] = 0
             adoptedKitEnd[slot] = 0
         }
-        acknowledgement.store(adopted << 8 | mask, ordering: .releasing)
+        acknowledged = adopted << 8 | mask
+        if acknowledged != previousAcknowledgement {
+            acknowledgement.store(acknowledged, ordering: .releasing)
+        }
+        if sounding { soundingObserved = true }
+        if soundingSlot >= 0 && !sounding && (soundingObserved || renderedSinceAdoption) {
+            lastFinished = lastAdopted
+            soundingSlot = -1
+            soundingKey = -1
+        }
+        if soundingSlot >= 0 && frames > 0 { renderedSinceAdoption = true }
+        publishFeedback(sounding: sounding ? lastAdopted : 0, frame: soundingFrame)
+        if acknowledged != previousAcknowledgement
+            || lastAdopted != previousAdopted || lastFinished != previousFinished
+        {
+            feedbackCell.wakeForProgress()
+        }
     }
 
     /// Engines must have cut all channels; no storage is reclaimed here.
     func reset() {
         adopted = publication.load(ordering: .acquiring) >> 16
+        resetPublication = adopted
         soundingKey = -1
+        soundingSlot = -1
+        soundingObserved = false
+        renderedSinceAdoption = false
+        resetCount &+= 1
         for slot in 0..<4 {
             adoptedWaves[slot] = nil
             adoptedChildren[slot] = nil
             adoptedKitStart[slot] = 0
             adoptedKitEnd[slot] = 0
         }
-        acknowledgement.store(adopted << 8, ordering: .releasing)
+        acknowledged = adopted << 8
+        acknowledgement.store(acknowledged, ordering: .releasing)
+        publishFeedback(sounding: 0, frame: nil)
+        feedbackCell.wakeForProgress()
     }
 }

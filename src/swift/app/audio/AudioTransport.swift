@@ -1,13 +1,47 @@
 import Synchronization
 
-public enum AudioTransportState: Int32 { case stopped, paused, playing }
+public enum AudioTransportState: Int32, Sendable { case stopped, paused, playing }
+
+public final class AudioTransportEndpoint: Sendable {
+    let status: AudioStatus
+    let volume = Atomic<Int>(100)
+    let pendingSeek = Atomic<UInt64>(UInt64.max)
+
+    init(status: AudioStatus) { self.status = status }
+
+    public func play() {
+        guard status.songLoaded else { return }
+        if status.requestedTransport == .stopped { status.invalidateTelemetry() }
+        status.requested.store(AudioTransportState.playing.rawValue, ordering: .relaxed)
+    }
+
+    public func pause() {
+        if status.requestedTransport == .playing {
+            status.requested.store(AudioTransportState.paused.rawValue, ordering: .relaxed)
+        }
+    }
+
+    public func stop() {
+        pendingSeek.store(UInt64.max, ordering: .releasing)
+        status.requested.store(AudioTransportState.stopped.rawValue, ordering: .relaxed)
+    }
+
+    public func seek(_ sample: UInt64) {
+        if status.songLoaded { pendingSeek.store(sample, ordering: .releasing) }
+    }
+
+    public func setOutputVolume(_ percent: Int) {
+        volume.store(min(100, max(0, percent)), ordering: .relaxed)
+    }
+}
 
 /// Owns requested transport and sample-accurate gain envelopes; no engine or publication ownership.
 final class AudioTransport {
-    private let request = Atomic<Int32>(AudioTransportState.stopped.rawValue)
-    private let volume = Atomic<Int>(100)
-    let pendingSeek = Atomic<UInt64>(UInt64.max)
-    private(set) var applied = AudioTransportState.stopped
+    private let status: AudioStatus
+    let endpoint: AudioTransportEndpoint
+    private(set) var applied = AudioTransportState.stopped {
+        didSet { status.applied.store(applied.rawValue, ordering: .relaxed) }
+    }
     private(set) var cutting = false
     private var rising = false
     private(set) var target = AudioTransportState.stopped
@@ -23,7 +57,9 @@ final class AudioTransport {
     private var gainStep: Float = 0
     private var gainRemaining: UInt32 = 0
 
-    init(sampleRate: Double, periodFrames: Int) {
+    init(sampleRate: Double, periodFrames: Int, status: AudioStatus, endpoint: AudioTransportEndpoint) {
+        self.status = status
+        self.endpoint = endpoint
         rampSamples = max(1, UInt32(sampleRate * 0.01))
         settleSamples =
             UInt32(max(1, periodFrames)) + max(1, UInt32(sampleRate * 2 / 59.7275))
@@ -31,16 +67,15 @@ final class AudioTransport {
     }
 
     var requested: AudioTransportState {
-        get { AudioTransportState(rawValue: request.load(ordering: .relaxed))! }
-        set { request.store(newValue.rawValue, ordering: .relaxed) }
+        get { status.requestedTransport }
+        set { status.requested.store(newValue.rawValue, ordering: .relaxed) }
     }
     var outputVolume: Int {
-        get { volume.load(ordering: .relaxed) }
-        set { volume.store(min(100, max(0, newValue)), ordering: .relaxed) }
+        get { endpoint.volume.load(ordering: .relaxed) }
+        set { endpoint.setOutputVolume(newValue) }
     }
     func stop() {
-        pendingSeek.store(UInt64.max, ordering: .releasing)
-        requested = .stopped
+        endpoint.stop()
     }
     func resetCut() {
         cutting = false
@@ -53,14 +88,14 @@ final class AudioTransport {
     }
     func reset() {
         resetCut()
-        pendingSeek.store(UInt64.max, ordering: .releasing)
+        endpoint.pendingSeek.store(UInt64.max, ordering: .releasing)
         requested = .stopped
         applied = .stopped
     }
     /// Cold only: park transport without rewinding the separately owned sequencer.
     func pauseImmediately() {
         resetCut()
-        pendingSeek.store(UInt64.max, ordering: .releasing)
+        endpoint.pendingSeek.store(UInt64.max, ordering: .releasing)
         requested = .paused
         applied = .paused
     }

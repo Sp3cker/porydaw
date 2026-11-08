@@ -1,4 +1,5 @@
 #include "public.sdk/source/vst/vstsinglecomponenteffect.h"
+#include "public.sdk/source/common/pluginview.h"
 #include "public.sdk/source/main/pluginfactory.h"
 #include "pluginterfaces/base/ibstream.h"
 #include "pluginterfaces/vst/ivstevents.h"
@@ -6,6 +7,7 @@
 #include "pluginterfaces/vst/ivstprocesscontext.h"
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -16,10 +18,13 @@
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
+void* pdphFixtureViewCreate(void*, int, int, void (*)(void*), void*, void*);
+void pdphFixtureViewResize(void*, int, int);
+void pdphFixtureViewDestroy(void*);
 namespace {
 constexpr uint32 diagnosticMagic = 0x44584450u, diagnosticVersion = 1;
 constexpr std::size_t diagnosticBytes = 112;
-// Diagnostic opt-in uses fault bit 30; component word 8 stays reserved for task8 keysReceived.
+// Diagnostic opt-in uses fault bit 30; component word 8 counts editor key-downs.
 constexpr uint32 diagnosticFlag = 0x40000000u;
 struct Pending { bool used = false; int64 sample = 0; uint64 order = 0; Event event{}; };
 struct Diagnostics {
@@ -29,6 +34,61 @@ struct Diagnostics {
     int32 inCount = 0, firstInKind = -1, firstInOffset = -1, firstInNoteId = -1;
 };
 static_assert(std::is_trivially_copyable_v<Diagnostics> && sizeof(double) == 8);
+class FixtureView final : public CPluginView {
+public:
+    FixtureView(IEditController* owner, void (*attached)(void*), void (*key)(void*), void* user)
+        : owner(owner), onAttached(attached), onKey(key), user(user) { rect = ViewRect(0, 0, 320, 200); }
+    ~FixtureView() override { if (native) pdphFixtureViewDestroy(native); }
+    tresult PLUGIN_API isPlatformTypeSupported(FIDString type) override {
+#ifdef __APPLE__
+        return type && std::strcmp(type, kPlatformTypeNSView) == 0 ? kResultTrue : kResultFalse;
+#elif defined(_WIN32)
+        return type && std::strcmp(type, kPlatformTypeHWND) == 0 ? kResultTrue : kResultFalse;
+#else
+        return type && std::strcmp(type, kPlatformTypeX11EmbedWindowID) == 0 ? kResultTrue : kResultFalse;
+#endif
+    }
+    tresult PLUGIN_API attached(void* parent, FIDString type) override {
+        if (!parent || native || isPlatformTypeSupported(type) != kResultTrue) return kResultFalse;
+        void* loop = nullptr;
+#if defined(__linux__)
+        if (!plugFrame || plugFrame->queryInterface(Linux::IRunLoop::iid, &loop) != kResultOk) return kResultFalse;
+#endif
+        native = pdphFixtureViewCreate(parent, rect.getWidth(), rect.getHeight(), onKey, user, loop);
+#if defined(__linux__)
+        if (loop) static_cast<Linux::IRunLoop*>(loop)->release();
+#endif
+        if (!native) return kResultFalse;
+        systemWindow = parent;
+        ViewRect requested(0, 0, 400, 240);
+        if (plugFrame) plugFrame->resizeView(this, &requested);
+        onAttached(user);
+        return kResultOk;
+    }
+    tresult PLUGIN_API removed() override {
+        if (native) { pdphFixtureViewDestroy(native); native = nullptr; }
+        systemWindow = nullptr; return kResultOk;
+    }
+    tresult PLUGIN_API onSize(ViewRect* size) override {
+        if (!size) return kInvalidArgument;
+        rect = *size;
+        if (native) pdphFixtureViewResize(native, rect.getWidth(), rect.getHeight());
+        return kResultOk;
+    }
+    tresult PLUGIN_API canResize() override { return kResultTrue; }
+    tresult PLUGIN_API checkSizeConstraint(ViewRect* size) override {
+        if (!size) return kInvalidArgument;
+        size->right = size->left + (std::max)(1, size->getWidth());
+        size->bottom = size->top + (std::max)(1, size->getHeight());
+        return kResultOk;
+    }
+private:
+    IPtr<IEditController> owner;
+    void (*onAttached)(void*);
+    void (*onKey)(void*);
+    void* user;
+    void* native = nullptr;
+};
 class TestGen final : public SingleComponentEffect {
 public:
     explicit TestGen(int variant) : variant(variant) {}
@@ -36,6 +96,19 @@ public:
     static FUnknown* createAudio(void*) { return static_cast<IComponent*>(new TestGen(1)); }
     static FUnknown* createRealtime(void*) { return static_cast<IComponent*>(new TestGen(2)); }
     static FUnknown* createAudioOnly(void*) { return static_cast<IComponent*>(new TestGen(3)); }
+    IPlugView* PLUGIN_API createView(FIDString name) override {
+        if (variant == 2 || !name || std::strcmp(name, ViewType::kEditor) != 0) return nullptr;
+        const auto attached = [](void* user) {
+            auto& plugin = *static_cast<TestGen*>(user);
+            if (!plugin.componentHandler) return;
+            plugin.componentHandler->beginEdit(0);
+            plugin.setParamNormalized(0, 5. / 12.);
+            plugin.componentHandler->performEdit(0, 5. / 12.);
+            plugin.componentHandler->endEdit(0);
+        };
+        const auto key = [](void* user) { static_cast<TestGen*>(user)->keysReceived.fetch_add(1, std::memory_order_relaxed); };
+        return new FixtureView(this, attached, key, this);
+    }
     tresult PLUGIN_API initialize(FUnknown* host) override {
         auto result = SingleComponentEffect::initialize(host);
         if (result != kResultOk) return result;
@@ -65,6 +138,7 @@ public:
         auto oldLatency = latency;
         latency = std::max(0, field(4));
         fault = read >= 16 ? field(12) : 0;
+        keysReceived.store(read >= 12 ? field(8) : 0, std::memory_order_relaxed);
         diagnostics = {};
         delayPending = faultCode() == 3;
         setParamNormalized(0, offset / 12.);
@@ -73,7 +147,7 @@ public:
     }
     tresult PLUGIN_API getState(IBStream* stream) override {
         std::array<uint8, 16> bytes{};
-        const int32 fields[] = {offset, latency, 0, fault};
+        const int32 fields[] = {offset, latency, keysReceived.load(std::memory_order_relaxed), fault};
         for (int field = 0; field < 4; ++field) for (int byte = 0; byte < 4; ++byte)
             bytes[field * 4 + byte] = static_cast<uint8>(uint32(fields[field]) >> (8 * byte));
         int32 written = 0;
@@ -98,7 +172,7 @@ public:
         const auto code = faultCode();
         if (code == 1) std::abort();
         if (code == 2) for (;;) std::this_thread::sleep_for(std::chrono::hours(24));
-        if (delayPending) {
+        if (delayPending && data.numSamples > 0) {
             delayPending = false;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
@@ -110,6 +184,7 @@ public:
                 queue->getPoint(queue->getPointCount() - 1, sample, value) == kResultOk)
                 offset = static_cast<int32>(std::lround(std::clamp(value, 0., 1.) * 12));
         }
+        if (data.numSamples == 0) return kResultOk;
         if (!data.processContext || !(data.processContext->state & ProcessContext::kPlaying)) {
             pending = {}; wasPlaying = false; return kResultOk;
         }
@@ -244,6 +319,7 @@ private:
     }
     const int variant;
     int32 offset = 0, latency = 128, fault = 0, nextID = 100000;
+    std::atomic<int32> keysReceived{0};
     uint64 order = 0;
     bool wasPlaying = false;
     bool delayPending = false;

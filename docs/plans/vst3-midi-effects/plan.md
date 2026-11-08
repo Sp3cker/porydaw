@@ -18,6 +18,12 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 
 Execution ruling approved by the user: loop-wrap input offs precede chased ons at offset 0 of the first wrapped block; both use the new loop context. Keep exact boundary timing and one bridge request per chunk. Task 7 also repairs the Playback take seam with completed-position records and explicitly flagged discontinuity releases, so silent tails and old-timeline endpoints remain exact.
 
+User-directed alignment gate: import fork-main `ff15770a` before accepting tasks 8–9. `AudioControl` owns device/renderer work off MainActor; VST attach/detach use acknowledged cold operations through callback exclusion. MainActor retains intent and asynchronous helper IPC. Task 14 migrates the ownership seam and checks without rewriting pushed history.
+
+User-approved review fixes preserve that audio ownership: cleanup tails are per effect and joined collectively at teardown; `PluginStateRecorder` owns edit-history observation separately from the demand-lived Live pump. App owns the sole Grab publication policy, `LiveInsert` performs the sole input wire encoding, and `Sequencer` owns one post-dispatch loop transition. These fixes do not waive the native editor and input acceptance gates.
+
+User-approved gate timing: implementation checkpoints may proceed after independent review and the covering Debug/ASAN headless gates. Desktop-dependent editor, focused-keyboard and installed-plugin smoke remain mandatory at final feature acceptance, explicitly pending until executed. This changes checkpoint timing only; it does not waive native behavior or treat static review as runtime proof.
+
 ## Gates
 
 - G1 — approved by the user (out-of-process wording). Task 5 applies this AGENTS.md "Native boundary" amendment verbatim:
@@ -31,7 +37,7 @@ Execution ruling approved by the user: loop-wrap input offs precede chased ons a
 - Follow spec.md exactly. Implementers never invent names; a missing decision is NEEDS_CONTEXT.
 - Do not include external product names, links, logos or vendor assets in committed content, except the open-source host names cited as technical precedent in this plan. No VST logo in the UI.
 - The song is the truth: the `.mid`, WAV export, CPU profile, backups, clipboard sources and every editing surface read `SongDocument` state, which never contains plugin output (D1). Only the audio callback's live path sounds plugin output.
-- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 owns `Sequencer`/`AudioRenderEngine`; task 7's bounded correction may extend only the take-event seam, `Sequencer` feedback and its existing checks to preserve exact segment endpoints. `AudioDevice` is untouched.
+- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 owns the callback seam; task 7 preserves exact take endpoints. Task 14 aligns `NativeAudio`/`AudioControl`/`AudioRenderEngine` and Host lifetime with upstream ownership. VST work does not modify upstream `AudioDevice`.
 - Threads: every VST3 call runs inside the helper. Its Qt main thread dispatches control, editor windows, Linux `IRunLoop` and key interception; its RT thread processes requests. A stdin reader posts control frames to the main thread. Porydaw's main actor sends control frames; plugin callbacks only flip atomics or enqueue.
 - QML: follow rule://qtbridge-surface and rule://text-contrast. Geometry comes from the resolved base font through existing layout policies; no hard-coded pixels. Persistent chrome never claims bare `Space`; Space reaches `transport.play_pause` from the main window and from plugin editor windows (D6).
 - Swift: rule://swift-standards, rule://swift-locality, rule://swift-typecheck-complexity. Explicit closure types. Comments are at most 2 lines.
@@ -58,12 +64,14 @@ Execution ruling approved by the user: loop-wrap input offs precede chased ons a
 | 11 | `MidiEffectsPanel.qml` (setup only) + mount + shell check + contrast | SDD, sdd-implementer: QML surface. Over-cap (6 files) | 10 (may be drafted alongside it) | [task-11-brief.md](task-11-brief.md) |
 | 12 | Effect Output drawer section: header controls including Reload, page, publication, selection, Copy, QML, drawer registration + shell check | SDD, sdd-implementer: drawer section on the roll camera. Over-cap (11 files): one surface | 9, 10, 11 (its shell check uses task 11's `injectPluginFault`) | [task-12-brief.md](task-12-brief.md) |
 | 13 | Per-instance helper host mode, shared-memory bridge and Swift transport | SDD, qt-cpp-reviewer: process, Qt threading and realtime IPC. Over-cap (15 files): one bridge behavior | 6 | [task-13-brief.md](task-13-brief.md) |
+| 14 | Align VST attachment and lifetime with fork-main off-main audio ownership | SDD, sdd-implementer: asynchronous borrowed-slot ownership and migration conflicts; over-cap, one cross-module lifetime behavior | 4, 7 | [task-14-brief.md](task-14-brief.md) |
 
 Parallelism (disjoint write sets):
 - tasks 1 ∥ 2 ∥ 4 ∥ 5;
 - then 3 (after 2) ∥ 6 (after 5);
 - then 13 (after 6), then 7 (after 1, 2, 4, 13);
 - then 8 ∥ 9;
+- user-directed task 14 gates implementation acceptance of the in-flight tasks 8–9; preserve their drafts, integrate the newer audio model, and pass combined review/headless verification before checkpointing. Desktop-dependent gates remain pending for final feature acceptance.
 - then 10;
 - then 11, then 12 (task 12 drafting may overlap 11; its shell check needs task 11's bootstrap).
 
@@ -76,6 +84,7 @@ Parallelism (disjoint write sets):
 - **B1** — after tasks 6 and 13. Commit and push before task 7 reuses bridge and module files.
 - **B** — after task 7. Commit and push before task 8 re-edits helper and instance files; then tasks 8 ∥ 9.
   After tasks 8–9, checkpoint accepted work before task 10 re-edits `DocumentWorkspace.swift` and `ApplicationSession+Tabs.swift`.
+  The task-14 upstream merge stays uncommitted until the alignment and task 8–9 milestone pass their review and covering Debug/ASAN headless gates; conflict-marker removal alone is not acceptance. The user-approved gate timing above defers native execution to final acceptance, allowing task 10 integration to proceed.
 - **C** — after task 10. Commit and push before task 12 re-edits `DocumentWorkspace.swift`.
 - **Final** — after tasks 11–12, plus the final verification below.
 

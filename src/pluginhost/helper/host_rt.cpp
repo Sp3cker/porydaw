@@ -67,6 +67,17 @@ void processRequests(Host& host) {
             break;
         }
         if (host.stopping.load(std::memory_order_acquire)) break;
+        if (host.parameterFlushRequested.load(std::memory_order_acquire)) {
+            uint32_t owner = 0;
+            if (host.processingOwner.compare_exchange_strong(owner, 1, std::memory_order_acquire)) {
+                pdph_process_context context = {};
+                int32_t written = 0, total = 0;
+                host.parameterFlushResult = pdph_plugin_process(host.plugin, 0, &context, nullptr, 0, nullptr, 0, &written, &total);
+                host.parameterFlushRequested.store(false, std::memory_order_relaxed);
+                host.processingOwner.store(2, std::memory_order_release);
+                host.parameterFlushComplete.store(true, std::memory_order_release);
+            }
+        }
         if (wait != PDPB_OK) continue;
         if (host.controlPending.load(std::memory_order_acquire)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1));

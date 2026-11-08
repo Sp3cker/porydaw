@@ -98,7 +98,7 @@ func checkControllerSuppression(_ report: CheckReport) throws {
     let retargetCursor = audio.playheadSamples
     _ = rig.render(1)
     report.expect(
-        audio.transport == .playing && audio.playheadSamples == retargetCursor + 1,
+        audio.requestedTransport == .playing && audio.playheadSamples == retargetCursor + 1,
         cppID: "transportcheck/TransportTest::pendingCutRetargetsOntoPlaying",
         message: "already-playing retarget completes and sequence continues")
     audio.stop()

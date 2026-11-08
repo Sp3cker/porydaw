@@ -54,6 +54,16 @@ void SwiftCoreTest::pluginHost()
     pdc_suite_run(PDC_SUITE_PLUGINHOST, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::pluginHostEditor()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINHOST_EDITOR, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::trackEffectsEditor()
+{
+    pdc_suite_run(PDC_SUITE_TRACKEFFECTS_EDITOR, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::audioController()
 {
     pdc_suite_run(PDC_SUITE_AUDIO_CONTROLLER, reportSwiftCheck, this);

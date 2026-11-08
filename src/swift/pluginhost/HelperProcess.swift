@@ -507,6 +507,8 @@ final class HelperProcess {
         _ = try await request(UInt32(PDPB_SET_SHORTCUTS), payload: payload)
     }
 
+    func reportRenderTimeout() { fail(.stoppedResponding) }
+
     func pollWatchdog(armed: Bool) {
         guard armed, lifecycle == .ready, failure == nil else {
             watchdogArmed = false

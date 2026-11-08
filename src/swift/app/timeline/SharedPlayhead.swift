@@ -438,7 +438,7 @@ public final class SharedPlayheadPresenter {
     private func observeCurrent(token: UInt64) -> Bool {
         let observation = SharedPlayheadObservation(
             sample: audio?.playheadSamples ?? 0,
-            transport: audio?.transport ?? 0, preview: readPreview?())
+            transport: audio?.requestedTransport ?? 0, preview: readPreview?())
         return observe(observation, token: token)
     }
 

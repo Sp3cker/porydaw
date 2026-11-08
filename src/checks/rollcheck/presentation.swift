@@ -74,17 +74,17 @@ private func checkMountedPolyphonyReveal(_ report: CheckReport) {
         tailCut: Array(repeating: 0, count: Int(MAX_TRACKS)),
         eventTotal: 3,
         events: Array(
-            repeating: M4APolyEvent(
+            repeating: AudioPolyEvent(
                 type: 0, trackIndex: 0, midiKey: 0,
                 byTrack: 0, program: 0, tick: 0),
             count: Int(M4A_POLY_EVENT_CAPACITY)))
-    snapshot.events[0] = M4APolyEvent(
+    snapshot.events[0] = AudioPolyEvent(
         type: 1, trackIndex: 0, midiKey: 60,
         byTrack: 1, program: 0, tick: 12_027)
-    snapshot.events[1] = M4APolyEvent(
+    snapshot.events[1] = AudioPolyEvent(
         type: 1, trackIndex: 0, midiKey: 127,
         byTrack: 1, program: 0, tick: 12_048)
-    snapshot.events[2] = M4APolyEvent(
+    snapshot.events[2] = AudioPolyEvent(
         type: 1, trackIndex: 0, midiKey: 60,
         byTrack: 1, program: 0, tick: 12_048)
     app.polyphony.update(snapshot)

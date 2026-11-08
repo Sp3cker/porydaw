@@ -12,6 +12,13 @@ public final class SampleStudioPresenter: QmlUncreatable {
     private var gestureBase: SampleEditParams?
     private var observers: [@MainActor () -> Void] = []
     private var sourceCents: Double
+    private var renderWorker: Task<SampleDocument?, Never>?
+    private var renderCompletion: Task<Void, Never>?
+    private var pendingRender: (revision: Int, document: SampleDocument)?
+    private var requestedRevision = 0
+    public private(set) var renderedParams: SampleEditParams
+    public private(set) var renderedSource: ImportedSample
+    public private(set) var processed: ProcessedSample
 
     @QtTracked public var windowTitle = "Sample Editor"
     @QtTracked public var sampleName = ""
@@ -46,13 +53,15 @@ public final class SampleStudioPresenter: QmlUncreatable {
     private var sampleDocument: SampleDocument
     @QtIgnored public var document: SampleDocument { sampleDocument }
     @QtIgnored public var params: SampleEditParams { sampleDocument.params }
-    @QtIgnored public var processed: ProcessedSample { sampleDocument.processed }
     @QtIgnored public var source: ImportedSample { sampleDocument.source }
     private(set) var sourceRevision = 0
 
     @QtIgnored
     public init(document: SampleDocument, validateName: @escaping (String) -> String?) {
         sampleDocument = document
+        renderedParams = document.params
+        renderedSource = document.source
+        processed = document.prepared ?? ProcessedSample()
         validateNewName = validateName
         sourceCents = (sampleDocument.params.fineTuneCents * 100).rounded() / 100
         sampleName = document.source.suggestedName
@@ -198,7 +207,68 @@ public final class SampleStudioPresenter: QmlUncreatable {
         history.push(before: base, after: params, mergeKey: -1)
         syncHistory()
     }
-    @QtIgnored public func wavBytes() -> Data { SampleWavWriter.bytes(for: processed) }
+    @QtIgnored public func wavBytes() async -> Data {
+        await Self.encodeWav(sampleDocument)
+    }
+
+    @QtIgnored public static func wavBytes(for snapshot: SampleDocument) async -> Data {
+        await encodeWav(snapshot)
+    }
+
+    @concurrent
+    private static func encodeWav(_ snapshot: SampleDocument) async -> Data {
+        var document = snapshot
+        document.prepare(checkpoint: {})
+        return SampleWavWriter.bytes(for: document.processed)
+    }
+
+    @QtIgnored public func waitForRender() async {
+        while let completion = renderCompletion { await completion.value }
+    }
+
+    @concurrent
+    private static func render(_ snapshot: SampleDocument) async -> SampleDocument? {
+        do {
+            var document = snapshot
+            try document.prepare(checkpoint: { try Task.checkCancellation() })
+            try Task.checkCancellation()
+            return document
+        } catch {
+            return nil
+        }
+    }
+
+    private func landRender(_ document: SampleDocument, result: ProcessedSample) {
+        processed = result
+        renderedParams = document.params
+        renderedSource = document.source
+        gainReadout = SampleStudioReadouts.gain(result, mode: document.params.normalizeMode)
+        romText = SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(result))
+        renderRevision += 1
+        for observer in observers { observer() }
+    }
+
+    private func startPendingRender() {
+        guard renderWorker == nil, let request = pendingRender else { return }
+        pendingRender = nil
+        let worker = Task(priority: .userInitiated) { await Self.render(request.document) }
+        renderWorker = worker
+        renderCompletion = Task { [weak self] in
+            let document = await worker.value
+            guard let self else { return }
+            self.renderWorker = nil
+            self.renderCompletion = nil
+            if request.revision == self.requestedRevision, let document, let result = document.prepared {
+                self.landRender(document, result: result)
+            }
+            self.startPendingRender()
+        }
+    }
+
+    deinit {
+        renderWorker?.cancel()
+        renderCompletion?.cancel()
+    }
     @QtIgnored public func addRenderObserver(_ body: @escaping @MainActor () -> Void) { observers.append(body) }
 
     private func syncHistory() {
@@ -224,11 +294,15 @@ public final class SampleStudioPresenter: QmlUncreatable {
             ? rateChoices[0]
             : (p.targetRate.rounded() == p.targetRate
                 ? SampleStudioReadouts.decimal(p.targetRate, places: 0) : String(p.targetRate))
-        let result = processed
-        gainReadout = SampleStudioReadouts.gain(result, mode: p.normalizeMode)
-        romText = SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(result))
         syncHistory()
-        renderRevision += 1
-        for observer in observers { observer() }
+        requestedRevision += 1
+        renderWorker?.cancel()
+        if let result = sampleDocument.prepared {
+            pendingRender = nil
+            landRender(sampleDocument, result: result)
+        } else {
+            pendingRender = (requestedRevision, sampleDocument)
+            startPendingRender()
+        }
     }
 }

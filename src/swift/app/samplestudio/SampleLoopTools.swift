@@ -36,6 +36,19 @@ public final class SampleLoopTools: QmlUncreatable {
         let params: SampleEditParams
         var commands: [PitchCommand]
     }
+    private enum LoopJob: Sendable {
+        case candidates
+        case refine
+    }
+
+    private enum LoopResult: Sendable {
+        case candidates([SampleDsp.LoopCandidate])
+        case refined(SampleEditParams?)
+    }
+
+    private var loopWorker: Task<LoopResult?, Never>?
+    private var loopCompletion: Task<Void, Never>?
+    private var loopGeneration = 0
 
     private var analysisState = AnalysisState.idle
     private var analysisGeneration = 0
@@ -50,6 +63,7 @@ public final class SampleLoopTools: QmlUncreatable {
     private var candidateCropEnd = -1
     private var candidateRate = 0.0
     private var candidatesValid = false
+    public private(set) var lastWaveformRenderRevision = -1
 
     @QtTracked public var loopBodyVisible = false
     @QtTracked public var pitchApplyVisible = false
@@ -72,6 +86,8 @@ public final class SampleLoopTools: QmlUncreatable {
     deinit {
         analysisWorker?.cancel()
         analysisCompletion?.cancel()
+        loopWorker?.cancel()
+        loopCompletion?.cancel()
     }
 
     /// Cancel analysis and deferred actions without restarting on subsequent parameter refreshes.
@@ -82,15 +98,18 @@ public final class SampleLoopTools: QmlUncreatable {
         pendingAnalysis = nil
         pendingCommands = nil
         analysisWorker?.cancel()
+        loopWorker?.cancel()
         clearAnalysisReadouts()
     }
 
     /// Await owned analysis and deferred actions, including cancelled work, without blocking the UI.
     @QtIgnored
     public func waitForPitchAnalysis() async {
-        while let completion = analysisCompletion {
-            await completion.value
-        }
+        repeat {
+            if let completion = analysisCompletion { await completion.value }
+            if let completion = loopCompletion { await completion.value }
+            await presenter.waitForRender()
+        } while analysisCompletion != nil || loopCompletion != nil
     }
 
     private func requestAnalysisIfNeeded() {
@@ -247,31 +266,7 @@ public final class SampleLoopTools: QmlUncreatable {
         canTryAnother = candidatesValid && !candidates.isEmpty
     }
 
-    /// Installs the Sample Studio marker adapter without coupling the shared model to a presenter.
-    @QtIgnored
-    public func bindWaveform(_ wave: MarkerWaveformModel) {
-        wave.onMarkerPressed = { [weak presenter] _ in presenter?.beginMarkerGesture() }
-        wave.onMarkerDragged = { [weak self, weak wave] id, frame in
-            guard let self, let wave else { return }
-            let before = self.presenter.params
-            self.dragMarker(id: id, frame: frame)
-            if self.presenter.params == before { self.publishWaveform(wave, sourceChanged: false) }
-        }
-        wave.onMarkerReleased = { [weak presenter] in presenter?.endMarkerGesture() }
-    }
-
-    private var lastPeakFit = 1.0
-    @QtIgnored
-    public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
-        if sourceChanged {
-            // Peak-fit like Split Studio; a normalize gain at or above the fit is preserved.
-            lastPeakFit = MarkerWaveformModel.peakFitGain(presenter.source.buffer)
-            wave.setSamples(
-                presenter.source.buffer, sampleRate: presenter.source.sampleRate,
-                gain: max(presenter.processed.normalizeGain, lastPeakFit))
-        } else {
-            wave.setGain(max(presenter.processed.normalizeGain, lastPeakFit))
-        }
+    private func publishMarkers(_ wave: MarkerWaveformModel) {
         let p = presenter.params
         var markers: [(id: Int, frame: Int, kind: String, label: String)] = [
             (1, p.cropStart, "crop", "Crop start"), (2, p.cropEnd, "crop", "Crop end"),
@@ -281,6 +276,34 @@ public final class SampleLoopTools: QmlUncreatable {
             markers.append((4, p.loopEnd, "loop", "Loop end"))
         }
         wave.setMarkers(markers)
+    }
+
+    /// Installs the Sample Studio marker adapter without coupling the shared model to a presenter.
+    @QtIgnored
+    public func bindWaveform(_ wave: MarkerWaveformModel) {
+        wave.onMarkerPressed = { [weak presenter] _ in presenter?.beginMarkerGesture() }
+        wave.onMarkerDragged = { [weak self, weak wave] (id: Int, frame: Int) in
+            guard let self, let wave else { return }
+            self.dragMarker(id: id, frame: frame)
+            self.publishMarkers(wave)
+        }
+        wave.onMarkerReleased = { [weak presenter] in presenter?.endMarkerGesture() }
+    }
+
+    private var lastPeakFit = 1.0
+    @QtIgnored
+    public func publishWaveform(_ wave: MarkerWaveformModel, sourceChanged: Bool) {
+        lastWaveformRenderRevision = presenter.renderRevision
+        if sourceChanged {
+            // Peak-fit like Split Studio; a normalize gain at or above the fit is preserved.
+            lastPeakFit = MarkerWaveformModel.peakFitGain(presenter.renderedSource.buffer)
+            wave.setSamples(
+                presenter.renderedSource.buffer, sampleRate: presenter.renderedSource.sampleRate,
+                gain: max(presenter.processed.normalizeGain, lastPeakFit))
+        } else {
+            wave.setGain(max(presenter.processed.normalizeGain, lastPeakFit))
+        }
+        publishMarkers(wave)
     }
 
     private func dragMarker(id: Int, frame: Int) {
@@ -301,54 +324,111 @@ public final class SampleLoopTools: QmlUncreatable {
         presenter.dragMarkers(cropStart: cropStart, cropEnd: cropEnd, loopStart: loopStart, loopEnd: loopEnd)
     }
 
-    private func analysisParams() -> SampleEditParams {
-        var p = presenter.params
-        p.loopOn = false
-        p.fadeIn = false
-        p.fadeOut = false
-        p.crossfadeOn = false
-        p.normalizeMode = .off
-        p.targetRate = presenter.source.sampleRate
-        return p
+    @concurrent
+    private static func runLoopJob(
+        _ job: LoopJob, source: ImportedSample, params: SampleEditParams, pitch: SampleDsp.PitchResult
+    ) async -> LoopResult? {
+        do {
+            var analysisParams = params
+            analysisParams.loopOn = false
+            analysisParams.fadeIn = false
+            analysisParams.fadeOut = false
+            analysisParams.crossfadeOn = false
+            analysisParams.normalizeMode = .off
+            analysisParams.targetRate = source.sampleRate
+            let analysis = try SampleRender.render(
+                source: source, params: analysisParams, checkpoint: { try Task.checkCancellation() })
+            let count = analysis.preview.count
+            let ratio = source.sampleRate > 0 ? analysis.outputRate / source.sampleRate : 1
+            let period = pitch.pitched && pitch.f0 > 0 ? analysis.outputRate / pitch.f0 : 0
+            switch job {
+            case .candidates:
+                guard count >= 256 else { return .candidates([]) }
+                let found = SampleDsp.suggestLoop(
+                    analysis.preview, rate: analysis.outputRate, period: period,
+                    regionA: Int((0.40 * Double(count)).rounded()), regionB: count - 1)
+                try Task.checkCancellation()
+                let mapped = found.compactMap { (candidate: SampleDsp.LoopCandidate) -> SampleDsp.LoopCandidate? in
+                    let start = params.cropStart + Int((Double(candidate.loopStart) / ratio).rounded())
+                    let end = params.cropStart + Int((Double(candidate.loopEnd) / ratio).rounded())
+                    guard start >= params.cropStart, end < params.cropEnd, end > start else { return nil }
+                    var result = candidate
+                    result.loopStart = start
+                    result.loopEnd = end
+                    return result
+                }
+                return .candidates(mapped)
+            case .refine:
+                guard count >= 32 else { return .refined(nil) }
+                var start = min(max(0, Int((Double(params.loopStart - params.cropStart) * ratio).rounded())), count - 2)
+                var end = min(
+                    max(start + 1, Int((Double(params.loopEnd - params.cropStart) * ratio).rounded())), count - 1)
+                SampleDsp.refineLoop(analysis.preview, period: period, loopStart: &start, loopEnd: &end)
+                var refinedParams = params
+                refinedParams.loopStart = params.cropStart + Int((Double(start) / ratio).rounded())
+                refinedParams.loopEnd = params.cropStart + Int((Double(end) / ratio).rounded())
+                guard refinedParams.loopStart < refinedParams.loopEnd, refinedParams.loopEnd < params.cropEnd else {
+                    return .refined(nil)
+                }
+                let before = try SampleRender.render(
+                    source: source, params: params, checkpoint: { try Task.checkCancellation() }
+                ).seam
+                let refined = try SampleRender.render(
+                    source: source, params: refinedParams, checkpoint: { try Task.checkCancellation() }
+                ).seam
+                guard !before.nccValid || (refined.nccValid && refined.ncc >= before.ncc - 0.02) else {
+                    return .refined(nil)
+                }
+                return .refined(refinedParams)
+            }
+        } catch {
+            return nil
+        }
     }
 
-    private func ensureCandidates() -> Bool {
-        let p = presenter.params
-        if candidatesValid && candidateCropStart == p.cropStart && candidateCropEnd == p.cropEnd
-            && candidateRate == p.targetRate
-        {
-            return !candidates.isEmpty
+    private func startLoopJob(_ job: LoopJob, command: PitchCommand? = nil) {
+        loopGeneration += 1
+        loopWorker?.cancel()
+        let generation = loopGeneration
+        let revision = presenter.sourceRevision
+        let params = presenter.params
+        let source = presenter.source
+        let pitch = pitch
+        let worker = Task(priority: .userInitiated) {
+            await Self.runLoopJob(job, source: source, params: params, pitch: pitch)
         }
-        guard analysisState == .ready else { return false }
-        candidatesValid = true
-        candidateCropStart = p.cropStart
-        candidateCropEnd = p.cropEnd
-        candidateRate = p.targetRate
-        candidates.removeAll()
-        candidateIndex = -1
-        let analysis = SampleRender.render(source: presenter.source, params: analysisParams())
-        let count = analysis.preview.count
-        guard count >= 256 else {
-            canTryAnother = false
-            return false
-        }
-        let ratio = presenter.source.sampleRate > 0 ? analysis.outputRate / presenter.source.sampleRate : 1
-        let period = pitch.pitched && pitch.f0 > 0 ? analysis.outputRate / pitch.f0 : 0
-        let found = SampleDsp.suggestLoop(
-            analysis.preview, rate: analysis.outputRate, period: period,
-            regionA: Int((0.40 * Double(count)).rounded()), regionB: count - 1)
-        for candidate in found {
-            let start = p.cropStart + Int((Double(candidate.loopStart) / ratio).rounded())
-            let end = p.cropStart + Int((Double(candidate.loopEnd) / ratio).rounded())
-            if start >= p.cropStart && end < p.cropEnd && end > start {
-                var mapped = candidate
-                mapped.loopStart = start
-                mapped.loopEnd = end
-                candidates.append(mapped)
+        loopWorker = worker
+        loopCompletion = Task { [weak self] in
+            let result = await worker.value
+            guard let self, self.loopGeneration == generation else { return }
+            self.loopWorker = nil
+            self.loopCompletion = nil
+            guard self.analysisState != .cancelled, self.presenter.sourceRevision == revision,
+                self.presenter.params == params, let result
+            else { return }
+            switch result {
+            case .candidates(let candidates):
+                self.candidates = candidates
+                self.candidatesValid = true
+                self.candidateCropStart = params.cropStart
+                self.candidateCropEnd = params.cropEnd
+                self.candidateRate = params.targetRate
+                self.candidateIndex = -1
+                self.canTryAnother = !candidates.isEmpty
+                switch command {
+                case .setLoopEnabled(let on): self.setLoopEnabled(on: on)
+                case .tryAnotherLoop: self.tryAnotherLoop()
+                case .applyDetectedPitch, .refineLoop, .none: break
+                }
+            case .refined(let params):
+                if let params { self.presenter.commitParams(params, mergeKey: -1) }
             }
         }
-        canTryAnother = !candidates.isEmpty
-        return !candidates.isEmpty
+    }
+
+    private func candidatesAreCurrent(_ params: SampleEditParams) -> Bool {
+        candidatesValid && candidateCropStart == params.cropStart && candidateCropEnd == params.cropEnd
+            && candidateRate == params.targetRate
     }
 
     private func applyCandidate(_ index: Int) {
@@ -364,13 +444,23 @@ public final class SampleLoopTools: QmlUncreatable {
 
     public func setLoopEnabled(on: Bool) {
         var p = presenter.params
+        if !on && !p.loopOn && loopWorker != nil {
+            loopGeneration += 1
+            loopWorker?.cancel()
+            loopWorker = nil
+            loopCompletion = nil
+        }
         if (on && p.loopStart == p.loopEnd) || pendingCommands != nil {
             if deferUntilPitchReady(.setLoopEnabled(on)) { return }
         }
         guard p.loopOn != on else { return }
         if on && p.loopStart == p.loopEnd {
+            guard candidatesAreCurrent(p) else {
+                startLoopJob(.candidates, command: .setLoopEnabled(true))
+                return
+            }
             p.loopOn = true
-            if ensureCandidates(), let best = candidates.first {
+            if let best = candidates.first {
                 p.loopStart = best.loopStart
                 p.loopEnd = best.loopEnd
                 p.crossfadeOn = false
@@ -398,7 +488,11 @@ public final class SampleLoopTools: QmlUncreatable {
 
     public func tryAnotherLoop() {
         if deferUntilPitchReady(.tryAnotherLoop) { return }
-        guard ensureCandidates() else { return }
+        guard candidatesAreCurrent(presenter.params) else {
+            startLoopJob(.candidates, command: .tryAnotherLoop)
+            return
+        }
+        guard !candidates.isEmpty else { return }
         applyCandidate(candidateIndex < 0 ? 0 : (candidateIndex + 1) % candidates.count)
     }
 
@@ -408,22 +502,7 @@ public final class SampleLoopTools: QmlUncreatable {
             if deferUntilPitchReady(.refineLoop) { return }
         }
         guard current.loopOn else { return }
-        let analysis = SampleRender.render(source: presenter.source, params: analysisParams())
-        let count = analysis.preview.count
-        guard count >= 32 else { return }
-        let ratio = presenter.source.sampleRate > 0 ? analysis.outputRate / presenter.source.sampleRate : 1
-        var start = min(max(0, Int((Double(current.loopStart - current.cropStart) * ratio).rounded())), count - 2)
-        var end = min(max(start + 1, Int((Double(current.loopEnd - current.cropStart) * ratio).rounded())), count - 1)
-        let period = pitch.pitched && pitch.f0 > 0 ? analysis.outputRate / pitch.f0 : 0
-        SampleDsp.refineLoop(analysis.preview, period: period, loopStart: &start, loopEnd: &end)
-        var p = current
-        p.loopStart = current.cropStart + Int((Double(start) / ratio).rounded())
-        p.loopEnd = current.cropStart + Int((Double(end) / ratio).rounded())
-        guard p.loopStart < p.loopEnd, p.loopEnd < p.cropEnd else { return }
-        let before = presenter.processed.seam
-        let refined = SampleRender.render(source: presenter.source, params: p).seam
-        guard !before.nccValid || (refined.nccValid && refined.ncc >= before.ncc - 0.02) else { return }
-        presenter.commitParams(p, mergeKey: -1)
+        startLoopJob(.refine)
     }
 
     public func setCrossfade(on: Bool) {

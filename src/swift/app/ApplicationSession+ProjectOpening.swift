@@ -194,6 +194,8 @@ extension ApplicationSession {
         voiceList.releaseVoicegroup()
         setEditingVoicegroup(enabled: false)
         await releaseTabs()
+        let unload = audio?.unload()
+        await unload?.value
         await catalogService?.close()
         pd_startup_trace_mark("project-release-end")
         guard !isDisposed, !Task.isCancelled else {

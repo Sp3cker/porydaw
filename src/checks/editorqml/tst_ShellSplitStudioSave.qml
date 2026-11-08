@@ -246,6 +246,7 @@ ShellLaneSupport {
         studio.loadSource(rootPath + "/samplesources/hires_tone.wav")
         const editor = studio.presenter()
         verify(editor !== null, "the empty kit publishes its editor")
+        verify(waitForNative(function() { return editor.sliceCount > 0 }, 10000), "the source finishes loading")
         compare(editor.voicegroupName, "hires_tone_kit", "the voicegroup name defaults to the file stem")
         editor.toggleSnap()
         editor.insertMarker(12000)

@@ -39,17 +39,31 @@ public final class KitStudioWorkflow: QmlUncreatable {
     public var savedKeyboardHeight: Double = 0
     @QtIgnored public let closeGuard = KitStudioCloseGuard()
     private weak var session: ApplicationSession?
+    private let beginSampleAudition: (@escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease?
     private var window: KitStudioWindow?
     private let libraryHost: StudioLibraryHost
     private var loadTask: Task<Void, Never>?
+    private var sourceLoadTask: Task<Void, Never>?
     private var closeWaitTask: Task<Void, Never>?
     private var orphanCleanupTask: Task<Void, Never>?
     private var orphanCleanupCompletion: (() -> Void)?
     private let previewPreparation: SampleSourcePreparation
-    private var kitAuditionRequest: UInt64?
-    private weak var kitAuditionAudio: NativeAudio?
+    private var kitAudition: SampleAuditionLease?
 
-    @QtIgnored public init(session: ApplicationSession) {
+    @QtIgnored public convenience init(session: ApplicationSession) {
+        self.init(
+            session: session,
+            beginSampleAudition: {
+                [weak session] (onEvent: @escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease? in
+                session?.audio?.beginSampleAudition(onEvent: onEvent)
+            })
+    }
+
+    @QtIgnored init(
+        session: ApplicationSession,
+        beginSampleAudition: @escaping (@escaping @MainActor (SampleAuditionEvent) -> Void) -> SampleAuditionLease?
+    ) {
+        self.beginSampleAudition = beginSampleAudition
         self.session = session
         let preparation = SampleSourcePreparation()
         previewPreparation = preparation
@@ -136,20 +150,28 @@ public final class KitStudioWorkflow: QmlUncreatable {
             presenter = KitStudioPresenter(waveform: waveform, effects: effects)
         }
         let next = KitStudioWindow(
-            presenter: presenter, footprint: footprint, pcm: PcmAuditionPlayer(lane: libraryHost.lane()))
-        next.pcm.onPlayhead = { [weak self, weak next] (frame: Int?) in
-            guard let self, let next, let id = next.playingSlice else { return }
-            let sourceFrame = frame.flatMap { (_: Int) -> Int? in
-                next.presenter.sourceFrame(sliceId: id, renderedPosition: next.pcm.playheadPosition)
-            }
-            next.presenter.waveform?.setPlayhead(frame: sourceFrame)
-            self.auditionPlaying = next.pcm.playing
+            presenter: presenter, footprint: footprint,
+            pcm: PcmAuditionPlayer(
+                beginSampleAudition: beginSampleAudition))
+        next.pcm.onPlayhead = { [weak self, weak next] (frame: Int) in
+            guard let self, let next, self.window === next, let id = next.playingSlice else { return }
+            next.presenter.waveform?.setPlayhead(
+                frame: next.presenter.sourceFrame(sliceId: id, renderedPosition: Double(frame)))
         }
-        next.pcm.onTerminated = { [weak self, weak next] in
+        next.pcm.onLifecycle = { [weak self, weak next] (lifecycle: PcmAuditionPlayer.Lifecycle) in
             guard let self, let next, self.window === next else { return }
-            next.playingSlice = nil
-            next.presenter.waveform?.setPlayhead(frame: nil)
-            self.auditionPlaying = false
+            switch lifecycle {
+            case .starting, .repeatGap:
+                next.presenter.waveform?.setPlayhead(frame: nil)
+                self.auditionPlaying = true
+            case .sounding:
+                self.auditionPlaying = true
+            case .ended:
+                next.presenter.cancelAuditionRender()
+                next.playingSlice = nil
+                next.presenter.waveform?.setPlayhead(frame: nil)
+                self.auditionPlaying = false
+            }
         }
         replaceWindow(next)
         if loaded == nil { presenter.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: "new_kit")) }
@@ -176,15 +198,28 @@ public final class KitStudioWorkflow: QmlUncreatable {
             guard let self, let footprint else { return "Split Studio is closed." }
             return self.validateVoicegroupName(name, footprint: footprint)
         }
-        effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
-            guard let self, let audio = self.session?.audio else { return false }
+        effects.beginKeyAudition = { [weak self] in
+            guard let self else { return }
             self.stopAudition()
-            let request = audio.beginSampleRequest()
-            self.kitAuditionRequest = request
-            self.kitAuditionAudio = audio
-            return audio.auditionKit(request: request, tone, key: key)
+            self.kitAudition = self.beginSampleAudition(
+                { [weak self] (event: SampleAuditionEvent) in
+                    switch event {
+                    case .finished: self?.kitAudition?.stop()
+                    case .ended: self?.kitAudition = nil
+                    case .started: break
+                    }
+                })
+        }
+        effects.endKeyAudition = { [weak self] in self?.kitAudition?.stop() }
+        effects.publishKitTone = { [weak self] (tone: KitAuditionTone, key: UInt8) -> Bool in
+            guard let lease = self?.kitAudition, lease.isCurrent else { return false }
+            lease.play { (id: SampleAuditionNoteID) -> SampleAuditionNote in
+                SampleAuditionNote(id: id, source: .kit(tone), key: key, adsr: AudioADSR(), toneKey: 60)
+            }
+            return true
         }
         effects.playPcm = { [weak self] (id: Int) in self?.playSlice(id: id) }
+        effects.endSliceAudition = { [weak self] in self?.stopAudition() }
         return effects
     }
 
@@ -254,36 +289,55 @@ public final class KitStudioWorkflow: QmlUncreatable {
     private var editableWindow: KitStudioWindow? { windowOpen && !saving ? window : nil }
 
     public func loadSource(path: String) {
-        guard let state = editableWindow?.presenter, let url = libraryHost.sourceURL(path) else { return }
+        guard let window = editableWindow, let service = session?.catalogService,
+            let url = libraryHost.sourceURL(path)
+        else { return }
         stopAudition()
-        do { try addSource(url, to: state, autoPlaceFirstSlice: true) } catch { showAlert(error) }
+        addSource(url, to: window, service: service, dropKey: nil)
     }
 
     public func dropLibrarySample(path: String, onKey: Int) {
-        guard let state = editableWindow?.presenter, let url = libraryHost.sourceURL(path) else { return }
+        guard let window = editableWindow, let service = session?.catalogService,
+            let url = libraryHost.sourceURL(path)
+        else { return }
         stopAudition()
-        do {
-            try addSource(url, to: state, autoPlaceFirstSlice: false)
-            if let id = state.session.sources.last?.id {
-                state.session.createFirstSlice(source: id)
-            }
-            let newest = state.newestSliceId()
-            if newest != 0 {
-                state.dropSample(name: state.sliceName(id: newest), onKey: onKey)
-            }
-        } catch { showAlert(error) }
+        addSource(url, to: window, service: service, dropKey: onKey)
     }
 
-    /// Decodes and adds one file; the first file of an empty kit suggests the voicegroup name.
-    private func addSource(_ url: URL, to state: KitStudioPresenter, autoPlaceFirstSlice: Bool) throws {
-        let wasEmpty = state.session.sources.isEmpty
-        let sample = try SampleImport.decodeFile(path: url.path)
-        state.addSource(sample, autoPlaceFirstSlice: autoPlaceFirstSlice)
-        if wasEmpty, !state.voicegroupNameEdited {
-            let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
-            state.applySuggestedVoicegroupName(nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
+    @concurrent
+    private static func decodeSource(_ path: String) async throws -> ImportedSample {
+        try SampleImport.decodeFile(path: path)
+    }
+
+    /// Source requests append in order; the first file suggests the voicegroup name.
+    private func addSource(_ url: URL, to window: KitStudioWindow, service: ProjectService, dropKey: Int?) {
+        let previous = sourceLoadTask
+        sourceLoadTask = Task { [weak self, weak window] in
+            await previous?.value
+            do {
+                let sample = try await Self.decodeSource(url.path)
+                guard let self, let window, self.editableWindow === window,
+                    self.isCurrent(window, service: service)
+                else { return }
+                let state = window.presenter
+                let wasEmpty = state.session.sources.isEmpty
+                state.addSource(sample, autoPlaceFirstSlice: dropKey == nil)
+                if wasEmpty, !state.voicegroupNameEdited {
+                    let stem = SampleNames.sanitize(url.deletingPathExtension().lastPathComponent)
+                    state.applySuggestedVoicegroupName(
+                        self.nextFreeVoicegroupName(stem: stem.isEmpty ? "new_kit" : stem + "_kit"))
+                }
+                self.session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
+                if let dropKey, let id = state.session.sources.last?.id {
+                    state.createFirstSliceAndDrop(source: id, onKey: dropKey)
+                }
+            } catch {
+                guard let self, let window, self.editableWindow === window,
+                    self.isCurrent(window, service: service)
+                else { return }
+                self.showAlert(error)
+            }
         }
-        session?.preferences.setString(key: "lastSampleDir", value: url.deletingLastPathComponent().path)
     }
 
     /// Whether every entry of a dragged `text/uri-list` names an audio file drop targets may accept.
@@ -342,28 +396,46 @@ public final class KitStudioWorkflow: QmlUncreatable {
         window?.presenter.removeSlice(id: id)
     }
     private func playSlice(id: Int) {
-        guard let window, let rendered = window.presenter.renderedSlice(id: id) else { return }
+        guard let window else { return }
         stopAudition()
-        window.playingSlice = id
-        let voice = window.presenter.sliceVoice(id: id)
-        window.pcm.play(
-            owner: self, rendered: rendered, looped: rendered.looped, key: voice?.note ?? 60,
-            adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
-        auditionPlaying = window.pcm.playing
+        guard let lease = window.pcm.claim() else { return }
+        var latestNote: SampleAuditionNote?
+        window.presenter.renderSlice(id: id) { [weak self, weak window] (rendered: ProcessedSample) in
+            guard let self, let window, self.window === window, lease.isCurrent else { return }
+            guard !rendered.s8.isEmpty else {
+                lease.stop()
+                return
+            }
+            let voice = window.presenter.sliceVoice(id: id)
+            window.playingSlice = id
+            let note = SampleAuditionNote(
+                id: .unassigned,
+                source: .pcm(
+                    samples: rendered.s8, frequency: rendered.freq,
+                    loopStart: rendered.loopStart, looped: rendered.looped),
+                key: voice?.note ?? 60, adsr: voice?.adsr ?? AudioADSR(), toneKey: 60)
+            latestNote = note
+            if window.pcm.playing {
+                window.pcm.republish(note)
+            } else {
+                window.pcm.play(
+                    note, lease: lease,
+                    repeatPolicy: .repeatFresh({ () -> SampleAuditionNote? in
+                        latestNote
+                    }))
+            }
+        }
     }
     public func tickAudition() {
         window?.pcm.tick()
         auditionPlaying = window?.pcm.playing ?? false
     }
+
     public func stopAudition() {
+        window?.presenter.cancelAuditionRender()
         previewPreparation.cancel()
-        window?.pcm.stop(owner: self)
-        if let request = kitAuditionRequest { kitAuditionAudio?.auditionSampleOff(request: request) }
-        kitAuditionRequest = nil
-        kitAuditionAudio = nil
-        window?.presenter.waveform?.setPlayhead(frame: nil)
-        window?.playingSlice = nil
-        auditionPlaying = false
+        window?.pcm.stop()
+        kitAudition?.stop()
         libraryHost.clearPreview()
     }
 
@@ -397,59 +469,73 @@ public final class KitStudioWorkflow: QmlUncreatable {
         let root = session.projectRoot
         let name = state.voicegroupName
         let edit = footprint.edit?.name == name ? footprint.edit : nil
-        var rendered: [KitStudioFootprint.SampleFile] = []
+        let sources = state.session.sources
+        var entries: [(name: String, key: KitStudioFootprint.RenderKey, written: KitStudioFootprint.SampleFile?)] = []
+        var inputs: [(source: KitSourceSession.Source, slice: KitSourceSession.Slice)] = []
         var sliceSymbols: [String: String] = [:]
-        for source in state.session.sources {
-            for (index, slice) in source.slices.enumerated() {
-                // An untouched project sample is referenced as-is; only new or edited audio is written.
+        for source in sources {
+            for slice in source.slices {
                 if let symbol = source.committedSymbol(of: slice) {
                     sliceSymbols[slice.name] = symbol
                     continue
                 }
                 sliceSymbols[slice.name] = "DirectSoundWaveData_" + slice.name
                 let key = KitStudioFootprint.RenderKey(source: source.id, rate: source.targetRate, slice: slice)
-                if let written = footprint.written[slice.name], written.key == key {
-                    rendered.append(written)
-                } else {
-                    let wav = SampleWavWriter.bytes(for: state.session.renderSlice(source: source.id, slice: index))
-                    rendered.append(KitStudioFootprint.SampleFile(name: slice.name, key: key, wav: wav))
-                }
+                let previous = footprint.written[slice.name]
+                let unchanged = previous?.key == key ? previous : nil
+                entries.append((slice.name, key, unchanged))
+                if unchanged == nil { inputs.append((source, slice)) }
             }
         }
-        // A slice name matching a project sample this window did not write is
-        // never written; the rename validator rejects these, this is the backstop.
-        let symbols = Set(VoicegroupSource.directSoundSymbols(root))
-        for sample in rendered where footprint.written[sample.name] == nil {
-            let symbol = "DirectSoundWaveData_" + sample.name
-            if symbols.contains(symbol) || Self.sampleFileExists(projectRoot: root, name: sample.name) {
-                showAlert(
-                    ProjectServiceError.operationFailed(
-                        "Split Studio: \(sample.name) already exists in this project."))
-                closeGuard.saveSettled(success: false)
-                return
-            }
-        }
-        let changed = rendered.filter { (sample: KitStudioFootprint.SampleFile) -> Bool in
-            footprint.written[sample.name].map { (written: KitStudioFootprint.SampleFile) -> Bool in
-                written.wav != sample.wav
-            } ?? false
-        }
-        if !changed.isEmpty, !overwriteConfirmed {
-            let names = changed.map(\.name).sorted()
-            setSave(
-                .confirmingOverwrite(
-                    prompt: "Overwrite \(names.count) saved samples?\n" + names.joined(separator: "\n")),
-                on: window)
-            return
-        }
+        let names = Set(entries.map(\.name))
         let task = Task { [weak self] in
             guard let self else { return }
             var saveSucceeded = false
+            var settleSave = true
             defer {
-                if self.window === window {
+                if settleSave, self.window === window {
                     self.setSave(.idle, on: window)
                     self.closeGuard.saveSettled(success: saveSucceeded)
                 }
+            }
+            let wavs = await KitSourceSession.renderWavs(inputs)
+            guard self.isCurrent(window, service: service), wavs.count == inputs.count else { return }
+            var rendered: [KitStudioFootprint.SampleFile] = []
+            rendered.reserveCapacity(entries.count)
+            var wavIndex = 0
+            for entry in entries {
+                if let written = entry.written {
+                    rendered.append(written)
+                } else {
+                    rendered.append(
+                        KitStudioFootprint.SampleFile(name: entry.name, key: entry.key, wav: wavs[wavIndex]))
+                    wavIndex += 1
+                }
+            }
+            // Project samples not written by this window must never be overwritten.
+            let symbols = Set(VoicegroupSource.directSoundSymbols(root))
+            for sample in rendered where footprint.written[sample.name] == nil {
+                let symbol = "DirectSoundWaveData_" + sample.name
+                if symbols.contains(symbol) || Self.sampleFileExists(projectRoot: root, name: sample.name) {
+                    self.showAlert(
+                        ProjectServiceError.operationFailed(
+                            "Split Studio: \(sample.name) already exists in this project."))
+                    return
+                }
+            }
+            let changed = rendered.filter { (sample: KitStudioFootprint.SampleFile) -> Bool in
+                footprint.written[sample.name].map { (written: KitStudioFootprint.SampleFile) -> Bool in
+                    written.wav != sample.wav
+                } ?? false
+            }
+            if !changed.isEmpty, !overwriteConfirmed {
+                let names = changed.map(\.name).sorted()
+                settleSave = false
+                self.setSave(
+                    .confirmingOverwrite(
+                        prompt: "Overwrite \(names.count) saved samples?\n" + names.joined(separator: "\n")),
+                    on: window)
+                return
             }
             do {
                 guard self.isCurrent(window, service: service) else { return }
@@ -524,7 +610,7 @@ public final class KitStudioWorkflow: QmlUncreatable {
                 self.showAlert(error)
             }
         }
-        setSave(.writing(task, names: Set(rendered.map(\.name))), on: window)
+        setSave(.writing(task, names: names), on: window)
     }
 
     private func setSave(_ save: KitStudioWindow.Save, on window: KitStudioWindow) {

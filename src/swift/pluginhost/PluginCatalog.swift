@@ -357,6 +357,11 @@ public final class PluginCatalog {
         self.init(cacheDirectory: cacheDirectory, scannerURL: scannerURL, standardRoots: Self.standardRoots())
     }
 
+    /// Uses the installed helper without probing modules during construction.
+    public convenience init(cacheDirectory: URL) {
+        self.init(cacheDirectory: cacheDirectory, scannerURL: HelperProcess.executableURL)
+    }
+
     internal init(
         cacheDirectory: URL, scannerURL: URL, standardRoots: [String], timeout: Duration = .seconds(10),
         childLaunched: ((String, Int32) -> Void)? = nil, childTerminated: ((String, Int32) -> Void)? = nil

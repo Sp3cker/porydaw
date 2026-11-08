@@ -1,6 +1,8 @@
+import Foundation
+@testable import PorydawApp
 import PorydawAppAudio
 import PorydawPlayback
-import PorydawKitStudio
+@testable import PorydawKitStudio
 import PorydawSample
 import PorydawVoicegroup
 
@@ -17,6 +19,12 @@ public func runKitDraftSuite(_ report: CheckReport) {
     checkKitWholeFileAdd(report)
     checkKitPresenterVoicegroupName(report)
     checkKitPresenterAudition(report)
+    checkKitAsyncAudition(report)
+    checkKitSharedMetadataAndKeyRender(report)
+    checkKitStaleKeyAudition(report)
+    checkKitWorkflowRealAudition(report)
+    checkKitWorkflowAuditionLeases(report)
+    checkKitWorkflowSliceLockstep(report)
 }
 
 @MainActor
@@ -534,6 +542,422 @@ private func checkKitPresenterAudition(_ report: CheckReport) {
     r.expect(kit.sliceVoice(id: second) == nil, message: "unmapped slice audition has no voice")
 }
 
+private func auditionSample(name: String) -> ImportedSample {
+    ImportedSample(
+        buffer: (0..<512).map { (frame: Int) -> Float in Float(frame % 31 - 15) / 16 },
+        sampleRate: 13379, suggestedName: name)
+}
+
+@MainActor
+private func checkKitSharedMetadataAndKeyRender(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::sharedMetadataKeyRender")
+    let kit = KitStudioPresenter()
+    let counter = KitSourceSession.RenderCounter()
+    kit.session.renderCounter = counter
+    kit.addSource(auditionSample(name: "shared"), autoPlaceFirstSlice: true)
+    var keys: [UInt8] = []
+    var pcm: [Int8] = []
+    kit.effects.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+        keys.append(key)
+        if case .sample(let samples, _, _, _, _, _, _, _) = tone.children[Int(key)] { pcm = samples }
+        return true
+    }
+    kit.playKey(key: 36)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (keys.isEmpty || !kit.metaText.hasPrefix("1 slice ·")) && Date() < deadline {
+                await Task.yield()
+            }
+            if keys.isEmpty || !kit.metaText.hasPrefix("1 slice ·") { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "shared metadata and key render did not land: \(error)")
+        return
+    }
+    let source = kit.session.sources[0]
+    r.expectEqual(expected: [36], actual: keys, what: "key audition publishes")
+    r.expectEqual(
+        expected: canonicalKitSlice(source: source, slice: source.slices[0]).s8,
+        actual: pcm, what: "key uses the canonical shared render")
+    r.expectEqual(
+        expected: 1, actual: counter.value.load(ordering: .relaxed), what: "metadata and key render the slice once")
+}
+
+@MainActor
+private func checkKitAsyncAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::asyncAudition")
+    let kit = KitStudioPresenter()
+    kit.addSource(auditionSample(name: "async"), autoPlaceFirstSlice: true)
+    kit.toggleSnap()
+    kit.insertMarker(frame: 256)
+    let first = kit.sliceId(row: 0)
+    var keys: [UInt8] = []
+    var keyPCM: [Int8] = []
+    kit.effects.publishKitTone = { (tone: KitAuditionTone, key: UInt8) -> Bool in
+        keys.append(key)
+        if case .sample(let pcm, _, _, _, _, _, _, _) = tone.children[Int(key)] { keyPCM = pcm }
+        return true
+    }
+    kit.playKey(key: 36)
+    kit.playKey(key: 37)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while keys.isEmpty && Date() < deadline { await Task.yield() }
+            if keys.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "latest key render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: [37], actual: keys, what: "older key cannot publish over a newer key")
+    kit.playKey(key: 36)
+
+    var renders: [ProcessedSample] = []
+    kit.renderSlice(id: first) { (sample: ProcessedSample) in renders.append(sample) }
+    let source = kit.session.sources[0]
+    let expected = canonicalKitSlice(source: source, slice: source.slices[0])
+    r.expectEqual(expected: expected.s8, actual: keyPCM, what: "key audition preserves canonical rendered PCM")
+    r.expectEqual(expected: [expected], actual: renders, what: "cached audition bytes match the canonical render")
+    r.expectEqual(
+        expected: 128, actual: kit.sourceFrame(sliceId: first, renderedPosition: 128),
+        what: "playhead uses the sounding slice render's source mapping")
+    kit.moveMarker(id: kit.markerId(row: 0), toFrame: 192)
+    r.expectEqual(
+        expected: 256, actual: kit.sourceFrame(sliceId: first, renderedPosition: 300),
+        what: "editing a boundary does not change the mapping of the render still sounding")
+    r.expectEqual(expected: 1, actual: renders.count, what: "old mapping remains until the replacement lands")
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while renders.count < 2 && Date() < deadline { await Task.yield() }
+            if renders.count < 2 { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "edited slice render did not land: \(error)")
+        return
+    }
+    let editedSource = kit.session.sources[0]
+    r.expectEqual(
+        expected: canonicalKitSlice(source: editedSource, slice: editedSource.slices[0]), actual: renders.last,
+        what: "boundary edit republishes the newly rendered bytes")
+    r.expectEqual(
+        expected: 192, actual: kit.sourceFrame(sliceId: first, renderedPosition: 300),
+        what: "playhead mapping switches with the new render")
+
+    kit.session.setSliceFades(source: source.id, slice: 0, fadeIn: true, fadeOut: false)
+    var stoppedRenderPublished = false
+    kit.renderSlice(id: first) { (_: ProcessedSample) in stoppedRenderPublished = true }
+    kit.cancelAuditionRender()
+    kit.playKey(key: 37)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while keys.count < 3 && Date() < deadline { await Task.yield() }
+            if keys.count < 3 { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "post-stop key render did not land: \(error)")
+        return
+    }
+    r.expect(!stoppedRenderPublished, message: "stop invalidates an in-flight slice render")
+}
+
+@MainActor
+private func checkKitStaleKeyAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::staleKeyAudition")
+    for edit in 0..<5 {
+        let kit = KitStudioPresenter()
+        kit.addSource(auditionSample(name: "stale"), autoPlaceFirstSlice: true)
+        kit.selectSlice(id: kit.sliceId(row: 0))
+        var published = false
+        var ended = false
+        kit.effects.publishKitTone = { (_: KitAuditionTone, _: UInt8) -> Bool in
+            published = true
+            return true
+        }
+        kit.effects.endKeyAudition = { ended = true }
+        kit.playKey(key: 36)
+        switch edit {
+        case 0: kit.setZoneRootKey(key: 72)
+        case 1: kit.setZonePan(pan: 25)
+        case 2: kit.setZoneAdsr(a: 1, d: 2, s: 3, r: 4)
+        case 3: kit.deleteZone(row: 0)
+        default: kit.setMode(index: 1)
+        }
+        do {
+            try runBlocking {
+                let deadline = Date().addingTimeInterval(20)
+                while !ended && !published && Date() < deadline { await Task.yield() }
+                if !ended && !published { throw RunBlockingError.timeout }
+            }
+        } catch {
+            r.expect(false, message: "stale key render did not settle for edit \(edit): \(error)")
+            continue
+        }
+        r.expect(ended && !published, message: "zone or mode edit \(edit) rejects the captured key tone")
+    }
+}
+
+@MainActor
+private func checkKitWorkflowRealAudition(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::auditionLeases")
+    let app = ApplicationSession()
+    app.projectOpen = true
+    app.projectRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+    do {
+        let audio = try runBlocking { try await NativeAudio() }
+        app.audioReadiness = .ready(audio)
+        let studio = KitStudioWorkflow(session: app)
+        defer {
+            studio.dispose()
+            do {
+                try runBlocking { await audio.shutdown() }
+            } catch {
+                r.expect(false, message: "audio cleanup failed: \(error)")
+            }
+        }
+        studio.requestOpen()
+        guard let editor = studio.presenter() else {
+            r.expect(false, message: "Split Studio opens")
+            return
+        }
+        editor.addSource(auditionSample(name: "lease"), autoPlaceFirstSlice: true)
+        var displaced = false
+        let previous = audio.beginSampleAudition { (event: SampleAuditionEvent) in
+            if case .ended(.displaced) = event { displaced = true }
+        }
+        editor.playSelectedSlice()
+        r.expect(
+            displaced && !previous.isCurrent && !studio.auditionPlaying, message: "slice claims audio before rendering")
+        let successor = audio.beginSampleAudition { (_: SampleAuditionEvent) in }
+        studio.stopAudition()
+        r.expect(successor.isCurrent, message: "stopping the displaced studio leaves its successor intact")
+        successor.stop()
+    } catch {
+        r.expect(false, message: "real audition fixture failed: \(error)")
+    }
+}
+
+@MainActor
+private func checkKitWorkflowAuditionLeases(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::auditionLeases")
+    let app = ApplicationSession()
+    app.projectOpen = true
+    app.projectRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+    let output = SampleAuditionCheckOutput()
+    let studio = KitStudioWorkflow(session: app, beginSampleAudition: output.begin)
+    defer { studio.dispose() }
+    studio.requestOpen()
+    guard let editor = studio.presenter(), let waveform = editor.waveform else {
+        r.expect(false, message: "Split Studio opens with a waveform")
+        return
+    }
+    editor.addSource(auditionSample(name: "lease"), autoPlaceFirstSlice: true)
+    waveform.setViewport(width: 320, height: 100)
+    let slice = editor.sliceId(row: 0)
+    editor.playSelectedSlice()
+    guard let pending = output.current else {
+        r.expect(false, message: "slice claims the output before its render lands")
+        return
+    }
+    let successor = output.begin { (_: SampleAuditionEvent) in }
+    r.expect(
+        editor.sourceFrame(sliceId: slice, renderedPosition: 0) == nil,
+        message: "displacement clears the pending render mapping")
+    r.expect(
+        !pending.isCurrent && successor?.isCurrent == true && !studio.auditionPlaying
+            && output.lastNote().map { (_: SampleAuditionNote) -> Bool in true } != true,
+        message: "displaced pending render cannot publish a note")
+    editor.playSelectedSlice()
+    var started: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while started == nil && Date() < deadline {
+                started = output.lastNote()
+                await Task.yield()
+            }
+            if started == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "slice render did not land: \(error)")
+        return
+    }
+    guard let first = started else {
+        r.expect(false, message: "slice starts after claiming a new lease")
+        return
+    }
+    output.start(first, frame: 32)
+    let beforeFrame = waveform.displayRevision
+    studio.tickAudition()
+    guard let mappedFrame = editor.sourceFrame(sliceId: slice, renderedPosition: 32) else {
+        r.expect(false, message: "sounding slice has a source-frame mapping")
+        return
+    }
+    let displayedFrame = waveform.displayRevision
+    waveform.setPlayhead(frame: mappedFrame)
+    r.expect(
+        studio.auditionPlaying && displayedFrame > beforeFrame && waveform.displayRevision == displayedFrame,
+        message: "slice playhead follows the engine frame mapped through its sounding render")
+    output.finish(first)
+    let gapRevision = waveform.displayRevision
+    waveform.setPlayhead(frame: nil)
+    r.expect(
+        studio.auditionPlaying && waveform.displayRevision == gapRevision,
+        message: "the repeat gap clears the playhead while retaining playback intent")
+    var repeated: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(5)
+            while repeated == nil && Date() < deadline {
+                studio.tickAudition()
+                repeated = output.lastNote()
+                await Task.yield()
+            }
+            if repeated == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "slice repeat did not start: \(error)")
+        return
+    }
+    guard let repeated else { return }
+    output.start(repeated, frame: 64)
+    studio.tickAudition()
+    let repeatedFrame = waveform.displayRevision
+    waveform.setPlayhead(frame: editor.sourceFrame(sliceId: slice, renderedPosition: 64))
+    r.expect(waveform.displayRevision == repeatedFrame, message: "repeated slice follows the new engine frame")
+
+    editor.playKey(key: 36)
+    guard let tone = output.lastNote(), let toneLease = output.current else {
+        r.expect(false, message: "kit key claims and publishes its tone")
+        return
+    }
+    if case .kit = tone.source {
+        r.expect(tone.key == 36 && toneLease.isCurrent, message: "kit note uses the claimed lease")
+    } else {
+        r.expect(false, message: "kit key publishes a kit tone rather than a slice")
+    }
+    output.start(tone)
+    output.finish(tone)
+    r.expect(!toneLease.isCurrent, message: "natural kit-tone finish ends its lease")
+    editor.playKey(key: 36)
+    guard let displacedTone = output.current else {
+        r.expect(false, message: "second kit key claims a lease")
+        return
+    }
+    let later = output.begin { (_: SampleAuditionEvent) in }
+    studio.stopAudition()
+    r.expect(
+        !displacedTone.isCurrent && later?.isCurrent == true,
+        message: "displaced kit-tone teardown cannot stop its successor")
+}
+
+@MainActor
+private func checkKitWorkflowSliceLockstep(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::sliceRenderLockstep")
+    let app = ApplicationSession()
+    app.projectOpen = true
+    app.projectRoot = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
+    let output = SampleAuditionCheckOutput()
+    let studio = KitStudioWorkflow(session: app, beginSampleAudition: output.begin)
+    defer { studio.dispose() }
+    studio.requestOpen()
+    guard let editor = studio.presenter() else {
+        r.expect(false, message: "Split Studio opens")
+        return
+    }
+    editor.addSource(auditionSample(name: "lockstep"), autoPlaceFirstSlice: true)
+    editor.toggleSnap()
+    editor.insertMarker(frame: 256)
+    let slice = editor.sliceId(row: 0)
+    editor.selectSlice(id: slice)
+    editor.playSelectedSlice()
+    var first: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while first == nil && Date() < deadline {
+                first = output.lastNote()
+                await Task.yield()
+            }
+            if first == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "initial slice did not start: \(error)")
+        return
+    }
+    guard let first else { return }
+    output.start(first)
+    editor.moveMarker(id: editor.markerId(row: 0), toFrame: 192)
+    var changed: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while changed == nil && Date() < deadline {
+                changed = output.lastNote()
+                await Task.yield()
+            }
+            if changed == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "edited slice did not republish: \(error)")
+        return
+    }
+    guard let changed else { return }
+    let source = editor.session.sources[0]
+    let expected = canonicalKitSlice(source: source, slice: source.slices[0])
+    if case .pcm(let samples, _, _, _) = changed.source {
+        r.expectEqual(expected: expected.s8, actual: samples, what: "boundary drag republishes the edited slice")
+    } else {
+        r.expect(false, message: "boundary drag republishes PCM")
+    }
+    r.expectEqual(
+        expected: 192, actual: editor.sourceFrame(sliceId: slice, renderedPosition: 300),
+        what: "republished audio and playhead use the same edited boundary")
+    output.start(changed)
+    output.finish(changed)
+    editor.moveMarker(id: editor.markerId(row: 0), toFrame: 128)
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while editor.sourceFrame(sliceId: slice, renderedPosition: 300) != 128 && Date() < deadline {
+                await Task.yield()
+            }
+            if editor.sourceFrame(sliceId: slice, renderedPosition: 300) != 128 { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "gap edit did not render: \(error)")
+        return
+    }
+    var repeated: SampleAuditionNote?
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(5)
+            while repeated == nil && Date() < deadline {
+                studio.tickAudition()
+                repeated = output.lastNote()
+                await Task.yield()
+            }
+            if repeated == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "edited gap repeat did not start: \(error)")
+        return
+    }
+    let gapSource = editor.session.sources[0]
+    let gapExpected = canonicalKitSlice(source: gapSource, slice: gapSource.slices[0])
+    if let repeated, case .pcm(let samples, _, _, _) = repeated.source {
+        r.expectEqual(expected: gapExpected.s8, actual: samples, what: "repeat gap uses the latest edited render")
+    } else {
+        r.expect(false, message: "repeat gap publishes PCM")
+    }
+    let lease = output.current
+    editor.removeSlice(id: slice)
+    r.expect(lease?.isCurrent == false && !studio.auditionPlaying, message: "deleting the active slice ends audition")
+}
+
 @MainActor
 private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::voicegroupNameAndMeta")
@@ -558,16 +982,39 @@ private func checkKitPresenterVoicegroupName(_ report: CheckReport) {
     p.insertMarker(frame: 10)
     p.insertMarker(frame: 100)
     let slice = p.sliceName(id: p.sliceId(row: 0))
-    let autoMapped = p.metaText
-    r.expect(
-        autoMapped.hasPrefix("1 slice · ") && autoMapped.hasSuffix(" ROM") && autoMapped != "1 slice · 0 bytes ROM",
-        message: "auto-placed slice contributes saved-at-rate ROM")
+    let source = p.session.sources[0]
+    let rendered = canonicalKitSlice(source: source, slice: source.slices[0])
+    let expected = "1 slice · \(SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(rendered))) ROM"
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while p.metaText != expected && Date() < deadline { await Task.yield() }
+            if p.metaText != expected { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "auto-mapped ROM render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: expected, actual: p.metaText, what: "auto-mapped ROM matches the canonical render")
     p.dropSample(name: slice, onKey: 60)
     let mapped = p.metaText
-    r.expect(
-        mapped.hasPrefix("1 slice · ") && mapped.hasSuffix(" ROM") && mapped != "1 slice · 0 bytes ROM",
-        message: "mapped slice contributes saved-at-rate ROM")
     p.dropSample(name: slice, onKey: 61)
-    r.expectEqual(expected: mapped, actual: p.metaText, what: "one sample counts once across keys")
+    r.expect(expected == mapped && expected == p.metaText, message: "mapped ROM remains exact and counts a sample once")
+    p.setSourceRate(rate: 7884)
+    p.setSourceRate(rate: 26758)
+    let updatedSource = p.session.sources[0]
+    let updated = canonicalKitSlice(source: updatedSource, slice: updatedSource.slices[0])
+    let expectedUpdated = "1 slice · \(SampleStudioReadouts.romSize(bytes: SampleStudioReadouts.romBytes(updated))) ROM"
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while p.metaText != expectedUpdated && Date() < deadline { await Task.yield() }
+            if p.metaText != expectedUpdated { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "latest ROM render did not land: \(error)")
+        return
+    }
+    r.expectEqual(expected: expectedUpdated, actual: p.metaText, what: "latest rate controls the ROM readout")
     r.expect(p.canSave, message: "mapped zone with valid name is saveable")
 }

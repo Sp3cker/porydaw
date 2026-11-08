@@ -1,5 +1,6 @@
 import Foundation
 @testable import PorydawApp
+import PorydawAppAudio
 import PorydawCore
 import PorydawCoreCheckNative
 @testable import PorydawDocument
@@ -278,32 +279,70 @@ internal func bankBackgroundEditReachesSelectedAudio(report: CheckReport, fixtur
         report.fail(id, "fixture cannot supply the selected square and replacement noise voice")
         return
     }
+    let originalLease = first.bankLease
+    func previewChannel(_ channel: Int) -> Bool {
+        until({
+            let channels = audio.previewPolySnapshot().cgb
+            return channels.indices.contains(channel) && channels[channel].on
+                && !channels[channel].releasing && channels[channel].midiKey == 60
+        })
+    }
     func soundingChannel() -> Int? {
         let start = first.timeline.sample(for: 10)
         let end = first.timeline.sample(for: 20)
         app.play()
-        guard until({ audio.playheadSamples >= start && audio.transport == 2 }),
+        guard until({ audio.playheadSamples >= start && audio.requestedTransport == 2 }),
             audio.playheadSamples < end
         else {
             app.stop()
             return nil
         }
-        let channel = audio.polySnapshot().cgb.enumerated().first {
-            $0.element.on && !$0.element.releasing && $0.element.track == 0
-                && $0.element.midiKey == 60
-        }?.offset
+        var channel: Int?
+        _ = until({
+            channel =
+                audio.polySnapshot().cgb.enumerated().first {
+                    (entry: (offset: Int, element: AudioPolyChannel)) -> Bool in
+                    entry.element.on && !entry.element.releasing && entry.element.track == 0
+                        && entry.element.midiKey == 60
+                }?.offset
+            return channel != nil || audio.playheadSamples >= end
+        })
         app.stop()
-        guard until({ audio.playheadSamples == 0 }) else { return nil }
+        guard
+            until({
+                audio.playheadSamples == 0
+                    && !audio.polySnapshot().cgb.contains {
+                        (channel: AudioPolyChannel) -> Bool in channel.on && !channel.releasing
+                    }
+            })
+        else { return nil }
         return channel
     }
     guard let squareChannel = soundingChannel() else {
         report.fail(id, "selected square voice did not produce native CGB telemetry")
         return
     }
+    audio.updateVoicegroup(originalLease)
+    audio.previewVoice(program: 0, key: 60, velocity: 100)
+    report.expect(
+        previewChannel(0), cppID: id,
+        message: "FIFO voice preview after the original bank swap sounds Square 1")
+    audio.previewVoice(program: 0, key: 60, velocity: 0)
     do {
         _ = try runBlocking {
             try await background.voicegroup.apply(slot: 0, value: noise, expected: original)
         }
+        let replacementLease = first.bankLease
+        report.expect(
+            !replacementLease.sharesBank(with: originalLease), cppID: id,
+            message: "voicegroup edit creates a distinct replacement bank")
+        let swap = audio.updateVoicegroup(replacementLease)
+        audio.previewVoice(program: 0, key: 60, velocity: 100)
+        try runBlocking { await swap.value }
+        report.expect(
+            previewChannel(3), cppID: id,
+            message: "voice preview queued immediately after bank swap uses the replacement Noise voice")
+        audio.previewVoice(program: 0, key: 60, velocity: 0)
         report.expectEqual(
             expected: noise, actual: first.bankSlots.first?.voice, cppID: id,
             what: "selected model receives the background bank edit")
@@ -390,18 +429,31 @@ internal func mountedEditReachesPeerTabAudio(report: CheckReport, fixtureRoot: S
         let start = document.timeline.sample(for: 10)
         let end = document.timeline.sample(for: 20)
         app.play()
-        guard until({ audio.playheadSamples >= start && audio.transport == 2 }),
+        guard until({ audio.playheadSamples >= start && audio.requestedTransport == 2 }),
             audio.playheadSamples < end
         else {
             app.stop()
             return nil
         }
-        let channel = audio.polySnapshot().cgb.enumerated().first {
-            $0.element.on && !$0.element.releasing && $0.element.track == 0
-                && $0.element.midiKey == 60
-        }?.offset
+        var channel: Int?
+        _ = until({
+            channel =
+                audio.polySnapshot().cgb.enumerated().first {
+                    (entry: (offset: Int, element: AudioPolyChannel)) -> Bool in
+                    entry.element.on && !entry.element.releasing && entry.element.track == 0
+                        && entry.element.midiKey == 60
+                }?.offset
+            return channel != nil || audio.playheadSamples >= end
+        })
         app.stop()
-        guard until({ audio.playheadSamples == 0 }) else { return nil }
+        guard
+            until({
+                audio.playheadSamples == 0
+                    && !audio.polySnapshot().cgb.contains {
+                        (channel: AudioPolyChannel) -> Bool in channel.on && !channel.releasing
+                    }
+            })
+        else { return nil }
         return channel
     }
     guard let squareChannel = soundingChannel(first) else {

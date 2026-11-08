@@ -29,7 +29,12 @@ endfunction()
 add_library(PorydawApp STATIC
     DocumentWorkspace.swift
     arpeggiator/ArpeggiatorPresenter.swift
+    miditools/TrackEffectsController.swift
+    miditools/PluginStateRecorder.swift
+    miditools/PluginEffectRenderer.swift
+    miditools/EffectOutputStore.swift
     NativeAudio.swift
+    audio/AudioControl.swift
     export/WavExportJob.swift
     export/WavExportPresenter.swift
     samplestudio/Sf2ZonePickerModel.swift
@@ -205,7 +210,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
-target_link_libraries(PorydawApp PUBLIC PorydawBackups PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawBackups PorydawCore PorydawDocument PorydawPlayback PorydawPluginHost PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
 
@@ -233,6 +238,8 @@ target_link_libraries(PorydawAppCommands PUBLIC PorydawCore QtBridgeCpp Qt6::Gui
 add_library(PorydawAppAudio STATIC
     audio/AudioDevice.swift
     audio/AudioRenderEngine.swift
+    audio/AudioStatus.swift
+    audio/SampleAuditionLease.swift
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift
     audio/AudioTelemetry.swift

@@ -13,7 +13,10 @@ A plugin's own editor is its parameter surface. Open it in a separate top-level 
 - src/swift/pluginhost/PluginEditorShortcuts.swift (new, `@MainActor enum`): `static func install(strokes: [Int], onShortcut: @escaping @MainActor (Int) -> Void)`, broadcasting `SetShortcuts` through `HelperProcess` and delivering `Shortcut(index)` on the main actor
 - src/checks/vstfixture/porydawtestgen.cpp plus new per-platform fixture views (a minimal native editor view): src/checks/vstfixture/porydawtestgen_view_mac.mm (NSView), src/checks/vstfixture/porydawtestgen_view_win.cpp (HWND child), src/checks/vstfixture/porydawtestgen_view_x11.cpp (X11 child window); src/checks/vstfixture/CMakeLists.txt selects one per platform
 - src/checks/pluginhost/PluginHostEditorChecks.swift (new; `public func runPluginHostEditorChecks(_ report: CheckReport)`)
-- `.github/workflows/build.yml` and `.github/workflows/release.yml`: `libxcb1-dev` in the Linux apt installs (`build-linux`, `asan-checks`; release `build-linux` gains an apt step on its ubuntu-22.04 runner), because the helper compiles against `xcb/xcb.h` for key grabs and Qt's install action ships no xcb headers
+- `.github/workflows/build.yml` and `.github/workflows/release.yml`: `libxcb1-dev` and `libx11-dev` in the Linux apt installs (`build-linux`, `asan-checks`; release `build-linux` gains an apt step on its ubuntu-22.04 runner), for the helper's XCB key grabs and X11 fixture view headers.
+- `src/pluginhost/pluginhost_internal.h`, `src/pluginhost/pluginhost.h`, `src/pluginhost/pluginhost_process.cpp`: private editor/query lifetime hooks and parameter-only inactive flush support; preserve the public wire ABI and engine-only check linkage.
+- `src/pluginhost/helper/host.h`, `src/pluginhost/helper/host_rt.cpp`, `src/pluginhost/helper/host_main.cpp`: install editor hooks and synchronize idle parameter flushes through the existing RT queue consumer.
+- Root `CMakeLists.txt`: enable Objective-C++ on Apple at the common ancestor of helper and fixture targets; remove the obsolete subdirectory-only activation.
 
 Registration (controller): new windowing suite `swiftcore-pluginhost-editor`, marked as a windowing check so `--no-windowing-checks` skips it.
 
@@ -30,11 +33,13 @@ Exactly spec.md "Native boundary" editor half and "Space and transport", plus th
 - **Linux run loop.** `IRunLoop` event handlers map to `QSocketNotifier` (read) and timers to `QTimer`, all on the GUI thread, unregistered on removal — the same adapter as ossia, MuseScore and Qtractor.
 - **Fixture editor.** A 320×200 native child view (NSView, HWND or X11 window, solid fill) that takes keyboard focus when clicked or attached, and counts every key-down it receives into component state `int32 LE keysReceived` at byte offset 8, the field reserved by task 6; `fault` stays at offset 12. Preserve decoding of 8-byte and 12-byte legacy states with `fault = 0`. On `attached` it requests `resizeView` to 400×240, then performs `beginEdit`/`performEdit(Pitch Offset = 5 semitones)`/`endEdit`.
   Preserve task 7's diagnostic opt-in in fault-word bit 30 (`0x40000000`), its 112-byte controller snapshot and one-shot delayed fault code 3. Decode the fault code with that bit masked; observations never modify component state. Normal mode now serializes `keysReceived` at byte 8; diagnostic selection never uses that field.
+- **Stopped editor edits.** Before publishing an edit callback or returning idle component state/digest, drain queued parameter changes through the existing RT consumer and acknowledge completion. A parameter-only zero-sample SDK call may flush while inactive; it carries no MIDI and adds no bridge request. The fixture's attach edit must appear in component state before the first Render, and the Render must independently prove parameter-queue delivery. No direct fixture DSP mutation to simulate delivery.
 - **Key interception.**
   - Scope: `SetShortcuts` replaces that helper's stroke set; an empty set disables interception. A key event matches when its window is an open editor `QWindow` or a descendant of one, its key equals the stroke's `Qt::Key`, and its modifier set equals the stroke's modifiers, ignoring Caps/Num Lock.
   - Delivery: the matching key-down sends `Shortcut(index)` once to Swift. That key-down, its auto-repeats and its key-up are swallowed; non-matching keys pass through untouched. Swift runs `ShellPresenter.activate(id: "transport.play_pause")`. Broadcast `SetShortcuts` to every live helper; send the current set to a new helper immediately after `Ready`.
   - macOS: `addLocalMonitorForEventsMatchingMask:(KeyDown|KeyUp)` returning nil for matches; installed once, removed when the set is empty.
-  - Windows: a `QAbstractNativeEventFilter` on `"windows_dispatcher_MSG"` for `WM_KEYDOWN`/`WM_KEYUP`/`WM_SYSKEYDOWN` whose `hwnd` has an editor root (`GetAncestor(GA_ROOT)`).
+  - macOS modifier translation preserves Qt's mapping: `ControlModifier` means Command, and `MetaModifier` means physical Control.
+  - Windows: a `QAbstractNativeEventFilter` accepts `"windows_generic_MSG"` for `WM_KEYDOWN`/`WM_KEYUP`/`WM_SYSKEYDOWN` whose `hwnd` has an editor root (`GetAncestor(GA_ROOT)`). It may also accept `"windows_dispatcher_MSG"` under the same root guard; Qt reserves that event type for system-wide messages, so dispatcher-only filtering would miss editor keys.
   - Linux/X11: `xcb_grab_key` on each editor window for the stroke's keycode, with every Caps/Num Lock variant of its modifiers, plus a native event filter on `"xcb_generic_event_t"` for the grabbed events. Grabs are released on close.
 
 # Implementation steps
@@ -53,11 +58,11 @@ Exactly spec.md "Native boundary" editor half and "Space and transport", plus th
    - with an empty set installed, Space reaches the fixture.
 
 # Acceptance predicate
-Editor checks pass on macOS with a display and system-event posting permission for the check process, and the ASAN run is clean. NAMED CHECKS (controller):
+Final acceptance requires editor checks on macOS with a display and system-event posting permission for the check process, plus a clean ASAN run and the native smoke below. Per the user-approved plan gate timing, implementation checkpoints may proceed after review and covering Debug/ASAN headless gates; native editor/input execution remains explicitly pending until final acceptance. NAMED CHECKS (controller):
 - `uv run --no-sync dev build:checks`
 - `uv run --no-sync dev checks --filter swiftcore-pluginhost-editor`
 - `uv run --no-sync dev build:checks --asan && uv run --no-sync dev checks --asan --filter swiftcore-pluginhost-editor`
-- `uv run --no-sync dev checks --filter swiftcore-pluginhost`: regression.
+- `uv run --no-sync dev checks --filter swiftcore-pluginhost --no-windowing-checks`: non-windowing host regression; the prefix also matches the editor suite, which is exercised separately with desktop approval.
 - `uv run --no-sync dev checks --filter swiftcore-pluginhost-abi`, plus `--asan`: ABI regression after the destroy-path and fixture-state changes. The fixture still decodes the 8-byte task 6 state format.
 
 # Controller verification

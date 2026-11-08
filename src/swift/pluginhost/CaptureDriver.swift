@@ -35,7 +35,6 @@ private final class CaptureWorker: @unchecked Sendable {
     private var stopping = false
     private var idleWaiters: [CheckedContinuation<Void, Never>] = []
     private var exitWaiters: [CheckedContinuation<Void, Never>] = []
-    private var input = [pdph_midi_event](repeating: pdph_midi_event(), count: 4096)
     private var output = [pdph_midi_event](repeating: pdph_midi_event(), count: 4096)
 
     func start() {
@@ -92,7 +91,7 @@ private final class CaptureWorker: @unchecked Sendable {
     }
 
     private func capture(
-        _ job: CaptureJob, input: inout [pdph_midi_event], output: inout [pdph_midi_event]
+        _ job: CaptureJob, output: inout [pdph_midi_event]
     ) throws -> CaptureResult {
         let transport = job.transport
         var events: [RawNoteEvent] = []
@@ -106,30 +105,23 @@ private final class CaptureWorker: @unchecked Sendable {
         while sample < end {
             try check(job.generation)
             let frames = Int32(min(Int64(CaptureTransport.blockFrames), end - sample))
-            var count = 0
+            let firstInput = inputIndex
             while inputIndex < transport.inputs.count && transport.inputs[inputIndex].sample < sample + Int64(frames) {
-                let note = transport.inputs[inputIndex]
+                guard inputIndex - firstInput < 4096 else {
+                    throw PluginHostError.native("Plugin input-event capacity exceeded.")
+                }
                 inputIndex += 1
-                guard count < 4096 else { throw PluginHostError.native("Plugin input-event capacity exceeded.") }
-                var event = pdph_midi_event()
-                event.sample_offset = Int32(max(0, note.sample - sample))
-                event.note_id = note.id
-                event.kind = UInt8(note.velocity > 0 ? PDPH_EVENT_NOTE_ON : PDPH_EVENT_NOTE_OFF)
-                event.pitch = note.pitch
-                event.velocity = Float(note.velocity) / 127
-                input[count] = event
-                count += 1
             }
             let reply: BridgeReply
             do {
                 var destination = output.mutableSpan
                 reply = try job.insert.processRender(
                     frames: frames, context: transport.context(at: sample),
-                    input: input.span.extracting(0..<count), output: &destination)
+                    input: transport.inputs.span.extracting(firstInput..<inputIndex), output: &destination)
             }
+            if reply.outcome == .timedOut { throw HelperProcessError.stoppedResponding }
             guard reply.outcome == .replied, reply.status == 0 else {
-                throw PluginHostError.native(
-                    reply.outcome == .crashed ? "Plugin stopped responding." : "Plugin processing failed.")
+                throw PluginHostError.native("Plugin processing failed.")
             }
             nonNotes += max(0, reply.total - reply.written)
             for index in 0..<reply.written {
@@ -192,9 +184,8 @@ private final class CaptureWorker: @unchecked Sendable {
             active = true
             condition.unlock()
             let result: Result<CaptureResult, any Error>
-            // Keep both stored-buffer accesses open while capture borrows their parameter-local views.
             do {
-                result = .success(try capture(current, input: &input, output: &output))
+                result = .success(try capture(current, output: &output))
             } catch {
                 result = .failure(error)
             }
@@ -302,6 +293,7 @@ public final class CaptureDriver {
             guard token == generation, !stopped else { throw CancellationError() }
             return result
         } catch {
+            if (error as? HelperProcessError) == .stoppedResponding { instance.reportFailure(error) }
             do { try await instance.finishRender() } catch { instance.reportFailure(error) }
             if let failure { throw failure }
             if token != generation || Task.isCancelled { throw CancellationError() }

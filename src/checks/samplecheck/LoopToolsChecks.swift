@@ -7,6 +7,15 @@ import SwiftCoreCheckSupport
 @MainActor
 internal func runLoopToolsChecks(_ report: CheckReport) {
     let validator: (String) -> String? = { _ in nil }
+    func settle(_ presenter: SampleStudioPresenter) -> Bool {
+        do {
+            try runBlocking { await presenter.waitForRender() }
+            return true
+        } catch {
+            report.fail("swiftcore/SampleLoopTools::render", "render did not settle: \(error)")
+            return false
+        }
+    }
     let pipeline = report.scoped(cppID: "samplecheck/SampleProcessingTest::pipelineLoopToggle")
     guard let prepared = try? SampleImport.decode(preparedSampleWav(), sourcePath: "fix/prepared_tone.wav") else {
         pipeline.expect(false, message: "prepared loop-toggle fixture import failed")
@@ -16,6 +25,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     let shortPresenter = SampleStudioPresenter(document: SampleDocument(source: prepared), validateName: validator)
     let shortTools = SampleLoopTools(presenter: shortPresenter)
     shortTools.setLoopEnabled(on: false)
+    guard settle(shortPresenter) else { return }
     pipeline.expect(
         !shortPresenter.processed.looped && shortPresenter.processed.size == 64,
         message: "A024 loop toggle renders a one-shot")
@@ -43,6 +53,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
         pitchTools.pitchApplyToolTip.contains("A3 +4¢ (220.5 Hz)."),
         message: "detected pitch tooltip rounds cents to whole units")
     pitchTools.applyDetectedPitch()
+    guard settle(pitchPresenter) else { return }
     adoption.expect(
         pitchPresenter.baseKey == 57 && abs(pitchPresenter.fineTuneCents - 3.93) <= 1.5,
         message: "A052 adopting pitch sets key and cents")
@@ -85,6 +96,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
         presenter.params.loopStart == 2000 && presenter.params.loopEnd == 9999,
         message: "A059 imported loop markers retain source bounds")
     tools.setLoopEnabled(on: false)
+    guard settle(presenter) else { return }
     populate.expect(
         !presenter.params.loopOn && !tools.loopBodyVisible,
         message: "A060 disabling loop hides loop body")
@@ -138,14 +150,20 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
             && latePresenter.processed.looped,
         message: "first populated loop searches beyond three-quarter sample boundary")
     presenter.undo()
+    guard settle(presenter) else { return }
     populate.expect(
         !presenter.params.loopOn && !tools.loopBodyVisible,
         message: "A067 undo re-disables auto-populated loop")
     presenter.redo()
+    guard settle(presenter) else { return }
     populate.expect(
         presenter.params.loopOn && tools.loopBodyVisible,
         message: "A068 redo re-enables auto-populated loop")
     tools.tryAnotherLoop()
+    do { try runBlocking { await tools.waitForPitchAnalysis() } } catch {
+        populate.expect(false, message: "loop candidate search did not settle: \(error)")
+        return
+    }
     populate.expect(
         presenter.params.loopOn && presenter.processed.looped,
         message: "A070 try-another keeps a valid loop")
@@ -161,6 +179,7 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     misaligned.loopStart = 2000
     misaligned.loopEnd = 2137
     refinePresenter.commitParams(misaligned, mergeKey: -1)
+    guard settle(refinePresenter) else { return }
     refine.expect(
         refinePresenter.params.loopStart == 2000 && refinePresenter.params.loopEnd == 2137,
         message: "A075 misaligned markers are committed")
@@ -178,4 +197,14 @@ internal func runLoopToolsChecks(_ report: CheckReport) {
     refine.expect(
         refinePresenter.params.loopStart == 2000 && refinePresenter.params.loopEnd == 2137,
         message: "A077 refinement adds no more than one undo entry")
+    refineTools.refineLoop()
+    refinePresenter.setCropStart(value: 100)
+    do { try runBlocking { await refineTools.waitForPitchAnalysis() } } catch {
+        refine.expect(false, message: "superseded loop refinement did not settle: \(error)")
+        return
+    }
+    refine.expect(
+        refinePresenter.params.cropStart == 100 && refinePresenter.params.loopStart == 2000
+            && refinePresenter.params.loopEnd == 2137,
+        message: "superseded loop refinement cannot overwrite a newer edit")
 }

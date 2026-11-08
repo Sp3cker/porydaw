@@ -28,6 +28,8 @@ public func pdcSuiteRun(
     case PDC_SUITE_PLUGINHOST_ABI: onMain(report, runPluginHostABIChecks)
     case PDC_SUITE_PLUGINBRIDGE: onMain(report, runPluginBridgeChecks)
     case PDC_SUITE_PLUGINHOST: onMain(report, runPluginHostChecks)
+    case PDC_SUITE_PLUGINHOST_EDITOR: onMain(report, runPluginHostEditorChecks)
+    case PDC_SUITE_TRACKEFFECTS_EDITOR: onMain(report, runTrackEffectsControllerEditorSuite)
     case PDC_SUITE_NOTE_EDITS:
         onMain(report) {
             coreEditCorpusLoadCheck($0); runNoteEditsSuite($0)
@@ -99,7 +101,11 @@ public func pdcSuiteRun(
     case PDC_SUITE_KEYSPLIT_TABLES: runKeysplitTablesSuite(report)
     case PDC_SUITE_BANK_OWNERSHIP: runBankOwnershipSuite(report)
     case PDC_SUITE_VOICE_LOCATOR: runVoicegroupLocatorSuite(report)
-    case PDC_SUITE_KIT_DRAFT: onMain(report, runKitDraftSuite)
+    case PDC_SUITE_KIT_DRAFT:
+        onMain(report) { (report: CheckReport) in
+            runKitDraftSuite(report)
+            runKitSourceLoadingChecks(report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }

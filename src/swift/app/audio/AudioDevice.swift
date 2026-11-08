@@ -1,5 +1,7 @@
 import Foundation
 import PorydawAudioDeviceNative
+import PorydawPlayback
+import Synchronization
 
 /// Owns the output device and its renderer. Lifecycle/cold calls are serialized by
 /// the facade on its control thread, never made from the audio callback.
@@ -7,14 +9,15 @@ public final class AudioDevice {
     enum InitializationError: String, LocalizedError {
         case nullBackend = "Failed to initialize the null audio backend."
         case outputDevice = "Failed to initialize the audio output device."
+        case startDevice = "Failed to start the audio output device."
 
         var errorDescription: String? { rawValue }
     }
 
     /// Programming invariant: the facade must not access the renderer after shutdown.
     public var renderer: AudioRenderEngine {
-        precondition(retainedRenderer != nil, "AudioDevice renderer accessed after shutdown")
-        return retainedRenderer!
+        precondition(target != nil, "AudioDevice renderer accessed after shutdown")
+        return target!.renderer
     }
     public private(set) var sampleRate: Double = 0
     public private(set) var backendName = ""
@@ -22,16 +25,10 @@ public final class AudioDevice {
     public let nullBackendForced: Bool
     public private(set) var periodSizeFrames = 0
     public private(set) var periodCount = 0
+    public private(set) var isRunning = false
+    public private(set) var lastStartError: String?
 
-    @concurrent
-    public static func prepare() async throws -> sending AudioDevice {
-        try Task.checkCancellation()
-        let device = try AudioDevice()
-        try Task.checkCancellation()
-        return device
-    }
-
-    private init() throws {
+    public init(sampleFeedback: SampleAuditionFeedbackCell = .init()) throws {
         let environment = ProcessInfo.processInfo.environment
         nullBackendForced = environment["PORYDAW_AUDIO_BACKEND"] == "null"
         do {
@@ -75,44 +72,51 @@ public final class AudioDevice {
             usingNullBackend = backend == ma_backend_null
             periodSizeFrames = Int(device.pointee.playback.internalPeriodSizeInFrames)
             periodCount = Int(device.pointee.playback.internalPeriods)
-            retainedRenderer = try AudioRenderEngine(
-                sampleRate: sampleRate, periodFrames: periodSizeFrames)
-            // Stay stopped: the first bind starts the device (starting here forces a ~100 ms restart).
-            device.pointee.pUserData = Unmanaged.passUnretained(renderer).toOpaque()
+            let target = AudioCallbackTarget(
+                renderer: try AudioRenderEngine(
+                    sampleRate: sampleRate, periodFrames: periodSizeFrames, sampleFeedback: sampleFeedback))
+            self.target = target
+            device.pointee.pUserData = Unmanaged.passUnretained(target).toOpaque()
         } catch {
             shutdown()
             throw error
         }
     }
 
-    /// Sole device start point; outermost call parks synchronously and restarts off-main.
-    public func withRenderingStopped<T>(_ body: () throws -> T) rethrows -> T {
-        coldDepth += 1
-        if coldDepth == 1, let device {
-            let handle = DeviceHandle(device: device)
-            startStop.sync { _ = ma_device_stop(handle.device) }
+    /// Control runs cold changes between callback blocks; the device keeps running and a
+    /// block that arrives meanwhile renders silence instead of waiting.
+    public func withRenderingExcluded<T>(_ body: () throws -> T) rethrows -> T {
+        guard let target else { return try body() }
+        while !target.gate.compareExchange(expected: .open, desired: .excluded, ordering: .acquiring).exchanged {
+            Thread.sleep(forTimeInterval: 0.000_05)
         }
-        defer {
-            coldDepth -= 1
-            if coldDepth == 0, let device {
-                let handle = DeviceHandle(device: device)
-                startStop.async { _ = ma_device_start(handle.device) }
-            }
-        }
+        defer { target.gate.store(.open, ordering: .releasing) }
         return try body()
+    }
+
+    @discardableResult
+    public func start() -> Bool {
+        if isRunning { return true }
+        guard let device, ma_device_start(device) == MA_SUCCESS else {
+            lastStartError = InitializationError.startDevice.localizedDescription
+            return false
+        }
+        isRunning = true
+        lastStartError = nil
+        return true
     }
 
     public func shutdown() {
         if let device {
-            startStop.sync {}
             if deviceInitialized {
                 ma_device_uninit(device)  // Joins/parks callbacks before releasing their borrower.
             }
             device.deallocate()
             self.device = nil
             deviceInitialized = false
+            isRunning = false
         }
-        retainedRenderer = nil
+        target = nil
         if let context {
             _ = ma_context_uninit(context)
             context.deallocate()
@@ -122,18 +126,15 @@ public final class AudioDevice {
 
     deinit { shutdown() }
 
-    private var retainedRenderer: AudioRenderEngine?
+    private var target: AudioCallbackTarget?
     private var device: UnsafeMutablePointer<ma_device>?
     private var context: UnsafeMutablePointer<ma_context>?
     private var deviceInitialized = false
-    private var coldDepth = 0
-    // Serializes start/stop: a queued start must finish before the next stop parks callbacks.
-    private let startStop = DispatchQueue(label: "porydaw.audio.startstop")
 
     private func initializeContext(backends: [ma_backend]) -> Bool {
         let context = UnsafeMutablePointer<ma_context>.allocate(capacity: 1)
-        let result = backends.withUnsafeBufferPointer {
-            ma_context_init($0.baseAddress, UInt32($0.count), nil, context)
+        let result = backends.withUnsafeBufferPointer { (buffer: UnsafeBufferPointer<ma_backend>) in
+            ma_context_init(buffer.baseAddress, UInt32(buffer.count), nil, context)
         }
         guard result == MA_SUCCESS else {
             context.deallocate()
@@ -176,17 +177,27 @@ public final class AudioDevice {
     #endif
 }
 
-// Thread-safe C handle: miniaudio's startStopLock plus the serial startStop queue.
-private struct DeviceHandle: @unchecked Sendable {
-    let device: UnsafeMutablePointer<ma_device>
+/// The callback's borrowed renderer and the gate control closes around cold changes.
+private final class AudioCallbackTarget {
+    enum Gate: UInt8, AtomicRepresentable { case open, rendering, excluded }
+    let renderer: AudioRenderEngine
+    let gate = Atomic<Gate>(.open)
+
+    init(renderer: AudioRenderEngine) { self.renderer = renderer }
 }
 
-/// Playback guarantees non-null output; pUserData borrows the renderer until uninit returns.
+/// Playback guarantees non-null output; pUserData borrows the target until uninit returns.
 /// No captures, allocations, locks, reclamation, or dispatch in this trampoline.
 private func audioDeviceRender(
     _ device: UnsafeMutablePointer<ma_device>?, _ output: UnsafeMutableRawPointer?,
     _ input: UnsafeRawPointer?, _ frames: UInt32
 ) {
-    Unmanaged<AudioRenderEngine>.fromOpaque(device!.pointee.pUserData!)
-        .takeUnretainedValue().render(output!.assumingMemoryBound(to: Float.self), frames: frames)
+    let target = Unmanaged<AudioCallbackTarget>.fromOpaque(device!.pointee.pUserData!).takeUnretainedValue()
+    let samples = output!.assumingMemoryBound(to: Float.self)
+    guard target.gate.compareExchange(expected: .open, desired: .rendering, ordering: .acquiring).exchanged else {
+        samples.update(repeating: 0, count: Int(frames) * 2)
+        return
+    }
+    target.renderer.render(samples, frames: frames)
+    target.gate.store(.open, ordering: .releasing)
 }

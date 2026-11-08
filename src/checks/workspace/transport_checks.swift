@@ -1,6 +1,7 @@
 import Foundation
 @testable import PorydawApp
 @testable import PorydawAppPresentation
+import PorydawAppAudio
 import PorydawCore
 @testable import PorydawDocument
 import PorydawPlayback
@@ -205,6 +206,9 @@ private func checkTransportVolumeIsolation(_ report: CheckReport, fixtureRoot: S
     report.expectEqual(
         expected: editedMaster, actual: firstDocument.state.config.masterVolume,
         cppID: id, what: "song master edit changes the first song cfg")
+    report.expect(
+        pollCheckUntil({ audio.appliedSongVolume == editedMaster }, seconds: 5), cppID: id,
+        message: "the queued song master update reaches the engine")
     report.expectEqual(
         expected: editedMaster, actual: audio.appliedSongVolume,
         cppID: id, what: "edited song master reaches applied audio settings")
@@ -405,7 +409,7 @@ private func checkCursorCommitSeeksPausedAndPlayingTransport(
     }
     let maxTick = length - 1
     app.stop()
-    guard pollCheckUntil({ audio.transport == 0 }, seconds: 10) else {
+    guard pollCheckUntil({ audio.requestedTransport == 0 }, seconds: 10) else {
         report.fail(id, "transport did not stop before the cursor-commit journey")
         return
     }
@@ -415,31 +419,30 @@ private func checkCursorCommitSeeksPausedAndPlayingTransport(
         session.editCursor == staged, cppID: id,
         message: "a stopped cursor commit moves only the edit cursor")
     app.play()
-    guard pollCheckUntil({ audio.transport == 2 }, seconds: 10) else {
+    guard pollCheckUntil({ audio.requestedTransport == 2 }, seconds: 10) else {
         report.fail(id, "fixture song did not start from its edit cursor")
         return
     }
     app.playPause()
-    guard pollCheckUntil({ audio.transport == 1 }, seconds: 10) else {
+    guard pollCheckUntil({ audio.requestedTransport == 1 }, seconds: 10) else {
         report.fail(id, "fixture song did not pause before the cursor-commit seek")
         return
     }
-    let pausedTick = audio.timeline.map { Tick(max(0, $0.tick(for: audio.playheadSamples))) } ?? 0
+    let pausedTick = Tick(max(0, session.timeline.tick(for: audio.playheadSamples)))
     let ahead = pausedTick >= 960 ? pausedTick - 480 : min(pausedTick + 960, maxTick)
     page.workspace.grid.setEditCursorTick(tick: Int(ahead))
     report.expect(
         pollCheckUntil(
             {
-                audio.transport == 1
+                audio.requestedTransport == 1
                     && abs(app.playheadPresenter().tick - Double(ahead)) <= 0.25
             }, seconds: 5), cppID: id,
         message: "a paused cursor commit moves the shared playhead to its target")
     report.expect(
         pollCheckUntil(
             {
-                guard let timeline = audio.timeline else { return false }
-                return audio.transport == 1
-                    && abs(timeline.tick(for: audio.playheadSamples) - Double(ahead)) <= 0.25
+                audio.requestedTransport == 1
+                    && abs(session.timeline.tick(for: audio.playheadSamples) - Double(ahead)) <= 0.25
             }, seconds: 5), cppID: id,
         message: "a paused cursor commit moves the audio playhead within 0.25 ticks of its target")
     let beforeResume = audio.playheadSamples
@@ -447,7 +450,7 @@ private func checkCursorCommitSeeksPausedAndPlayingTransport(
     report.expect(
         pollCheckUntil(
             {
-                audio.transport == 2 && audio.playheadSamples > beforeResume
+                audio.requestedTransport == 2 && audio.playheadSamples > beforeResume
             }, seconds: 5), cppID: id,
         message: "play after a paused cursor commit resumes past the committed sample")
     let seekTick = min(length / 2, Tick(session.timeline.ticksPerBeat) * 16)
@@ -456,20 +459,20 @@ private func checkCursorCommitSeeksPausedAndPlayingTransport(
     report.expect(
         pollCheckUntil(
             {
-                audio.transport == 2
+                audio.requestedTransport == 2
                     && audio.playheadSamples >= seekSample
             }, seconds: 5), cppID: id,
         message: "a playing cursor commit seeks audio past its tick while staying Playing")
     app.stop()
     report.expect(
-        pollCheckUntil({ audio.transport == 0 }, seconds: 10),
+        pollCheckUntil({ audio.requestedTransport == 0 }, seconds: 10),
         cppID: id, message: "stop after a playing cursor commit leaves transport Stopped")
     app.play()
     let quarter = UInt64(Double(audio.sampleRate) * 0.25)
     report.expect(
         pollCheckUntil(
             {
-                audio.transport == 2
+                audio.requestedTransport == 2
                     && audio.playheadSamples >= seekSample + quarter
             }, seconds: 10), cppID: id,
         message: "play after stop restarts from the committed cursor and advances a quarter second")
@@ -508,9 +511,11 @@ private func pollCheckUntil(_ predicate: () -> Bool, seconds: TimeInterval = 5) 
 
 @MainActor
 private func workspaceAudioSounding(_ audio: NativeAudio) -> Bool {
-    audio.activeCgbChannels > 0
-        && audio.polySnapshot().cgb.contains {
-            $0.on && !$0.releasing && $0.track == 0 && $0.midiKey == 60
+    let channels = audio.polySnapshot().cgb
+    return audio.activeCgbChannels > 0
+        && channels.contains {
+            (channel: AudioPolyChannel) -> Bool in
+            channel.on && !channel.releasing && channel.track == 0 && channel.midiKey == 60
         }
 }
 
@@ -527,17 +532,21 @@ private func observeWorkspaceOpeningNote(
     let noteWindow = session.timeline.sample(for: 10)
     let noteEnd = session.timeline.sample(for: 20)
     app.play()
-    let reachedWindow = pollCheckUntil({ audio.playheadSamples >= noteWindow && audio.transport == 2 })
+    let reachedWindow = pollCheckUntil({ audio.playheadSamples >= noteWindow && audio.requestedTransport == 2 })
     let observedSample = audio.playheadSamples
     guard reachedWindow, observedSample < noteEnd else {
         failure =
             "missed note window \(noteWindow)..<\(noteEnd): "
-            + "sample=\(observedSample), transport=\(audio.transport), "
+            + "sample=\(observedSample), transport=\(audio.requestedTransport), "
             + "backend=\(audio.backendName), period=\(audio.periodSizeFrames)"
         app.stop()
         return nil
     }
-    let result = workspaceAudioSounding(audio)
+    var result = false
+    _ = pollCheckUntil({
+        result = workspaceAudioSounding(audio)
+        return result || audio.playheadSamples >= noteEnd
+    })
     if !result {
         let channels = audio.polySnapshot().cgb.filter(\.on).map {
             "(track:\($0.track), key:\($0.midiKey), releasing:\($0.releasing))"
@@ -551,7 +560,7 @@ private func observeWorkspaceOpeningNote(
     guard pollCheckUntil({ audio.playheadSamples == 0 && !workspaceAudioSounding(audio) }) else {
         failure =
             "stop did not rewind and release voices: "
-            + "sample=\(audio.playheadSamples), transport=\(audio.transport)"
+            + "sample=\(audio.playheadSamples), transport=\(audio.requestedTransport)"
         return nil
     }
     return result
@@ -643,21 +652,21 @@ private func checkEngineStopResyncsTransportState(
     let checkID = "swiftcore/TransportBar::engineStopResyncsState"
     audio.setLoopEnabled(false)
     app.play()
-    guard pollCheckUntil({ audio.transport == 2 }, seconds: 10) else {
-        report.fail(checkID, "fixture song did not start: transport=\(audio.transport)")
+    guard pollCheckUntil({ audio.requestedTransport == 2 }, seconds: 10) else {
+        report.fail(checkID, "fixture song did not start: transport=\(audio.requestedTransport)")
         return
     }
-    guard let timeline = audio.timeline else {
-        report.fail(checkID, "engine has no timeline after start")
+    guard let timeline = app.selectedDocument?.timeline else {
+        report.fail(checkID, "selected document has no timeline after start")
         return
     }
     let tailStop = timeline.lengthSamples + UInt64(3 * audio.sampleRate)
     audio.seek(sample: tailStop > 2048 ? tailStop - 1024 : 0)
-    guard pollCheckUntil({ audio.transport == 0 }, seconds: 10) else {
+    guard pollCheckUntil({ audio.requestedTransport == 0 }, seconds: 10) else {
         report.fail(
             checkID,
             "engine did not auto-stop past the tail: "
-                + "sample=\(audio.playheadSamples), transport=\(audio.transport)")
+                + "sample=\(audio.playheadSamples), transport=\(audio.requestedTransport)")
         return
     }
     let meter = app.transportBarPresenter()

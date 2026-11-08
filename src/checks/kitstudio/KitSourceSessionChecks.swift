@@ -1,5 +1,7 @@
+import Foundation
+@testable import PorydawApp
 import PorydawAppPresentation
-import PorydawKitStudio
+@testable import PorydawKitStudio
 import PorydawSample
 import PorydawSampleUI
 import PorydawVoicegroup
@@ -12,6 +14,10 @@ func runKitSourceSessionChecks(_ report: CheckReport) {
     checkSourceNames(report)
     checkSourceExhaustion(report)
     checkSourceRenderAndRates(report)
+    checkSharedRenderLanes(report)
+    checkSourceAuditionFrameMapping(report)
+    checkSourceSaveRender(report)
+    checkSupersededSaveWritesNothing(report)
     checkSourceClose(report)
     checkSourceSnapshot(report)
     checkSourceAutoPlaceAndZoneRemoval(report)
@@ -24,6 +30,20 @@ private func sessionSample(
     ImportedSample(
         buffer: [Float](repeating: 0.5, count: count), sampleRate: rate,
         playLength: count, suggestedName: name, gbaReady: gbaReady)
+}
+
+func canonicalKitSlice(source: KitSourceSession.Source, slice: KitSourceSession.Slice) -> ProcessedSample {
+    var params = SampleDocument.defaultParams(for: source.sample)
+    params.cropStart = slice.startFrame
+    params.cropEnd = slice.endFrame
+    params.targetRate = source.targetRate
+    params.loopOn =
+        source.committedSymbol != nil && source.sample.hasLoop && slice.startFrame == 0
+        && slice.endFrame == source.sample.frameCount
+    params.fadeIn = false
+    params.fadeOut = false
+    if source.targetRate != source.sample.sampleRate { params.exactPitchOverride = 0 }
+    return SampleSlice.render(source: source.sample, params: params, fadeIn: slice.fadeIn, fadeOut: slice.fadeOut)
 }
 
 @MainActor
@@ -255,7 +275,18 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
             if params.targetRate != sample.sampleRate { params.exactPitchOverride = 0 }
             let direct = SampleSlice.render(source: sample, params: params, fadeIn: fadeIn, fadeOut: fadeOut)
             let before = session.sources
-            let rendered = session.renderSlice(source: id, slice: 0)
+            let source = session.sources[index]
+            let rendered = canonicalKitSlice(source: source, slice: source.slices[0])
+            do {
+                let wavs = try runBlocking {
+                    await KitSourceSession.renderWavs([(source: source, slice: source.slices[0])])
+                }
+                r.expectEqual(
+                    expected: [SampleWavWriter.bytes(for: direct)], actual: wavs,
+                    what: "off-main render matches the direct pipeline")
+            } catch {
+                r.expect(false, message: "off-main render failed: \(error)")
+            }
             r.expectEqual(expected: direct, actual: rendered, what: "render metadata matches direct pipeline")
             r.expectEqual(expected: before, actual: session.sources, what: "render is a pure query")
             r.expect(!rendered.looped, message: "slices are one-shot even for looped imports")
@@ -271,7 +302,8 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
             expected: oldRate, actual: session.sources[index].targetRate, what: "invalid selection preserves rate")
         r.expect(session.setSourceRate(source: id, rate: 7884), message: "shared table rate selected by Hz")
         r.expectEqual(expected: 7884.0, actual: session.sources[index].targetRate, what: "source stores selected Hz")
-        let resampled = session.renderSlice(source: id, slice: 0)
+        let resampledSource = session.sources[index]
+        let resampled = canonicalKitSlice(source: resampledSource, slice: resampledSource.slices[0])
         r.expectEqual(expected: 7884.0, actual: resampled.outputRate, what: "render uses selected source rate")
         if ready {
             r.expect(
@@ -280,14 +312,250 @@ private func checkSourceRenderAndRates(_ report: CheckReport) {
         r.expect(session.setSourceRate(source: id, rate: Int(rate)), message: "source rate option accepted")
         r.expectEqual(expected: rate, actual: session.sources[index].targetRate, what: "source-rate option stored")
         if ready {
+            let originalRateSource = session.sources[index]
             r.expectEqual(
-                expected: sample.exactPitch, actual: session.renderSlice(source: id, slice: 0).freq,
+                expected: sample.exactPitch,
+                actual: canonicalKitSlice(source: originalRateSource, slice: originalRateSource.slices[0]).freq,
                 what: "returning to the original rate restores exact pitch")
         }
     }
     r.expectEqual(
         expected: 44100.0, actual: session.sources[0].targetRate,
         what: "later sources' rate edits leave first source unchanged")
+}
+
+@MainActor
+private func checkSharedRenderLanes(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::sharedRenderLanes")
+    let session = KitSourceSession()
+    let counter = KitSourceSession.RenderCounter()
+    session.renderCounter = counter
+    session.addSource(sessionSample())
+    let id = session.sources[0].id
+    _ = session.createFirstSlice(source: id)
+    let source = session.sources[0]
+    let input = [(source: source, slice: source.slices[0])]
+    var staleMetadata = false
+    var staleAudition = false
+    var metadata: [ProcessedSample] = []
+    var audition: [ProcessedSample] = []
+    session.renderSlices(input, metadata: true) { (_: [ProcessedSample]) in staleMetadata = true }
+    session.renderSlices(input) { (_: [ProcessedSample]) in staleAudition = true }
+    session.renderSlices(input, metadata: true) { (results: [ProcessedSample]) in metadata = results }
+    session.cancelRender()
+    session.renderSlices(input) { (results: [ProcessedSample]) in audition = results }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (metadata.isEmpty || audition.isEmpty) && Date() < deadline { await Task.yield() }
+            if metadata.isEmpty || audition.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "shared lane renders did not land: \(error)")
+        return
+    }
+    let expected = canonicalKitSlice(source: source, slice: source.slices[0])
+    r.expect(!staleMetadata && !staleAudition, message: "superseded requests never publish in either lane")
+    r.expectEqual(expected: [expected], actual: metadata, what: "latest metadata receives the canonical render")
+    r.expectEqual(expected: [expected], actual: audition, what: "latest audition receives the same render")
+    r.expectEqual(
+        expected: 1, actual: counter.value.load(ordering: .relaxed),
+        what: "lane cancellation preserves the shared render")
+
+    var oldRevisionPublished = false
+    session.setSliceFades(source: id, slice: 0, fadeIn: true, fadeOut: false)
+    let changed = session.sources[0]
+    let changedInput = [(source: changed, slice: changed.slices[0])]
+    session.renderSlices(changedInput, metadata: true) { (_: [ProcessedSample]) in oldRevisionPublished = true }
+    session.renderSlices(changedInput) { (_: [ProcessedSample]) in oldRevisionPublished = true }
+    session.setSliceFades(source: id, slice: 0, fadeIn: false, fadeOut: true)
+    let latest = session.sources[0]
+    let latestInput = [(source: latest, slice: latest.slices[0])]
+    metadata = []
+    audition = []
+    session.renderSlices(latestInput, metadata: true) { (results: [ProcessedSample]) in metadata = results }
+    session.renderSlices(latestInput) { (results: [ProcessedSample]) in audition = results }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while (metadata.isEmpty || audition.isEmpty) && Date() < deadline { await Task.yield() }
+            if metadata.isEmpty || audition.isEmpty { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "new revision renders did not land: \(error)")
+        return
+    }
+    let latestExpected = canonicalKitSlice(source: latest, slice: latest.slices[0])
+    r.expect(!oldRevisionPublished, message: "source edits invalidate both previous lane requests")
+    r.expectEqual(expected: [latestExpected], actual: metadata, what: "metadata follows the latest source revision")
+    r.expectEqual(expected: [latestExpected], actual: audition, what: "audition follows the latest source revision")
+}
+
+@MainActor
+private func checkSourceAuditionFrameMapping(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioPresenter::auditionFrameMapping")
+    var committed = ProcessedSample()
+    committed.s8 = (0..<400).map { (frame: Int) -> Int8 in Int8(frame % 64 - 32) }
+    committed.freq = 13379 * 1024
+    committed.size = 400
+    committed.looped = true
+    committed.loopStart = 397
+    let p = KitStudioPresenter(
+        loading: [
+            KitZone(
+                startKey: 36, endKey: 36, sampleName: "DirectSoundWaveData_loop",
+                rootKey: 60, pan: 0, adsr: (255, 0, 255, 0))
+        ],
+        mode: .drumkit, name: "kit",
+        samples: ["DirectSoundWaveData_loop": committed], progWaves: [:])
+    let slice = p.sliceId(row: 0)
+    var original: ProcessedSample?
+    p.renderSlice(id: slice) { (sample: ProcessedSample) in original = sample }
+    r.expectEqual(expected: committed, actual: original, what: "the untouched sample sounds its committed bytes")
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "committed bytes share the source frame grid without render metadata")
+
+    p.setSourceRate(rate: 7884)
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "a rate edit does not remap the committed sample still sounding")
+    var rendered: ProcessedSample?
+    p.renderSlice(id: slice) { (sample: ProcessedSample) in rendered = sample }
+    do {
+        try runBlocking {
+            let deadline = Date().addingTimeInterval(20)
+            while rendered == nil && Date() < deadline { await Task.yield() }
+            if rendered == nil { throw RunBlockingError.timeout }
+        }
+    } catch {
+        r.expect(false, message: "looped slice render did not land: \(error)")
+        return
+    }
+    guard let rendered else { return }
+    r.expect(rendered.looped && rendered.outputRate != 7884, message: "loop resampling adjusts the output rate")
+    r.expectEqual(
+        expected: 300, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "playhead maps with the sounding loop's adjusted rate")
+    p.setSourceRate(rate: 13379)
+    r.expectEqual(
+        expected: 300, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "a later rate edit preserves the sounding render's captured mapping")
+    p.undo()
+    p.undo()
+    p.renderSlice(id: slice) { (_: ProcessedSample) in }
+    r.expectEqual(
+        expected: 200, actual: p.sourceFrame(sliceId: slice, renderedPosition: 200),
+        what: "playing the committed sample restores its source-grid mapping")
+}
+
+@MainActor
+private func checkSourceSaveRender(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitSourceSession::saveRender")
+    let session = KitSourceSession()
+    session.addSource(sessionSample(count: 400))
+    let id = session.sources[0].id
+    session.createFirstSlice(source: id)
+    session.setMarker(source: id, frame: 200, snap: false)
+    session.setSliceFades(source: id, slice: 0, fadeIn: true, fadeOut: false)
+    let source = session.sources[0]
+    let inputs = source.slices.map { (slice: KitSourceSession.Slice) in (source: source, slice: slice) }
+    let expected = source.slices.indices.map { (index: Int) -> Data in
+        SampleWavWriter.bytes(for: canonicalKitSlice(source: source, slice: source.slices[index]))
+    }
+    session.setSliceFades(source: id, slice: 0, fadeIn: false, fadeOut: true)
+    do {
+        let actual = try runBlocking { await KitSourceSession.renderWavs(inputs) }
+        r.expectEqual(expected: expected, actual: actual, what: "captured slices produce canonical WAV bytes in order")
+        let cancelled = try runBlocking {
+            let task = Task { await KitSourceSession.renderWavs(inputs) }
+            task.cancel()
+            return await task.value
+        }
+        r.expect(cancelled.isEmpty, message: "cancelled save rendering returns no partial WAV batch")
+    } catch {
+        r.expect(false, message: "save rendering did not settle: \(error)")
+    }
+}
+
+@MainActor
+private func checkSupersededSaveWritesNothing(_ report: CheckReport) {
+    let r = report.scoped(cppID: "swiftcore/KitStudioWorkflow::supersededSaveWritesNothing")
+    guard let fixtureRoot = CheckEnvironment.fixtureRoot else {
+        r.expect(false, message: "save cancellation requires a staged fixture directory")
+        return
+    }
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-kit-save-superseded")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    app.openProject(path: root)
+    do {
+        try runBlocking {
+            while !app.projectOpen && app.lastSaveError.isEmpty { await Task.yield() }
+        }
+    } catch {
+        r.expect(false, message: "project open did not settle: \(error)")
+        return
+    }
+    guard app.projectOpen, let service = app.catalogService else {
+        r.expect(false, message: "save cancellation fixture failed to open: \(app.lastSaveError)")
+        return
+    }
+    let studio = app.kitStudio()
+    studio.requestOpen()
+    guard let editor = studio.presenter() else {
+        r.expect(false, message: "Split Studio did not open")
+        return
+    }
+    editor.addSource(sessionSample(name: "cancelled_save", count: 4096), autoPlaceFirstSlice: true)
+    guard editor.canSave else {
+        r.expect(false, message: "save cancellation fixture is not saveable")
+        return
+    }
+    func projectFiles() throws -> [String: Data] {
+        let directory = URL(fileURLWithPath: root, isDirectory: true)
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: directory, includingPropertiesForKeys: [.isRegularFileKey])
+        else { throw CocoaError(.fileReadUnknown) }
+        var files: [String: Data] = [:]
+        while let file = enumerator.nextObject() as? URL {
+            if try file.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true {
+                files[file.path] = try Data(contentsOf: file)
+            }
+        }
+        return files
+    }
+    do {
+        let before = try projectFiles()
+        studio.closeRequested()
+        guard studio.closeGuard.promptOpen else {
+            r.expect(false, message: "dirty Split Studio did not request a close decision")
+            return
+        }
+        studio.answerPrompt(answer: 0)
+        guard studio.saving && studio.closeGuard.saving else {
+            r.expect(false, message: "close-save did not start an asynchronous render")
+            return
+        }
+        app.catalogService = nil
+        defer { app.catalogService = service }
+        try runBlocking {
+            while studio.saving { await Task.yield() }
+        }
+        r.expect(
+            studio.closeGuard.promptOpen && !studio.closeGuard.saving,
+            message: "superseded save settles the close guard as unsuccessful")
+        let after = try projectFiles()
+        r.expect(before == after, message: "superseded save writes no project files")
+        studio.answerPrompt(answer: 2)
+        r.expect(!studio.closeGuard.promptOpen, message: "the pending close can be cancelled after save settles")
+    } catch {
+        r.expect(false, message: "save cancellation check could not settle: \(error)")
+    }
 }
 
 @MainActor
@@ -459,7 +727,7 @@ private func checkCommittedKitSamples(_ report: CheckReport) {
     r.expect(!p.sliceIsCommitted(id: kick) && p.dirty, message: "the fork saves as new audio")
     let forked = p.session.sources[0]
     r.expect(
-        p.session.renderSlice(source: forked.id, slice: 0).looped,
+        canonicalKitSlice(source: forked, slice: forked.slices[0]).looped,
         message: "a fork covering the whole sample keeps its loop")
     p.undo()
     r.expect(

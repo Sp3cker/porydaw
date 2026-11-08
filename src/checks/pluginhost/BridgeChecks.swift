@@ -101,7 +101,6 @@ private final class BridgeCheckFixture {
 
     func start(_ check: CheckReport.Scoped, fault: Int32 = 0) async throws {
         try await helper.start()
-        channel.bindHelper(pid: helper.processIdentifier)
         check.expect(helper.readyVersion == UInt32(PDPB_VERSION), message: "Ready negotiates bridge version 1")
         let buses = try await helper.createPlugin(modulePath: module.path, classUID: uid)
         check.expectEqual(
@@ -303,16 +302,33 @@ private func checkBridgeHang(_ fixture: BridgeCheckFixture, _ check: CheckReport
 @MainActor
 private func checkBridgeRenderTimeout(_ fixture: BridgeCheckFixture, _ check: CheckReport.Scoped) async throws {
     try await fixture.start(check, fault: 2)
+    let helperPID = fixture.helper.processIdentifier
     let started = pdpb_monotonic_ns()
     let reply = fixture.process(render: true)
     let elapsed = pdpb_monotonic_ns() - started
     check.expectEqual(
-        expected: BridgeReply.Outcome.crashed, actual: reply.0.outcome, what: "hung Render returns crash status")
+        expected: BridgeReply.Outcome.timedOut, actual: reply.0.outcome, what: "hung Render returns a typed timeout")
     check.expect(
         elapsed >= 10_000_000_000 && elapsed < 12_000_000_000,
         message: "Render waits at most its ten-second deadline with scheduling slack")
-    try await bridgeWait { fixture.helper.exitStatus != nil }
-    check.expect(fixture.helper.failure != nil, message: "Render timeout kills and reports the helper")
+    await Task.yield()
+    check.expect(
+        helperPID > 0 && fixture.helper.processIdentifier == helperPID
+            && fixture.helper.failure == nil && fixture.helper.exitStatus == nil && !fixture.helper.reachedEOF
+            && fixture.failures.isEmpty,
+        message: "timed-out Render leaves the real helper alive for MainActor-owned failure handling")
+    fixture.helper.reportRenderTimeout()
+    check.expectEqual(
+        expected: HelperProcessError.stoppedResponding, actual: fixture.helper.failure,
+        what: "MainActor records the Render timeout before terminating the helper")
+    try await bridgeWait { fixture.helper.exitStatus != nil && fixture.helper.reachedEOF }
+    check.expect(fixture.helper.exitStatus != 0, message: "MainActor terminates the hung Render helper")
+    check.expectEqual(
+        expected: HelperProcessError.stoppedResponding, actual: fixture.helper.failure,
+        what: "Render timeout remains authoritative after stdout EOF and process exit")
+    check.expectEqual(
+        expected: [HelperProcessError.stoppedResponding], actual: fixture.failures,
+        what: "Render termination and EOF publish the timeout exactly once")
 }
 
 @MainActor
