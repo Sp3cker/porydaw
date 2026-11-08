@@ -33,6 +33,7 @@ add_library(PorydawApp STATIC
     miditools/PluginStateRecorder.swift
     miditools/PluginEffectRenderer.swift
     miditools/EffectOutputStore.swift
+    miditools/MidiEffectsPresenter.swift
     NativeAudio.swift
     audio/AudioControl.swift
     export/WavExportJob.swift

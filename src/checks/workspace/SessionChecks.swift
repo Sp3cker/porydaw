@@ -124,6 +124,7 @@ public func runProjectSessionSuite(_ report: CheckReport) {
     runTrackHeadersChecks(report, session: session, service: service)
     runTrackHeadersInputChecks(report, session: session, service: service)
     runEffectPersistenceChecks(report, session: session, service: service)
+    runMidiEffectsPresenterChecks(report, session: session, service: service)
     runTrackEffectsControllerChecks(report, session: session, service: service)
 
     sessionLifetime(report: report, session: session, service: service)

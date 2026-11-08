@@ -90,6 +90,7 @@ private final class EffectsFixture {
             dirty: false, loadName: suite.bankLoadName, sampleRate: audio.sampleRate)
         workspace = DocumentWorkspace(
             viewport: DocumentViewport(session: session), audio: audio, pluginCatalog: catalog,
+            preferences: PreferencesStore(),
             playhead: playhead, playheadGuides: guides, eventList: events, palette: GridPalette(),
             typography: Typography(baseFontPx: 13),
             callbacks: .init(

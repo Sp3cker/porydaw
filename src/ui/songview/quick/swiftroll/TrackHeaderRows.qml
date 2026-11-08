@@ -18,6 +18,11 @@ Item {
     height: parent.height
     clip: true
 
+    FontMetrics {
+        id: subtitleMetrics
+        font: root.headersModel.subtitleFont
+    }
+
     function itemAt(index: int): Item {
         return trackHeaderRows.itemAt(index)
     }
@@ -114,8 +119,12 @@ Item {
                 required property int track
                 required property string title
                 required property string subtitle
+                required property string effectName
+                required property bool liveArmed
+                required property bool effectStopped
                 required property App.SceneRect titleRect
                 required property App.SceneRect subtitleRect
+                required property App.SceneRect effectRect
                 required property real selectedTitleOffsetX
                 required property real selectedTitleOffsetY
                 required property color baseColor
@@ -252,6 +261,67 @@ Item {
                     elide: Text.ElideRight
                     maximumLineCount: 1
                     verticalAlignment: Text.AlignVCenter
+                }
+
+                Item {
+                    id: effectBadge
+
+                    x: trackHeaderRow.effectRect.x
+                    y: trackHeaderRow.effectRect.y
+                    width: trackHeaderRow.effectRect.width
+                    height: trackHeaderRow.effectRect.height
+                    visible: !trackHeaderRow.isAddTrack && trackHeaderRow.effectName.length > 0
+                    readonly property real padding: trackHeaderRow.subtitleFont.pixelSize / 4
+                    readonly property real gap: caption.visible ? padding : 0
+
+                    Rectangle {
+                        width: Math.max(0, effectBadge.width - caption.width - effectBadge.gap)
+                        height: parent.height
+                        color: root.appearance.buttonBackground
+
+                        Text {
+                            objectName: "timelineHeaderEffect_" + trackHeaderRow.track
+                            x: effectBadge.padding
+                            width: Math.max(0, parent.width - 2 * effectBadge.padding)
+                            height: parent.height
+                            color: root.appearance.buttonText
+                            font: trackHeaderRow.subtitleFont
+                            text: trackHeaderRow.effectName
+                            textFormat: Text.PlainText
+                            renderType: Text.NativeRendering
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
+
+                    Rectangle {
+                        id: caption
+
+                        x: effectBadge.width - width
+                        width: visible ? Math.min(effectBadge.width,
+                            subtitleMetrics.advanceWidth(captionText.text) + 2 * effectBadge.padding) : 0
+                        height: parent.height
+                        visible: trackHeaderRow.effectStopped || trackHeaderRow.liveArmed
+                        color: root.appearance.buttonPressedBackground
+
+                        Text {
+                            id: captionText
+
+                            objectName: "timelineHeaderEffectCaption_" + trackHeaderRow.track
+                            x: effectBadge.padding
+                            width: Math.max(0, parent.width - 2 * effectBadge.padding)
+                            height: parent.height
+                            color: root.appearance.buttonPressedText
+                            font: trackHeaderRow.subtitleFont
+                            text: trackHeaderRow.effectStopped ? qsTr("Stopped") : qsTr("Live")
+                            textFormat: Text.PlainText
+                            renderType: Text.NativeRendering
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                    }
                 }
 
                 TrackHeaderToggle {

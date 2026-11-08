@@ -62,6 +62,7 @@ public final class DocumentWorkspace {
     public let headerVoicePicker: HeaderVoicePicker
     public let arpeggiator: ArpeggiatorPresenter
     public let effects: TrackEffectsController
+    public let midiEffects: MidiEffectsPresenter
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
@@ -90,7 +91,7 @@ public final class DocumentWorkspace {
     private var audioRelease: AudioOperation<Void>?
 
     public init(
-        viewport: DocumentViewport, audio: NativeAudio, pluginCatalog: PluginCatalog,
+        viewport: DocumentViewport, audio: NativeAudio, pluginCatalog: PluginCatalog, preferences: PreferencesStore,
         playhead: SharedPlayheadPresenter,
         playheadGuides: PlayheadGuidesPresenter,
         eventList: EventListPresenter, palette: GridPalette,
@@ -99,7 +100,11 @@ public final class DocumentWorkspace {
         self.viewport = viewport
         let session = viewport.session
         appliedSongConfig = session.document.state.config
-        effects = TrackEffectsController(session: session, audio: audio, catalog: pluginCatalog)
+        let effects = TrackEffectsController(session: session, audio: audio, catalog: pluginCatalog)
+        self.effects = effects
+        midiEffects = MidiEffectsPresenter(
+            session: session, effects: effects, catalog: pluginCatalog, preferences: preferences,
+            palette: palette, typography: typography)
         self.audio = audio
         self.playhead = playhead
         self.playheadGuides = playheadGuides
@@ -130,6 +135,8 @@ public final class DocumentWorkspace {
         }
         let headers = TrackHeadersPresenter(typography: typography)
         headers.attach(session: session, palette: grid.palette)
+        headers.effects = effects
+        headers.refreshFromDocument()
         self.trackHeaders = headers
         let headerVoicePicker = HeaderVoicePicker(headers: headers, typography: typography)
         self.headerVoicePicker = headerVoicePicker
@@ -138,6 +145,9 @@ public final class DocumentWorkspace {
         self.arpeggiator = arpeggiator
         headers.onArpeggiatorRequested = { [weak arpeggiator] track in
             arpeggiator?.open(track: track)
+        }
+        headers.onMidiEffectsRequested = { [weak midiEffects] (track: Int) in
+            midiEffects?.open(track: track)
         }
         headerVoicePicker.onOpenChanged = callbacks.headerVoicePickerOpenChanged
         headerVoicePicker.onComplete = callbacks.headerVoicePickerCompleted
@@ -222,6 +232,12 @@ public final class DocumentWorkspace {
         session.onChange = { [weak self] change in
             self?.sessionDidChange(change)
         }
+        effects.onChanged = { [weak self] (_: EffectID) in
+            guard let self, !self.isTornDown else { return }
+            self.midiEffects.documentChanged()
+            self.trackHeaders.refreshFromDocument()
+        }
+        effects.outputs.onChanged = { [weak midiEffects] (_: EffectID) in midiEffects?.documentChanged() }
     }
 
     /// Installs the already-built workspace only after the previous scene has
@@ -287,6 +303,7 @@ public final class DocumentWorkspace {
         grid.reloadVisuals()
         trackHeaders.refreshAppearance()
         arpeggiator.refreshAppearance()
+        midiEffects.refreshAppearance()
         velocityPage.refreshPromptStyle()
         voiceChangesPage.refreshPromptStyle()
         automationPage.refreshPromptStyles()
@@ -308,6 +325,7 @@ public final class DocumentWorkspace {
         {
             pitchBend.settleAndClose()
             arpeggiator.close()
+            midiEffects.close()
         }
     }
 
@@ -320,6 +338,10 @@ public final class DocumentWorkspace {
     public func suspendCallbacks() {
         effects.suspend()
         arpeggiator.close()
+        midiEffects.close()
+        trackHeaders.refreshFromDocument()
+        effects.onChanged = nil
+        effects.outputs.onChanged = nil
         viewport.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
@@ -338,10 +360,12 @@ public final class DocumentWorkspace {
     /// the outgoing one before it activates the incoming one: `activate()` binds
     /// first, and the stop-and-unload here would strand that bind.
     public func deactivate() {
+        midiEffects.close()
         guard isActive else { return }
         effects.suspend()
         isActive = false
         arpeggiator.close()
+        trackHeaders.refreshFromDocument()
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
@@ -368,6 +392,9 @@ public final class DocumentWorkspace {
         guard !isTornDown else { return }
         isTornDown = true
         arpeggiator.close()
+        midiEffects.close()
+        effects.onChanged = nil
+        effects.outputs.onChanged = nil
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
         pitchBend.cancelAndClose()
@@ -488,7 +515,11 @@ public final class DocumentWorkspace {
 
     private func sessionDidChange(_ change: SessionChange) {
         rulerMenu.sessionDidChange(change)
-        if !change.domains.intersection([.document, .effects]).isEmpty { effects.documentDidChange() }
+        if !change.domains.intersection([.document, .effects]).isEmpty {
+            effects.documentDidChange()
+            midiEffects.documentChanged()
+        }
+        if change.domains.contains(.bank) { midiEffects.close() }
         if change.domains.contains(.document) || change.domains.contains(.bank) {
             arpeggiator.close()
         }
@@ -500,7 +531,7 @@ public final class DocumentWorkspace {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
             pitchBend.documentDidChange()
         }
-        let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
+        let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState, .effects]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
         if isActive {
             playheadGuides.sessionDidChange(change)

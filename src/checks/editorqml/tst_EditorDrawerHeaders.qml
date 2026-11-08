@@ -6,11 +6,103 @@ import Porydaw.Ui
 import "EditorDrawerLayoutSupport.js" as LayoutSupport
 import "EditorDrawerPixelSupport.js" as PixelSupport
 
+import "TextContrastAudit.js" as TextContrastAudit
 EditorDrawerTestSupport {
     id: testCase
     name: "EditorDrawerLane"
 
     // ---- production page cases ----------------------------------------------
+
+    property int effectHeaderDestructions: 0
+
+    Component {
+        id: effectHeaderComponent
+        TrackHeaderBand {
+            bandVisible: true
+            model: bootstrap.headerEffectsModel
+            controlFont: model.normalTitleFont
+            hintService: null
+            hintScopeAllowed: false
+            Component.onDestruction: testCase.effectHeaderDestructions += 1
+        }
+    }
+
+    function assertEffectInk(text, context) {
+        const visible = waitForNative(function() {
+            return text && text.visible && text.width > 0 && text.height > 0
+        }, 3000)
+        verify(visible, context + " is visible: " + (text ? JSON.stringify({
+            visible: text.visible, width: text.width, height: text.height,
+            parentWidth: text.parent.width, badgeWidth: text.parent.parent.width,
+            effectName: text.parent.parent.parent.effectName,
+            effectRectWidth: text.parent.parent.parent.effectRect.width
+        }) : "missing text item"))
+        waitForRendering(text)
+        const root = TextContrastAudit.sceneRoot(text)
+        const record = TextContrastAudit.measure(text, grabImage(root), root)
+        verify(record !== null, context + " actually paints text pixels")
+        verify(record.ratio + 1e-6 >= record.required, TextContrastAudit.format(context, record))
+    }
+
+    function test_headerEffectBadgesRenderWithAccessibleInk() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.resetChrome("track-header-effects")
+        effectHeaderDestructions = 0
+        verify(bootstrap.prepareHeaderEffects(), bootstrap.headerEffectsError)
+        let band = null
+        try {
+            tryVerify(function() { return bootstrap.headerEffectsModel !== null }, 2000)
+            const model = bootstrap.headerEffectsModel
+            model.configureViewport(260, 220, 13, testCase.devicePixelRatio)
+            band = effectHeaderComponent.createObject(testCase.surface, {
+                bandRect: Qt.rect(0, 0, 260, 220), z: 1000
+            })
+            verify(band !== null, "the real header band mounts with the real effect workspace")
+            const rows = findChild(band, "timelineTrackHeaderRows")
+            tryVerify(function() { return rows && rows.count > 0 }, 2000)
+            const row = rows.itemAt(0)
+            const name = findChild(row, "timelineHeaderEffect_0")
+            const caption = findChild(row, "timelineHeaderEffectCaption_0")
+            tryCompare(name, "text", "TestGen")
+            verify(row.titleRect.y + row.titleRect.height <= row.subtitleRect.y,
+                   "the title leaves the retained voice subtitle unobscured")
+            verify(row.subtitleRect.y + row.subtitleRect.height <= row.effectRect.y,
+                   "the effect badge has its own third line")
+            verify(row.effectRect.y + row.effectRect.height <= row.height,
+                   "the badge stays inside the unchanged row height")
+            const input = findChild(band, "timelineTrackHeadersInput")
+            const beforeVoice = bootstrap.headerEffectVoiceRequests()
+            const voice = row.mapToItem(input, row.subtitleRect.x + row.subtitleRect.width / 2,
+                                       row.subtitleRect.y + row.subtitleRect.height / 2)
+            mouseDoubleClickSequence(input, voice.x, voice.y, Qt.LeftButton)
+            compare(bootstrap.headerEffectVoiceRequests(), beforeVoice + 1,
+                    "the actual shifted voice rectangle still activates the voice command")
+            const modes = ["vanilla", "dark-neutral-high", "immaterial"]
+            for (let i = 0; i < modes.length; ++i) {
+                verify(bootstrap.setHeaderEffectTheme(modes[i]), bootstrap.headerEffectsError)
+                verify(bootstrap.setHeaderEffectLive(true), bootstrap.headerEffectsError)
+                tryCompare(caption, "text", "Live")
+                tryCompare(caption, "visible", true)
+                assertEffectInk(name, modes[i] + " effect badge")
+                assertEffectInk(caption, modes[i] + " Live caption")
+                verify(bootstrap.crashHeaderEffect(), bootstrap.headerEffectsError)
+                tryCompare(caption, "text", "Stopped")
+                tryCompare(caption, "visible", true)
+                assertEffectInk(name, modes[i] + " stopped effect badge")
+                assertEffectInk(caption, modes[i] + " Stopped caption")
+                verify(bootstrap.reloadHeaderEffect(), bootstrap.headerEffectsError)
+                tryCompare(caption, "text", "Live")
+                verify(bootstrap.setHeaderEffectLive(false), bootstrap.headerEffectsError)
+                tryCompare(caption, "visible", false)
+            }
+        } finally {
+            if (band) {
+                band.destroy()
+                tryCompare(testCase, "effectHeaderDestructions", 1)
+            }
+            verify(bootstrap.finishHeaderEffects(), bootstrap.headerEffectsError)
+        }
+    }
 
     function test_quickSurfacePublishesAndRendersHeaders() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")

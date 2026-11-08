@@ -262,7 +262,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songDock.attach(session: self)
         pluginCatalog.onChanged = { [weak self] in
             guard let self, !self.isDisposed else { return }
-            for tab in self.songTabs.tabs { tab.workspace.effects.catalogDidChange() }
+            for tab in self.songTabs.tabs {
+                tab.workspace.effects.catalogDidChange()
+                tab.workspace.midiEffects.catalogDidChange()
+            }
         }
     }
 
@@ -465,6 +468,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         guard let workspace else { preconditionFailure("Pitch Bend requested without an open song") }
         return workspace.pitchBend
     }
+
+    public func midiEffectsPresenter() -> Optional<MidiEffectsPresenter> { workspace?.midiEffects }
 
     public func trackHeadersPresenter() -> TrackHeadersPresenter {
         guard let workspace else {

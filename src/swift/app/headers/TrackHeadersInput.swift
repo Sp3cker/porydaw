@@ -35,7 +35,7 @@ extension TrackHeadersPresenter {
         let localY = y + scrollY - Double(row * rowHeight)
         if geometry.muteRect(width: viewportWidth).contains(x: x, y: localY) { return .mute }
         if geometry.soloRect(width: viewportWidth).contains(x: x, y: localY) { return .solo }
-        if geometry.textRects(width: viewportWidth, metrics: textMetrics).1.contains(x: x, y: localY) {
+        if snapshots[row].subtitleRect.contains(x: x, y: localY) {
             return .voice
         }
         return .body

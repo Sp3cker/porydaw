@@ -88,8 +88,10 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onChangeTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onArpeggiatorRequested: ((Int) -> Void)?
+    @QtIgnored public var onMidiEffectsRequested: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
     @QtIgnored var session: DocumentSession?
+    @QtIgnored weak var effects: TrackEffectsController?
     @QtIgnored var palette = GridPalette()
     @QtIgnored var geometry = TrackHeadersGeometry()
     @QtIgnored var pointer = HeaderPointerState()
@@ -141,6 +143,7 @@ public final class TrackHeadersPresenter {
     public func detach() {
         cancelTransientState()
         session = nil
+        effects = nil
         appliedRevision = nil
         structuralRevision = nil
         pendingVoice = nil
@@ -160,6 +163,7 @@ public final class TrackHeadersPresenter {
         onChangeTrackVoiceRequested = nil
         onRevealTrackVoiceRequested = nil
         onArpeggiatorRequested = nil
+        onMidiEffectsRequested = nil
         onContextMenuRequested = nil
     }
 
@@ -438,7 +442,7 @@ public final class TrackHeadersPresenter {
     }
 
     public func activateHeaderMenuAction(actionId: Int) {
-        guard let target = pendingMenu, (1...6).contains(actionId) else { return }
+        guard let target = pendingMenu, (1...7).contains(actionId) else { return }
         if actionId == 4, session?.document.canAddTrack != true { return }
         dismissHeaderMenu()
         guard let session, target.matches(session.document), validTrack(target.track) else { return }
@@ -453,6 +457,7 @@ public final class TrackHeadersPresenter {
             session.document.deleteTrack(target.track)
             refreshFromDocument()
         case 6: onArpeggiatorRequested?(target.track)
+        case 7: onMidiEffectsRequested?(target.track)
         default: break
         }
     }
@@ -528,7 +533,7 @@ public final class TrackHeadersPresenter {
         dismissHeaderMenu()
         let labels = [
             "Change voice...", "Show voice in voicegroup", "Rename track...",
-            "Duplicate track", "Delete track", "Arpeggiator...",
+            "Duplicate track", "Delete track", "Arpeggiator...", "MIDI Effects...",
         ]
         menuItems.reset(
             to: labels.enumerated().map { (index: Int, text: String) -> MenuRow in
@@ -565,9 +570,14 @@ public final class TrackHeaderRowHandle {
     public var track: Int = -1
     public var title: String = ""
     public var subtitle: String = ""
+    public var effectName: String = ""
+    public var liveArmed: Bool = false
+    public var effectStopped: Bool = false
     @QtTracked public var titleRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     @QtTracked public var subtitleRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var effectRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     public var selectedTitleOffsetX: Double = 0
     public var selectedTitleOffsetY: Double = 0
@@ -601,8 +611,12 @@ public final class TrackHeaderRowHandle {
         publish(\.track, row.track)
         publish(\.title, row.title)
         publish(\.subtitle, row.subtitle)
+        publish(\.effectName, row.effectName)
+        publish(\.liveArmed, row.liveArmed)
+        publish(\.effectStopped, row.effectStopped)
         _ = titleRect.update(row.titleRect.sceneValue)
         _ = subtitleRect.update(row.subtitleRect.sceneValue)
+        _ = effectRect.update(row.effectRect.sceneValue)
         publish(\.selectedTitleOffsetX, row.selectedTitleOffset.x)
         publish(\.selectedTitleOffsetY, row.selectedTitleOffset.y)
         publish(\.titleFont, row.titleFont)

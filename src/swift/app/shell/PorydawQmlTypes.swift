@@ -68,6 +68,8 @@ public enum PorydawQmlTypes {
         KitSourceRow.self,
         KitStudioPresenter.self,
         LayoutSpaces.self,
+        MidiEffectPluginRow.self,
+        MidiEffectsPresenter.self,
         MouseHints.self,
         OtherEventsBandPresenter.self,
         OtherEventsMarkerHandle.self,

@@ -7,6 +7,7 @@ import PorydawCore
 import PorydawDocument
 import QtBridge
 import QtBridgeCpp
+import SwiftCoreCheckSupport
 
 /// QML-facing bridge for the lane: the staged scratch paths, the accumulated
 /// page-cancellation count, and every test page the container hosts.
@@ -67,6 +68,66 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     /// phase is fixed before this object exists.
     public var lanePhase: String = EditorQmlBootstrap.stagedPhase
     @QtTracked public var preferences = PreferencesStore()
+    @QtTracked public var headerEffectsModel: Optional<TrackHeadersPresenter> = nil
+    public var headerEffectsError: String = ""
+    private var headerEffectsFixture: EditorMidiEffectsFixture?
+
+    public func pumpMainRunLoop() {
+        _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
+    }
+
+    public func prepareHeaderEffects() -> Bool {
+        guard headerEffectsFixture == nil, let source = session?.selectedDocument else { return false }
+        do {
+            let fixture = try runBlocking { try await EditorMidiEffectsFixture.make(source: source) }
+            headerEffectsFixture = fixture
+            headerEffectsModel = fixture.headers
+            return true
+        } catch {
+            headerEffectsError = String(describing: error)
+            return false
+        }
+    }
+
+    public func setHeaderEffectLive(enabled: Bool) -> Bool {
+        changeHeaderEffects { (fixture: EditorMidiEffectsFixture) in try await fixture.setLive(enabled) }
+    }
+
+    public func crashHeaderEffect() -> Bool {
+        changeHeaderEffects { (fixture: EditorMidiEffectsFixture) in try await fixture.crash() }
+    }
+
+    public func reloadHeaderEffect() -> Bool {
+        changeHeaderEffects { (fixture: EditorMidiEffectsFixture) in try await fixture.reload() }
+    }
+
+    public func setHeaderEffectTheme(mode: String) -> Bool {
+        changeHeaderEffects { (fixture: EditorMidiEffectsFixture) in fixture.setTheme(mode) }
+    }
+
+    public func headerEffectVoiceRequests() -> Int { headerEffectsFixture?.voiceRequests ?? -1 }
+
+    public func finishHeaderEffects() -> Bool {
+        guard changeHeaderEffects({ (fixture: EditorMidiEffectsFixture) in try await fixture.finish() }) else {
+            return false
+        }
+        headerEffectsModel = nil
+        headerEffectsFixture = nil
+        return true
+    }
+
+    private func changeHeaderEffects(
+        _ action: @escaping @MainActor (EditorMidiEffectsFixture) async throws -> Void
+    ) -> Bool {
+        guard let fixture = headerEffectsFixture else { return false }
+        do {
+            try runBlocking { try await action(fixture) }
+            return true
+        } catch {
+            headerEffectsError = String(describing: error)
+            return false
+        }
+    }
 
     public func resetPreferences() -> Bool {
         preferences.resetPreferences()

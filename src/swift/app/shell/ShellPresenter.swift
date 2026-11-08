@@ -4,6 +4,7 @@ import PorydawAppPresentation
 import PorydawBackups
 import PorydawDocument
 import PorydawNativeHost
+import PorydawPluginHost
 import QtBridge
 
 @MainActor
@@ -108,6 +109,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         clipboardObserver = clipboard.addChangeObserver { [weak self] in
             self?.refreshActionStates()
+        }
+        let transportStrokes = keybindings.sequences("transport.play_pause").compactMap {
+            (sequence: KeybindingSequence) -> Int? in
+            sequence.strokes.count == 1 ? sequence.strokes[0] : nil
+        }
+        PluginEditorShortcuts.install(strokes: transportStrokes) { [weak self] (_: Int) in
+            self?.activate(id: "transport.play_pause")
         }
         pd_startup_trace_mark("presenter-end")
     }

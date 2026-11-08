@@ -189,7 +189,7 @@ enum EditorQmlLane {
             ),
             (
                 "Headers",
-                "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay"
+                "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay headerEffectBadgesRenderWithAccessibleInk"
             ),
             (
                 "VelocityRaster",

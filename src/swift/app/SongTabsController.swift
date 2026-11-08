@@ -89,6 +89,7 @@ public final class SongTabSession {
 
     public func pitchBendPresenter() -> PitchBendPresenter { workspace.pitchBend }
     public func arpeggiatorPresenter() -> ArpeggiatorPresenter { workspace.arpeggiator }
+    public func midiEffectsPresenter() -> Optional<MidiEffectsPresenter> { workspace.midiEffects }
 
     public func trackHeadersPresenter() -> TrackHeadersPresenter { workspace.trackHeaders }
     public func headerVoicePickerModel() -> HeaderVoicePicker { workspace.headerVoicePicker }

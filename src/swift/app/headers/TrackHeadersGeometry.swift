@@ -29,8 +29,12 @@ struct TrackHeaderSnapshot: Equatable {
     var track = -1
     var title = ""
     var subtitle = ""
+    var effectName: String = ""
+    var liveArmed = false
+    var effectStopped = false
     var titleRect = HeaderRect()
     var subtitleRect = HeaderRect()
+    var effectRect = HeaderRect()
     var selectedTitleOffset = HeaderPoint()
     var titleFont: QmlFont
     var subtitleFont: QmlFont
@@ -261,6 +265,17 @@ extension TrackHeadersPresenter {
         row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1
+        if let effect = session.document.effect(onTrack: track) {
+            row.effectName = effect.config.plugin.name
+            row.liveArmed = effects?.isLive(effect.id) == true
+            if let status = effects?.status(effect.id), case .crashed = status { row.effectStopped = true }
+            let available = Double(max(0, geometry.rowHeight - geometry.separatorWidth))
+            let gap = min(Double(geometry.spaceHalf), max(0, (available - rects.0.height - 2 * rects.1.height) / 2))
+            row.titleRect.y = max(0, (available - rects.0.height - 2 * rects.1.height - 2 * gap) / 2)
+            row.subtitleRect.y = row.titleRect.y + rects.0.height + gap
+            row.effectRect = row.subtitleRect
+            row.effectRect.y += row.subtitleRect.height + gap
+        }
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
         let scoped = !primary && session.selectedTracks.contains(track)
         if scoped {

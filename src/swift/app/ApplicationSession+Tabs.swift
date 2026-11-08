@@ -205,7 +205,8 @@ extension ApplicationSession {
             let viewport = DocumentViewport(session: session)
             viewport.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(
-                viewport: viewport, audio: audio, pluginCatalog: pluginCatalog, playhead: playhead,
+                viewport: viewport, audio: audio, pluginCatalog: pluginCatalog, preferences: preferences,
+                playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
             viewport.onEditorViewStateChanged = { [weak self, weak viewport] state in

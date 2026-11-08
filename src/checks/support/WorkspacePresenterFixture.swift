@@ -10,6 +10,8 @@ public struct WorkspacePresenterFixture {
     public let guides: PlayheadGuidesPresenter
     public let eventList: EventListPresenter
     public let workspace: DocumentWorkspace
+    let catalog: PluginCatalog
+    let catalogDirectory: URL
 
     public init(
         viewport: DocumentViewport, audio: NativeAudio,
@@ -18,11 +20,13 @@ public struct WorkspacePresenterFixture {
         playhead = SharedPlayheadPresenter()
         guides = PlayheadGuidesPresenter()
         eventList = EventListPresenter()
-        let cache = FileManager.default.temporaryDirectory.appendingPathComponent(
+        catalogDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(
             "porydaw-workspace-catalog-\(UUID().uuidString)", isDirectory: true)
-        let catalog = PluginCatalog(cacheDirectory: cache, scannerURL: HelperProcess.executableURL, standardRoots: [])
+        catalog = PluginCatalog(
+            cacheDirectory: catalogDirectory, scannerURL: HelperProcess.executableURL, standardRoots: [])
         workspace = DocumentWorkspace(
-            viewport: viewport, audio: audio, pluginCatalog: catalog, playhead: playhead,
+            viewport: viewport, audio: audio, pluginCatalog: catalog, preferences: PreferencesStore(),
+            playhead: playhead,
             playheadGuides: guides, eventList: eventList, palette: GridPalette(),
             typography: Typography(baseFontPx: 13), callbacks: callbacks)
     }

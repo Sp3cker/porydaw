@@ -442,6 +442,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/SessionChecks.swift
         workspace/EffectPersistenceChecks.swift
         miditools/TrackEffectsControllerChecks.swift
+        miditools/MidiEffectsPresenterChecks.swift
         workspace/bank_sharing.swift
         workspace/bank_undo_publication.swift
         workspace/editor_view_state_checks.swift
@@ -577,6 +578,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/EditorQmlProfileEvidence.swift
         editorqml/EditorQmlBootstrap.swift
         editorqml/EditorQmlBootstrapSupport.swift
+        editorqml/EditorMidiEffectsFixture.swift
+        support/WorkspacePresenterFixture.swift
         editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
@@ -585,7 +588,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        SWIFT_LINK_LIBRARIES QtBridge PorydawApp
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp swift_core_check_support
         SOURCES
         editorqml/EditorQmlPaths.swift.in
         # Source-directory inputs resolve NativeWait.js imports without staging.
