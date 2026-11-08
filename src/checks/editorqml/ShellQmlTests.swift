@@ -10,6 +10,7 @@ import QtBridgeCpp
 @testable import PorydawApp
 @testable import PorydawAppPresentation
 @testable import PorydawAppAudio
+@testable import PorydawPluginHost
 
 /// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
 /// is one TestCase file with its own staged decomp-project fixture; the runner
@@ -65,6 +66,15 @@ enum ShellQmlLane {
         PreferencesStore.stageShared(
             plistPath: URL(fileURLWithPath: scratch, isDirectory: true)
                 .appendingPathComponent("settings.plist").path)
+        let previousCatalogFactory = ApplicationSession.pluginCatalogFactory
+        let catalogCache = URL(fileURLWithPath: scratch, isDirectory: true)
+            .appendingPathComponent("plugin-catalogs", isDirectory: true)
+        ApplicationSession.pluginCatalogFactory = { @MainActor () -> PluginCatalog in
+            PluginCatalog(
+                cacheDirectory: catalogCache.appendingPathComponent(UUID().uuidString, isDirectory: true),
+                scannerURL: HelperProcess.executableURL, standardRoots: [])
+        }
+        defer { ApplicationSession.pluginCatalogFactory = previousCatalogFactory }
         var app = QTestAppCpp()
         app.setInputDir(EditorQmlPaths.testDirectory)
         app.setImportPath(EditorQmlPaths.qmlImportPath)
@@ -215,6 +225,8 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     private static var stagedProjectRoot = ""
 
     public var projectRoot: String = ShellQmlBootstrap.stagedProjectRoot
+    public var vstFixtureFolder: String = URL(fileURLWithPath: CommandLine.arguments[0])
+        .deletingLastPathComponent().appendingPathComponent("vstfixtures", isDirectory: true).path
     @QtTracked public var rasterDpr2Child = ProcessInfo.processInfo.environment["PORYDAW_DRAWER_RASTER_DPR2"] != nil
     @QtTracked public var preferences = PreferencesStore()
 
@@ -228,6 +240,11 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
 
     public func resetPreferences() -> Bool {
         preferences.resetPreferences()
+    }
+
+    /// Injects a fixture processing fault without changing the document's recorded state.
+    public func injectPluginFault(track: Int, mode: Int) -> Bool {
+        PluginFaultInjector.inject(app: polyphonySession, track: track, mode: mode)
     }
     public func seedStartupSong(projectPath: String, song: String) -> Bool {
         let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)

@@ -135,6 +135,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         support/NumericCheckSupport.swift
         LINK_LIBRARIES ${core_check_libraries}
     )
+    target_compile_options(swift_core_check_support INTERFACE
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+    )
     add_porydaw_check_lane(swift_core_check_logic
         MODULE_NAME SwiftCoreCheckLogic
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_logic"
@@ -579,14 +583,13 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/EditorQmlBootstrap.swift
         editorqml/EditorQmlBootstrapSupport.swift
         editorqml/EditorMidiEffectsFixture.swift
+        editorqml/GridInputClipProbe.swift
         support/WorkspacePresenterFixture.swift
         editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
         SWIFT_COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
         SWIFT_LINK_LIBRARIES QtBridge PorydawApp swift_core_check_support
         SOURCES
@@ -644,6 +647,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         AUTOMOC OFF
         SWIFT_SOURCES
         editorqml/ShellQmlTests.swift
+        editorqml/PluginFaultInjector.swift
         editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
@@ -661,7 +665,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        SWIFT_LINK_LIBRARIES QtBridge PorydawApp PorydawCore
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp PorydawCore swift_core_check_support
         SOURCES
         editorqml/EditorQmlPaths.swift.in
         editorqml/NativeWait.js
@@ -687,6 +691,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellGridInputAutomation.qml
         editorqml/ShellPitchBendSupport.qml
         editorqml/tst_ShellArpeggiator.qml
+        editorqml/tst_ShellMidiEffects.qml
+        editorqml/tst_ShellEffectOutput.qml
         editorqml/tst_ShellPitchBendCancellation.qml
         editorqml/tst_ShellPitchBendControls.qml
         editorqml/tst_ShellPitchBendPointer.qml

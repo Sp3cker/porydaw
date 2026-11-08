@@ -66,9 +66,10 @@ public final class DocumentWorkspace {
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
+    public let effectOutputPage: EffectOutputPage
     public let rulerMenu: RulerMenuPresenter
     /// Drawer chrome belongs to the document: this workspace owns the presenter
-    /// and the three section slots its own pages occupy.
+    /// and the section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
     public let otherEventsBand: OtherEventsBandPresenter
 
@@ -163,6 +164,13 @@ public final class DocumentWorkspace {
         let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
         automationPage.attach(viewport: viewport, palette: grid.palette)
         self.automationPage = automationPage
+        let effectOutputPage = EffectOutputPage(baseFontPx: Double(typography.baseFontPx))
+        effectOutputPage.attach(viewport: viewport, palette: grid.palette, effects: effects)
+        effectOutputPage.onCommandAvailabilityChanged = callbacks.gridCommandAvailabilityChanged
+        effectOutputPage.onAddEffectRequested = { [weak midiEffects] (track: Int) in
+            midiEffects?.open(track: track)
+        }
+        self.effectOutputPage = effectOutputPage
         let rulerMenu = RulerMenuPresenter(viewport: viewport, grid: grid, automation: automationPage)
         self.rulerMenu = rulerMenu
         grid.onGridMenuOpened = { [weak automationPage, weak rulerMenu] in
@@ -232,12 +240,18 @@ public final class DocumentWorkspace {
         session.onChange = { [weak self] change in
             self?.sessionDidChange(change)
         }
-        effects.onChanged = { [weak self] (_: EffectID) in
+        effects.onChanged = { [weak self] (id: EffectID) in
             guard let self, !self.isTornDown else { return }
             self.midiEffects.documentChanged()
             self.trackHeaders.refreshFromDocument()
+            self.effectOutputPage.effectChanged(id)
         }
-        effects.outputs.onChanged = { [weak midiEffects] (_: EffectID) in midiEffects?.documentChanged() }
+        effects.outputs.onChanged = { [weak self] (id: EffectID) in
+            guard let self, !self.isTornDown else { return }
+            self.midiEffects.documentChanged()
+            self.effectOutputPage.outputChanged(id)
+            self.callbacks.gridCommandAvailabilityChanged()
+        }
     }
 
     /// Installs the already-built workspace only after the previous scene has
@@ -252,6 +266,7 @@ public final class DocumentWorkspace {
             timeline: session.timeline, bank: session.bankLease,
             config: session.document.state.config)
         effects.activate()
+        effectOutputPage.activate()
         grid.onBandAudition = { [weak audio] notes in
             audio?.updateBandAudition(notes)
         }
@@ -281,8 +296,8 @@ public final class DocumentWorkspace {
                 levels: levels,
                 elapsedSeconds: elapsed, playing: playing)
         }
-        drawer.attachSections([velocityPage, voiceChangesPage, automationPage])
-        for kind in [DrawerSectionKind.velocity, .voiceChanges, .automation] {
+        drawer.attachSections([velocityPage, voiceChangesPage, automationPage, effectOutputPage])
+        for kind in DrawerSectionKind.allCases {
             flushDeferredCamera(kind)
         }
         playheadGuides.attach(viewport: viewport)
@@ -304,6 +319,7 @@ public final class DocumentWorkspace {
         trackHeaders.refreshAppearance()
         arpeggiator.refreshAppearance()
         midiEffects.refreshAppearance()
+        effectOutputPage.refreshAppearance()
         velocityPage.refreshPromptStyle()
         voiceChangesPage.refreshPromptStyle()
         automationPage.refreshPromptStyles()
@@ -336,6 +352,7 @@ public final class DocumentWorkspace {
     /// scene has already released. Idempotent with `teardown`, which clears
     /// the same closures.
     public func suspendCallbacks() {
+        effectOutputPage.suspend()
         effects.suspend()
         arpeggiator.close()
         midiEffects.close()
@@ -362,6 +379,7 @@ public final class DocumentWorkspace {
     public func deactivate() {
         midiEffects.close()
         guard isActive else { return }
+        effectOutputPage.suspend()
         effects.suspend()
         isActive = false
         arpeggiator.close()
@@ -375,6 +393,7 @@ public final class DocumentWorkspace {
         lastPlayheadPresentation = nil
         playheadGuides.detach()
         eventList.detach()
+        drawer.detachSection(effectOutputPage)
         drawer.detachSection(automationPage)
         drawer.detachSection(voiceChangesPage)
         drawer.detachSection(velocityPage)
@@ -410,6 +429,7 @@ public final class DocumentWorkspace {
         drawer.onChromeChanged = nil
         automationPage.onLaneRangeChanged = nil
         viewport.onCameraChangeDetailed = nil
+        effectOutputPage.detach()
         voiceChangesPage.detach()
         headerVoicePicker.cancelPicker()
         headerVoicePicker.onOpenChanged = nil
@@ -470,6 +490,7 @@ public final class DocumentWorkspace {
         case (.voiceChanges, _): voiceChangesPage.refreshCamera()
         case (.automation, true): automationPage.refreshCamera()
         case (.automation, false): automationPage.refreshHorizontalProjection()
+        case (.effectOutput, _): effectOutputPage.refreshCamera()
         }
     }
 
@@ -525,6 +546,10 @@ public final class DocumentWorkspace {
         }
         let documentChanged = change.domains.contains(.document)
         let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
+        if primaryTrackChanged || !change.domains.intersection([.document, .effects]).isEmpty {
+            effectOutputPage.refreshFromDocument()
+            deferredCameraZoom[.effectOutput] = nil
+        }
         let moved = documentChanged ? moved(since: appliedRevisions) : Moved()
         if documentChanged {
             appliedRevisions = session.document.revisions
@@ -617,6 +642,7 @@ public final class DocumentWorkspace {
 
     private func present(playhead presentation: SharedPlayheadPresentation) {
         lastPlayheadPresentation = presentation
+        effectOutputPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         if drawer.section(kind: DrawerSectionKind.velocity.rawValue).visible {
             velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         }
@@ -640,6 +666,8 @@ public final class DocumentWorkspace {
             voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         case .automation:
             automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        case .effectOutput:
+            effectOutputPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         }
     }
 }

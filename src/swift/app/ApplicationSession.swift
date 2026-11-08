@@ -207,8 +207,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return data.appendingPathComponent("porydaw/Plugins", isDirectory: true)
     }
 
+    static var pluginCatalogFactory: @MainActor () -> PluginCatalog = { @MainActor () -> PluginCatalog in
+        PluginCatalog(cacheDirectory: ApplicationSession.pluginCacheDirectory())
+    }
+
     public required init() {
-        pluginCatalog = PluginCatalog(cacheDirectory: Self.pluginCacheDirectory())
+        pluginCatalog = Self.pluginCatalogFactory()
         let palette = GridPalette()
         self.palette = palette
         songTabs = SongTabsController(palette: palette)
@@ -520,14 +524,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.voiceChangesPage
     }
 
-    /// The document-bound Automation page, with the same document lifetime as the
-    /// other two pages.
+    /// The document-bound Automation page, with the same document lifetime as its siblings.
     public func automationPage() -> AutomationPage {
         guard let workspace else {
             preconditionFailure("Automation page requested without an open song")
         }
         return workspace.automationPage
     }
+
+    public func effectOutputPage() -> Optional<EffectOutputPage> { workspace?.effectOutputPage }
 
     /// The one shared playhead. Unlike a workspace's drawer it is application
     /// state: it publishes an empty, detached presentation until a document is

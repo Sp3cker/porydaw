@@ -105,21 +105,6 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         }
     }
 
-    private static func diagnosticText(_ report: NormalizationReport?) -> String {
-        guard let report else { return "" }
-        let counters: [(String, Int)] = [
-            ("notes", report.notes), ("nonNoteEvents", report.nonNoteEvents),
-            ("droppedBeforeRange", report.droppedBeforeRange), ("droppedAfterRange", report.droppedAfterRange),
-            ("droppedPitch", report.droppedPitch), ("droppedTooShort", report.droppedTooShort),
-            ("orphanOffs", report.orphanOffs), ("unterminatedNotes", report.unterminatedNotes),
-            ("snappedOnsets", report.snappedOnsets), ("adjustedDurations", report.adjustedDurations),
-            ("velocityClamped", report.velocityClamped), ("overlapsTrimmed", report.overlapsTrimmed),
-            ("duplicatesSuppressed", report.duplicatesSuppressed),
-        ]
-        var parts: [String] = []
-        for (name, count) in counters where count != 0 { parts.append("\(name): \(count)") }
-        return parts.joined(separator: ", ")
-    }
 
     private func refresh() {
         refreshFolders()
@@ -150,7 +135,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
             }
             return
         }
-        diagnostics = Self.diagnosticText(effects.outputs[effect.id]?.report)
+        diagnostics = MidiEffectDiagnostics.text(effects.outputs[effect.id]?.report)
         isEditorOpen = effects.instance(for: effect.id)?.isEditorOpen == true
         switch effects.status(effect.id) {
         case .idle, .ready, .rendering, .nothingHeard:

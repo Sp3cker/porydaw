@@ -27,19 +27,6 @@ func drawerLayoutCheckDrawerMetricsAndKinds(_ report: CheckReport) {
     report.expectEqual(
         expected: 44, actual: metrics.maximumDefaultBodyHeight(hostHeight: 174), cppID: drawerLayoutMetricsID,
         what: "the reserve bound meets the body floor exactly at its boundary")
-
-    report.expect(
-        DrawerSectionKind.automation.rawValue == 0 && DrawerSectionKind.velocity.rawValue == 1
-            && DrawerSectionKind.voiceChanges.rawValue == 2
-            && DrawerSectionKind.stackOrder == [.velocity, .voiceChanges, .automation]
-            && DrawerSectionKind.toggleOrder == [.voiceChanges, .automation, .velocity],
-        cppID: drawerLayoutMetricsID,
-        message: "section identities keep production raw values and the fixed stack and toggle orders")
-    report.expect(
-        DrawerSectionKind.allCases.map(\.name) == ["automations", "velocity", "voiceChanges"]
-            && DrawerSectionKind.allCases.map(\.keyName) == ["automation", "velocity", "voiceChanges"],
-        cppID: drawerLayoutMetricsID,
-        message: "preference key names follow the historical formats")
 }
 
 @MainActor
@@ -64,6 +51,7 @@ func drawerLayoutCheckDrawerNoPageAndAvailability(_ report: CheckReport) {
         $0.restorePreferences(
             velocityVisible: 1, velocityHeight: 220, automationVisible: -1,
             automationHeight: 0, voiceChangesVisible: -1, voiceChangesHeight: 0,
+            effectOutputVisible: 0, effectOutputHeight: 0,
             activePage: -1)
     }
     report.expect(

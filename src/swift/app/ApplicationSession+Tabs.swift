@@ -87,6 +87,7 @@ extension ApplicationSession {
             _ = await prior?.value
             // Component.onDestruction precedes child destruction. Retire on the
             // existing async boundary, after the QML destruction stack unwinds.
+            await tab.workspace.effectOutputPage.shutdown()
             await tab.workspace.effects.shutdown()
             tab.workspace.teardown()
             await tab.workspace.awaitAudioRelease()
@@ -254,6 +255,7 @@ extension ApplicationSession {
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
                 if let pending { songTabs.cancelReload(tabId: pending.tabId) }
+                await workspace.effectOutputPage.shutdown()
                 await workspace.effects.shutdown()
                 workspace.teardown()
                 await workspace.awaitAudioRelease()
@@ -272,6 +274,7 @@ extension ApplicationSession {
                         songTabs.tab(id: pending.tabId).map {
                             !pending.matches($0)
                         } ?? false
+                    await workspace.effectOutputPage.shutdown()
                     await workspace.effects.shutdown()
                     workspace.teardown()
                     await workspace.awaitAudioRelease()

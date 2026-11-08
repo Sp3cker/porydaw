@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawAppPresentation
 import PorydawAppAudio
 import PorydawAppCommands
@@ -8,6 +8,7 @@ import PorydawDocument
 import QtBridge
 import QtBridgeCpp
 import SwiftCoreCheckSupport
+@testable import PorydawPluginHost
 
 /// QML-facing bridge for the lane: the staged scratch paths, the accumulated
 /// page-cancellation count, and every test page the container hosts.
@@ -71,6 +72,77 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     @QtTracked public var headerEffectsModel: Optional<TrackHeadersPresenter> = nil
     public var headerEffectsError: String = ""
     private var headerEffectsFixture: EditorMidiEffectsFixture?
+    public var effectOutputError: String = ""
+    private var outputFixtureID: EffectID?
+
+    /// Stages deterministic notes in the real selected workspace's session-only
+    /// store. The plug-in identity comes from the same fixture catalog as Shell.
+    public func stageEffectOutput(origin: Int, degraded: Bool) -> Bool {
+        guard let session, let workspace = session.workspace,
+            let track = workspace.session.selectedTrack
+        else { return false }
+        do {
+            let id: EffectID
+            if let existing = outputFixtureID,
+                workspace.viewport.session.document.effect(onTrack: track)?.id == existing
+            {
+                id = existing
+            } else {
+                let module = HelperProcess.executableURL.deletingLastPathComponent()
+                    .appendingPathComponent("vstfixtures/porydawtestgen.vst3")
+                try runBlocking {
+                    await session.pluginCatalog.scan(folders: [module.path], force: false)
+                }
+                guard
+                    let entry = session.pluginCatalog.entries.first(where: {
+                        (entry: PluginCatalogEntry) in entry.name == "TestGen" && entry.modulePath == module.path
+                    })
+                else {
+                    effectOutputError = "TestGen fixture was not discovered"
+                    return false
+                }
+                id = try workspace.viewport.session.document.addEffect(
+                    TrackEffectConfig(
+                        track: track,
+                        plugin: PluginEffectConfig(
+                            modulePath: entry.modulePath, classUID: entry.classUID, name: entry.name,
+                            input: .none, pacing: .offline, prerollBars: 0)))
+                outputFixtureID = id
+            }
+            let beat = Tick(workspace.viewport.session.document.ticksPerBeat)
+            let duration = max(Tick(1), beat / 2)
+            let notes = [
+                NewNote(track: track, tick: 0, pitch: 48, duration: duration, velocity: 90),
+                NewNote(track: track, tick: beat, pitch: 60, duration: duration, velocity: 100),
+                NewNote(track: track, tick: beat * 2, pitch: 72, duration: duration, velocity: 110),
+            ]
+            var report = NormalizationReport()
+            report.notes = notes.count
+            report.snappedOnsets = 2
+            report.droppedBeforeRange = 1
+            workspace.effects.outputs[id] = EffectOutput(
+                range: TimeRange(startTick: 0, endTick: beat * 4), notes: notes,
+                origin: origin == 0 ? .render : .grab, report: report, degraded: degraded)
+            effectOutputError = ""
+            return true
+        } catch {
+            effectOutputError = String(describing: error)
+            return false
+        }
+    }
+
+    public func finishEffectOutput() -> Bool {
+        guard let id = outputFixtureID else { return true }
+        guard let document = session?.selectedDocument?.document else { return false }
+        do {
+            try document.removeEffect(id)
+            outputFixtureID = nil
+            return true
+        } catch {
+            effectOutputError = String(describing: error)
+            return false
+        }
+    }
 
     public func pumpMainRunLoop() {
         _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
@@ -205,6 +277,9 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         case .velocity: page = session.velocityPage()
         case .voiceChanges: page = session.voiceChangesPage()
         case .automation: page = session.automationPage()
+        case .effectOutput:
+            guard let output = session.effectOutputPage() else { return false }
+            page = output
         }
         session.drawerPresenter().detachSection(page)
         return !session.drawerPresenter().section(kind: kind).available
@@ -219,6 +294,9 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         case .velocity: page = session.velocityPage()
         case .voiceChanges: page = session.voiceChangesPage()
         case .automation: page = session.automationPage()
+        case .effectOutput:
+            guard let output = session.effectOutputPage() else { return false }
+            page = output
         }
         session.drawerPresenter().attachSection(page)
         return session.drawerPresenter().section(kind: kind).available

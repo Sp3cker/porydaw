@@ -16,11 +16,12 @@ public struct EditorCommandRouter {
     private unowned let rulerMenu: RulerMenuPresenter
     private let drawer: EditorDrawerPresenter?
     private let velocity: VelocityPage?
+    private let effectOutput: EffectOutputPage?
 
     public init(
         session: DocumentSession, grid: PianoGrid, automation: AutomationPage,
         rulerMenu: RulerMenuPresenter, drawer: EditorDrawerPresenter? = nil,
-        velocity: VelocityPage? = nil
+        velocity: VelocityPage? = nil, effectOutput: EffectOutputPage? = nil
     ) {
         self.session = session
         self.grid = grid
@@ -28,13 +29,14 @@ public struct EditorCommandRouter {
         self.rulerMenu = rulerMenu
         self.drawer = drawer
         self.velocity = velocity
+        self.effectOutput = effectOutput
     }
 
     private var timeSelectionActive: Bool { session.timeSelection?.isActive == true }
     private var pointerGestureActive: Bool {
         grid.interactionActive || grid.scrollbarGrabActive
             || drawer?.resizeActive == true || automation.pointerGestureActive
-            || velocity?.hasGesture == true
+            || velocity?.hasGesture == true || effectOutput?.interactionActive == true
     }
     private var modalActive: Bool {
         automation.menuOpen || automation.promptOpen || rulerMenu.insertTimePromptOpen
@@ -44,12 +46,19 @@ public struct EditorCommandRouter {
         timeSelectionActive && editCommandPolicy(command).rangeOperation != .none
     }
 
+    private func targetsEffectOutput(_ command: EditCommand) -> Bool {
+        !timeSelectionActive && effectOutput?.bodyFocused == true && (command == .copy || command == .selectAll)
+    }
+
     public func isAvailable(_ command: EditCommand) -> Bool {
         guard !modalActive,
             !pointerGestureActive || editCommandPolicy(command).survivesPointerGesture
         else { return false }
         if command == .paste || targetsTimeSelection(command) {
             return automation.selectionCommandAvailable(command: command)
+        }
+        if targetsEffectOutput(command) {
+            return effectOutput?.selectionCommandAvailable(command: command) == true
         }
         // A time range owns the timeline even for these notes-only rows.
         if timeSelectionActive && (command == .lengthenNote || command == .shortenNote) {
@@ -91,6 +100,10 @@ public struct EditorCommandRouter {
             _ = automation.consumeSelectionCommand(command: command)
             return nil
         }
+        if targetsEffectOutput(command) {
+            _ = effectOutput?.consumeSelectionCommand(command: command)
+            return nil
+        }
         if command == .insertTime {
             _ = rulerMenu.openInsertTimePromptAtCursor()
             return nil
@@ -126,6 +139,6 @@ extension ApplicationSession {
         return EditorCommandRouter(
             session: workspace.session, grid: workspace.grid,
             automation: workspace.automationPage, rulerMenu: workspace.rulerMenu,
-            drawer: workspace.drawer, velocity: workspace.velocityPage)
+            drawer: workspace.drawer, velocity: workspace.velocityPage, effectOutput: workspace.effectOutputPage)
     }
 }

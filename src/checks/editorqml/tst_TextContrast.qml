@@ -42,9 +42,12 @@ ShellLaneSupport {
     closeGateMessage: "closing reaches the dirty gate or completes"
     closeReadyMessage: "the scene is released"
 
+    function preDestroyShell() { bootstrap.children.length = 0 }
+
     function openShell() {
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        bootstrap.children.push(shell.shellPresenter)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         const chrome = findChild(shell, "shellContentLoader")
@@ -436,6 +439,86 @@ ShellLaneSupport {
         tryCompare(model, "isOpen", false)
     }
 
+    function auditMidiSurface(context, item) {
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               context + " submits before contrast capture")
+        const result = Audit.audit(item, grab)
+        record(context, result)
+        auditPopups(context, result.popups)
+    }
+
+    function auditMidiEffects(context) {
+        const surface = selectedSurface()
+        const model = surface.midiEffectsModel
+        model.open(surface.gridModel.trackIndex)
+        tryCompare(model, "isOpen", true)
+        tryVerify(function() { return findChild(surface, "midiEffectsPanel") !== null }, 5000)
+        const panel = findChild(surface, "midiEffectsPanel")
+        auditMidiSurface(context + " MIDI setup empty", panel)
+        model.addFolder(bootstrap.vstFixtureFolder)
+        const list = findChild(panel, "midiEffectsPluginList")
+        let generator = -1
+        verify(waitForNative(function() {
+            if (model.isScanning)
+                return false
+            for (let index = 0; index < list.count; ++index) {
+                list.positionViewAtIndex(index, ListView.Contain)
+                list.forceLayout()
+                const row = list.itemAtIndex(index)
+                if (row && row.name === "TestGen" && !row.blocked) {
+                    generator = index
+                    return true
+                }
+            }
+            return false
+        }, 30000), "the real MIDI fixture is available for contrast states")
+        model.selectPlugin(generator)
+        verify(waitForNative(function() { return model.hasEffect && !model.isLoading }, 30000),
+               "the actual effect loads before enabled-control capture")
+        auditMidiSurface(context + " MIDI setup loaded", panel)
+        model.close()
+        tryCompare(model, "isOpen", false)
+    }
+
+    function auditEffectOutput(context) {
+        const surface = selectedSurface()
+        const session = surface.applicationSession
+        const drawer = session.drawerPresenter()
+        drawer.setSectionVisible(3, true, false)
+        tryVerify(function() {
+            const item = findChild(surface, "effectOutputPage")
+            return item !== null && item.visible && item.width > 0 && item.height > 0
+        }, 5000)
+        const item = findChild(surface, "effectOutputPage")
+        const model = session.effectOutputPage()
+        auditMidiSurface(context + " effect output empty", item)
+        model.renderOutput()
+        verify(waitForNative(function() { return !model.rendering && model.canCopy }, 30000),
+               "real rendered notes enable Copy and expose output diagnostics")
+        auditMidiSurface(context + " effect output rendered", item)
+        model.setLive(true)
+        verify(waitForNative(function() { return model.live }, 10000), "Live becomes attached")
+        auditMidiSurface(context + " effect output Live", item)
+        verify(bootstrap.injectPluginFault(surface.gridModel.trackIndex, 1))
+        verify(waitForNative(function() { return model.canReload }, 10000), "the committed crash exposes Reload")
+        auditMidiSurface(context + " effect output stopped", item)
+        surface.midiEffectsModel.open(surface.gridModel.trackIndex)
+        tryVerify(function() { return findChild(surface, "midiEffectsPanel") !== null }, 5000)
+        auditMidiSurface(context + " MIDI setup stopped", findChild(surface, "midiEffectsPanel"))
+        surface.midiEffectsModel.close()
+        model.reloadPlugin()
+        verify(waitForNative(function() { return !model.canReload && model.canOperate && model.live }, 30000),
+               "Reload restores the real Live effect")
+        model.clearOutput()
+        auditMidiSurface(context + " effect output cleared", item)
+        surface.midiEffectsModel.open(surface.gridModel.trackIndex)
+        surface.midiEffectsModel.removeEffect()
+        verify(waitForNative(function() { return !model.hasEffect }, 10000), "removal exposes Add MIDI Effect")
+        auditMidiSurface(context + " effect output no effect", item)
+        drawer.setSectionVisible(3, false, false)
+    }
+
+
     function auditUndoHistory(context) {
         const presenter = shell.shellPresenter
         const history = presenter.session.undoHistory
@@ -577,6 +660,8 @@ ShellLaneSupport {
         presenter.activate("view.polyphony_debugger")
 
         auditUndoHistory(mode)
+        auditMidiEffects(mode)
+        auditEffectOutput(mode)
 
         presenter.activate("view.event_list")
         tryCompare(session.songTabs, "selectedTabShowsEvents", true, 3000)

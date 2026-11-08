@@ -226,7 +226,7 @@ private func midiEffectsSelectionAndSettings(
 }
 
 @MainActor
-private func midiEffectsCloseAndDiagnostics(
+private func midiEffectsCloseKeepsRuntime(
     _ fixture: MidiEffectsPresenterFixture, check: CheckReport.Scoped
 ) async throws {
     let presenter = fixture.presenter
@@ -234,19 +234,6 @@ private func midiEffectsCloseAndDiagnostics(
     try await fixture.settle()
     let id = try await fixture.select("TestGen")
     guard let instance = fixture.controller.instance(for: id) else { throw MidiEffectsPresenterCheckError.fixture }
-    var report = NormalizationReport()
-    report.notes = 3
-    report.nonNoteEvents = 1
-    report.snappedOnsets = 2
-    fixture.controller.outputs[id] = EffectOutput(
-        range: TimeRange(startTick: 0, endTick: 96), notes: [], origin: .render, report: report, degraded: false)
-    check.expect(
-        presenter.diagnostics == "notes: 3, nonNoteEvents: 1, snappedOnsets: 2",
-        message: "diagnostics are one line containing exactly the non-zero normalization counters")
-    fixture.controller.outputs[id] = EffectOutput(
-        range: TimeRange(startTick: 0, endTick: 96), notes: [], origin: .grab,
-        report: NormalizationReport(), degraded: false)
-    check.expect(presenter.diagnostics.isEmpty, message: "zero diagnostics clear the readout")
     presenter.configure(fontPx: 18)
     presenter.configure(fontPx: .nan)
     check.expect(presenter.baseFontPx == 18, message: "configuration follows typography and rejects a non-finite size")
@@ -592,7 +579,7 @@ func runMidiEffectsPresenterChecks(_ report: CheckReport, session: DocumentSessi
             try await midiEffectsSelectionAndSettings(fixture, check: check)
         }
         try run { (fixture: MidiEffectsPresenterFixture) in
-            try await midiEffectsCloseAndDiagnostics(fixture, check: check)
+            try await midiEffectsCloseKeepsRuntime(fixture, check: check)
         }
         try run { (fixture: MidiEffectsPresenterFixture) in
             try await midiEffectsUnavailable(fixture, check: check)

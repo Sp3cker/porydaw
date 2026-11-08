@@ -34,6 +34,7 @@ FocusScope {
     final readonly property App.OtherEventsBandPresenter otherEventsPresenter: applicationSession ? applicationSession.otherEventsBand() : null
     final readonly property App.PitchBendPresenter pitchBendPresenter: applicationSession ? applicationSession.pitchBendPresenter() : null
     final readonly property App.ArpeggiatorPresenter arpeggiatorModel: applicationSession ? applicationSession.arpeggiatorPresenter() : null
+    final readonly property App.MidiEffectsPresenter midiEffectsModel: applicationSession ? applicationSession.midiEffectsPresenter() : null
     final readonly property App.EventListPresenter eventListPresenter: applicationSession ? applicationSession.eventListPresenter() : null
     final property bool showEvents: applicationSession.showsEvents
     onShowEventsChanged: {
@@ -79,6 +80,7 @@ FocusScope {
         || applicationSession.headerVoicePickerOpen || applicationSession.timeSigPromptOpen
         || rulerMenu.insertTimePromptOpen || velocityModel.promptOpen || pitchBendPresenter.isOpen
         || (arpeggiatorModel && arpeggiatorModel.isOpen)
+        || (midiEffectsModel && midiEffectsModel.isOpen)
     function refreshHintScope(): void {
         if (hintService && !hintScopeCovered && hintWindowActive)
             hintService.scopeRefresh()
@@ -163,6 +165,8 @@ FocusScope {
         configureViewport()
         if (arpeggiatorModel)
             arpeggiatorModel.configure(baseFontPx)
+        if (midiEffectsModel)
+            midiEffectsModel.configure(baseFontPx)
     }
     onVisibleChanged: {
         // Cancellation reaches presenters even if this surface is already hidden.

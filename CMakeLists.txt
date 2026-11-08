@@ -274,9 +274,11 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/PromptAction.qml
         src/ui/songview/quick/PromptOverlay.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/ArpeggiatorPanel.qml
+        src/ui/songview/quick/MidiEffectsPanel.qml
         src/ui/songview/quick/ArpeggiatorStepPad.qml
         src/ui/songview/quick/ArpeggiatorKnob.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
@@ -325,6 +327,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
         src/ui/songview/quick/drawer/AutomationPage.qml
+        src/ui/songview/quick/drawer/EffectOutputPage.qml
         src/ui/songview/quick/drawer/AutomationPlot.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml
         src/ui/songview/quick/drawer/AutomationMenu.qml

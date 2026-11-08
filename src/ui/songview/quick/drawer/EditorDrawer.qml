@@ -30,6 +30,7 @@ FocusScope {
     readonly property int automationKind: 0
     readonly property int velocityKind: 1
     readonly property int voiceChangesKind: 2
+    readonly property int effectOutputKind: 3
 
     // Composition supplies width; Swift owns the aggregate height.
     height: presenter.height
@@ -40,6 +41,7 @@ FocusScope {
         case drawerScope.automationKind: return "automation"
         case drawerScope.velocityKind: return "velocity"
         case drawerScope.voiceChangesKind: return "voiceChanges"
+        case drawerScope.effectOutputKind: return "effectOutput"
         }
         return ""
     }
@@ -49,6 +51,7 @@ FocusScope {
         case drawerScope.automationKind: return Icons.automation
         case drawerScope.velocityKind: return Icons.velocity
         case drawerScope.voiceChangesKind: return Icons.flat
+        case drawerScope.effectOutputKind: return Icons.wave
         }
         return emptyIcon
     }
@@ -65,6 +68,7 @@ FocusScope {
         case drawerScope.automationKind: return automationSection.pageLoader
         case drawerScope.velocityKind: return velocitySection.pageLoader
         case drawerScope.voiceChangesKind: return voiceChangesSection.pageLoader
+        case drawerScope.effectOutputKind: return effectOutputSection.pageLoader
         }
         return null
     }
@@ -230,6 +234,7 @@ FocusScope {
                 const hadVisibleSection = drawerScope.presenter.automationSection.visible
                                           || drawerScope.presenter.velocitySection.visible
                                           || drawerScope.presenter.voiceChangesSection.visible
+                                          || drawerScope.presenter.effectOutputSection.visible
                 drawerScope.presenter.toggleSection(section.kind,
                                                     drawerScope.activeFocus
                                                     && (toggle.activeFocus || hadVisibleSection))
@@ -372,6 +377,14 @@ FocusScope {
         kind: drawerScope.automationKind
         toggleName: qsTr("Automation drawer")
         handleName: qsTr("Resize automation drawer")
+    }
+
+    DrawerSection {
+        id: effectOutputSection
+
+        kind: drawerScope.effectOutputKind
+        toggleName: qsTr("Effect Output drawer")
+        handleName: qsTr("Resize Effect Output drawer")
     }
 
     Item {

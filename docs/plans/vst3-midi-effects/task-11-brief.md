@@ -5,11 +5,13 @@ The production QML panel for live MIDI-effect inserts, bound to spec.md "MidiEff
 - src/ui/songview/quick/MidiEffectsPanel.qml (new; no MidiEffects QML exists today)
 - src/ui/songview/quick/swiftroll/EditorSurface.qml: `midiEffectsModel` bound to `applicationSession ? applicationSession.midiEffectsPresenter() : null`, mirroring `arpeggiatorModel` (`EditorSurface.qml:36`); `configure(baseFontPx)` beside the arpeggiator's (`:163-164`); `midiEffectsModel && midiEffectsModel.isOpen` joins `hintScopeCovered` (`:76-81`)
 - src/ui/songview/quick/swiftroll/EditorSurfacePrompts.qml: mount `MidiEffectsPanel` beside `ArpeggiatorPanel` (`:33-48`), same visibility/focus contract, `z` below the arpeggiator loader's 15
-- src/checks/editorqml/ShellQmlTests.swift: bootstrap property `vstFixtureFolder: String`, the `vstfixtures` directory beside the running executable; bootstrap method `injectPluginFault(track: Int, mode: Int)`, which restores the fixture fault state into the track effect's live instance through task 9's internal `TrackEffectsController.instance(for:)` (`@testable import`), changing no document state
+- src/checks/editorqml/ShellQmlTests.swift: bootstrap property `vstFixtureFolder: String`, the `vstfixtures` directory beside the running executable; bootstrap method `injectPluginFault(track: Int, mode: Int)` delegates through `PluginFaultInjector`, restoring fixture fault state without changing document state.
+- src/checks/editorqml/PluginFaultInjector.swift (new): one internal checks-support module owns fixture encoding, typed error normalization, injection/stimulus tasks and their joins, and committed-failure validation. Preserve the current two fault modes and diagnostics; do not add a production test mode or a second observer.
+- src/ui/songview/quick/PromptAction.qml (new): one shared Enter/Return, pointer and accessibility action, with typed `PromptStyle` appearance and ordinary button semantics; bare Space remains unclaimed. Both the setup panel and task 12's output page consume this module. Each surface retains its own scrolling and toggle semantics; do not extract the arpeggiator's distinct radio/checkbox selectors.
+- `src/swift/app/ApplicationSession.swift`: one internal, explicitly typed MainActor catalog-construction factory for parameterless QML creation. Production defaults remain unchanged and each session owns its immutable catalog. `ShellQmlLane.run` scopes and restores that factory to create real catalogs with fixture-only roots and unique caches under its private scratch; no host-installed plug-ins or user cache enter the gate.
 - src/checks/editorqml/tst_ShellMidiEffects.qml (new)
-- src/checks/editorqml/tst_TextContrast.qml: `auditMidiEffects(context)`, modeled on `auditArpeggiator`, called next to it
 
-Registration (controller): `qt_add_qml_module` QML_FILES; a `ShellQmlEntries` entry `shell-midieffects` → `tst_ShellMidiEffects.qml` with `songs("mus_route101")` (arpeggiator precedent `ShellQmlEntries.swift:66-68`); the fixture bundle copied beside the shell check executable.
+Registration (controller): `qt_add_qml_module` QML_FILES includes the panel and `PromptAction`; the existing shell target's SWIFT_SOURCES includes `PluginFaultInjector.swift`. A `ShellQmlEntries` entry `shell-midieffects` → `tst_ShellMidiEffects.qml` uses `songs("mus_route101")`; existing `add_porydaw_check` fixture dependencies and shared output directory supply the bundles beside the shell executable. Link canonical `swift_core_check_support`; that target exports its native C module-map/include usage requirements rather than each consumer duplicating them. `tst_TextContrast.qml` gains `auditMidiEffects(context)` beside `auditArpeggiator`. The controller is the only writer of that contrast file across tasks 11–12.
 
 # Prerequisites
 Task 10 (the `MidiEffectsPresenter` interface, frozen in spec.md: properties, slots, status strings, objectNames, menu action 7). The panel may be drafted alongside task 10; integration and checks run after it.
@@ -28,7 +30,7 @@ Exactly spec.md "MidiEffectsPresenter".
 - **Keyboard.** Enter/Return and pointer activate controls. No control claims bare Space: Space plays the song (and from the plugin editor window too, per D6).
 
 # Implementation steps
-1. Build the panel by adapting `ArpeggiatorPanel`'s card, footer and selector patterns. Do not create a second style system.
+1. Adapt `ArpeggiatorPanel`'s modal layout and existing `PromptStyle`, not its distinct selector interaction model. Reuse `PromptAction` for Enter/Return-only actions rather than duplicating the keyboard, accessibility, focus-chrome and pointer protocol in the two new surfaces. Keep page-specific focus-reveal policy local; preserve all existing focus/scroll behavior.
 2. Mount and bind it, and add it to `hintScopeCovered`.
 3. Add the bootstrap property.
 4. `tst_ShellMidiEffects.qml` on `mus_route101` covers panel setup only (arpeggiator shell pattern `tst_ShellArpeggiator.qml:1-63`):

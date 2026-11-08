@@ -59,6 +59,7 @@ public enum PorydawQmlTypes {
         AutomationTabHandle.self,
         EditorDrawerPresenter.self,
         EditorDrawerSectionState.self,
+        EffectOutputPage.self,
         EventListRowHandle.self,
         GridPalette.self,
         GridScene.self,

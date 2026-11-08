@@ -110,6 +110,7 @@ add_library(PorydawApp STATIC
     timeline/RulerMenuPresenter.swift
     drawer/EditorDrawer.swift
     drawer/EditorDrawerLayout.swift
+    drawer/effectoutput/EffectOutputPage.swift
     drawer/otherEvents/OtherEventsStrip.swift
     drawer/otherEvents/OtherEventsBandPresenter.swift
     drawer/velocity/VelocityContext.swift
@@ -284,6 +285,7 @@ add_library(PorydawAppPresentation STATIC
     presentation/QListModelSync.swift
     presentation/IntegerInputPolicy.swift
     presentation/NumberFieldFormat.swift
+    presentation/MidiEffectDiagnostics.swift
     presentation/drawer/DrawerPan.swift
     presentation/drawer/DrawerStaticsContent.swift
     presentation/drawer/LaneCaptionMetrics.swift

@@ -93,6 +93,7 @@ func drawerLayoutCheckDrawerFocusRequests(_ report: CheckReport) {
         $0.restorePreferences(
             velocityVisible: 1, velocityHeight: 0, automationVisible: 1,
             automationHeight: 0, voiceChangesVisible: -1, voiceChangesHeight: 0,
+            effectOutputVisible: 0, effectOutputHeight: 0,
             activePage: DrawerSectionKind.voiceChanges.rawValue)
     }
     let skipped = unavailable.apply { $0.toggleSection(.velocity, drawerOwnsFocus: true) }
@@ -146,8 +147,8 @@ func drawerLayoutCheckDrawerCancellation(_ report: CheckReport) {
     let fanOut = harness.cancelInteractions()
     report.expect(
         pages[.velocity]!.cancelCount == 2 && pages[.voiceChanges]!.cancelCount == 2
-            && pages[.automation]!.cancelCount == 2 && Set(harness.trace.kinds) == Set(DrawerSectionKind.allCases)
-            && harness.trace.kinds.count == 3,
+            && pages[.automation]!.cancelCount == 2 && Set(harness.trace.kinds) == Set(pages.keys)
+            && harness.trace.kinds.count == pages.count,
         cppID: drawerLayoutCancelID,
         message: "global cancellation fans out to every attached page once, including hidden kinds")
     drawerLayoutExpectNoDrawerRecords(
@@ -194,11 +195,12 @@ func drawerLayoutCheckDrawerCancellation(_ report: CheckReport) {
 @MainActor
 func drawerLayoutCheckDrawerRestoreAndPreferenceRecords(_ report: CheckReport) {
     let harness = drawerLayoutMakeDrawerHarness()
-    let pages = drawerLayoutAttachDrawerPages(harness)
+    let pages = drawerLayoutAttachLegacyThreeDrawerPages(harness)
     let restored = harness.apply {
         $0.restorePreferences(
             velocityVisible: 1, velocityHeight: 120, automationVisible: 1,
             automationHeight: 0, voiceChangesVisible: 1, voiceChangesHeight: 96,
+            effectOutputVisible: 0, effectOutputHeight: 0,
             activePage: DrawerSectionKind.voiceChanges.rawValue)
     }
     report.expect(
@@ -219,6 +221,7 @@ func drawerLayoutCheckDrawerRestoreAndPreferenceRecords(_ report: CheckReport) {
         $0.restorePreferences(
             velocityVisible: -1, velocityHeight: 120, automationVisible: -1,
             automationHeight: 0, voiceChangesVisible: -1, voiceChangesHeight: 96,
+            effectOutputVisible: -1, effectOutputHeight: 0,
             activePage: -1)
     }
     report.expect(
