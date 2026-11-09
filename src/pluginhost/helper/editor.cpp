@@ -94,6 +94,9 @@ public:
         plugin = nullptr;
         if (owner->editor == this) { owner->editor = nullptr; owner->closeEditor = nullptr; }
         pdph::helper::refreshShortcutWindows();
+#ifdef __APPLE__
+        pdph::helper::refreshMacEditorWindows();
+#endif
         if (attached) { attached = false; view->removed(); }
         view->setFrame(nullptr);
         view = nullptr;
@@ -281,10 +284,19 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
     editors.push_back(editor.get());
     pdph::helper::refreshShortcutWindows();
     editor->show(); editor->requestActivate();
+#ifdef __APPLE__
+    pdph::helper::refreshMacEditorWindows();
+#endif
     *out = editor.release();
     return PDPH_OK;
 }
-void pdph_editor_raise(pdph_editor editor) { if (editor) { editor->show(); editor->raise(); editor->requestActivate(); } }
+void pdph_editor_raise(pdph_editor editor) {
+    if (!editor) return;
+    editor->show(); editor->raise(); editor->requestActivate();
+#ifdef __APPLE__
+    pdph::helper::refreshMacEditorWindows();
+#endif
+}
 void pdph_editor_close(pdph_editor editor) { delete editor; }
 pdph_result pdph_editor_set_shortcuts(const int32_t* strokes, int32_t count, void (*callback)(void*, int32_t), void* user) {
     return pdph::helper::setEditorShortcuts(strokes, count, callback, user);

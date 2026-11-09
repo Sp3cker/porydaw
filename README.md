@@ -93,6 +93,13 @@ voicegroup; plug-in audio output is not mixed into the song.
    the plug-in's notes instead of that track's recorded notes.
 
 Closing setup leaves Live running and keeps an opened plug-in editor.
+
+On macOS, plug-in editors stay above Porydaw's ordinary windows while
+Porydaw or one of its editors is foreground. Clicking Porydaw keeps keyboard
+focus in Porydaw without covering the editors. Switching to another app lets
+that app cover them; editors are not globally always on top. Ordering alone
+does not activate a window or restore a hidden or minimized editor.
+
 **Render** captures the active time selection, or the song range when no time
 selection is active. Stop playback before rendering a Live effect.
 **Grab played** captures notes produced during playback. Select output notes,

@@ -186,7 +186,9 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
                 application.executableURL?.resolvingSymlinksInPath()
                     == HelperProcess.executableURL.resolvingSymlinksInPath(),
                 let id = window[kCGWindowNumber as String] as? UInt32,
-                let layer = window[kCGWindowLayer as String] as? Int, layer == 0,
+                let layer = window[kCGWindowLayer as String] as? Int,
+                layer == Int(CGWindowLevelForKey(.normalWindow))
+                    || layer == Int(CGWindowLevelForKey(.floatingWindow)),
                 let bounds = window[kCGWindowBounds as String] as? [String: Double],
                 let x = bounds["X"], let y = bounds["Y"],
                 let width = bounds["Width"], let height = bounds["Height"]
@@ -205,6 +207,105 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
         }
         guard let found else { throw EditorCheckError.window }
         return found
+    }
+
+    @MainActor
+    private func editorWindowsAreAbove(_ editors: [EditorCheckWindow], owner: NSWindow) -> Bool {
+        guard
+            let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], 0)
+                as? [[String: Any]]
+        else { return false }
+        let ids = windows.compactMap { (window: [String: Any]) -> UInt32? in
+            window[kCGWindowNumber as String] as? UInt32
+        }
+        guard let ownerIndex = ids.firstIndex(of: UInt32(owner.windowNumber)) else { return false }
+        return editors.allSatisfy { (editor: EditorCheckWindow) -> Bool in
+            guard let editorIndex = ids.firstIndex(of: editor.id) else { return false }
+            return editorIndex < ownerIndex
+        }
+    }
+
+    @MainActor
+    private func checkEditorOwnerFocus(
+        _ editors: [EditorCheckWindow], owner: NSWindow, input: NSTextView,
+        check: CheckReport.Scoped, message: String
+    ) async throws {
+        _ = NSRunningApplication.current.activate(options: [])
+        owner.makeKeyAndOrderFront(nil)
+        guard owner.makeFirstResponder(input) else { throw EditorCheckError.window }
+        try await editorWait {
+            NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
+                && owner.isKeyWindow && NSApplication.shared.keyWindow === owner
+                && owner.firstResponder === input && editorWindowsAreAbove(editors, owner: owner)
+        }
+        check.expect(
+            NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
+                && owner.isKeyWindow && NSApplication.shared.keyWindow === owner && owner.firstResponder === input,
+            message: "\(message): the owner retains frontmost process and native text-input key focus")
+        check.expect(
+            editorWindowsAreAbove(editors, owner: owner),
+            message: "\(message): CoreGraphics front-to-back order keeps every editor above the ordinary owner window")
+    }
+
+    @MainActor
+    private func checkEditorOrdering(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
+        let owner = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+            styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        owner.isReleasedWhenClosed = false
+        owner.title = "Porydaw editor ordering owner"
+        owner.level = .normal
+        owner.center()
+        let input = NSTextView(frame: NSRect(x: 0, y: 0, width: 640, height: 480))
+        owner.contentView = input
+        defer { owner.close() }
+        try await editorInstance(entries, "TestGen") { (first: PluginInstance) in
+            let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
+            try await first.openEditor(title: "Porydaw editor ordering one")
+            let firstWindow = try await editorNewWindow(excluding: existing)
+            try await checkEditorOwnerFocus(
+                [firstWindow], owner: owner, input: input, check: check, message: "owner focus with one editor")
+            try await editorInstance(entries, "TestGen") { (second: PluginInstance) in
+                let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
+                try await second.openEditor(title: "Porydaw editor ordering two")
+                let secondWindow = try await editorNewWindow(excluding: existing)
+                check.expect(
+                    firstWindow.pid != secondWindow.pid,
+                    message: "ordering exercises two real sibling helper processes")
+                try await first.openEditor(title: "Porydaw editor ordering one raised")
+                try await editorWait {
+                    NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                }
+                owner.orderFrontRegardless()
+                try await editorWait {
+                    NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                        && editorWindowsAreAbove([firstWindow, secondWindow], owner: owner)
+                }
+                check.expect(
+                    NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                        && editorWindowsAreAbove([firstWindow, secondWindow], owner: owner),
+                    message: "raising one sibling keeps both helpers' editors above the ordinary owner window")
+                try await checkEditorOwnerFocus(
+                    [firstWindow, secondWindow], owner: owner, input: input, check: check,
+                    message: "owner focus after sibling activation")
+                await second.closeEditor()
+                try await editorWait {
+                    !editorWindows().contains { (window: EditorCheckWindow) -> Bool in window.id == secondWindow.id }
+                }
+                check.expect(
+                    !second.isEditorOpen && first.isEditorOpen,
+                    message: "closing one sibling leaves the other editor attached")
+                let beforeReopen = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
+                try await second.openEditor(title: "Porydaw editor ordering two reopened")
+                let reopenedWindow = try await editorNewWindow(excluding: beforeReopen)
+                check.expect(
+                    reopenedWindow.pid == secondWindow.pid && second.isEditorOpen,
+                    message: "reopening reuses the real second helper with a newly attached editor")
+                try await checkEditorOwnerFocus(
+                    [firstWindow, reopenedWindow], owner: owner, input: input, check: check,
+                    message: "owner focus after sibling close/reopen")
+            }
+        }
     }
 
     private func editorPostKey(
@@ -349,6 +450,7 @@ public func runPluginHostEditorChecks(_ report: CheckReport) {
         let entries = try editorFixtureEntries()
         try runBlocking { try await checkEditorLifecycle(entries, check) }
         #if os(macOS)
+            try runBlocking { try await checkEditorOrdering(entries, check) }
             try runBlocking { try await checkEditorKeys(entries, check) }
         #endif
     } catch { check.fail("real plugin editor: \(error)") }

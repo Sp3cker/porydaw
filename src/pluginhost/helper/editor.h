@@ -15,5 +15,6 @@ pdph_result setEditorShortcuts(const int32_t*, int32_t, void (*)(void*, int32_t)
 bool interceptEditorKey(uintptr_t window, uint32_t key, uint32_t modifiers, uint32_t physicalKey, bool down, bool repeat);
 #ifdef __APPLE__
 void updateMacShortcuts(bool enabled);
+void refreshMacEditorWindows();
 #endif
 }
