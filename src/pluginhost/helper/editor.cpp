@@ -9,10 +9,14 @@
 #include <QScreen>
 #include <QScopedValueRollback>
 #include <QSocketNotifier>
+#include <QTimer>
 #include <algorithm>
 #include <chrono>
 #include <map>
 #include <memory>
+#include <cstdio>
+#include <exception>
+#include <utility>
 
 using namespace Steinberg;
 namespace {
@@ -83,28 +87,38 @@ struct pdph_editor_impl final : public QWindow, public IPlugFrame {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(pdph_editor_impl)
 public:
-    pdph_editor_impl(pdph_plugin plugin, IPlugView* view) : plugin(plugin), view(owned(view)) {}
-    ~pdph_editor_impl() override {
+    pdph_editor_impl(pdph_plugin plugin, IPtr<IPlugView>&& view) : plugin(plugin), view(std::move(view)) {}
+    ~pdph_editor_impl() noexcept override {
         detach(false);
         editors.erase(std::remove(editors.begin(), editors.end(), this), editors.end());
     }
-    void detach(bool userClosed) {
+    void detach(bool userClosed) noexcept {
         if (!plugin) return;
         auto* owner = plugin;
         plugin = nullptr;
         if (owner->editor == this) { owner->editor = nullptr; owner->closeEditor = nullptr; }
-        pdph::helper::refreshShortcutWindows();
+        try { pdph::helper::refreshShortcutWindows(); } catch (...) { std::fprintf(stderr, "Could not refresh editor shortcuts during detach\n"); }
 #ifdef __APPLE__
-        pdph::helper::refreshMacEditorWindows();
+        try { pdph::helper::refreshMacEditorWindows(); } catch (...) { std::fprintf(stderr, "Could not refresh editor ordering during detach\n"); }
 #endif
-        if (attached) { attached = false; view->removed(); }
-        view->setFrame(nullptr);
-        view = nullptr;
+        if (attached) {
+            attached = false;
+            try { view->removed(); } catch (...) { std::fprintf(stderr, "Plugin editor removed() threw during detach\n"); }
+        }
+        if (view) {
+            try { view->setFrame(nullptr); } catch (...) { std::fprintf(stderr, "Plugin editor setFrame(nullptr) threw during detach\n"); }
+            auto* released = view.take();
+            try { released->release(); } catch (...) { std::fprintf(stderr, "Plugin editor release() threw during detach\n"); }
+        }
 #if defined(__linux__)
-        if (runLoop) runLoop->clear();
+        if (runLoop) {
+            try { runLoop->clear(); } catch (...) { std::fprintf(stderr, "Could not clear editor run loop during detach\n"); }
+        }
         runLoop = nullptr;
 #endif
-        if (userClosed) owner->handler->editorClosed();
+        if (userClosed) {
+            try { owner->handler->editorClosed(); } catch (...) { std::fprintf(stderr, "Could not notify editor close\n"); }
+        }
     }
     tresult PLUGIN_API queryInterface(const TUID iid, void** object) override {
         if (!object) return kInvalidArgument;
@@ -197,49 +211,26 @@ void shutdownEditors() {
     pdph::hostQuery = nullptr; factoryRunLoop = nullptr;
 #endif
 }
-void installEditors(Host& host) {
+void installEditors() {
 #if defined(__linux__)
     if (!factoryRunLoop) factoryRunLoop = owned(new RunLoop);
     pdph::hostQuery = queryRunLoop;
 #endif
-    host.editorAction = [](Host& owner, const Frame& frame, QByteArray&, QString& error) {
-        auto fail = [&] { error = QStringLiteral("Malformed editor control payload"); return false; };
-        auto read32 = [&](qsizetype offset) {
-            uint32_t value = 0;
-            for (int byte = 0; byte < 4; ++byte) value |= uint32_t(static_cast<unsigned char>(frame.payload[offset + byte])) << (byte * 8);
-            return value;
-        };
-        if (frame.type == PDPB_SET_SHORTCUTS) {
-            if (frame.payload.size() < 4) return fail();
-            const uint32_t count = read32(0);
-            if (count > uint32_t((PDPB_MAX_CONTROL_BYTES - 4) / 8) || frame.payload.size() != 4 + qsizetype(count) * 8) return fail();
-            std::vector<int32_t> strokes; strokes.reserve(count);
-            for (uint32_t index = 0; index < count; ++index) strokes.push_back(int32_t(read32(4 + index * 8) | read32(8 + index * 8)));
-            const auto callback = [](void* user, int32_t index) { static_cast<Host*>(user)->enqueue(PDPB_SHORTCUT, uint32_t(index)); };
-            if (pdph_editor_set_shortcuts(strokes.data(), int32_t(count), callback, &owner) == PDPH_OK) return true;
-            error = QStringLiteral("Could not install editor shortcuts"); return false;
-        }
-        if (frame.type == PDPB_OPEN_EDITOR) {
-            if (frame.payload.size() < 4 || read32(0) != uint32_t(frame.payload.size() - 4)) return fail();
-            const auto title = frame.payload.mid(4);
-            if (title.contains('\0')) return fail();
-            pdph_editor editor = nullptr; pdph_error reason = {};
-            const auto result = pdph_editor_open(owner.plugin, title.constData(), &editor, &reason);
-            if (result != PDPH_OK) { error = QString::fromUtf8(reason.message); return false; }
-            return true;
-        }
-        if (!frame.payload.isEmpty()) return fail();
-        if (frame.type == PDPB_RAISE_EDITOR) pdph_editor_raise(owner.plugin->editor);
-        else pdph_editor_close(owner.plugin->editor);
-        return true;
-    };
 }
 }
 extern "C" {
 pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor* out, pdph_error* error) {
+    if (out) *out = nullptr;
     if (!plugin || !title || !out) return PDPH_ERR_ARGUMENT;
-    *out = nullptr;
-    if (plugin->editor) { pdph_editor_raise(plugin->editor); *out = plugin->editor; return PDPH_OK; }
+    try {
+    if (plugin->editor) {
+        auto* editor = plugin->editor;
+        editor->show(); editor->raise(); editor->requestActivate();
+#ifdef __APPLE__
+        pdph::helper::refreshMacEditorWindows();
+#endif
+        *out = editor; return PDPH_OK;
+    }
 #if defined(__linux__)
     if (QGuiApplication::platformName() != QStringLiteral("xcb")) {
         pdph::error(error, "Plugin editors need X11 (QT_QPA_PLATFORM=xcb)"); return PDPH_ERR_UNSUPPORTED_PLATFORM;
@@ -253,9 +244,10 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
     }
     const auto type = kPlatformTypeNSView;
 #endif
-    auto* view = plugin->controller->createView(Steinberg::Vst::ViewType::kEditor);
-    if (!view) { pdph::error(error, "Plugin has no editor (PDPH_ERR_NO_EDITOR)"); return PDPH_ERR_NO_EDITOR; }
-    auto editor = std::make_unique<pdph_editor_impl>(plugin, view);
+    IPtr<IPlugView> ownedView = owned(plugin->controller->createView(Steinberg::Vst::ViewType::kEditor));
+    if (!ownedView) { pdph::error(error, "Plugin has no editor (PDPH_ERR_NO_EDITOR)"); return PDPH_ERR_NO_EDITOR; }
+    auto* view = ownedView.get();
+    auto editor = std::make_unique<pdph_editor_impl>(plugin, std::move(ownedView));
     if (view->isPlatformTypeSupported(type) != kResultTrue) {
         pdph::error(error, "Plugin editor does not support this platform"); return PDPH_ERR_UNSUPPORTED_PLATFORM;
     }
@@ -274,10 +266,10 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
     if (view->getSize(&rect) != kResultOk || editor->resizeView(view, &rect) != kResultOk) {
         pdph::error(error, "Could not size plugin editor"); return PDPH_ERR_SDK;
     }
+    editor->attached = true;
     if (view->attached(pdph::helper::editorParent(*editor), type) != kResultOk) {
         pdph::error(error, "Could not attach plugin editor"); return PDPH_ERR_SDK;
     }
-    editor->attached = true;
     if (view->canResize() != kResultTrue) { editor->setMinimumSize(editor->size()); editor->setMaximumSize(editor->size()); }
     QObject::connect(editor.get(), &QWindow::screenChanged, editor.get(), [target = editor.get()] { target->updateScale(); });
     plugin->editor = editor.get(); plugin->closeEditor = pdph_editor_close;
@@ -289,17 +281,25 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
 #endif
     *out = editor.release();
     return PDPH_OK;
+    } catch (const std::exception& exception) {
+        pdph::error(error, exception.what()); return PDPH_ERR_INTERNAL;
+    } catch (...) {
+        pdph::error(error, "Plugin editor operation threw an exception"); return PDPH_ERR_INTERNAL;
+    }
 }
 void pdph_editor_raise(pdph_editor editor) {
     if (!editor) return;
-    editor->show(); editor->raise(); editor->requestActivate();
+    try {
+        editor->show(); editor->raise(); editor->requestActivate();
 #ifdef __APPLE__
-    pdph::helper::refreshMacEditorWindows();
+        pdph::helper::refreshMacEditorWindows();
 #endif
+    } catch (...) { std::fprintf(stderr, "Could not raise plugin editor\n"); }
 }
 void pdph_editor_close(pdph_editor editor) { delete editor; }
 pdph_result pdph_editor_set_shortcuts(const int32_t* strokes, int32_t count, void (*callback)(void*, int32_t), void* user) {
-    return pdph::helper::setEditorShortcuts(strokes, count, callback, user);
+    try { return pdph::helper::setEditorShortcuts(strokes, count, callback, user); }
+    catch (...) { return PDPH_ERR_INTERNAL; }
 }
 }
 #include "editor.moc"

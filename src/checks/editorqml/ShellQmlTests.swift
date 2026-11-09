@@ -246,6 +246,17 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
     public func injectPluginFault(track: Int, mode: Int) -> Bool {
         PluginFaultInjector.inject(app: polyphonySession, track: track, mode: mode)
     }
+
+    /// Observes both native stop acknowledgment and the selected effect's stopped callback state.
+    public func pluginRenderTransportStopped(track: Int) -> Bool {
+        guard let app = polyphonySession, let workspace = app.workspace, let audio = app.transportAudio,
+            let effect = workspace.session.document.effect(onTrack: track),
+            let instance = workspace.effects.instance(for: effect.id), let insert = instance.liveInsert
+        else { return false }
+        return audio.requestedTransport == AudioTransportState.stopped.rawValue
+            && audio.status.appliedTransport == .stopped && !insert.isPlaying
+    }
+
     public func seedStartupSong(projectPath: String, song: String) -> Bool {
         let recipe = WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: [song], selectedSong: song)
         EditorViewStatePreferences.saveTabs(recipe, store: preferences)

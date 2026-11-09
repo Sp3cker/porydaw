@@ -180,6 +180,66 @@ private func checkCaptureTiming(_ check: CheckReport.Scoped) throws {
     check.expect(
         scheduled.inputs[0].id > 0 && scheduled.inputs[0].id != scheduled.inputs[1].id,
         message: "overlapping input notes have distinct positive paired IDs")
+    let estimates: [(CaptureRequest, Double)] = [
+        (hostRequest(timeline, start: 24, end: 144, preroll: 2), 3.75),
+        (hostRequest(timeline, start: 24, end: 144), 3.25),
+        (hostRequest(timeline, start: 96, end: 144, preroll: 1), 3.25),
+        (hostRequest(hostTimeline(sampleRate: 96_000), pacing: .realtime), 0.5),
+        (hostRequest(hostTimeline(mixed: true), start: 6, end: 24, input: .trackNotes), 0.375),
+    ]
+    for (request, expected) in estimates {
+        let seconds = try CaptureTransport.estimatedSeconds(for: request)
+        check.expect(
+            seconds == expected, message: "duration includes exact preroll, tempo segments and rate conversion")
+        let prepared = try CaptureTransport(request)
+        check.expect(
+            seconds == Double(prepared.endSample - prepared.startSample) / CaptureTransport.sampleRate,
+            message: "caption duration and prepared capture share sample endpoints")
+    }
+    let fractional = PlaybackTimeline.build(
+        file: MidiFile(
+            division: 3,
+            chunks: [
+                MidiChunk(
+                    events: [
+                        .meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20]),
+                        .meta(tick: 0, type: 0x58, data: [3, 3, 24, 8]),
+                    ], endTick: 18)
+            ]),
+        sampleRate: 48_000, settings: PlaybackSettings())
+    let fractionalRequest = hostRequest(fractional, start: 9, end: 18, preroll: 1)
+    let fractionalTransport = try CaptureTransport(fractionalRequest)
+    let fractionalSeconds = try CaptureTransport.estimatedSeconds(for: fractionalRequest)
+    check.expect(
+        fractionalSeconds == 2
+            && fractionalTransport.prerollStart == 6 && fractionalTransport.startSample == 48_000,
+        message: "fractional signature beats retain the canonical integer beat projection in preroll timing")
+    let invalidRequests = [
+        hostRequest(timeline, end: 0),
+        hostRequest(timeline, end: TimeDefaults.noTick),
+        hostRequest(timeline, preroll: 3),
+        CaptureRequest(
+            timeline: timeline, track: 16, range: TimeRange(startTick: 0, endTick: 24),
+            input: .none, pacing: .offline, prerollBars: 0),
+    ]
+    for request in invalidRequests {
+        do {
+            _ = try CaptureTransport.estimatedSeconds(for: request)
+            check.fail("duration must reject an invalid capture before preparing notes")
+        } catch {
+            check.expect(
+                error as? PluginHostError == .native("Invalid capture range or timing."),
+                message: "cheap timing preserves the capture validation error")
+        }
+        do {
+            _ = try CaptureTransport(request)
+            check.fail("full preparation must reject the same invalid capture")
+        } catch {
+            check.expect(
+                error as? PluginHostError == .native("Invalid capture range or timing."),
+                message: "full preparation retains shared validation")
+        }
+    }
 }
 
 private func hostWithoutIDs(_ events: [RawNoteEvent]) -> [RawNoteEvent] {

@@ -59,7 +59,7 @@ static bool inputClosed() {
 }
 Host::Host() {
     for (uint32_t index = 0; index < callbackSlots.size(); ++index) callbackSlots[index].sequence.store(index, std::memory_order_relaxed);
-    installEditors(*this);
+    installEditors();
     QObject::connect(&callbackTimer, &QTimer::timeout, &context, [this] { drainCallbacks(); });
     callbackTimer.start(10ms);
 }

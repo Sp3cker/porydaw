@@ -56,9 +56,9 @@ private func abiText<T>(_ value: T) -> String {
     }
 }
 
-private func abiState(offset: Int32 = 0, latency: Int32 = 128, size: Int = 16) -> [UInt8] {
+private func abiState(offset: Int32 = 0, latency: Int32 = 128, size: Int = 16, fault: Int32 = 0) -> [UInt8] {
     var bytes: [UInt8] = []
-    for value in [offset, latency, 0, 0] {
+    for value in [offset, latency, 0, fault] {
         let bits = UInt32(bitPattern: value)
         for shift in stride(from: 0, to: 32, by: 8) { bytes.append(UInt8(truncatingIfNeeded: bits >> shift)) }
     }
@@ -238,6 +238,50 @@ private func checkABIScanner(_ report: CheckReport, directory: URL, fixture: URL
             expected: Set(["TestGen", "TestGenAudio", "TestGenRealtimeOnly", "TestAudioOnly"]), actual: names,
             cppID: "pluginhost/scan", what: "scanner exposes exactly the fixture classes")
     } catch { report.fail("pluginhost/scan", "scanner launch/JSON failed: \(error)") }
+}
+
+@MainActor
+private func checkABIParameterBatch(_ plugin: OpaquePointer, _ report: CheckReport) {
+    let queued = abiRestore(plugin, abiState(fault: 10))
+    report.expectEqual(
+        expected: Int32(PDPH_OK), actual: queued, cppID: "pluginhost/parameter-batch",
+        what: "fixture setter publishes three ordered UI parameter edits")
+    let before = abiReadState(plugin)
+    report.expectEqual(
+        expected: abiState(fault: 10), actual: before.1, cppID: "pluginhost/parameter-batch",
+        what: "main-thread state read does not steal queued edits from the RT consumer")
+    let flushed = abiProcess(plugin, frames: 0)
+    report.expect(
+        flushed.count == 1 && flushed[0].status == PDPH_OK && flushed[0].events.isEmpty,
+        cppID: "pluginhost/parameter-batch", message: "idle parameter batch flush carries no MIDI")
+    var expected = abiState(offset: 11, fault: 10)
+    expected[8] = 1
+    report.expectEqual(
+        expected: expected, actual: abiReadState(plugin).1, cppID: "pluginhost/parameter-batch",
+        what: "FIFO edits coalesce to the final value at sample offset zero")
+    _ = abiProcess(plugin, frames: 0)
+    report.expectEqual(
+        expected: expected, actual: abiReadState(plugin).1, cppID: "pluginhost/parameter-batch",
+        what: "the next idle call does not replay the consumed batch")
+    if abiStart(plugin, report) {
+        report.expectEqual(
+            expected: Int32(PDPH_OK), actual: abiRestore(plugin, abiState(fault: 10)),
+            cppID: "pluginhost/parameter-batch", what: "a later UI batch publishes after processing setup")
+        let processed = abiProcess(plugin)
+        let onsets = processed.flatMap(\.events).filter { (event: ABIEvent) -> Bool in
+            event.kind == UInt8(PDPH_EVENT_NOTE_ON)
+        }
+        report.expectEqual(
+            expected: [UInt8(71)], actual: onsets.map(\.pitch), cppID: "pluginhost/parameter-batch",
+            what: "normal processing consumes the new FIFO batch before its first note")
+        report.expectEqual(
+            expected: expected, actual: abiReadState(plugin).1, cppID: "pluginhost/parameter-batch",
+            what: "normal processing also applies edits at sample offset zero")
+        abiStop(plugin)
+    }
+    report.expectEqual(
+        expected: Int32(PDPH_OK), actual: abiRestore(plugin, abiState()), cppID: "pluginhost/parameter-batch",
+        what: "fixture returns to ordinary processing after the batch")
 }
 
 @MainActor
@@ -448,7 +492,10 @@ public func runPluginHostABIChecks(_ report: CheckReport) {
                 expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_latency_samples(plugin),
                 cppID: "pluginhost/latency-before-setup", what: "latency is unavailable before setup")
             if iteration != 0 { continue }
-            if name == "TestGen" { checkABIGenerator(plugin, report) }
+            if name == "TestGen" {
+                checkABIParameterBatch(plugin, report)
+                checkABIGenerator(plugin, report)
+            }
             if name == "TestGenAudio" {
                 report.expectEqual(
                     expected: Int32(PDPH_OK), actual: abiRestore(plugin, abiState(latency: 384)),

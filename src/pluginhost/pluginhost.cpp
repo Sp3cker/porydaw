@@ -65,9 +65,9 @@ tresult PLUGIN_API ComponentHandler::performEdit(ParamID id, ParamValue value) {
     writeIndex.store(next, std::memory_order_release);
     return kResultOk;
 }
-bool ComponentHandler::pop(ParameterEdit& edit) {
+bool ComponentHandler::pop(ParameterEdit& edit, uint32_t endpoint) {
     auto read = readIndex.load(std::memory_order_relaxed);
-    if (read == writeIndex.load(std::memory_order_acquire)) return false;
+    if (read == endpoint) return false;
     edit = edits[read];
     readIndex.store((read + 1) % eventCapacity, std::memory_order_release);
     return true;

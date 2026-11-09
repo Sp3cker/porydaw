@@ -642,7 +642,6 @@ public final class DocumentWorkspace {
 
     private func present(playhead presentation: SharedPlayheadPresentation) {
         lastPlayheadPresentation = presentation
-        effectOutputPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         if drawer.section(kind: DrawerSectionKind.velocity.rawValue).visible {
             velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         }
@@ -667,7 +666,7 @@ public final class DocumentWorkspace {
         case .automation:
             automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         case .effectOutput:
-            effectOutputPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+            break
         }
     }
 }

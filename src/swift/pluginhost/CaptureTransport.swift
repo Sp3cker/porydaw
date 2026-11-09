@@ -51,21 +51,38 @@ public struct CaptureTransport: Sendable {
     public let prerollStart: Tick
     let inputs: [CaptureInput]
 
-    public init(_ request: CaptureRequest) throws {
+    private static func bounds(
+        for request: CaptureRequest
+    ) throws -> (prerollStart: Tick, startSample: Int64, endSample: Int64) {
         guard !request.range.isEmpty, !request.range.hasReservedEndpoint,
             request.timeline.ticksPerBeat > 0, !request.timeline.tempoMap.isEmpty,
             request.track >= 0, request.track < 16, (0...2).contains(request.prerollBars)
         else { throw PluginHostError.native("Invalid capture range or timing.") }
-        self.request = request
         var start = Double(request.range.startTick)
         for _ in 0..<request.prerollBars {
             let meter = Self.meter(at: max(0, start - 1), timeline: request.timeline)
             let length = Self.barLength(meter, division: request.timeline.ticksPerBeat)
             start = max(0, start - length)
         }
-        prerollStart = Tick(start)
-        startSample = Self.sample(for: start, timeline: request.timeline)
-        endSample = Self.sample(for: Double(request.range.endTick), timeline: request.timeline)
+        return (
+            Tick(start), Self.sample(for: start, timeline: request.timeline),
+            Self.sample(for: Double(request.range.endTick), timeline: request.timeline)
+        )
+    }
+
+    /// Returns the request's validated duration in seconds, including preroll, without preparing input notes.
+    /// - Throws: `PluginHostError` if the request's range or timing is invalid.
+    public static func estimatedSeconds(for request: CaptureRequest) throws -> Double {
+        let bounds = try bounds(for: request)
+        return Double(bounds.endSample - bounds.startSample) / sampleRate
+    }
+
+    public init(_ request: CaptureRequest) throws {
+        let bounds = try Self.bounds(for: request)
+        self.request = request
+        prerollStart = bounds.prerollStart
+        startSample = bounds.startSample
+        endSample = bounds.endSample
         var scheduled: [CaptureInput] = []
         if request.input == .trackNotes {
             var queues = [[(Int64, UInt8, Int32)]](repeating: [], count: 128)

@@ -1,11 +1,11 @@
 #pragma once
-#include "host.h"
+#include "pluginhost.h"
 #include <QWindow>
 #include <cstdint>
 #include <vector>
 
 namespace pdph::helper {
-void installEditors(Host&);
+void installEditors();
 void shutdownEditors();
 void* editorParent(QWindow&);
 bool isEditorWindow(uintptr_t nativeWindow);

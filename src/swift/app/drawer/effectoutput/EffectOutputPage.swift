@@ -71,7 +71,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     private var bytes = Data()
     private var emptyBytes: Data?
     private var active = false
-    private var playing = false
     private var message = ""
     private var outputMessage = ""
     private var renderMessage = ""
@@ -308,13 +307,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     public func outputChanged(_ id: EffectID) {
         guard id == effectID else { return }
         loadOutput()
-    }
-
-    @QtIgnored
-    public func refreshPlayhead(tick _: Double, playing: Bool) {
-        guard playing != self.playing else { return }
-        self.playing = playing
-        refreshHeader()
     }
 
     @QtIgnored
@@ -600,11 +592,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         guard canRender, let id = effectID, let effects, let session = viewport?.session,
             let track = selectedTrack, let effect = session.document.effect(onTrack: track)
         else { return }
-        if live, playing {
-            message = "Stop playback to render"
-            refreshHeader()
-            return
-        }
         do {
             let range = try effects.renderRange(id)
             if effect.config.plugin.input == .trackNotes {
@@ -621,13 +608,12 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
             let request = CaptureRequest(
                 timeline: session.timeline, track: track, range: range, input: effect.config.plugin.input,
                 pacing: effect.config.plugin.pacing, prerollBars: effect.config.plugin.prerollBars)
-            let transport = try CaptureTransport(request)
+            let estimatedSeconds = try CaptureTransport.estimatedSeconds(for: request)
             switch request.pacing {
             case .offline:
                 renderMessage = "Rendering..."
             case .realtime:
-                let seconds = Int(
-                    ceil(Double(transport.endSample - transport.startSample) / CaptureTransport.sampleRate))
+                let seconds = Int(ceil(estimatedSeconds))
                 renderMessage = "Rendering in real time (about \(seconds) s)"
             }
             begin(.render(range))

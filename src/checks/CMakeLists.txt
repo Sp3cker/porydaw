@@ -96,6 +96,7 @@ qt_add_executable(porydaw_checks
     fixturecatalog.cpp
     fixturecatalog.hpp
     fwd.hpp
+    pluginhost/ParameterBatchChecks.cpp
     support/checkstartup.cpp
     support/checkstartup.h
 )
@@ -523,6 +524,8 @@ target_link_libraries(porydaw_checks PRIVATE
     Qt6::Test
     Qt6::Widgets
     QtBridgeCpp
+    porydaw_pluginhost
+    porydaw_vst3_sdk
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
     swift_core_check swift_core_check_logic swift_core_check_support PorydawApp QtBridge

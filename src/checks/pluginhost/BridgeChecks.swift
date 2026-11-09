@@ -182,6 +182,18 @@ private func checkBridgeRoundTrips(_ fixture: BridgeCheckFixture, _ check: Check
     if let reopened { pdpb_channel_close(reopened) }
     check.expectEqual(expected: Int32(PDPB_OK), actual: beforeReady, what: "monitor close preserves the owner's name")
     try await fixture.start(check)
+    try await fixture.helper.setShortcuts([HelperShortcut(key: 0x20, modifiers: 0)])
+    try await fixture.helper.setShortcuts([])
+    try await fixture.helper.raiseEditor()
+    try await fixture.helper.closeEditor()
+    do {
+        try await fixture.helper.openEditor(title: "invalid\0title")
+        check.fail("embedded NUL must reject OpenEditor before touching native UI")
+    } catch HelperProcessError.native(let reason) {
+        check.expectEqual(
+            expected: "Malformed editor control payload", actual: reason,
+            what: "canonical editor decoder preserves malformed-payload diagnostics")
+    }
     #if !os(Windows)
         reopened = nil
         let afterReady = pdpb_channel_open(fixture.channel.name, &reopened)
@@ -232,6 +244,33 @@ private func checkBridgeRoundTrips(_ fixture: BridgeCheckFixture, _ check: Check
     check.expect(
         fixture.helper.failure == nil && fixture.helper.exitStatus == 0,
         message: "Quit is clean and shutdown is idempotent")
+}
+
+@MainActor
+private func checkBridgeCallbackLoss(_ fixture: BridgeCheckFixture, _ check: CheckReport.Scoped) async throws {
+    try await fixture.start(check)
+    fixture.events.removeAll()
+    do {
+        try await fixture.helper.setState(which: 0, bytes: bridgeState(latency: 0, fault: 4))
+    } catch {
+        check.expect(
+            fixture.helper.failure != nil, message: "callback-loss termination may overtake the setter reply")
+    }
+    try await bridgeWait { fixture.helper.exitStatus != nil && fixture.helper.reachedEOF }
+    check.expect(fixture.helper.exitStatus != 0, message: "one bounded main-thread callback burst fails closed")
+    check.expect(
+        fixture.helper.failure?.description.contains("stopped working") == true,
+        message: "callback integrity loss enters the existing unexpected-exit recovery path")
+    check.expectEqual(expected: 1, actual: fixture.failures.count, what: "callback loss publishes one failure")
+    check.expect(
+        !fixture.events.contains { (event: HelperEvent) -> Bool in
+            if case .endEdit = event { return true }
+            return false
+        },
+        message: "a known-incomplete callback batch is not published as healthy edits")
+    check.expect(
+        !fixture.events.contains(.log("Plugin callback queue overflow")),
+        message: "overflow is not a log-only healthy state")
 }
 
 @MainActor
@@ -365,7 +404,7 @@ public func runPluginBridgeChecks(_ report: CheckReport) {
         let (module, uid) = try bridgeFixtureIdentity()
         let cases: [@MainActor (BridgeCheckFixture, CheckReport.Scoped) async throws -> Void] = [
             checkBridgeRoundTrips, checkBridgeCrash, checkBridgeHang, checkBridgeRenderTimeout, checkBridgeInputEOF,
-            checkBridgeStartupShutdown,
+            checkBridgeStartupShutdown, checkBridgeCallbackLoss,
         ]
         for operation in cases {
             try runBlocking {

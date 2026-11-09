@@ -102,6 +102,10 @@ does not activate a window or restore a hidden or minimized editor.
 
 **Render** captures the active time selection, or the song range when no time
 selection is active. Stop playback before rendering a Live effect.
+The duration estimate includes pre-roll without preparing note events. Render
+prepares its input schedule once on the capture worker and normalizes captured
+notes off the UI thread; canceling waits for capture to settle before restoring
+an armed Live effect.
 **Grab played** captures notes produced during playback. Select output notes,
 or leave the selection empty to copy all, then **Copy** and use ordinary roll
 Paste; Paste is undoable. Clear removes captured output, not song notes.

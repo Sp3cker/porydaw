@@ -15,6 +15,7 @@
 #include <cstring>
 #include <thread>
 #include <type_traits>
+#include <stdexcept>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -36,9 +37,27 @@ struct Diagnostics {
 static_assert(std::is_trivially_copyable_v<Diagnostics> && sizeof(double) == 8);
 class FixtureView final : public CPluginView {
 public:
-    FixtureView(IEditController* owner, void (*attached)(void*), void (*key)(void*), void* user)
-        : owner(owner), onAttached(attached), onKey(key), user(user) { rect = ViewRect(0, 0, 320, 200); }
-    ~FixtureView() override { if (native) pdphFixtureViewDestroy(native); }
+    FixtureView(IEditController* owner, void (*attached)(void*), void (*key)(void*), void* user,
+        uint32 fault, std::atomic<int32>& cleanup)
+        : owner(owner), onAttached(attached), onKey(key), user(user), fault(fault), cleanup(cleanup) {
+        rect = ViewRect(0, 0, 320, 200);
+    }
+    ~FixtureView() override {
+        if (native) pdphFixtureViewDestroy(native);
+        if (fault >= 6 && fault <= 9) cleanup.fetch_or(4, std::memory_order_relaxed);
+    }
+    tresult PLUGIN_API getSize(ViewRect* size) override {
+        if (fault == 6) throw std::runtime_error("Fixture editor getSize failure");
+        return CPluginView::getSize(size);
+    }
+    tresult PLUGIN_API setFrame(IPlugFrame* frame) override {
+        const auto result = CPluginView::setFrame(frame);
+        if (!frame && fault >= 6 && fault <= 9) {
+            cleanup.fetch_or(2, std::memory_order_relaxed);
+            throw std::runtime_error("Fixture editor setFrame cleanup failure");
+        }
+        return result;
+    }
     tresult PLUGIN_API isPlatformTypeSupported(FIDString type) override {
 #ifdef __APPLE__
         return type && std::strcmp(type, kPlatformTypeNSView) == 0 ? kResultTrue : kResultFalse;
@@ -62,12 +81,19 @@ public:
         systemWindow = parent;
         ViewRect requested(0, 0, 400, 240);
         if (plugFrame) plugFrame->resizeView(this, &requested);
+        if (fault == 7) throw std::runtime_error("Fixture editor attached failure");
+        if (fault == 8) return kResultFalse;
         onAttached(user);
         return kResultOk;
     }
     tresult PLUGIN_API removed() override {
         if (native) { pdphFixtureViewDestroy(native); native = nullptr; }
-        systemWindow = nullptr; return kResultOk;
+        systemWindow = nullptr;
+        if (fault >= 7 && fault <= 9) {
+            cleanup.fetch_or(1, std::memory_order_relaxed);
+            throw std::runtime_error("Fixture editor removed cleanup failure");
+        }
+        return kResultOk;
     }
     tresult PLUGIN_API onSize(ViewRect* size) override {
         if (!size) return kInvalidArgument;
@@ -88,6 +114,8 @@ private:
     void (*onKey)(void*);
     void* user;
     void* native = nullptr;
+    const uint32 fault;
+    std::atomic<int32>& cleanup;
 };
 class TestGen final : public SingleComponentEffect {
 public:
@@ -98,6 +126,7 @@ public:
     static FUnknown* createAudioOnly(void*) { return static_cast<IComponent*>(new TestGen(3)); }
     IPlugView* PLUGIN_API createView(FIDString name) override {
         if (variant == 2 || !name || std::strcmp(name, ViewType::kEditor) != 0) return nullptr;
+        if (faultCode() == 5) throw std::runtime_error("Fixture editor createView failure");
         const auto attached = [](void* user) {
             auto& plugin = *static_cast<TestGen*>(user);
             if (!plugin.componentHandler) return;
@@ -107,7 +136,7 @@ public:
             plugin.componentHandler->endEdit(0);
         };
         const auto key = [](void* user) { static_cast<TestGen*>(user)->keysReceived.fetch_add(1, std::memory_order_relaxed); };
-        return new FixtureView(this, attached, key, this);
+        return new FixtureView(this, attached, key, this, faultCode(), keysReceived);
     }
     tresult PLUGIN_API initialize(FUnknown* host) override {
         auto result = SingleComponentEffect::initialize(host);
@@ -136,13 +165,17 @@ public:
         };
         offset = std::clamp(field(0), 0, 12);
         auto oldLatency = latency;
-        latency = std::max(0, field(4));
+        latency = (std::max)(0, field(4));
         fault = read >= 16 ? field(12) : 0;
         keysReceived.store(read >= 12 ? field(8) : 0, std::memory_order_relaxed);
         diagnostics = {};
         delayPending = faultCode() == 3;
         setParamNormalized(0, offset / 12.);
         if (variant == 1 && latency != oldLatency && componentHandler) componentHandler->restartComponent(kLatencyChanged);
+        if (componentHandler && faultCode() == 4)
+            for (uint32 index = 0; index < 4097; ++index) componentHandler->endEdit(index);
+        if (componentHandler && faultCode() == 10)
+            for (const int32 value : {2, 7, 11}) componentHandler->performEdit(0, value / 12.);
         return kResultOk;
     }
     tresult PLUGIN_API getState(IBStream* stream) override {
@@ -183,6 +216,9 @@ public:
             if (queue && queue->getParameterId() == 0 && queue->getPointCount() &&
                 queue->getPoint(queue->getPointCount() - 1, sample, value) == kResultOk)
                 offset = static_cast<int32>(std::lround(std::clamp(value, 0., 1.) * 12));
+            if (faultCode() == 10 && queue && queue->getPointCount()) {
+                keysReceived.fetch_add(sample == 0 ? 1 : -1000, std::memory_order_relaxed);
+            }
         }
         if (data.numSamples == 0) return kResultOk;
         if (!data.processContext || !(data.processContext->state & ProcessContext::kPlaying)) {

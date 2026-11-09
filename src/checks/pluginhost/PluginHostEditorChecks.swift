@@ -101,6 +101,63 @@ private func editorCaptureRequest() -> CaptureRequest {
         input: .none, pacing: .offline, prerollBars: 0)
 }
 
+private func editorFaultState(_ fault: Int32) -> PluginStateBlob {
+    var bytes: [UInt8] = []
+    for value in [Int32(0), 0, 0, fault] {
+        for shift in stride(from: 0, to: 32, by: 8) {
+            bytes.append(UInt8(truncatingIfNeeded: UInt32(bitPattern: value) >> shift))
+        }
+    }
+    return PluginStateBlob(component: bytes, controller: [])
+}
+
+@MainActor
+private func checkEditorExceptions(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
+    let cases: [(Int32, String, Int32)] = [
+        (5, "Fixture editor createView failure", 0),
+        (6, "Fixture editor getSize failure", 6),
+        (7, "Fixture editor attached failure", 7),
+        (8, "Could not attach plugin editor", 7),
+    ]
+    for (fault, reason, cleanup) in cases {
+        try await editorInstance(entries, "TestGen") { (instance: PluginInstance) in
+            try await instance.restore(editorFaultState(fault))
+            do {
+                try await instance.openEditor(title: "Porydaw throwing editor check")
+                check.fail("fixture fault \(fault) must reject OpenEditor")
+            } catch HelperProcessError.native(let actual) {
+                check.expectEqual(
+                    expected: reason, actual: actual,
+                    what: "fault \(fault) preserves its original failure across throwing cleanup")
+            }
+            check.expect(
+                !instance.isEditorOpen && instance.failure == nil,
+                message: "editor exceptions are request failures, not helper crashes")
+            let state = try await instance.state()
+            check.expectEqual(
+                expected: cleanup, actual: try editorInteger(state.component, offset: 8),
+                what: "fault \(fault) independently removes, unframes and releases the view")
+            try await instance.restore(editorFaultState(0))
+            try await instance.openEditor(title: "Porydaw editor after exception")
+            check.expect(instance.isEditorOpen, message: "failed open leaves the instance able to reopen")
+        }
+    }
+    try await editorInstance(entries, "TestGen") { (instance: PluginInstance) in
+        try await instance.restore(editorFaultState(9))
+        var closes = 0
+        instance.onEditorClosed = { closes += 1 }
+        try await instance.openEditor(title: "Porydaw throwing teardown check")
+        await instance.closeEditor()
+        let state = try await instance.state()
+        check.expectEqual(
+            expected: Int32(7), actual: try editorInteger(state.component, offset: 8),
+            what: "programmatic close completes frame reset and view release after removed throws")
+        check.expect(
+            closes == 0 && instance.failure == nil && !instance.isEditorOpen,
+            message: "throwing programmatic teardown remains nonthrowing and never reports user-close")
+    }
+}
+
 @MainActor
 private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
     try await editorInstance(entries, "TestGen") { (instance: PluginInstance) in
@@ -344,6 +401,35 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
     }
 
     @MainActor
+    private func checkEditorThrowingUserClose(
+        _ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped
+    ) async throws {
+        guard CGPreflightPostEventAccess() else { throw EditorCheckError.eventPermission }
+        try await editorInstance(entries, "TestGen") { (instance: PluginInstance) in
+            try await instance.restore(editorFaultState(9))
+            var closes = 0
+            instance.onEditorClosed = { closes += 1 }
+            let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
+            try await instance.openEditor(title: "Porydaw throwing user-close check")
+            let window = try await editorNewWindow(excluding: existing)
+            _ = NSRunningApplication(processIdentifier: window.pid)?.activate(options: [])
+            try editorClickClose(window)
+            try await editorWait { !instance.isEditorOpen && closes == 1 }
+            let state = try await instance.state()
+            check.expectEqual(
+                expected: Int32(7), actual: try editorInteger(state.component, offset: 8),
+                what: "user-close completes every independent throwing cleanup step")
+            await instance.closeEditor()
+            check.expect(
+                closes == 1 && instance.failure == nil,
+                message: "throwing teardown emits exactly one user-close and leaves the helper healthy")
+            try await instance.restore(editorFaultState(0))
+            try await instance.openEditor(title: "Porydaw editor after throwing user close")
+            check.expect(instance.isEditorOpen, message: "user-closed throwing view does not prevent reopening")
+        }
+    }
+
+    @MainActor
     private func checkEditorModifiedKeys(
         _ instance: PluginInstance, window: EditorCheckWindow, check: CheckReport.Scoped
     ) async throws {
@@ -449,9 +535,11 @@ public func runPluginHostEditorChecks(_ report: CheckReport) {
     do {
         let entries = try editorFixtureEntries()
         try runBlocking { try await checkEditorLifecycle(entries, check) }
+        try runBlocking { try await checkEditorExceptions(entries, check) }
         #if os(macOS)
             try runBlocking { try await checkEditorOrdering(entries, check) }
             try runBlocking { try await checkEditorKeys(entries, check) }
+            try runBlocking { try await checkEditorThrowingUserClose(entries, check) }
         #endif
     } catch { check.fail("real plugin editor: \(error)") }
 }

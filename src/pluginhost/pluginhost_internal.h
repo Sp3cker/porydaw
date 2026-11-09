@@ -28,7 +28,8 @@ public:
     Steinberg::tresult PLUGIN_API requestOpenEditor(Steinberg::FIDString) override;
     Steinberg::tresult PLUGIN_API startGroupEdit() override;
     Steinberg::tresult PLUGIN_API finishGroupEdit() override;
-    bool pop(ParameterEdit&);
+    uint32_t publishedEndpoint() const { return writeIndex.load(std::memory_order_acquire); }
+    bool pop(ParameterEdit&, uint32_t endpoint);
     void detach();
     void editorClosed();
     bool hasPendingEdits() const { return readIndex.load(std::memory_order_acquire) != writeIndex.load(std::memory_order_acquire); }

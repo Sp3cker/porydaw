@@ -120,6 +120,13 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-pluginhost-abi", "pluginHostABI");
         swiftSuite("swiftcore-pluginbridge", "pluginBridge");
         swiftSuite("swiftcore-pluginhost", "pluginHost");
+        result.push_back({.name = "pluginhost-parameter-batch",
+                          .argv = strings({"--pluginhost-parameter-batch"}),
+                          .handler = [](QApplication &, const QStringList &, const QStringList &) {
+                              return runPluginHostParameterBatchCheck();
+                          },
+                          .startup = StartupKind::HandlerOwned,
+                          .framework = Framework::Process});
         result.push_back({.name = "swiftcore-pluginhost-editor",
                           .argv = strings({"--swiftcore", "{scratch}", "{mid2agb}", "pluginHostEditor"}),
                           .handler = swiftCore,

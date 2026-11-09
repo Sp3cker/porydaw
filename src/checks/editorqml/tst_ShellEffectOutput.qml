@@ -161,12 +161,23 @@ ShellClipboardSupport {
         compare(control(p.view, "effectOutputOrigin").text, "Played")
         shell.shellPresenter.activate("transport.stop")
         compareNative(p.transport, "state", 1)
-        verify(waitForNative(function() { return !p.app.playheadPresenter().playing }, 5000),
-               "the applied native transport is stopped before rendering")
-        activate(p.view, "effectOutputRender")
         verify(waitForNative(function() {
+            return !p.app.playheadPresenter().playing && bootstrap.pluginRenderTransportStopped(0)
+        }, 5000), "the native transport and effect callback acknowledge Stop before rendering")
+        activate(p.view, "effectOutputRender")
+        const renderCommitted = waitForNative(function() {
             return !p.model.busy && p.model.originLabel === "Rendered" && p.model.noteCount > 0
-        }, 30000), "the helper commits rendered output rather than the earlier grabbed notes")
+        }, 30000)
+        verify(renderCommitted, "the helper commits rendered output rather than the earlier grabbed notes"
+               + (renderCommitted ? "" : " (busy=" + p.model.busy + "; originLabel=" + p.model.originLabel
+                  + "; noteCount=" + p.model.noteCount + "; status=" + p.model.status
+                  + "; progress=" + p.model.progress + "; rendering=" + p.model.rendering
+                  + "; live=" + p.model.live + "; canRender=" + p.model.canRender
+                  + "; canReload=" + p.model.canReload + "; diagnostics=" + p.model.diagnostics
+                  + "; transport=" + p.transport.state + "; clock=" + p.transport.timeText
+                  + "; playing=" + p.app.playheadPresenter().playing
+                  + "; tick=" + p.app.playheadPresenter().tick
+                  + "; shellStatus=" + shell.shellPresenter.statusText + ")" + effectDiagnostics()))
         compare(noteFacts(p.grid), before, "render and grab never insert document notes")
         p.grid.setCameraHScroll(0)
         const input = control(p.view, "effectOutputInput")

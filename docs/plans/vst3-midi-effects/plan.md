@@ -65,6 +65,8 @@ User-approved gate timing: implementation checkpoints may proceed after independ
 | 12 | Effect Output drawer section: header controls including Reload, page, publication, selection, Copy, QML, drawer registration + shell check | SDD, sdd-implementer: drawer section on the roll camera. Over-cap (11 files): one surface | 9, 10, 11 (its shell check uses task 11's `injectPluginFault`) | [task-12-brief.md](task-12-brief.md) |
 | 13 | Per-instance helper host mode, shared-memory bridge and Swift transport | SDD, qt-cpp-reviewer: process, Qt threading and realtime IPC. Over-cap (15 files): one bridge behavior | 6 | [task-13-brief.md](task-13-brief.md) |
 | 14 | Align VST attachment and lifetime with fork-main off-main audio ownership | SDD, sdd-implementer: asynchronous borrowed-slot ownership and migration conflicts; over-cap, one cross-module lifetime behavior | 4, 7 | [task-14-brief.md](task-14-brief.md) |
+| 15 | Remove duplicate editor dispatch; bound parameter batches, fail closed on callback loss, and contain editor exceptions | SDD, qt-cpp-reviewer: one native helper correctness surface; over-cap, shared dispatcher/lifecycle ownership | 8, 13, 14 | [task-15-brief.md](task-15-brief.md) |
+| 16 | Canonical cheap capture timing, one worker-owned input schedule, off-main Render normalization | SDD, sdd-implementer: one render request across presentation and worker execution; over-cap | 7, 9, 12 | [task-16-brief.md](task-16-brief.md) |
 
 Parallelism (disjoint write sets):
 - tasks 1 ∥ 2 ∥ 4 ∥ 5;
@@ -74,6 +76,7 @@ Parallelism (disjoint write sets):
 - user-directed task 14 gates implementation acceptance of the in-flight tasks 8–9; preserve their drafts, integrate the newer audio model, and pass combined review/headless verification before checkpointing. Desktop-dependent gates remain pending for final feature acceptance.
 - then 10;
 - then 11, then 12 (task 12 drafting may overlap 11; its shell check needs task 11's bootstrap).
+- user-approved thermo repairs 15 ∥ 16 use disjoint native/Swift write sets after the reviewed ordering predecessor is checkpointed; controller serializes all build/check configurations and owns registration.
 
 ## Checkpoints
 
@@ -86,7 +89,8 @@ Parallelism (disjoint write sets):
   After tasks 8–9, checkpoint accepted work before task 10 re-edits `DocumentWorkspace.swift` and `ApplicationSession+Tabs.swift`.
   The task-14 upstream merge stays uncommitted until the alignment and task 8–9 milestone pass their review and covering Debug/ASAN headless gates; conflict-marker removal alone is not acceptance. The user-approved gate timing above defers native execution to final acceptance, allowing task 10 integration to proceed.
 - **C** — after task 10. Commit and push before task 12 re-edits `DocumentWorkspace.swift`.
-- **Final** — after tasks 11–12, plus the final verification below.
+- **Ordering predecessor** — `15933295`: reviewed macOS ordering policy, Debug/ASAN headless gates passed; pushed before task 15 reuses editor files. Native window/input acceptance remains pending under the gate-timing ruling.
+- **Final** — after tasks 11–12 and approved thermo repairs 15–16, plus the final verification below.
 
 ## Final verification (controller)
 

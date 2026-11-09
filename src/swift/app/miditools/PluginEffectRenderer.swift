@@ -31,7 +31,7 @@ public struct PluginEffectRenderer {
         return TimeRange(startTick: Tick(first.start), endTick: Tick(min(UInt64(TimeDefaults.noTick - 1), last.end)))
     }
 
-    public static func normalize(
+    public nonisolated static func normalize(
         _ events: [RawNoteEvent], track: Int, range: TimeRange, timeline: PlaybackTimeline,
         nonNoteEvents: Int = 0, origin: EffectOutputOrigin, degraded: Bool = false
     ) throws -> EffectOutput {
@@ -40,6 +40,17 @@ public struct PluginEffectRenderer {
         var report = normalized.report
         report.nonNoteEvents = nonNoteEvents
         return EffectOutput(range: range, notes: normalized.notes, origin: origin, report: report, degraded: degraded)
+    }
+
+    @concurrent
+    private static func normalizeRender(_ capture: CaptureResult, request: CaptureRequest) async throws -> EffectOutput
+    {
+        try Task.checkCancellation()
+        let output = try normalize(
+            capture.events, track: request.track, range: request.range, timeline: request.timeline,
+            nonNoteEvents: capture.nonNoteEvents, origin: .render)
+        try Task.checkCancellation()
+        return output
     }
 
     public func render(
@@ -51,8 +62,6 @@ public struct PluginEffectRenderer {
             timeline: timeline, track: effect.config.track, range: range, input: plugin.input,
             pacing: plugin.pacing, prerollBars: plugin.prerollBars)
         let capture = try await instance.capture.render(request, progress: progress)
-        return try Self.normalize(
-            capture.events, track: effect.config.track, range: range, timeline: timeline,
-            nonNoteEvents: capture.nonNoteEvents, origin: .render)
+        return try await Self.normalizeRender(capture, request: request)
     }
 }

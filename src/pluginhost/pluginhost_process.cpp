@@ -20,7 +20,7 @@ void pairNote(pdph_plugin plugin, pdph_midi_event& event) {
             bool collision;
             do {
                 event.note_id = plugin->nextNoteID;
-                plugin->nextNoteID = plugin->nextNoteID == std::numeric_limits<int32_t>::max() ? 0 : plugin->nextNoteID + 1;
+                plugin->nextNoteID = plugin->nextNoteID == (std::numeric_limits<int32_t>::max)() ? 0 : plugin->nextNoteID + 1;
                 collision = false;
                 for (const auto& held : plugin->held) if (held.used && held.id == event.note_id) collision = true;
             } while (collision);
@@ -102,7 +102,7 @@ int32_t pdph_plugin_latency_samples(pdph_plugin plugin) {
     if (!plugin->setup) return PDPH_ERR_STATE;
     try {
         auto latency = plugin->processor->getLatencySamples();
-        if (latency > static_cast<uint32_t>(std::numeric_limits<int32_t>::max())) return PDPH_ERR_SDK;
+        if (latency > static_cast<uint32_t>((std::numeric_limits<int32_t>::max)())) return PDPH_ERR_SDK;
         return static_cast<int32_t>(latency);
     } catch (...) { return PDPH_ERR_INTERNAL; }
 }
@@ -132,10 +132,11 @@ pdph_result pdph_plugin_process(pdph_plugin plugin, int32_t frames, const pdph_p
     *written = 0; *total = 0;
     if (frames == 0 && inCount != 0) return PDPH_ERR_ARGUMENT;
     if (frames > 0 && (!plugin->processing || frames > plugin->maxBlock)) return PDPH_ERR_STATE;
+    const auto parameterEndpoint = plugin->handler->publishedEndpoint();
     try {
         plugin->inputEvents.clear(); plugin->outputEvents.reset(); plugin->inputParameters.clearQueue();
         pdph::ParameterEdit edit{};
-        while (plugin->handler->pop(edit)) {
+        while (plugin->handler->pop(edit, parameterEndpoint)) {
             if (std::find(plugin->parameterIDs.begin(), plugin->parameterIDs.end(), edit.id) == plugin->parameterIDs.end()) continue;
             int32 index = 0;
             auto queue = plugin->inputParameters.addParameterData(edit.id, index);

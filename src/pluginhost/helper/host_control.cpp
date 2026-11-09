@@ -8,6 +8,7 @@
 #include <cstring>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace pdph::helper {
 namespace {
@@ -53,6 +54,7 @@ void endEdit(void* user, uint32_t id) { static_cast<Host*>(user)->enqueue(PDPB_E
 void restart(void* user, int32_t flags) { static_cast<Host*>(user)->enqueue(PDPB_RESTART_COMPONENT, static_cast<uint32_t>(flags)); }
 void dirty(void* user, int32_t on) { static_cast<Host*>(user)->enqueue(PDPB_SET_DIRTY, on != 0); }
 void editorClosed(void* user) { static_cast<Host*>(user)->enqueue(PDPB_EDITOR_CLOSED, 0); }
+void shortcut(void* user, int32_t index) { static_cast<Host*>(user)->enqueue(PDPB_SHORTCUT, uint32_t(index)); }
 bool state(pdph_plugin plugin, int32_t which, QByteArray& bytes, QString& error) {
     uint8_t* raw = nullptr; int64_t size = 0;
     const auto result = pdph_plugin_get_state(plugin, which, &raw, &size);
@@ -114,6 +116,10 @@ void Host::enqueue(uint32_t type, uint32_t value) {
 }
 void Host::drainCallbacks() {
     if (stopping.load(std::memory_order_acquire)) { QCoreApplication::quit(); return; }
+    if (callbacksOverflowed.load(std::memory_order_relaxed)) {
+        std::fprintf(stderr, "Plugin callback queue overflow: stream integrity lost\n");
+        stop(1); return;
+    }
     const auto& next = callbackSlots[callbackRead % PDPB_MAX_EVENTS];
     if (plugin && next.sequence.load(std::memory_order_acquire) == callbackRead + 1) {
         if (!quiesce()) return;
@@ -129,10 +135,6 @@ void Host::drainCallbacks() {
         QByteArray payload;
         if (event.type != PDPB_EDITOR_CLOSED) append32(payload, event.value);
         if (!sendFrame(event.type, 0, payload)) { stop(1); return; }
-    }
-    if (callbacksOverflowed.exchange(false, std::memory_order_relaxed)) {
-        QByteArray payload; appendBytes(payload, QByteArrayLiteral("Plugin callback queue overflow"));
-        if (!sendFrame(PDPB_LOG, 0, payload)) stop(1);
     }
 }
 void dispatch(Host& host, Frame frame) {
@@ -211,13 +213,35 @@ void dispatch(Host& host, Frame frame) {
         if (latency < 0) operation(latency); else append32(output, latency);
         break;
     }
-    case PDPB_OPEN_EDITOR:
+    case PDPB_OPEN_EDITOR: {
+        const auto title = input.data();
+        if (!input.done() || title.contains('\0')) { error = QStringLiteral("Malformed editor control payload"); break; }
+        pdph_editor editor = nullptr; pdph_error reason = {};
+        const auto result = pdph_editor_open(host.plugin, title.constData(), &editor, &reason);
+        if (result != PDPH_OK) error = QString::fromUtf8(reason.message);
+        break;
+    }
     case PDPB_RAISE_EDITOR:
     case PDPB_CLOSE_EDITOR:
-    case PDPB_SET_SHORTCUTS:
-        if (!host.editorAction) error = QStringLiteral("Editor controls are not supported by this helper");
-        else if (!host.editorAction(host, frame, output, error) && error.isEmpty()) error = QStringLiteral("Editor control failed");
+        if (!input.done()) { error = QStringLiteral("Malformed editor control payload"); break; }
+        if (frame.type == PDPB_RAISE_EDITOR) pdph_editor_raise(host.plugin->editor);
+        else pdph_editor_close(host.plugin->editor);
         break;
+    case PDPB_SET_SHORTCUTS: {
+        const auto count = input.u32();
+        if (!input.valid || count > uint32_t((PDPB_MAX_CONTROL_BYTES - 4) / 8) ||
+            frame.payload.size() != 4 + qsizetype(count) * 8) {
+            error = QStringLiteral("Malformed editor control payload"); break;
+        }
+        std::vector<int32_t> strokes; strokes.reserve(count);
+        for (uint32_t index = 0; index < count; ++index) {
+            const auto key = input.u32(), modifiers = input.u32();
+            strokes.push_back(int32_t(key | modifiers));
+        }
+        if (pdph_editor_set_shortcuts(strokes.data(), int32_t(count), shortcut, &host) != PDPH_OK)
+            error = QStringLiteral("Could not install editor shortcuts");
+        break;
+    }
     case PDPB_QUIT:
         if (!input.done()) malformed();
         break;

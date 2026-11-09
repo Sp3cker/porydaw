@@ -38,8 +38,6 @@ struct Host {
     bool processing = false;
     double sampleRate = 48000;
     uint32_t periodFrames = 256, maxBlock = 1024;
-    // Task 8 installs editor dispatch; absent hooks return an explicit unsupported error.
-    bool (*editorAction)(Host&, const Frame&, QByteArray&, QString&) = nullptr;
     bool quiesce();
     void resume();
     bool flushParameters();

@@ -18,11 +18,15 @@ public struct CaptureProgress: Sendable {
 
 private struct CaptureJob: Sendable {
     let generation: UInt64
-    let transport: CaptureTransport
+    let request: CaptureRequest
     let insert: LiveInsert
     let latency: Int64
     let progress: @MainActor @Sendable (CaptureProgress) -> Void
     let completion: @Sendable (Result<CaptureResult, any Error>) -> Void
+}
+
+private struct CapturePreparationFailure: Error {
+    let underlying: any Error
 }
 
 // NSCondition protects mailbox, cancellation and idle waiters; only its Thread runs jobs.
@@ -93,7 +97,14 @@ private final class CaptureWorker: @unchecked Sendable {
     private func capture(
         _ job: CaptureJob, output: inout [pdph_midi_event]
     ) throws -> CaptureResult {
-        let transport = job.transport
+        try check(job.generation)
+        let transport: CaptureTransport
+        do {
+            transport = try CaptureTransport(job.request)
+        } catch {
+            throw CapturePreparationFailure(underlying: error)
+        }
+        try check(job.generation)
         var events: [RawNoteEvent] = []
         var nonNotes = 0
         var inputIndex = 0
@@ -262,7 +273,7 @@ public final class CaptureDriver {
             for waiter in settled { waiter.resume() }
             settled.removeAll()
         }
-        let transport = try CaptureTransport(request)
+        _ = try CaptureTransport.estimatedSeconds(for: request)
         var submitted = false
         do {
             let insert = try await instance.acquireRender(request)
@@ -274,9 +285,11 @@ public final class CaptureDriver {
                     submitted = true
                     worker.submit(
                         CaptureJob(
-                            generation: token, transport: transport, insert: insert, latency: latency,
+                            generation: token, request: request, insert: insert, latency: latency,
                             progress: { [weak self] (value: CaptureProgress) in
-                                guard let self, self.generation == token, !self.stopped, self.failure == nil else {
+                                guard let self, self.running, self.generation == token, !self.stopped,
+                                    self.failure == nil
+                                else {
                                     return
                                 }
                                 progress(value)
@@ -298,6 +311,9 @@ public final class CaptureDriver {
             if let failure { throw failure }
             if token != generation || Task.isCancelled { throw CancellationError() }
             if error is CancellationError { throw error }
+            if let preparation = error as? CapturePreparationFailure {
+                throw PluginHostError(bridging: preparation.underlying)
+            }
             if submitted { instance.reportFailure(error) }
             throw PluginHostError(bridging: error)
         }
