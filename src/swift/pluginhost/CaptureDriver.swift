@@ -7,13 +7,10 @@ public struct CaptureResult: Sendable {
     /// Raw notes, including preroll and tail; Core owns pairing and range rejection.
     public let events: [RawNoteEvent]
     public let nonNoteEvents: Int
-    public let pacing: EffectPacing
 }
 
 public struct CaptureProgress: Sendable {
     public let fraction: Double
-    /// Raw realtime notes so far, with the same contract as CaptureResult.events.
-    public let events: [RawNoteEvent]
 }
 
 private struct CaptureJob: Sendable {
@@ -165,15 +162,12 @@ private final class CaptureWorker: @unchecked Sendable {
                     1,
                     Double(sample - transport.startSample) / Double(max(1, transport.endSample - transport.startSample))
                 )
-                let partial = transport.request.pacing == .realtime ? events : []
-                Task { @MainActor in job.progress(CaptureProgress(fraction: fraction, events: partial)) }
+                Task { @MainActor in job.progress(CaptureProgress(fraction: fraction)) }
                 repeat { nextBar = transport.nextBar(after: nextBar) } while nextBar <= sample
             }
         }
         try check(job.generation)
-        return CaptureResult(
-            events: events, nonNoteEvents: nonNotes,
-            pacing: transport.request.pacing)
+        return CaptureResult(events: events, nonNoteEvents: nonNotes)
     }
 
     private func run() {

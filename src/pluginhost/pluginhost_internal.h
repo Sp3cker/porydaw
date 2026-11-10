@@ -16,6 +16,12 @@ constexpr int eventCapacity = 4096;
 static_assert(std::atomic<uint32_t>::is_always_lock_free && std::atomic<bool>::is_always_lock_free,
     "Plugin processing callbacks require lock-free atomics");
 struct ParameterEdit { Steinberg::Vst::ParamID id; Steinberg::Vst::ParamValue value; };
+enum class PluginPhase {
+    unprepared,
+    prepared,
+    active,
+    processing,
+};
 class ComponentHandler final : public Steinberg::U::Implements<Steinberg::U::Directly<
     Steinberg::Vst::IComponentHandler, Steinberg::Vst::IComponentHandler2>> {
 public:
@@ -82,7 +88,7 @@ struct pdph_plugin_impl {
     uint64_t noteOrder = 0;
     int32_t nextNoteID = 0;
     int32_t maxBlock = 0;
-    bool setup = false, active = false, processing = false;
+    pdph::PluginPhase phase = pdph::PluginPhase::unprepared;
     pdph_editor editor = nullptr;
     void (*closeEditor)(pdph_editor) = nullptr;
     pdph_result prepareParameters();

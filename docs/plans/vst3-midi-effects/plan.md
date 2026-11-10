@@ -47,6 +47,10 @@ User-approved gate timing: implementation checkpoints may proceed after independ
 - Use `--release` on build and check commands if the Debug cache's Qt kit disagrees with the checkout-local kit (the arpeggiator plan's precedent); otherwise run them as written.
 - No commits until a checkpoint. At each checkpoint the controller commits the accepted tasks, then pushes the branch to `origin`. Untracked `docs/ideas/memacc-flow-ableton-wayfinding.md`, `profiler/` and `prototypes/` stay untracked and uncommitted.
 
+- User-approved cleanup extension (tasks 17–22): remove confirmed dead code and make local closed protocols explicit without a global state machine. Preserve independent setup/editor/live/render generations, cancellation joins, audio ownership and QML Loader release lifetimes.
+- Task 18 intentionally removes unused realtime progress note snapshots and `CaptureResult.pacing`; percentage progress, final captured events, pacing execution and UI behavior remain unchanged. Its spec/brief updates supersede the original payload requirements.
+- App workflow tasks preserve the current QtBridge surface and observable projections; an internal enum does not justify removing a QML notification or releasing a presenter before its Loader.
+
 ## Tasks
 
 | # | Task | Route / seat | Depends | Brief |
@@ -67,6 +71,12 @@ User-approved gate timing: implementation checkpoints may proceed after independ
 | 14 | Align VST attachment and lifetime with fork-main off-main audio ownership | SDD, sdd-implementer: asynchronous borrowed-slot ownership and migration conflicts; over-cap, one cross-module lifetime behavior | 4, 7 | [task-14-brief.md](task-14-brief.md) |
 | 15 | Remove duplicate editor dispatch; bound parameter batches, fail closed on callback loss, and contain editor exceptions | SDD, qt-cpp-reviewer: one native helper correctness surface; over-cap, shared dispatcher/lifecycle ownership | 8, 13, 14 | [task-15-brief.md](task-15-brief.md) |
 | 16 | Canonical cheap capture timing, one worker-owned input schedule, off-main Render normalization | SDD, sdd-implementer: one render request across presentation and worker execution; over-cap | 7, 9, 12 | [task-16-brief.md](task-16-brief.md) |
+| 17 | Remove unused native discovery/log capability, canonicalize helper state, simplify parameter-flush handshake and name engine lifecycle | SDD, qt-cpp-reviewer Implement; over-cap, one native lifecycle/control behavior | 15 | [task-17-brief.md](task-17-brief.md) |
+| 18 | Explicit setup cache and removal of unused capture payloads/contracts | SDD, sdd-implementer; over-cap, one Swift host/capture contract | 16; task 17 log cutover interface | [task-18-brief.md](task-18-brief.md) |
+| 19 | Explicit recorder synchronization phase | SDD, sdd-implementer | 9 | [task-19-brief.md](task-19-brief.md) |
+| 20 | Explicit Sample Studio source decisions with retained Loader resources | SDD, sdd-implementer | — | [task-20-brief.md](task-20-brief.md) |
+| 21 | Typed close/reload/replace and save-conflict requests | SDD, sdd-implementer; over-cap, one close/save request lifecycle | — | [task-21-brief.md](task-21-brief.md) |
+| 22 | Explicit MIDI import I/O lifecycle, retaining wizard page state | SDD, sdd-implementer | — | [task-22-brief.md](task-22-brief.md) |
 
 Parallelism (disjoint write sets):
 - tasks 1 ∥ 2 ∥ 4 ∥ 5;
@@ -77,6 +87,7 @@ Parallelism (disjoint write sets):
 - then 10;
 - then 11, then 12 (task 12 drafting may overlap 11; its shell check needs task 11's bootstrap).
 - user-approved thermo repairs 15 ∥ 16 use disjoint native/Swift write sets after the reviewed ordering predecessor is checkpointed; controller serializes all build/check configurations and owns registration.
+- Cleanup tasks 17–22 have disjoint write sets and may implement concurrently; 17 removes the native/decoder log arm while 18 removes its `PluginInstance` consumer. No shared build runs until the cutover settles. Controller owns docs/BUILDING.md and plan.md; task 18 alone owns the capture spec and original task-7 contract edits. Review accepted tasks in bounded batches, with user-selected Claude Opus 5.5 assessing quality. Checkpoint before any later task reuses an accepted task's files.
 
 ## Checkpoints
 
@@ -91,6 +102,8 @@ Parallelism (disjoint write sets):
 - **C** — after task 10. Commit and push before task 12 re-edits `DocumentWorkspace.swift`.
 - **Ordering predecessor** — `15933295`: reviewed macOS ordering policy, Debug/ASAN headless gates passed; pushed before task 15 reuses editor files. Native window/input acceptance remains pending under the gate-timing ruling.
 - **Final** — after tasks 11–12 and approved thermo repairs 15–16, plus the final verification below.
+- **Cleanup checkpoint** — tasks 17–22 accepted after independent task reviews and m1 / Claude Opus 5.5 final source-quality PASS (no critical/important findings). Final repaired Debug and ASAN each passed 8 focused harnesses; production shell passed 13. Bridge: 0 baselined findings; AOT: 8782/8866 compiled (99.1%), 84 rejected; format check and all 26 Swift index targets passed.
+  Installed-plugin/native final acceptance is still open: the fresh app's saved ChordPotion instance stalled inside its constructor's soundfont filesystem enumeration, before changed setup/phase/flush operations. Standalone scanner instantiation passed from both worktree and root cwd; cause and baseline reproduction are not established. No timeout/launch/SDK workaround was applied. Editor Space, reversible parameter editing, focus/stacking and native Debug/ASAN acceptance are not claimed complete.
 
 ## Final verification (controller)
 

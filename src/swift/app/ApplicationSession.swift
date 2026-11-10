@@ -12,13 +12,34 @@ import PorydawAppPresentation
 import PorydawPluginHost
 
 @MainActor
+struct SaveConflictRequest {
+    enum Target {
+        case fileSave
+        case closeGate(tabId: Int)
+    }
+
+    let target: Target
+    weak var session: DocumentSession?
+    let songLabel: String
+    let detail: String
+
+    init(session: DocumentSession, target: Target) {
+        self.target = target
+        self.session = session
+        songLabel = session.document.source.label
+        detail =
+            "\(songLabel) changed on disk since it was last loaded or saved. Overwrite it with your edits, register your edits as a new song, or cancel."
+    }
+}
+
+@MainActor
 @QtBridgeable
 public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveInProgress = false
     @QtTracked public var lastSaveError = ""
     @QtTracked public var lastOpenNotice = ""
-    /// Save-conflict prompt: empty label means no prompt. The fork name field
-    /// follows the New Song label law through acceptSaveConflictLabelEdit.
+    /// Only this owner publishes the prompt; QML edits the proposed fork label.
+    /// These fields project the request and never authorize a save by themselves.
     @QtTracked public var saveConflictSongLabel = ""
     @QtTracked public var saveConflictDetail = ""
     @QtTracked public var saveConflictNewSongLabel = ""
@@ -182,9 +203,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var isHostCloseWalk = false
     @QtIgnored
     var isReplacingProject = false
-    /// Close-gate tab awaiting the save-conflict answer, or -1 for File Save.
     @QtIgnored
-    var pendingSaveConflictTabId = -1
+    var saveConflictRequest: SaveConflictRequest?
 
     private static func pluginCacheDirectory() -> URL {
         let home = FileManager.default.homeDirectoryForCurrentUser

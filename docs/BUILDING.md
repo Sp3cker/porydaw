@@ -42,6 +42,12 @@ Any other text keeps the current value. Search boxes share `SearchQuery`: every
 whitespace-separated word must appear, case- and diacritic-insensitively, in
 some searchable field. Menu type-ahead stays prefix-based.
 
+Workflow enums own decisions; QtBridge fields are observable projections, not
+second authorities. Sample Studio's stereo/zone decision is separate from its
+editor and Loader-release lifetimes. MIDI import distinguishes loading, wizard
+editing and registration. Tab close/reload requests carry their target together;
+save-conflict requests keep only a weak document identity.
+
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 
 On macOS, the runner asks Swiftly for the effective project selection and checks
@@ -139,9 +145,12 @@ lock-free atomic sizes, alignment, field offsets and wire size. POSIX backing ma
 be page-rounded; mappings still expose only the logical wire extent.
 
 `PorydawPluginHost` owns discovery, framed control, capture and live insertion.
-Its nine Swift sources depend on Core, Playback and the SDK-free C bridge, with
+Its Swift sources depend on Core, Playback and the SDK-free C bridge, with
 no C++ interop. Discovery supervises separate scanner children and keeps usable
 cached entries during progressive scans and cancellation.
+Setup validity is a request key paired with the invalidation revision captured
+before reconfiguration. Interrupted reconfiguration leaves no valid cache;
+a restart during setup cannot be erased by that setup's completion.
 
 Each instance lazily launches one helper. One non-Sendable producer owns
 request/reply payload access; a separate main-actor mapping monitors atomics and
@@ -150,12 +159,20 @@ from the dedicated capture worker; detach/join precedes transfer and reclamation
 Control/state operations are async, never main-actor blocking.
 Swift owns control, watchdog and shutdown deadlines; native teardown never adds
 a competing hang policy. The helper supports both `scan` and `host --channel`.
+The native engine owns four phases: unprepared, prepared, active and processing.
+The helper reads that authority under processing ownership instead of mirroring
+it. Parameter flushing uses one request/acknowledgment flag: the RT thread
+publishes its result and restores control ownership before release-clearing it.
 
 Live feedback carries actual dispatches, completed positions and boundaries in
 one bounded SPSC ring. Callback-resolved ticks preserve old-timeline endpoints
 and silent tails across seeks and adoption; the main-thread drain never estimates
 them from a later transport snapshot. Loop input offs precede chase at offset
 zero of the first wrapped block, under the new loop context.
+Render reports percentage progress per completed bar; only its final result
+carries raw notes. No cumulative note-array snapshots cross to MainActor per bar.
+Recorder initialization, synchronized baseline and pending restore are explicit
+phases; permission, pending edits and cancellation joins remain separate.
 
 Run `uv run --no-sync dev checks --filter swiftcore-pluginbridge` for real-helper
 transport, state, crash, hang and shutdown coverage; add `--asan` for sanitizer

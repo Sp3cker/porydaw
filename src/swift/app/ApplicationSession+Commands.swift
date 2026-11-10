@@ -193,7 +193,7 @@ extension ApplicationSession {
                 // Nothing was written; the prompt takes the answer.
                 guard let self, !self.isDisposed, self.catalogService === service else { return }
                 self.publishSaveState(inProgress: false)
-                self.presentSaveConflict(session: session, closeTabId: nil)
+                self.presentSaveConflict(session: session, target: .fileSave)
                 return
             } catch {
                 guard let self, !self.isDisposed, self.catalogService === service else { return }

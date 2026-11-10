@@ -173,6 +173,7 @@ public func runBankHistorySuite(_ report: CheckReport) {
     }
     historyTransitionRegressions(report, fixtureRoot: fixtureRoot)
     bankCloseCancelAfterAdmissionChecks(report, fixtureRoot: fixtureRoot)
+    typedCloseRequestChecks(report, fixtureRoot: fixtureRoot)
     bankUndoPublicationChecks(report, fixtureRoot: fixtureRoot)
     bankCanonicalPublicationChecks(report, fixtureRoot: fixtureRoot)
     orphanBankReplayDelaysProjectClose(report, fixtureRoot: fixtureRoot)

@@ -261,9 +261,47 @@ private func effectsRangesAndRender(
 }
 
 @MainActor
+private func effectsRecorderReentrantSuppression(
+    entry: PluginCatalogEntry, check: CheckReport.Scoped
+) async throws {
+    let instance = try PluginInstance(entry: entry)
+    let recorder = PluginStateRecorder(instance: instance)
+    recorder.isPermitted = { true }
+    var records = 0
+    recorder.onRecord = { [weak recorder] (_: PluginStateBlob) in
+        records += 1
+        recorder?.suppress()
+    }
+    instance.onEdit = { [weak recorder] in recorder?.edited() }
+    do {
+        try await recorder.initialize()
+        try await instance.restore(effectsState(pitch: 2))
+        try await effectsWait { records == 1 }
+        await recorder.idle()
+        recorder.refreshObservation()
+        try await instance.restore(effectsState(pitch: 4))
+        await effectsElapse(.milliseconds(700))
+        await recorder.idle()
+        let state = try await instance.state()
+        check.expect(
+            records == 1 && state.component.first == 4,
+            message: "reentrant suppression during recording survives callback completion and permission refresh")
+    } catch {
+        recorder.pause()
+        await recorder.idle()
+        await instance.shutdown()
+        throw error
+    }
+    recorder.pause()
+    await recorder.idle()
+    await instance.shutdown()
+}
+
+@MainActor
 private func effectsStateHistory(
     _ fixture: EffectsFixture, entry: PluginCatalogEntry, check: CheckReport.Scoped
 ) async throws {
+    try await effectsRecorderReentrantSuppression(entry: entry, check: check)
     let id = try fixture.add(entry)
     let controller = fixture.controller
     let document = fixture.session.document
@@ -280,7 +318,18 @@ private func effectsStateHistory(
     check.expect(
         document.effects[0].pluginState?.component.first == 4,
         message: "real parameter notifications debounce the gesture burst into one settings step")
-    _ = try await fixture.session.undo()
+    do {
+        let onEdit = instance.onEdit
+        var editFinished = false
+        instance.onEdit = {
+            onEdit?()
+            editFinished = true
+        }
+        defer { instance.onEdit = onEdit }
+        try await instance.restore(effectsState(pitch: 5))
+        try await effectsWait { editFinished }
+        _ = try await fixture.session.undo()
+    }
     try await effectsWait { try await instance.state().component.first == 0 }
     check.expect(
         instance.liveInsert?.isAttached == true,
@@ -288,7 +337,7 @@ private func effectsStateHistory(
     await effectsElapse(.milliseconds(700))
     check.expect(
         document.history.canRedo && document.history.undoCount == count + 1,
-        message: "restore notification suppression preserves redo and creates no settings step")
+        message: "history restore discards the pending gesture, preserves redo and creates no settings step")
     _ = try await fixture.session.redo()
     try await effectsWait { try await instance.state().component.first == 4 }
     try await controller.setLive(id, false)

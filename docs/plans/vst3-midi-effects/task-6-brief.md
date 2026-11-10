@@ -28,7 +28,7 @@ Exactly spec.md "Native boundary" minus the editor half (task 8 adds the editor 
 - **Signatures and threading.** Setup, activation, bus activation, latency and state run on the helper's main thread. `process` runs on its processing thread for live and Render, never concurrently. Setup and `set_processing` run through the helper's control path. Document each rule in the header.
 - **Errors.** Errors fill `pdph_error.message` with the SDK/loader reason. Null handles return `PDPH_ERR_ARGUMENT`.
 - **ABI constants (controller ruling).** `PDPH_OK=0`, `PDPH_ERR_ARGUMENT=-1`, `PDPH_ERR_STATE=-2`, `PDPH_ERR_SDK=-3`, `PDPH_ERR_INTERNAL=-4`; reserve `PDPH_ERR_NO_EDITOR=-5` and `PDPH_ERR_UNSUPPORTED_PLATFORM=-6` for task 8. `PDPH_EVENT_NOTE_ON=0`, `PDPH_EVENT_NOTE_OFF=1`, `PDPH_EVENT_OTHER=2`. Context and restart flags use the SDK values unchanged. Task 13 moves these POD declarations/constants unchanged.
-- **`pdph_standard_module_paths`** returns `VST3::Hosting::Module::getModulePaths()`.
+- Standard plugin roots are owned by Swift `PluginCatalog`; the native engine accepts explicit module paths. Task 17 removes the unused native path-enumeration API.
 - **`pdph_module_class_info`** lists only classes of category `kVstAudioEffectClass`. `pdph_module_class_count` counts the same set.
 - **`pdph_plugin_create`.**
   - Host context: installs the host context with `PluginContextFactory::instance().setPluginContext(host)` (once per process) before `PlugProvider::initialize`. `host` is a `HostApplication` subclass overriding `getName` to return "Porydaw".

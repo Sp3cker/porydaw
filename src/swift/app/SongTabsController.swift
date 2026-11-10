@@ -159,6 +159,17 @@ internal struct PendingReload {
     }
 }
 
+enum SongCloseRequest {
+    case close(tabId: Int)
+    case reload(tabId: Int, label: String)
+
+    var tabId: Int {
+        switch self {
+        case .close(let tabId), .reload(let tabId, _): return tabId
+        }
+    }
+}
+
 /// The song tab strip: the model its Repeaters read, the selection the strip and
 /// the pages bind, and the close gate the unsaved-changes dialog answers.
 ///
@@ -199,12 +210,14 @@ public final class SongTabsController {
     /// own stored properties exist.
     @QtIgnored
     weak var app: ApplicationSession?
-    /// The tab the close gate must reopen in place once the user approves; `-1`
-    /// while the gate is asking about a plain close.
+    /// The close gate's authority; pendingCloseId is its observable projection.
     @QtIgnored
-    var reloadId = -1
-    @QtIgnored
-    var replacementLabel: String?
+    var pendingCloseRequest: SongCloseRequest? {
+        didSet {
+            let tabId = pendingCloseRequest?.tabId ?? -1
+            if pendingCloseId != tabId { pendingCloseId = tabId }
+        }
+    }
     /// The tab whose close-save is in flight. The gate stays up until the
     /// application reports back, so a second Save press starts no second write.
     @QtIgnored
@@ -366,7 +379,7 @@ public final class SongTabsController {
     /// owning an in-flight binding transition is refused while it stays pending:
     /// closing it would drop the transition's origin from under the commit.
     public func requestClose(tabId: Int) {
-        guard !isClosingAll, pendingCloseId == -1, pendingCloseBank == nil,
+        guard !isClosingAll, pendingCloseRequest == nil, pendingCloseBank == nil,
             let tab = tab(id: tabId), savingCloseId != tabId, !tab.bindingTransitionPending
         else { return }
         app?.guardSplitStudioClose(
@@ -379,7 +392,7 @@ public final class SongTabsController {
                     return
                 }
                 if tabId != self.selectedId { self.select(tabId: tabId) }
-                self.pendingCloseId = tabId
+                self.pendingCloseRequest = .close(tabId: tabId)
             },
             cancel: {})
     }
@@ -391,11 +404,11 @@ public final class SongTabsController {
             app?.discardBankBeforeClose(bank)
             return
         }
-        guard let tabId = takePendingClose() else { return }
+        guard let request = takePendingClose() else { return }
         if let index = projectSwitchApprovalIndex {
             projectSwitchApprovalIndex = index + 1
-        } else if let index = tabIndex(of: tabId) {
-            closeTab(index: index)
+        } else if let index = tabIndex(of: request.tabId) {
+            approveClose(request, index: index)
         }
         advanceCloseAll()
     }
@@ -411,8 +424,8 @@ public final class SongTabsController {
             app?.saveBankBeforeClose(bank)
             return
         }
-        guard pendingCloseId != -1, savingCloseId == -1 else { return }
-        guard let tab = tab(id: pendingCloseId) else { return }
+        guard let request = pendingCloseRequest, savingCloseId == -1 else { return }
+        guard let tab = tab(id: request.tabId) else { return }
         savingCloseId = tab.tabId
         app?.saveTabBeforeClose(tab)
     }
@@ -427,10 +440,8 @@ public final class SongTabsController {
             app?.closeAllResolved(closed: false)
             return
         }
-        guard pendingCloseId != -1 else { return }
-        pendingCloseId = -1
-        if reloadId != -1 { reloadId = -1 }
-        replacementLabel = nil
+        guard pendingCloseRequest != nil else { return }
+        pendingCloseRequest = nil
         if isClosingAll {
             setClosingAll(false)
             projectSwitchApprovalIndex = nil

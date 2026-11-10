@@ -64,9 +64,9 @@ pdph_result pdph_plugin_impl::prepareParameters() {
 extern "C" {
 pdph_result pdph_plugin_setup_processing(pdph_plugin plugin, int32_t realtime, double sampleRate, int32_t maxBlock) {
     if (!plugin || !std::isfinite(sampleRate) || sampleRate <= 0 || maxBlock <= 0) return PDPH_ERR_ARGUMENT;
-    if (plugin->active || plugin->processing) return PDPH_ERR_STATE;
+    if (plugin->phase == pdph::PluginPhase::active || plugin->phase == pdph::PluginPhase::processing) return PDPH_ERR_STATE;
     try {
-        plugin->setup = false;
+        plugin->phase = pdph::PluginPhase::unprepared;
         ProcessSetup setup{realtime ? kRealtime : kOffline, kSample32, maxBlock, sampleRate};
         auto result = plugin->processor->setupProcessing(setup);
         if (result != kResultOk) return pdph::sdkResult(result);
@@ -93,13 +93,13 @@ pdph_result pdph_plugin_setup_processing(pdph_plugin plugin, int32_t realtime, d
         plugin->data.outputParameterChanges = nullptr;
         plugin->maxBlock = maxBlock;
         plugin->held = {};
-        plugin->setup = true;
+        plugin->phase = pdph::PluginPhase::prepared;
         return PDPH_OK;
     } catch (...) { return PDPH_ERR_INTERNAL; }
 }
 int32_t pdph_plugin_latency_samples(pdph_plugin plugin) {
     if (!plugin) return PDPH_ERR_ARGUMENT;
-    if (!plugin->setup) return PDPH_ERR_STATE;
+    if (plugin->phase == pdph::PluginPhase::unprepared) return PDPH_ERR_STATE;
     try {
         auto latency = plugin->processor->getLatencySamples();
         if (latency > static_cast<uint32_t>((std::numeric_limits<int32_t>::max)())) return PDPH_ERR_SDK;
@@ -108,19 +108,26 @@ int32_t pdph_plugin_latency_samples(pdph_plugin plugin) {
 }
 pdph_result pdph_plugin_set_active(pdph_plugin plugin, int32_t active) {
     if (!plugin) return PDPH_ERR_ARGUMENT;
-    if ((active && !plugin->setup) || (!active && plugin->processing)) return PDPH_ERR_STATE;
+    if ((active && plugin->phase == pdph::PluginPhase::unprepared) ||
+        (!active && plugin->phase == pdph::PluginPhase::processing)) return PDPH_ERR_STATE;
     try {
         auto result = plugin->component->setActive(active != 0);
-        if (result == kResultOk) plugin->active = active != 0;
+        if (result == kResultOk) {
+            if (active && plugin->phase == pdph::PluginPhase::prepared) plugin->phase = pdph::PluginPhase::active;
+            else if (!active && plugin->phase == pdph::PluginPhase::active) plugin->phase = pdph::PluginPhase::prepared;
+        }
         return pdph::sdkResult(result);
     } catch (...) { return PDPH_ERR_INTERNAL; }
 }
 pdph_result pdph_plugin_set_processing(pdph_plugin plugin, int32_t processing) {
     if (!plugin) return PDPH_ERR_ARGUMENT;
-    if (processing && !plugin->active) return PDPH_ERR_STATE;
+    if (processing && plugin->phase != pdph::PluginPhase::active && plugin->phase != pdph::PluginPhase::processing) return PDPH_ERR_STATE;
     try {
         auto result = plugin->processor->setProcessing(processing != 0);
-        if (result == kResultOk) plugin->processing = processing != 0;
+        if (result == kResultOk) {
+            if (processing) plugin->phase = pdph::PluginPhase::processing;
+            else if (plugin->phase == pdph::PluginPhase::processing) plugin->phase = pdph::PluginPhase::active;
+        }
         return pdph::sdkResult(result);
     } catch (...) { return PDPH_ERR_INTERNAL; }
 }
@@ -131,7 +138,7 @@ pdph_result pdph_plugin_process(pdph_plugin plugin, int32_t frames, const pdph_p
         inCount > pdph::eventCapacity || capacity < 0 || (inCount && !input) || (capacity && !output)) return PDPH_ERR_ARGUMENT;
     *written = 0; *total = 0;
     if (frames == 0 && inCount != 0) return PDPH_ERR_ARGUMENT;
-    if (frames > 0 && (!plugin->processing || frames > plugin->maxBlock)) return PDPH_ERR_STATE;
+    if (frames > 0 && (plugin->phase != pdph::PluginPhase::processing || frames > plugin->maxBlock)) return PDPH_ERR_STATE;
     const auto parameterEndpoint = plugin->handler->publishedEndpoint();
     try {
         plugin->inputEvents.clear(); plugin->outputEvents.reset(); plugin->inputParameters.clearQueue();
@@ -145,7 +152,7 @@ pdph_result pdph_plugin_process(pdph_plugin plugin, int32_t frames, const pdph_p
         if (frames == 0) {
             if (!plugin->inputParameters.getParameterCount()) return PDPH_OK;
             ProcessData flush{};
-            flush.processMode = plugin->setup ? plugin->data.processMode : kRealtime;
+            flush.processMode = plugin->phase == pdph::PluginPhase::unprepared ? kRealtime : plugin->data.processMode;
             flush.symbolicSampleSize = kSample32;
             flush.inputParameterChanges = &plugin->inputParameters;
             return pdph::sdkResult(plugin->processor->process(flush));

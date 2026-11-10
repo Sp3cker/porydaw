@@ -26,32 +26,32 @@ extension SongTabsController {
         closeWaitObservers.removeAll()
     }
 
-    /// Reloads a selected song through the close gate, keeping its original
-    /// tab selectable until the replacement document is ready.
+    /// Executes the approved intent; a reload keeps its original row and page.
     @QtIgnored
-    func requestReload(tabId: Int) {
-        guard pendingCloseId == -1, pendingCloseBank == nil,
-            !reloadsInFlight.contains(tabId),
-            let index = tabIndex(of: tabId)
-        else { return }
-        reloadId = tabId
-        if tabs[index].dirty {
-            if tabId != selectedId { select(tabId: tabId) }
-            pendingCloseId = tabId
-        } else {
+    func approveClose(_ request: SongCloseRequest, index: Int) {
+        switch request {
+        case .close:
             closeTab(index: index)
+        case .reload(let tabId, let label):
+            reloadsInFlight.insert(tabId)
+            app?.reloadApproved(label: label, replacing: PendingReload(tabs[index]))
         }
     }
 
-    /// Applies the ordinary dirty close gate before placing a different song
-    /// at the selected tab's position.
+    /// Applies the dirty close gate while retaining the reload's target label.
     @QtIgnored
-    func requestReplacement(tabId: Int, label: String) {
-        guard pendingCloseId == -1, pendingCloseBank == nil,
-            !reloadsInFlight.contains(tabId), tab(id: tabId) != nil
+    func requestReload(tabId: Int, label: String) {
+        guard pendingCloseRequest == nil, pendingCloseBank == nil,
+            !reloadsInFlight.contains(tabId),
+            let index = tabIndex(of: tabId)
         else { return }
-        replacementLabel = label
-        requestReload(tabId: tabId)
+        let request = SongCloseRequest.reload(tabId: tabId, label: label)
+        if tabs[index].dirty {
+            if tabId != selectedId { select(tabId: tabId) }
+            pendingCloseRequest = request
+        } else {
+            approveClose(request, index: index)
+        }
     }
 
     /// The application's answer to `confirmSave()`.
@@ -59,12 +59,14 @@ extension SongTabsController {
     func closeAfterSave(tabId: Int, saved: Bool) {
         guard savingCloseId == tabId else { return }
         savingCloseId = -1
-        guard saved, pendingCloseId == tabId, let index = tabIndex(of: tabId) else { return }
-        pendingCloseId = -1
+        guard saved, let request = pendingCloseRequest, request.tabId == tabId,
+            let index = tabIndex(of: tabId)
+        else { return }
+        pendingCloseRequest = nil
         if projectSwitchApprovalIndex != nil {
             projectSwitchApprovalIndex = index + 1
         } else {
-            closeTab(index: index)
+            approveClose(request, index: index)
         }
         advanceCloseAll()
     }
@@ -90,26 +92,32 @@ extension SongTabsController {
         // no allTabsClosed/closeCancelled would ever fire. Adopt the gate — its
         // answer drives advanceCloseAll — and drop any reload so the walk owns
         // the outcome.
-        reloadId = -1
-        replacementLabel = nil
+        if let request = pendingCloseRequest {
+            pendingCloseRequest = .close(tabId: request.tabId)
+        }
         setClosingAll(true)
         app?.refreshDocumentState()
         if app?.kitStudioWorkflow != nil, app?.hasSplitStudioCreatedSamples == true {
-            projectSwitchApprovalIndex = tabIndex(of: pendingCloseId) ?? 0
+            projectSwitchApprovalIndex =
+                pendingCloseRequest.flatMap { (request: SongCloseRequest) -> Int? in
+                    tabIndex(of: request.tabId)
+                } ?? 0
         } else {
             projectSwitchApprovalIndex = nil
         }
-        if pendingCloseId == -1 { advanceCloseAll() }
+        if pendingCloseRequest == nil { advanceCloseAll() }
     }
 
     @QtIgnored
     func startProjectSwitchCloseAll() {
         guard !isClosingAll else { return }
-        reloadId = -1
+        if let request = pendingCloseRequest {
+            pendingCloseRequest = .close(tabId: request.tabId)
+        }
         projectSwitchApprovalIndex = 0
         setClosingAll(true)
         app?.refreshDocumentState()
-        if pendingCloseId == -1 { advanceCloseAll() }
+        if pendingCloseRequest == nil { advanceCloseAll() }
     }
 
     // MARK: - Whole-strip release
@@ -142,20 +150,10 @@ extension SongTabsController {
         app?.tabsDidChange()
     }
 
-    /// A reload only starts opening here: its old row, page and selectable
-    /// identity remain until the new document is ready.
     func closeTab(index: Int) {
         let tab = tabs[index]
         let tabId = tab.tabId
-        if pendingCloseId == tabId { pendingCloseId = -1 }
-        if reloadId == tabId {
-            let replacement = replacementLabel ?? tab.title
-            reloadId = -1
-            replacementLabel = nil
-            reloadsInFlight.insert(tabId)
-            app?.reloadApproved(label: replacement, replacing: PendingReload(tab))
-            return
-        }
+        if pendingCloseRequest?.tabId == tabId { pendingCloseRequest = nil }
         let removeTab = { [weak self, weak tab] in
             guard let self, let tab, self.tab(id: tabId) === tab,
                 let currentIndex = self.tabIndex(of: tabId)
@@ -266,7 +264,9 @@ extension SongTabsController {
                 guard tab.dirty else { continue }
                 projectSwitchApprovalIndex = index
                 if tab.tabId != selectedId { select(tabId: tab.tabId) }
-                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
+                if pendingCloseRequest?.tabId != tab.tabId {
+                    pendingCloseRequest = .close(tabId: tab.tabId)
+                }
                 return
             }
             projectSwitchApprovalIndex = nil
@@ -278,7 +278,9 @@ extension SongTabsController {
                     continue
                 }
                 if tab.tabId != selectedId { select(tabId: tab.tabId) }
-                if pendingCloseId != tab.tabId { pendingCloseId = tab.tabId }
+                if pendingCloseRequest?.tabId != tab.tabId {
+                    pendingCloseRequest = .close(tabId: tab.tabId)
+                }
                 return
             }
         }
@@ -291,11 +293,10 @@ extension SongTabsController {
         app?.closeAllResolved(closed: true)
     }
 
-    func takePendingClose() -> Int? {
-        guard pendingCloseId != -1 else { return nil }
-        let tabId = pendingCloseId
-        pendingCloseId = -1
-        return tabId
+    func takePendingClose() -> SongCloseRequest? {
+        guard let request = pendingCloseRequest else { return nil }
+        pendingCloseRequest = nil
+        return request
     }
 
     func clearPendingCloseBank() {
@@ -333,8 +334,7 @@ extension SongTabsController {
         }
         tabs.removeSubrange(0..<tabs.count)
         tabCount = 0
-        pendingCloseId = -1
-        reloadId = -1
+        pendingCloseRequest = nil
         reloadsInFlight.removeAll()
         savingCloseId = -1
         publishSelection(index: -1)

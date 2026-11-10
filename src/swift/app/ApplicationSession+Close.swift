@@ -96,7 +96,7 @@ extension ApplicationSession {
                 guard let self, !self.isDisposed, self.catalogService === service else { return }
                 self.publishSaveState(inProgress: false)
                 self.songTabs.closeAfterSave(tabId: tabId, saved: false)
-                self.presentSaveConflict(session: session, closeTabId: tabId)
+                self.presentSaveConflict(session: session, target: .closeGate(tabId: tabId))
                 return
             } catch {
                 guard let self, !self.isDisposed, self.catalogService === service else { return }
@@ -281,15 +281,14 @@ extension ApplicationSession {
 
     // MARK: - Save conflict
 
-    /// Raises the conflict prompt after save() threw SaveConflictError. The
-    /// document stays dirty; closeTabId carries the close-gate tab, if any.
+    /// Raises the conflict prompt for File Save or the originating close gate.
     @QtIgnored
-    func presentSaveConflict(session: DocumentSession, closeTabId: Int?) {
-        saveConflictSongLabel = session.document.source.label
-        saveConflictDetail =
-            "\(session.document.source.label) changed on disk since it was last loaded or saved. Overwrite it with your edits, register your edits as a new song, or cancel."
+    func presentSaveConflict(session: DocumentSession, target: SaveConflictRequest.Target) {
+        let request = SaveConflictRequest(session: session, target: target)
+        saveConflictRequest = request
+        saveConflictSongLabel = request.songLabel
+        saveConflictDetail = request.detail
         saveConflictNewSongLabel = ""
-        pendingSaveConflictTabId = closeTabId ?? -1
     }
 
     /// The fork name field follows the New Song label law per keystroke.
@@ -307,12 +306,12 @@ extension ApplicationSession {
 
     /// Overwrite: the normal save proceeds over the on-disk contents.
     func resolveSaveConflictOverwriteImpl() {
-        guard !saveConflictSongLabel.isEmpty, !saveInProgress else { return }
-        guard let session = resolveSaveConflictSession() else {
+        guard let request = saveConflictRequest, !saveInProgress else { return }
+        guard let session = resolveSaveConflictSession(request) else {
             missingSaveConflictSession()
             return
         }
-        let tabId = pendingSaveConflictTabId
+        let target = request.target
         clearSaveConflict()
         publishSaveState(inProgress: true, error: "")
         let service = catalogService
@@ -336,7 +335,7 @@ extension ApplicationSession {
             }
             guard let self, !self.isDisposed, self.catalogService === service else { return }
             self.publishSaveState(inProgress: false)
-            if tabId != -1 {
+            if case .closeGate(let tabId) = target {
                 self.songTabs.savingCloseId = tabId
                 self.songTabs.closeAfterSave(tabId: tabId, saved: !session.document.isDirty)
             }
@@ -347,10 +346,10 @@ extension ApplicationSession {
     /// MIDI, the original file stays untouched, and the created song opens in
     /// a tab like the File > New Song flow. A close-gate tab then closes.
     func resolveSaveConflictForkImpl() {
-        guard !saveConflictSongLabel.isEmpty, !saveInProgress,
+        guard let request = saveConflictRequest, !saveInProgress,
             let service = catalogService
         else { return }
-        guard let session = resolveSaveConflictSession() else {
+        guard let session = resolveSaveConflictSession(request) else {
             missingSaveConflictSession()
             return
         }
@@ -358,7 +357,7 @@ extension ApplicationSession {
         guard saveConflictLabelValid(label: label),
             !saveConflictLabelTaken(label: label)
         else { return }
-        let tabId = pendingSaveConflictTabId
+        let target = request.target
         clearSaveConflict()
         publishSaveState(inProgress: true, error: "")
         Task { [weak self] in
@@ -369,7 +368,7 @@ extension ApplicationSession {
                 guard let self, !self.isDisposed, self.catalogService === service else { return }
                 self.openSongFromDock(label: label, newTab: true)
                 self.publishSaveState(inProgress: false)
-                if tabId != -1 {
+                if case .closeGate(let tabId) = target {
                     self.songTabs.savingCloseId = tabId
                     self.songTabs.closeAfterSave(tabId: tabId, saved: true)
                 }
@@ -386,39 +385,39 @@ extension ApplicationSession {
     /// Cancel: nothing is written, the document stays dirty, and a pending
     /// close or project switch aborts like the close gate's own Cancel.
     func cancelSaveConflictImpl() {
-        guard !saveConflictSongLabel.isEmpty else { return }
-        let tabId = pendingSaveConflictTabId
+        guard let request = saveConflictRequest else { return }
         clearSaveConflict()
-        guard tabId != -1 else { return }
-        songTabs.cancelClose()
+        if case .closeGate = request.target {
+            songTabs.cancelClose()
+        }
     }
 
-    private func resolveSaveConflictSession() -> DocumentSession? {
-        let label = saveConflictSongLabel
-        guard !label.isEmpty else { return nil }
-        if pendingSaveConflictTabId != -1 {
-            guard let tab = songTabs.tab(id: pendingSaveConflictTabId),
-                tab.workspace.session.document.source.label == label
-            else { return nil }
-            return tab.workspace.session
+    private func resolveSaveConflictSession(_ request: SaveConflictRequest) -> DocumentSession? {
+        let session: DocumentSession?
+        switch request.target {
+        case .closeGate(let tabId):
+            session = songTabs.tab(id: tabId)?.workspace.session
+        case .fileSave:
+            session = selectedDocument
         }
-        guard let session = selectedDocument,
-            session.document.source.label == label
+        guard let session, session === request.session,
+            session.document.source.label == request.songLabel
         else { return nil }
         return session
     }
 
     private func missingSaveConflictSession() {
-        let message = "The conflicted song \(saveConflictSongLabel) is no longer open."
+        guard let request = saveConflictRequest else { return }
+        let message = "The conflicted song \(request.songLabel) is no longer open."
         clearSaveConflict()
         publishLastSaveError(message)
         publishOperationFailure(message: message)
     }
 
     private func clearSaveConflict() {
+        saveConflictRequest = nil
         saveConflictSongLabel = ""
         saveConflictDetail = ""
         saveConflictNewSongLabel = ""
-        pendingSaveConflictTabId = -1
     }
 }

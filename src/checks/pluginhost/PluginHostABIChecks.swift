@@ -238,6 +238,16 @@ private func checkABIScanner(_ report: CheckReport, directory: URL, fixture: URL
 
 @MainActor
 private func checkABIParameterBatch(_ plugin: OpaquePointer, _ report: CheckReport) {
+    report.expectEqual(
+        expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_set_active(plugin, 1),
+        cppID: "pluginhost/lifecycle", what: "activation before setup is rejected")
+    report.expectEqual(
+        expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_set_processing(plugin, 1),
+        cppID: "pluginhost/lifecycle", what: "processing before activation is rejected")
+    let unprepared = abiProcess(plugin)
+    report.expect(
+        unprepared.count == 1 && unprepared[0].status == PDPH_ERR_STATE && unprepared[0].events.isEmpty,
+        cppID: "pluginhost/lifecycle", message: "nonzero processing before setup is rejected without output")
     let queued = abiRestore(plugin, abiState(fault: 10))
     report.expectEqual(
         expected: Int32(PDPH_OK), actual: queued, cppID: "pluginhost/parameter-batch",
@@ -286,6 +296,9 @@ private func checkABIGenerator(_ plugin: OpaquePointer, _ report: CheckReport) {
     report.expectEqual(
         expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_setup_processing(plugin, 0, 48_000, 256),
         cppID: "pluginhost/active-setup", what: "setup while active is rejected")
+    report.expectEqual(
+        expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_set_active(plugin, 0),
+        cppID: "pluginhost/lifecycle", what: "deactivation must wait until processing stops")
     let blocks = abiProcess(plugin, blocks: 64)
     let failedBlock = blocks.firstIndex { (block: ABIBlock) -> Bool in block.status != PDPH_OK }
     report.expect(

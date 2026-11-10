@@ -33,11 +33,9 @@ struct Host {
     uint32_t callbackRead = 0;
     std::atomic<bool> callbacksOverflowed{false};
     std::atomic<bool> parameterFlushRequested{false};
-    std::atomic<bool> parameterFlushComplete{false};
     int32_t parameterFlushResult = PDPH_OK;
-    bool processing = false;
     double sampleRate = 48000;
-    uint32_t periodFrames = 256, maxBlock = 1024;
+    uint32_t periodFrames = 256;
     bool quiesce();
     void resume();
     bool flushParameters();

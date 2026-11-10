@@ -268,9 +268,6 @@ private func checkBridgeCallbackLoss(_ fixture: BridgeCheckFixture, _ check: Che
             return false
         },
         message: "a known-incomplete callback batch is not published as healthy edits")
-    check.expect(
-        !fixture.events.contains(.log("Plugin callback queue overflow")),
-        message: "overflow is not a log-only healthy state")
 }
 
 @MainActor

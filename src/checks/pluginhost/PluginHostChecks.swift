@@ -352,9 +352,10 @@ private func checkRealtimeLifecycle(_ entries: [PluginCatalogEntry], _ check: Ch
             }
         }
         try await hostWait { progress != nil }
+        let fraction = progress?.fraction ?? 0
         check.expect(
-            progress?.events.isEmpty == false && (progress?.fraction ?? 0) < 1,
-            message: "realtime progress includes partial events at a completed bar")
+            fraction > 0 && fraction < 1,
+            message: "realtime progress reports a bounded percentage before completion at a completed bar")
         let start = ContinuousClock.now
         instance.capture.cancel()
         let cancelled = await task.result

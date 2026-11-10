@@ -127,7 +127,7 @@ extension ApplicationSession {
                 songTabs.selectTab(tabId: live.tabId)
                 return
             }
-            songTabs.requestReload(tabId: live.tabId)
+            songTabs.requestReload(tabId: live.tabId, label: live.title)
             return
         }
         startOpen(label: label, at: nil)
@@ -138,12 +138,12 @@ extension ApplicationSession {
         guard !songTabs.isClosingAll else { return }
         if let live = songTabs.tab(label: label) {
             if live.tabId == songTabs.selectedId, !newTab {
-                songTabs.requestReload(tabId: live.tabId)
+                songTabs.requestReload(tabId: live.tabId, label: live.title)
             } else {
                 songTabs.selectTab(tabId: live.tabId)
             }
         } else if !newTab, let selected = songTabs.selectedPage {
-            songTabs.requestReplacement(tabId: selected.tabId, label: label)
+            songTabs.requestReload(tabId: selected.tabId, label: label)
         } else {
             startOpen(label: label, at: nil)
         }

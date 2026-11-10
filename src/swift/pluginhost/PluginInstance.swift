@@ -25,6 +25,12 @@ public enum PluginHostError: Error, Equatable, Sendable, CustomStringConvertible
 public final class PluginInstance {
     private enum ControlOperation { case restore, arm, render }
 
+    private struct SetupKey: Equatable {
+        let realtime: Bool
+        let sampleRate: Double
+        let period: UInt32
+    }
+
     private struct LiveCallbacks {
         let attach: @MainActor (LiveInsert) async -> Void
         let detach: @MainActor (LiveInsert) async -> Void
@@ -32,7 +38,7 @@ public final class PluginInstance {
 
     public let entry: PluginCatalogEntry
     public private(set) var buses: HelperBuses?
-    public private(set) var needsSetup = true
+    public var needsSetup: Bool { configuredSetup?.revision != setupRevision }
     public private(set) var failure: PluginHostError?
     public var onEdit: (() -> Void)?
     public var onFailure: ((PluginHostError) -> Void)?
@@ -53,9 +59,7 @@ public final class PluginInstance {
     private var stopped = false
     private var shutdownFinished = false
     private var shutdownWaiters: [CheckedContinuation<Void, Never>] = []
-    private var setupRealtime: Bool?
-    private var setupRate: Double = 0
-    private var setupPeriod: UInt32 = 0
+    private var configuredSetup: (key: SetupKey, revision: UInt64)?
     private var setupRevision: UInt64 = 0
     private var liveRate: Double = 48_000
     private var livePeriod: UInt32 = 256
@@ -164,7 +168,6 @@ public final class PluginInstance {
         case .endEdit, .setDirty(true): onEdit?()
         case .restartComponent(let flags):
             if flags & (1 << 3 | 1 << 1) != 0 {
-                needsSetup = true
                 setupRevision &+= 1
             }
             if flags & (1 << 2 | 1 << 4 | 1 << 5) != 0 { onEdit?() }
@@ -177,7 +180,7 @@ public final class PluginInstance {
             onEditorClosed?()
         case .shortcut(let index):
             if isEditorOpen { PluginEditorShortcuts.receive(index) }
-        case .ready, .setDirty(false), .log, .eof, .terminated: break
+        case .ready, .setDirty(false), .eof, .terminated: break
         }
     }
 
@@ -261,8 +264,7 @@ public final class PluginInstance {
                 self.generation &+= 1
                 self.helper = nil
                 self.liveInsert = nil
-                self.needsSetup = true
-                self.setupRealtime = nil
+                self.configuredSetup = nil
                 try await self.ensureStarted()
                 guard let helper = self.helper else { throw PluginHostError.native("Plugin unavailable.") }
                 try await helper.setState(which: 0, bytes: component)
@@ -352,10 +354,12 @@ public final class PluginInstance {
     private func setup(realtime: Bool, sampleRate: Double, period: UInt32) async throws {
         guard let helper else { throw PluginHostError.native("Plugin unavailable.") }
         let token = generation
+        let key = SetupKey(realtime: realtime, sampleRate: sampleRate, period: period)
         try await helper.setProcessing(false)
         try validate(token)
-        if needsSetup || setupRealtime != realtime || setupRate != sampleRate || setupPeriod != period {
+        if needsSetup || configuredSetup?.key != key {
             let revision = setupRevision
+            configuredSetup = nil
             try await helper.setActive(false)
             try validate(token)
             try await helper.setupProcessing(
@@ -366,10 +370,7 @@ public final class PluginInstance {
             try validate(token)
             latencySamples = Int64(max(0, try await helper.latency()))
             try validate(token)
-            setupRealtime = realtime
-            setupRate = sampleRate
-            setupPeriod = period
-            needsSetup = setupRevision != revision
+            configuredSetup = (key, revision)
         }
         try await helper.setProcessing(true)
         try validate(token)

@@ -52,7 +52,6 @@ enum {
     PDPB_READY = 0x40000001u, PDPB_END_EDIT = 0x40000002u,
     PDPB_RESTART_COMPONENT = 0x40000003u, PDPB_SET_DIRTY = 0x40000004u,
     PDPB_EDITOR_CLOSED = 0x40000005u, PDPB_SHORTCUT = 0x40000006u,
-    PDPB_LOG = 0x40000007u,
 };
 // Control scalars are LE; strings/bytes are u32 length then raw UTF-8/bytes; no padding.
 // Reply type is PDPB_REPLY, same requestId; payload u32 result (0 ok, 1 error), then data/error string.
@@ -61,7 +60,7 @@ enum {
 // GetState: u32 which (0 component, 1 controller); reply bytes. SetState: which + bytes.
 // Digest reply: u64 FNV-1a; latency reply: i32. OpenEditor: string title.
 // SetShortcuts: u32 count + count pairs (u32 Qt key, u32 Qt modifiers), in registry order.
-// Other requests empty. Ready: u32 version; EndEdit/Restart/Dirty/Shortcut: u32; Log: string.
+// Other requests empty. Ready: u32 version; EndEdit/Restart/Dirty/Shortcut: u32.
 // Events have requestId 0. EditorClosed is empty. Editor actions are supplied by task 8.
 int32_t pdpb_channel_create(const char* name, pdpb_channel** out);
 int32_t pdpb_channel_open(const char* name, pdpb_channel** out);

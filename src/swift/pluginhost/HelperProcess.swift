@@ -42,7 +42,6 @@ enum HelperEvent: Equatable, Sendable {
     case setDirty(Bool)
     case editorClosed
     case shortcut(UInt32)
-    case log(String)
     case eof
     case terminated(Int32)
 }
@@ -293,7 +292,6 @@ final class HelperProcess {
             event = .setDirty(value != 0)
         case UInt32(PDPB_EDITOR_CLOSED): event = .editorClosed
         case UInt32(PDPB_SHORTCUT): event = .shortcut(try payload.read(UInt32.self))
-        case UInt32(PDPB_LOG): event = .log(try payload.readText())
         default: throw HelperProcessError.invalidPayload
         }
         try payload.requireEnd()

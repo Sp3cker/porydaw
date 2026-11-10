@@ -1,4 +1,5 @@
 #include "host.h"
+#include "pluginhost_internal.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -73,9 +74,8 @@ void processRequests(Host& host) {
                 pdph_process_context context = {};
                 int32_t written = 0, total = 0;
                 host.parameterFlushResult = pdph_plugin_process(host.plugin, 0, &context, nullptr, 0, nullptr, 0, &written, &total);
-                host.parameterFlushRequested.store(false, std::memory_order_relaxed);
                 host.processingOwner.store(2, std::memory_order_release);
-                host.parameterFlushComplete.store(true, std::memory_order_release);
+                host.parameterFlushRequested.store(false, std::memory_order_release);
             }
         }
         if (wait != PDPB_OK) continue;
@@ -98,7 +98,7 @@ void processRequests(Host& host) {
             configuredRate = host.sampleRate; configuredPeriod = host.periodFrames;
         }
         shared->status = PDPH_OK; shared->out_written = 0; shared->out_total = 0;
-        if (!host.plugin || !host.processing) shared->status = PDPH_ERR_STATE;
+        if (!host.plugin || host.plugin->phase != pdph::PluginPhase::processing) shared->status = PDPH_ERR_STATE;
         else if (shared->frames <= 0 || shared->frames > PDPB_MAX_CHUNK ||
             shared->in_count < 0 || shared->in_count > PDPB_MAX_EVENTS) shared->status = PDPH_ERR_ARGUMENT;
         else {
@@ -109,7 +109,7 @@ void processRequests(Host& host) {
                 }
             }
             for (int32_t offset = 0; offset < shared->frames && shared->status == PDPH_OK;) {
-                const int32_t frames = (std::min)(shared->frames - offset, static_cast<int32_t>(host.maxBlock));
+                const int32_t frames = (std::min)(shared->frames - offset, host.plugin->maxBlock);
                 int32_t count = 0;
                 for (int32_t index = 0; index < shared->in_count; ++index) {
                     const auto& event = shared->in[index];

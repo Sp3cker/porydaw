@@ -91,10 +91,9 @@ void Host::resume() {
 }
 bool Host::flushParameters() {
     if (!plugin || !plugin->handler->hasPendingEdits()) return true;
-    parameterFlushComplete.store(false, std::memory_order_relaxed);
     parameterFlushRequested.store(true, std::memory_order_release);
     processingOwner.store(0, std::memory_order_release);
-    while (!parameterFlushComplete.load(std::memory_order_acquire)) {
+    while (parameterFlushRequested.load(std::memory_order_acquire)) {
         if (stopping.load(std::memory_order_acquire)) return false;
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -173,7 +172,7 @@ void dispatch(Host& host, Frame frame) {
         if (!input.done() || realtime > 1 || !std::isfinite(rate) || rate <= 0 || !block || !period) { malformed(); break; }
         const uint32_t pluginBlock = (std::min)(block, 1024u);
         if (operation(pdph_plugin_setup_processing(host.plugin, realtime, rate, pluginBlock))) {
-            host.sampleRate = rate; host.maxBlock = pluginBlock; host.periodFrames = period;
+            host.sampleRate = rate; host.periodFrames = period;
         }
         break;
     }
@@ -182,7 +181,7 @@ void dispatch(Host& host, Frame frame) {
         const auto on = input.u32();
         if (!input.done() || on > 1) { malformed(); break; }
         if (frame.type == PDPB_SET_ACTIVE) operation(pdph_plugin_set_active(host.plugin, on));
-        else if (operation(pdph_plugin_set_processing(host.plugin, on))) host.processing = on != 0;
+        else operation(pdph_plugin_set_processing(host.plugin, on));
         break;
     }
     case PDPB_GET_STATE: {

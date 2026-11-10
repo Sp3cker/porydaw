@@ -30,9 +30,6 @@ typedef struct {
     void (*editor_closed)(void*);
 } pdph_host_callbacks;
 
-// Main thread. Returned paths are owned by the caller; release with pdph_free_string_array.
-pdph_result pdph_standard_module_paths(char*** out, int32_t* count);
-void pdph_free_string_array(char**, int32_t);
 // Main thread. Instances retain the loaded module independently of the module handle.
 pdph_result pdph_module_open(const char* utf8_path, pdph_module*, pdph_error*);
 void pdph_module_close(pdph_module);

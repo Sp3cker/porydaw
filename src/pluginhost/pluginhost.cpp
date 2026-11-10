@@ -100,32 +100,11 @@ pdph_plugin_impl::~pdph_plugin_impl() {
     if (handler) handler->detach();
     try {
         if (controller) controller->setComponentHandler(nullptr);
-        if (processor && processing) processor->setProcessing(false);
-        if (component && active) component->setActive(false);
+        if (processor && phase == pdph::PluginPhase::processing) processor->setProcessing(false);
+        if (component && (phase == pdph::PluginPhase::active || phase == pdph::PluginPhase::processing)) component->setActive(false);
     } catch (...) {}
 }
 extern "C" {
-pdph_result pdph_standard_module_paths(char*** out, int32_t* count) {
-    if (!out || !count) return PDPH_ERR_ARGUMENT;
-    *out = nullptr; *count = 0;
-    try {
-        auto paths = VST3::Hosting::Module::getModulePaths();
-        auto strings = static_cast<char**>(std::calloc(paths.size(), sizeof(char*)));
-        if (!strings && !paths.empty()) return PDPH_ERR_INTERNAL;
-        for (size_t i = 0; i < paths.size(); ++i) {
-            strings[i] = static_cast<char*>(std::malloc(paths[i].size() + 1));
-            if (!strings[i]) { pdph_free_string_array(strings, static_cast<int32_t>(i)); return PDPH_ERR_INTERNAL; }
-            std::memcpy(strings[i], paths[i].c_str(), paths[i].size() + 1);
-        }
-        *out = strings; *count = static_cast<int32_t>(paths.size());
-        return PDPH_OK;
-    } catch (...) { return PDPH_ERR_INTERNAL; }
-}
-void pdph_free_string_array(char** strings, int32_t count) {
-    if (!strings) return;
-    for (int32_t i = 0; i < count; ++i) std::free(strings[i]);
-    std::free(strings);
-}
 pdph_result pdph_module_open(const char* path, pdph_module* out, pdph_error* error) {
     if (!path || !out) { pdph::error(error, "Null module path or output"); return PDPH_ERR_ARGUMENT; }
     *out = nullptr;
