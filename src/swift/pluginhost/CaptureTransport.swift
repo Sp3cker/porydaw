@@ -85,34 +85,59 @@ public struct CaptureTransport: Sendable {
         endSample = bounds.endSample
         var scheduled: [CaptureInput] = []
         if request.input == .trackNotes {
-            var queues = [[(Int64, UInt8, Int32)]](repeating: [], count: 128)
+            var counts = InlineArray<128, Int>(repeating: 0)
+            var noteCount = 0
+            for event in request.timeline.events
+            where Int(event.track) == request.track && event.type == 9 && event.data1 > 0 {
+                counts[Int(event.data0 & 127)] += 1
+                noteCount += 1
+                guard noteCount < Int(Int32.max) else { throw PluginHostError.native("Too many input notes.") }
+            }
             var heads = InlineArray<128, Int>(repeating: 0)
+            var offset = 0
+            for pitch in 0..<128 {
+                heads[pitch] = offset
+                offset += counts[pitch]
+            }
+            var tails = heads
+            var pending = [
+                (
+                    on: CaptureInput, offSample: Int64?
+                )
+            ](
+                repeating: (CaptureInput(sample: 0, pitch: 0, velocity: 0, id: 0), nil),
+                count: noteCount)
             var nextID: Int32 = 1
             for event in request.timeline.events where Int(event.track) == request.track {
                 guard event.type == 8 || event.type == 9 else { continue }
-                let pitch = event.data0 & 127
+                let pitch = Int(event.data0 & 127)
                 let sample = Self.sample(for: Double(event.tick), timeline: request.timeline)
                 if event.type == 9 && event.data1 > 0 {
-                    queues[Int(pitch)].append((sample, min(127, event.data1), nextID))
-                    guard nextID < Int32.max else { throw PluginHostError.native("Too many input notes.") }
+                    pending[tails[pitch]].on = CaptureInput(
+                        sample: sample, pitch: UInt8(pitch), velocity: min(127, event.data1), id: nextID)
+                    tails[pitch] += 1
                     nextID += 1
-                } else if heads[Int(pitch)] < queues[Int(pitch)].count {
-                    let on = queues[Int(pitch)][heads[Int(pitch)]]
-                    heads[Int(pitch)] += 1
-                    if on.0 < endSample && sample > startSample {
-                        scheduled.append(
-                            CaptureInput(sample: max(startSample, on.0), pitch: pitch, velocity: on.1, id: on.2))
-                        scheduled.append(
-                            CaptureInput(sample: min(endSample, sample), pitch: pitch, velocity: 0, id: on.2))
-                    }
+                } else if heads[pitch] < tails[pitch] {
+                    pending[heads[pitch]].offSample = sample
+                    heads[pitch] += 1
                 }
             }
-            for pitch in 0..<128 {
-                for on in queues[pitch].dropFirst(heads[pitch]) where on.0 < endSample {
-                    scheduled.append(
-                        CaptureInput(sample: max(startSample, on.0), pitch: UInt8(pitch), velocity: on.1, id: on.2))
-                    scheduled.append(CaptureInput(sample: endSample, pitch: UInt8(pitch), velocity: 0, id: on.2))
-                }
+            var pairCount = 0
+            for note in pending where note.on.sample < endSample {
+                if let release = note.offSample, release <= startSample { continue }
+                pairCount += 1
+            }
+            scheduled.reserveCapacity(pairCount * 2)
+            for note in pending where note.on.sample < endSample {
+                if let release = note.offSample, release <= startSample { continue }
+                scheduled.append(
+                    CaptureInput(
+                        sample: max(startSample, note.on.sample), pitch: note.on.pitch,
+                        velocity: note.on.velocity, id: note.on.id))
+                scheduled.append(
+                    CaptureInput(
+                        sample: min(endSample, note.offSample ?? endSample), pitch: note.on.pitch,
+                        velocity: 0, id: note.on.id))
             }
         }
         scheduled.sort { (lhs: CaptureInput, rhs: CaptureInput) -> Bool in

@@ -27,7 +27,7 @@ bool isEditorFamily(NSRunningApplication* application) {
     char executable[PROC_PIDPATHINFO_MAXSIZE] = {};
     return proc_pidpath(pid, executable, sizeof(executable)) > 0 && std::strcmp(executable, family.executable) == 0;
 }
-void applyEditorOrdering(NSRunningApplication* application, const std::vector<uintptr_t>& windows) {
+void applyEditorOrdering(NSRunningApplication* application, const QVarLengthArray<uintptr_t, 1>& windows) {
     const bool family = isEditorFamily(application);
     for (const auto handle : windows) {
         NSView* content = (__bridge NSView*)reinterpret_cast<void*>(handle);

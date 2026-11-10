@@ -52,55 +52,79 @@ struct HelperShortcut: Sendable {
 }
 
 private struct ControlPayload {
-    var data = Data()
-    private var offset = 0
+    var data: Data
+    private var offset: Int
+    private let end: Int
 
-    init(data: Data = Data()) { self.data = data }
+    init(data: Data, range: Range<Int>? = nil) {
+        self.data = data
+        offset = range?.lowerBound ?? data.startIndex
+        end = range?.upperBound ?? data.endIndex
+    }
+
+    init(capacity: Int) {
+        data = Data()
+        data.reserveCapacity(capacity)
+        offset = 0
+        end = 0
+    }
 
     mutating func append<T: FixedWidthInteger>(_ value: T) {
-        var littleEndian = value.littleEndian
-        withUnsafeBytes(of: &littleEndian) { (bytes: UnsafeRawBufferPointer) in data.append(contentsOf: bytes) }
+        for shift in stride(from: 0, to: T.bitWidth, by: 8) {
+            data.append(UInt8(truncatingIfNeeded: value >> shift))
+        }
     }
 
-    mutating func append(bytes: Data) {
+    mutating func append(bytes: [UInt8]) {
         precondition(bytes.count <= Int(PDPB_MAX_CONTROL_BYTES))
         append(UInt32(bytes.count))
-        data.append(bytes)
+        data.append(contentsOf: bytes)
     }
 
-    mutating func append(text: String) { append(bytes: Data(text.utf8)) }
+    mutating func append(text: String) {
+        precondition(text.utf8.count <= Int(PDPB_MAX_CONTROL_BYTES))
+        append(UInt32(text.utf8.count))
+        data.append(contentsOf: text.utf8)
+    }
 
     mutating func read<T: FixedWidthInteger>(_: T.Type) throws -> T {
         let count = MemoryLayout<T>.size
-        guard data.count - offset >= count else { throw HelperProcessError.invalidPayload }
+        guard end - offset >= count else { throw HelperProcessError.invalidPayload }
         var value: T = 0
         for index in 0..<count { value |= T(data[offset + index]) << (index * 8) }
         offset += count
         return value
     }
 
-    mutating func readBytes() throws -> Data {
+    private mutating func readByteRange() throws -> Range<Int> {
         let count = Int(try read(UInt32.self))
-        guard count <= data.count - offset else { throw HelperProcessError.invalidPayload }
-        let result = data.subdata(in: offset..<(offset + count))
+        guard count <= end - offset else { throw HelperProcessError.invalidPayload }
+        let start = offset
         offset += count
-        return result
-    }
-
-    mutating func readText() throws -> String {
-        guard let value = String(data: try readBytes(), encoding: .utf8) else {
-            throw HelperProcessError.invalidPayload
-        }
-        return value
+        return start..<(start + count)
     }
 
     func requireEnd() throws {
-        guard offset == data.count else { throw HelperProcessError.invalidPayload }
+        guard offset == end else { throw HelperProcessError.invalidPayload }
+    }
+
+    mutating func readState() throws -> [UInt8] {
+        let range = try readByteRange()
+        try requireEnd()
+        return Array(data[range])
+    }
+
+    mutating func readText() throws -> String {
+        let range = try readByteRange()
+        let value = String(data: data[range], encoding: .utf8)
+        guard let value else { throw HelperProcessError.invalidPayload }
+        return value
     }
 
     mutating func remainder() -> Data {
-        let bytes = data.subdata(in: offset..<data.count)
-        offset = data.count
+        // Replies cross suspension and must not retain the coalesced receive buffer.
+        let bytes = data.subdata(in: offset..<end)
+        offset = end
         return bytes
     }
 }
@@ -145,8 +169,13 @@ private final class HelperMonitor {
 @MainActor
 final class HelperProcess {
     private enum Lifecycle { case idle, starting, ready, stopping, stopped }
+    private enum Reply: Sendable {
+        case data(Data)
+        case state([UInt8])
+    }
     private struct Pending {
-        let continuation: CheckedContinuation<Data, any Error>
+        let type: UInt32
+        let continuation: CheckedContinuation<Reply, any Error>
         let deadline: Task<Void, Never>
     }
 
@@ -248,15 +277,24 @@ final class HelperProcess {
         onEvent?(.terminated(status))
     }
 
-    private func receive(type: UInt32, id: UInt32, data: Data) throws {
-        var payload = ControlPayload(data: data)
+    private func receive(type: UInt32, id: UInt32, data: Data, range: Range<Int>) throws {
+        var payload = ControlPayload(data: data, range: range)
         if type == PDPB_REPLY {
-            guard pending[id] != nil else { return }
+            guard let pendingRequest = pending[id] else { return }
             let result = try payload.read(UInt32.self)
             guard result <= 1 else { throw HelperProcessError.invalidPayload }
-            let outcome: Result<Data, any Error>
+            let outcome: Result<Reply, any Error>
             if result == 0 {
-                outcome = .success(payload.remainder())
+                if pendingRequest.type == PDPB_GET_STATE {
+                    do {
+                        let state = try payload.readState()
+                        outcome = .success(.state(state))
+                    } catch {
+                        outcome = .failure(HelperProcessError.invalidPayload)
+                    }
+                } else {
+                    outcome = .success(.data(payload.remainder()))
+                }
             } else {
                 outcome = .failure(HelperProcessError.native(try payload.readText()))
                 try payload.requireEnd()
@@ -307,19 +345,23 @@ final class HelperProcess {
         }
         buffered.append(received.data)
         do {
-            var consumed = 0
-            while buffered.count - consumed >= 12 {
-                var header = ControlPayload(data: buffered.subdata(in: consumed..<(consumed + 12)))
+            var consumed = buffered.startIndex
+            while buffered.endIndex - consumed >= 12 {
+                var header = ControlPayload(data: buffered, range: consumed..<(consumed + 12))
                 let type = try header.read(UInt32.self)
                 let id = try header.read(UInt32.self)
                 let length = Int(try header.read(UInt32.self))
                 guard length <= PDPB_MAX_CONTROL_BYTES else { throw HelperProcessError.invalidPayload }
-                guard buffered.count - consumed - 12 >= length else { break }
+                guard buffered.endIndex - consumed - 12 >= length else { break }
                 let start = consumed + 12
-                try receive(type: type, id: id, data: buffered.subdata(in: start..<(start + length)))
+                try receive(type: type, id: id, data: buffered, range: start..<(start + length))
                 consumed = start + length
             }
-            if consumed > 0 { buffered = Data(buffered.dropFirst(consumed)) }
+            if consumed == buffered.endIndex {
+                buffered.removeAll(keepingCapacity: true)
+            } else if consumed > buffered.startIndex {
+                buffered.removeSubrange(buffered.startIndex..<consumed)
+            }
             if received.ended, !reachedEOF {
                 reachedEOF = true
                 stdout.fileHandleForReading.readabilityHandler = nil
@@ -349,7 +391,11 @@ final class HelperProcess {
         stdout.fileHandleForReading.readabilityHandler = { [weak self] (handle: FileHandle) in
             let data = handle.availableData
             streams.bytes.withLock { (bytes: inout HelperStreamBytes) in
-                bytes.data.append(data)
+                if bytes.data.isEmpty {
+                    bytes.data = data
+                } else {
+                    bytes.data.append(data)
+                }
                 if data.isEmpty { bytes.ended = true }
             }
             if data.isEmpty { handle.readabilityHandler = nil }
@@ -387,30 +433,34 @@ final class HelperProcess {
         }
     }
 
-    private func request(_ type: UInt32, payload: ControlPayload = ControlPayload()) async throws -> Data {
+    private func request(
+        _ type: UInt32, payloadSize: Int = 0,
+        writePayload: (inout ControlPayload) -> Void = { (_: inout ControlPayload) in }
+    ) async throws -> Reply {
         if let failure { throw failure }
         guard lifecycle == .ready || (lifecycle == .stopping && type == PDPB_QUIT) else {
             throw HelperProcessError.notReady
         }
         try Task.checkCancellation()
-        precondition(payload.data.count <= PDPB_MAX_CONTROL_BYTES)
+        precondition(payloadSize >= 0 && payloadSize <= PDPB_MAX_CONTROL_BYTES)
         let id = nextID
         nextID &+= 1
         if nextID == 0 { nextID = 1 }
         precondition(pending[id] == nil)
-        var frame = ControlPayload()
-        frame.append(UInt32(type))
+        var frame = ControlPayload(capacity: 12 + payloadSize)
+        frame.append(type)
         frame.append(id)
-        frame.append(UInt32(payload.data.count))
-        frame.data.append(payload.data)
+        frame.append(UInt32(payloadSize))
+        writePayload(&frame)
+        precondition(frame.data.count == 12 + payloadSize)
         return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, any Error>) in
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Reply, any Error>) in
                 let deadline = Task { @MainActor [weak self] in
                     let seconds = type == PDPB_CREATE_PLUGIN ? 30 : 5
                     do { try await Task.sleep(for: .seconds(seconds)) } catch { return }
                     self?.fail(.timeout(UInt32(type)))
                 }
-                pending[id] = Pending(continuation: continuation, deadline: deadline)
+                pending[id] = Pending(type: type, continuation: continuation, deadline: deadline)
                 do { try stdin.fileHandleForWriting.write(contentsOf: frame.data) } catch { fail(.eof) }
             }
         } onCancel: {
@@ -424,10 +474,13 @@ final class HelperProcess {
 
     func createPlugin(modulePath: String, classUID: [UInt8]) async throws -> HelperBuses {
         guard classUID.count == 16 else { throw HelperProcessError.invalidPayload }
-        var payload = ControlPayload()
-        payload.append(text: modulePath)
-        payload.data.append(contentsOf: classUID)
-        var reply = ControlPayload(data: try await request(UInt32(PDPB_CREATE_PLUGIN), payload: payload))
+        let response = try await request(UInt32(PDPB_CREATE_PLUGIN), payloadSize: 4 + modulePath.utf8.count + 16) {
+            (frame: inout ControlPayload) in
+            frame.append(text: modulePath)
+            frame.data.append(contentsOf: classUID)
+        }
+        guard case .data(let data) = response else { throw HelperProcessError.invalidPayload }
+        var reply = ControlPayload(data: data)
         let buses = HelperBuses(
             eventIn: try reply.read(Int32.self), eventOut: try reply.read(Int32.self),
             audioIn: try reply.read(Int32.self), audioOut: try reply.read(Int32.self))
@@ -436,73 +489,80 @@ final class HelperProcess {
     }
 
     func setupProcessing(realtime: Bool, sampleRate: Double, maxBlock: UInt32, periodFrames: UInt32) async throws {
-        var payload = ControlPayload()
-        payload.append(UInt32(realtime ? 1 : 0))
-        payload.append(sampleRate.bitPattern)
-        payload.append(maxBlock)
-        payload.append(periodFrames)
-        _ = try await request(UInt32(PDPB_SETUP_PROCESSING), payload: payload)
+        _ = try await request(UInt32(PDPB_SETUP_PROCESSING), payloadSize: 20) { (frame: inout ControlPayload) in
+            frame.append(UInt32(realtime ? 1 : 0))
+            frame.append(sampleRate.bitPattern)
+            frame.append(maxBlock)
+            frame.append(periodFrames)
+        }
     }
 
     func setActive(_ on: Bool) async throws {
-        var payload = ControlPayload()
-        payload.append(UInt32(on ? 1 : 0))
-        _ = try await request(UInt32(PDPB_SET_ACTIVE), payload: payload)
+        _ = try await request(UInt32(PDPB_SET_ACTIVE), payloadSize: 4) { (frame: inout ControlPayload) in
+            frame.append(UInt32(on ? 1 : 0))
+        }
     }
 
     func setProcessing(_ on: Bool) async throws {
-        var payload = ControlPayload()
-        payload.append(UInt32(on ? 1 : 0))
-        _ = try await request(UInt32(PDPB_SET_PROCESSING), payload: payload)
+        _ = try await request(UInt32(PDPB_SET_PROCESSING), payloadSize: 4) { (frame: inout ControlPayload) in
+            frame.append(UInt32(on ? 1 : 0))
+        }
     }
 
     func getState(which: UInt32) async throws -> [UInt8] {
-        var payload = ControlPayload()
-        payload.append(which)
-        var reply = ControlPayload(data: try await request(UInt32(PDPB_GET_STATE), payload: payload))
-        let state = try reply.readBytes()
-        try reply.requireEnd()
-        return Array(state)
+        let reply = try await request(UInt32(PDPB_GET_STATE), payloadSize: 4) { (frame: inout ControlPayload) in
+            frame.append(which)
+        }
+        guard case .state(let state) = reply else { throw HelperProcessError.invalidPayload }
+        return state
     }
 
     func setState(which: UInt32, bytes: [UInt8]) async throws {
-        var payload = ControlPayload()
-        payload.append(which)
-        payload.append(bytes: Data(bytes))
-        _ = try await request(UInt32(PDPB_SET_STATE), payload: payload)
+        _ = try await request(UInt32(PDPB_SET_STATE), payloadSize: 8 + bytes.count) { (frame: inout ControlPayload) in
+            frame.append(which)
+            frame.append(bytes: bytes)
+        }
     }
 
     func stateDigest() async throws -> UInt64 {
-        var reply = ControlPayload(data: try await request(UInt32(PDPB_GET_STATE_DIGEST)))
+        guard case .data(let data) = try await request(UInt32(PDPB_GET_STATE_DIGEST)) else {
+            throw HelperProcessError.invalidPayload
+        }
+        var reply = ControlPayload(data: data)
         let digest = try reply.read(UInt64.self)
         try reply.requireEnd()
         return digest
     }
 
     func latency() async throws -> Int32 {
-        var reply = ControlPayload(data: try await request(UInt32(PDPB_GET_LATENCY)))
+        guard case .data(let data) = try await request(UInt32(PDPB_GET_LATENCY)) else {
+            throw HelperProcessError.invalidPayload
+        }
+        var reply = ControlPayload(data: data)
         let latency = try reply.read(Int32.self)
         try reply.requireEnd()
         return latency
     }
 
     func openEditor(title: String) async throws {
-        var payload = ControlPayload()
-        payload.append(text: title)
-        _ = try await request(UInt32(PDPB_OPEN_EDITOR), payload: payload)
+        _ = try await request(UInt32(PDPB_OPEN_EDITOR), payloadSize: 4 + title.utf8.count) {
+            (frame: inout ControlPayload) in
+            frame.append(text: title)
+        }
     }
 
     func raiseEditor() async throws { _ = try await request(UInt32(PDPB_RAISE_EDITOR)) }
     func closeEditor() async throws { _ = try await request(UInt32(PDPB_CLOSE_EDITOR)) }
 
     func setShortcuts(_ strokes: [HelperShortcut]) async throws {
-        var payload = ControlPayload()
-        payload.append(UInt32(strokes.count))
-        for stroke in strokes {
-            payload.append(stroke.key)
-            payload.append(stroke.modifiers)
+        _ = try await request(UInt32(PDPB_SET_SHORTCUTS), payloadSize: 4 + strokes.count * 8) {
+            (frame: inout ControlPayload) in
+            frame.append(UInt32(strokes.count))
+            for stroke in strokes {
+                frame.append(stroke.key)
+                frame.append(stroke.modifiers)
+            }
         }
-        _ = try await request(UInt32(PDPB_SET_SHORTCUTS), payload: payload)
     }
 
     func reportRenderTimeout() { fail(.stoppedResponding) }

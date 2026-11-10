@@ -1,28 +1,22 @@
 #include "host.h"
-#include "pluginhost_internal.h"
+#include "editor.h"
 #include <QCoreApplication>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <memory>
-#include <utility>
-#include <vector>
 
 namespace pdph::helper {
 namespace {
-void append32(QByteArray& bytes, uint32_t value) {
-    for (unsigned shift = 0; shift < 32; shift += 8) bytes.append(static_cast<char>(value >> shift));
+void encode32(char* bytes, uint32_t value) {
+    for (unsigned byte = 0; byte < 4; ++byte) bytes[byte] = static_cast<char>(value >> (byte * 8));
 }
-void append64(QByteArray& bytes, uint64_t value) {
-    for (unsigned shift = 0; shift < 64; shift += 8) bytes.append(static_cast<char>(value >> shift));
-}
-void appendBytes(QByteArray& bytes, const QByteArray& value) {
-    append32(bytes, static_cast<uint32_t>(value.size())); bytes.append(value);
+void encode64(char* bytes, uint64_t value) {
+    encode32(bytes, static_cast<uint32_t>(value)); encode32(bytes + 4, static_cast<uint32_t>(value >> 32));
 }
 struct Payload {
-    const QByteArray& bytes;
+    QByteArrayView bytes;
     qsizetype position = 0;
     bool valid = true;
     uint32_t u32() {
@@ -36,45 +30,56 @@ struct Payload {
         const uint64_t bits = low | (high << 32);
         double value; std::memcpy(&value, &bits, sizeof(value)); return value;
     }
-    QByteArray raw(uint32_t size) {
+    QByteArrayView raw(uint32_t size) {
         if (static_cast<uint64_t>(bytes.size() - position) < size) { valid = false; return {}; }
-        auto value = bytes.mid(position, size); position += size; return value;
+        auto value = bytes.sliced(position, size); position += size; return value;
     }
-    QByteArray data() { const auto size = u32(); return valid ? raw(size) : QByteArray{}; }
+    QByteArrayView data() { const auto size = u32(); return valid ? raw(size) : QByteArrayView{}; }
     bool done() const { return valid && position == bytes.size(); }
 };
 QString sdkError(int32_t result) { return QStringLiteral("Plugin operation failed (%1)").arg(result); }
-void reply(Host& host, const Frame& frame, const QByteArray& data, const QString& error) {
-    QByteArray payload;
-    append32(payload, error.isEmpty() ? 0 : 1);
-    if (error.isEmpty()) payload.append(data); else appendBytes(payload, error.toUtf8());
-    if (!sendFrame(PDPB_REPLY, frame.request, payload)) host.stop(1);
+void reply(Host& host, const Frame& frame, QByteArrayView data, const QString& error, QByteArrayView tail = {}) {
+    char prefix[8] = {};
+    bool sent;
+    if (error.isEmpty()) {
+        sent = sendFrame(PDPB_REPLY, frame.request, {QByteArrayView(prefix, 4), data, tail});
+    } else {
+        const auto text = error.toUtf8();
+        encode32(prefix, 1); encode32(prefix + 4, static_cast<uint32_t>(text.size()));
+        sent = sendFrame(PDPB_REPLY, frame.request, {QByteArrayView(prefix, 8), text});
+    }
+    if (!sent) host.stop(1);
 }
 void endEdit(void* user, uint32_t id) { static_cast<Host*>(user)->enqueue(PDPB_END_EDIT, id); }
 void restart(void* user, int32_t flags) { static_cast<Host*>(user)->enqueue(PDPB_RESTART_COMPONENT, static_cast<uint32_t>(flags)); }
 void dirty(void* user, int32_t on) { static_cast<Host*>(user)->enqueue(PDPB_SET_DIRTY, on != 0); }
 void editorClosed(void* user) { static_cast<Host*>(user)->enqueue(PDPB_EDITOR_CLOSED, 0); }
 void shortcut(void* user, int32_t index) { static_cast<Host*>(user)->enqueue(PDPB_SHORTCUT, uint32_t(index)); }
-bool state(pdph_plugin plugin, int32_t which, QByteArray& bytes, QString& error) {
-    uint8_t* raw = nullptr; int64_t size = 0;
-    const auto result = pdph_plugin_get_state(plugin, which, &raw, &size);
-    std::unique_ptr<uint8_t, decltype(&pdph_free_buffer)> owned(raw, pdph_free_buffer);
+bool state(Host& host, int32_t which, QByteArrayView& bytes, QString& error) {
+    const auto result = pdph::readState(host.plugin, which, host.stateStream);
     if (result != PDPH_OK) { error = sdkError(result); return false; }
+    const auto size = host.stateStream.getSize();
+    const auto raw = host.stateStream.getData();
     if (size < 0 || size > PDPB_MAX_CONTROL_BYTES - 8 || (size && !raw)) {
+        host.stateStream.setSize(0);
         error = QStringLiteral("Plugin state exceeds the bridge limit"); return false;
     }
-    bytes = QByteArray(reinterpret_cast<const char*>(raw), static_cast<qsizetype>(size));
+    bytes = QByteArrayView(raw, static_cast<qsizetype>(size));
     return true;
 }
 }
-bool sendFrame(uint32_t type, uint32_t request, const QByteArray& payload) {
-    if (payload.size() > PDPB_MAX_CONTROL_BYTES) return false;
+bool sendFrame(uint32_t type, uint32_t request, std::initializer_list<QByteArrayView> payloads) {
+    uint32_t size = 0;
+    for (const auto bytes : payloads) {
+        if (bytes.size() > PDPB_MAX_CONTROL_BYTES - size) return false;
+        size += static_cast<uint32_t>(bytes.size());
+    }
     char header[12];
-    const uint32_t fields[] = {type, request, static_cast<uint32_t>(payload.size())};
-    for (unsigned field = 0; field < 3; ++field)
-        for (unsigned byte = 0; byte < 4; ++byte) header[field * 4 + byte] = static_cast<char>(fields[field] >> (byte * 8));
-    return std::fwrite(header, 1, sizeof(header), stdout) == sizeof(header) &&
-        std::fwrite(payload.constData(), 1, payload.size(), stdout) == static_cast<size_t>(payload.size()) && std::fflush(stdout) == 0;
+    encode32(header, type); encode32(header + 4, request); encode32(header + 8, size);
+    if (std::fwrite(header, 1, sizeof(header), stdout) != sizeof(header)) return false;
+    for (const auto bytes : payloads)
+        if (!bytes.isEmpty() && std::fwrite(bytes.data(), 1, bytes.size(), stdout) != static_cast<size_t>(bytes.size())) return false;
+    return std::fflush(stdout) == 0;
 }
 bool Host::quiesce() {
     controlPending.store(true, std::memory_order_release);
@@ -131,15 +136,15 @@ void Host::drainCallbacks() {
         if (slot.sequence.load(std::memory_order_acquire) != callbackRead + 1) break;
         const auto event = slot.event;
         slot.sequence.store(callbackRead + PDPB_MAX_EVENTS, std::memory_order_release); ++callbackRead;
-        QByteArray payload;
-        if (event.type != PDPB_EDITOR_CLOSED) append32(payload, event.value);
-        if (!sendFrame(event.type, 0, payload)) { stop(1); return; }
+        char payload[4]; encode32(payload, event.value);
+        const auto size = event.type == PDPB_EDITOR_CLOSED ? 0 : 4;
+        if (!sendFrame(event.type, 0, {QByteArrayView(payload, size)})) { stop(1); return; }
     }
 }
 void dispatch(Host& host, Frame frame) {
     if (!host.quiesce()) return;
     struct Resume { Host& host; ~Resume() { host.resume(); } } resume{host};
-    Payload input = {frame.payload}; QByteArray output; QString error;
+    Payload input = {frame.payload}; char fixedOutput[16] = {}; QByteArrayView output, stateBytes; QString error;
     auto operation = [&](int32_t result) { if (result != PDPH_OK) error = sdkError(result); return result == PDPH_OK; };
     const auto malformed = [&] { error = QStringLiteral("Malformed control payload"); };
     if (frame.type != PDPB_CREATE_PLUGIN && frame.type != PDPB_QUIT && frame.type != PDPB_SET_SHORTCUTS && !host.plugin) {
@@ -154,15 +159,17 @@ void dispatch(Host& host, Frame frame) {
         if (!input.done() || path.isEmpty() || path.contains('\0')) { malformed(); break; }
         if (host.plugin || host.module) { error = QStringLiteral("This helper already hosts a plugin"); break; }
         pdph_error reason = {};
-        if (pdph_module_open(path.constData(), &host.module, &reason) != PDPH_OK) { error = QString::fromUtf8(reason.message); break; }
+        const QByteArray terminatedPath(path.data(), path.size());
+        if (pdph_module_open(terminatedPath.constData(), &host.module, &reason) != PDPH_OK) { error = QString::fromUtf8(reason.message); break; }
         const pdph_host_callbacks callbacks{&host, endEdit, restart, dirty, editorClosed};
-        if (pdph_plugin_create(host.module, reinterpret_cast<const uint8_t*>(uid.constData()), callbacks, &host.plugin, &reason) != PDPH_OK) {
+        if (pdph_plugin_create(host.module, reinterpret_cast<const uint8_t*>(uid.data()), callbacks, &host.plugin, &reason) != PDPH_OK) {
             error = QString::fromUtf8(reason.message); pdph_module_close(host.module); host.module = nullptr; break;
         }
         pdph_bus_counts buses = {};
         if (operation(pdph_plugin_buses(host.plugin, &buses))) {
-            append32(output, buses.event_in); append32(output, buses.event_out);
-            append32(output, buses.audio_in); append32(output, buses.audio_out);
+            encode32(fixedOutput, buses.event_in); encode32(fixedOutput + 4, buses.event_out);
+            encode32(fixedOutput + 8, buses.audio_in); encode32(fixedOutput + 12, buses.audio_out);
+            output = QByteArrayView(fixedOutput, 16);
         }
         break;
     }
@@ -187,36 +194,41 @@ void dispatch(Host& host, Frame frame) {
     case PDPB_GET_STATE: {
         const auto which = input.u32();
         if (!input.done() || which > 1) { malformed(); break; }
-        QByteArray bytes; if (state(host.plugin, which, bytes, error)) appendBytes(output, bytes);
+        if (state(host, which, stateBytes, error)) {
+            encode32(fixedOutput, static_cast<uint32_t>(stateBytes.size()));
+            output = QByteArrayView(fixedOutput, 4);
+        }
         break;
     }
     case PDPB_SET_STATE: {
         const auto which = input.u32(); const auto bytes = input.data();
         if (!input.done() || which > 1) { malformed(); break; }
-        operation(pdph_plugin_set_state(host.plugin, which, reinterpret_cast<const uint8_t*>(bytes.constData()), bytes.size()));
+        operation(pdph_plugin_set_state(host.plugin, which, reinterpret_cast<const uint8_t*>(bytes.data()), bytes.size()));
         break;
     }
     case PDPB_GET_STATE_DIGEST: {
         if (!input.done()) { malformed(); break; }
         uint64_t digest = 14695981039346656037ull;
-        QByteArray bytes;
-        if (state(host.plugin, 0, bytes, error)) {
-            for (const auto byte : std::as_const(bytes)) { digest ^= static_cast<unsigned char>(byte); digest *= 1099511628211ull; }
+        QByteArrayView bytes;
+        if (state(host, 0, bytes, error)) {
+            for (const auto byte : bytes) { digest ^= static_cast<unsigned char>(byte); digest *= 1099511628211ull; }
         }
-        if (error.isEmpty()) append64(output, digest);
+        if (error.isEmpty()) { encode64(fixedOutput, digest); output = QByteArrayView(fixedOutput, 8); }
         break;
     }
     case PDPB_GET_LATENCY: {
         if (!input.done()) { malformed(); break; }
         const auto latency = pdph_plugin_latency_samples(host.plugin);
-        if (latency < 0) operation(latency); else append32(output, latency);
+        if (latency < 0) operation(latency);
+        else { encode32(fixedOutput, latency); output = QByteArrayView(fixedOutput, 4); }
         break;
     }
     case PDPB_OPEN_EDITOR: {
         const auto title = input.data();
         if (!input.done() || title.contains('\0')) { error = QStringLiteral("Malformed editor control payload"); break; }
         pdph_editor editor = nullptr; pdph_error reason = {};
-        const auto result = pdph_editor_open(host.plugin, title.constData(), &editor, &reason);
+        // The title is the final field, so the owned Frame supplies its trailing NUL.
+        const auto result = pdph_editor_open(host.plugin, title.data(), &editor, &reason);
         if (result != PDPH_OK) error = QString::fromUtf8(reason.message);
         break;
     }
@@ -232,12 +244,12 @@ void dispatch(Host& host, Frame frame) {
             frame.payload.size() != 4 + qsizetype(count) * 8) {
             error = QStringLiteral("Malformed editor control payload"); break;
         }
-        std::vector<int32_t> strokes; strokes.reserve(count);
-        for (uint32_t index = 0; index < count; ++index) {
-            const auto key = input.u32(), modifiers = input.u32();
-            strokes.push_back(int32_t(key | modifiers));
-        }
-        if (pdph_editor_set_shortcuts(strokes.data(), int32_t(count), shortcut, &host) != PDPH_OK)
+        const ShortcutStrokeReader readStroke = [](void* context, int32_t) noexcept {
+            auto& payload = *static_cast<Payload*>(context);
+            const auto key = payload.u32(), modifiers = payload.u32();
+            return int32_t(key | modifiers);
+        };
+        if (setEditorShortcuts(int32_t(count), readStroke, &input, shortcut, &host) != PDPH_OK)
             error = QStringLiteral("Could not install editor shortcuts");
         break;
     }
@@ -249,7 +261,7 @@ void dispatch(Host& host, Frame frame) {
     }
     if (frame.type == PDPB_OPEN_EDITOR && error.isEmpty() && !host.flushParameters())
         error = QStringLiteral("Could not flush plugin parameter edits");
-    reply(host, frame, output, error);
+    reply(host, frame, output, error, stateBytes);
     if (frame.type == PDPB_QUIT && error.isEmpty()) host.stop(0);
 }
 }

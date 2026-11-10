@@ -417,6 +417,15 @@ private func midiEffectsCatalogAndFolders(
         fixture.session.document.effect(onTrack: 0)?.config.plugin.modulePath == secondModule
             && presenter.selectedPlugin == secondRow,
         message: "identically named classes in separate modules keep module-path plus class-UID identity")
+    let rows = (0..<presenter.plugins.count).map { (index: Int) -> MidiEffectPluginRow in
+        presenter.plugins[index]
+    }
+    for _ in 0..<3 { presenter.catalogDidChange() }
+    check.expect(
+        presenter.plugins.count == rows.count
+            && rows.indices.allSatisfy { (index: Int) -> Bool in presenter.plugins[index] === rows[index] }
+            && presenter.selectedPlugin == secondRow,
+        message: "unchanged catalog notifications retain every visible row and the selected duplicate-name identity")
     presenter.rescan()
     try await fixture.settle()
     let rescannedRow = try fixture.row("TestGen", modulePath: secondModule)

@@ -7,7 +7,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <sstream>
+#include <ostream>
+#include <streambuf>
+#include <string>
 #include <thread>
 
 using namespace Steinberg;
@@ -36,11 +38,51 @@ HostApplication& hostContext() {
 template<size_t N> void copyText(char (&to)[N], const std::string& from) {
     std::snprintf(to, N, "%s", from.c_str());
 }
-class ProviderErrors {
+template<size_t N> void copySubCategories(char (&to)[N], const VST3::Hosting::ClassInfo::SubCategories& categories) {
+    size_t position = 0;
+    for (size_t index = 0; index < categories.size(); ++index) {
+        if (index) {
+            if (position == N - 1) break;
+            to[position++] = '|';
+        }
+        for (const auto byte : categories[index]) {
+            if (byte == '\0' || position == N - 1) { to[position] = '\0'; return; }
+            to[position++] = byte;
+        }
+    }
+    to[position] = '\0';
+}
+class ProviderErrors final : private std::streambuf {
 public:
-    ProviderErrors() { PlugProvider::setErrorStream(&stream); }
-    ~ProviderErrors() { PlugProvider::setErrorStream(nullptr); }
-    std::ostringstream stream;
+    ProviderErrors() : stream(this) { PlugProvider::setErrorStream(&stream); }
+    ~ProviderErrors() override { PlugProvider::setErrorStream(nullptr); }
+    ProviderErrors(const ProviderErrors&) = delete;
+    ProviderErrors& operator=(const ProviderErrors&) = delete;
+    const char* message() const {
+        return emitted ? prefix : "PlugProvider initialization or connection failed";
+    }
+private:
+    std::streamsize xsputn(const char* bytes, std::streamsize count) override {
+        if (count > 0) {
+            emitted = true;
+            const auto copied = static_cast<size_t>((std::min)(count, static_cast<std::streamsize>(sizeof(prefix) - 1 - used)));
+            std::memcpy(prefix + used, bytes, copied);
+            used += copied;
+            prefix[used] = '\0';
+        }
+        return count;
+    }
+    int_type overflow(int_type value) override {
+        if (!traits_type::eq_int_type(value, traits_type::eof())) {
+            const char byte = traits_type::to_char_type(value);
+            xsputn(&byte, 1);
+        }
+        return traits_type::not_eof(value);
+    }
+    char prefix[sizeof(pdph_error::message)] = {};
+    size_t used = 0;
+    bool emitted = false;
+    std::ostream stream;
 };
 bool stateSucceeded(tresult result) {
     return result == kResultOk || result == kNotImplemented;
@@ -55,6 +97,17 @@ tresult (*hostQuery)(const TUID, void**) = nullptr;
 pdph_result sdkResult(tresult result) { return result == kResultOk ? PDPH_OK : PDPH_ERR_SDK; }
 void error(pdph_error* out, const char* message) {
     if (out) std::snprintf(out->message, sizeof(out->message), "%s", message);
+}
+pdph_result readState(pdph_plugin plugin, int32_t which, StateStream& stream, bool* implemented) {
+    stream.reset();
+    if (implemented) *implemented = false;
+    if (!plugin || (which != 0 && which != 1)) return PDPH_ERR_ARGUMENT;
+    try {
+        const auto result = which == 0 ? plugin->component->getState(&stream) : plugin->controller->getState(&stream);
+        if (result == kResultOk) { if (implemented) *implemented = true; return PDPH_OK; }
+        stream.reset();
+        return stateSucceeded(result) ? PDPH_OK : PDPH_ERR_SDK;
+    } catch (...) { stream.reset(); return PDPH_ERR_INTERNAL; }
 }
 tresult PLUGIN_API ComponentHandler::beginEdit(ParamID) { return kResultOk; }
 tresult PLUGIN_API ComponentHandler::performEdit(ParamID id, ParamValue value) {
@@ -114,8 +167,10 @@ pdph_result pdph_module_open(const char* path, pdph_module* out, pdph_error* err
         if (!module) { pdph::error(error, reason.c_str()); return PDPH_ERR_SDK; }
         auto result = std::make_unique<pdph_module_impl>();
         result->module = std::move(module);
-        for (const auto& info : result->module->getFactory().classInfos())
-            if (info.category() == kVstAudioEffectClass) result->classes.push_back(info);
+        result->classes = result->module->getFactory().classInfos();
+        auto& classes = result->classes;
+        classes.erase(std::remove_if(classes.begin(), classes.end(),
+            [](const auto& info) { return info.category() != kVstAudioEffectClass; }), classes.end());
         *out = result.release();
         return PDPH_OK;
     } catch (const std::exception& e) { pdph::error(error, e.what()); return PDPH_ERR_INTERNAL; }
@@ -132,7 +187,7 @@ pdph_result pdph_module_class_info(pdph_module module, int32_t index, pdph_class
         *out = {};
         std::memcpy(out->uid, info.ID().data(), 16);
         copyText(out->name, info.name()); copyText(out->category, info.category());
-        copyText(out->sub_categories, info.subCategoriesString()); copyText(out->vendor, info.vendor());
+        copySubCategories(out->sub_categories, info.subCategories()); copyText(out->vendor, info.vendor());
         copyText(out->version, info.version()); copyText(out->sdk_version, info.sdkVersion());
         return PDPH_OK;
     } catch (...) { return PDPH_ERR_INTERNAL; }
@@ -153,8 +208,7 @@ pdph_result pdph_plugin_create(pdph_module module, const uint8_t uid[16], pdph_h
         ProviderErrors errors;
         plugin->provider = std::make_unique<PlugProvider>(module->module->getFactory(), *info, true);
         if (!plugin->provider->initialize()) {
-            auto reason = errors.stream.str();
-            pdph::error(error, reason.empty() ? "PlugProvider initialization or connection failed" : reason.c_str());
+            pdph::error(error, errors.message());
             return PDPH_ERR_SDK;
         }
         plugin->component = plugin->provider->getComponentPtr();
@@ -193,10 +247,11 @@ pdph_result pdph_plugin_get_state(pdph_plugin plugin, int32_t which, uint8_t** b
     if (!plugin || !bytes || !size || (which != 0 && which != 1)) return PDPH_ERR_ARGUMENT;
     *bytes = nullptr; *size = 0;
     try {
-        MemoryStream stream;
-        auto result = which == 0 ? plugin->component->getState(&stream) : plugin->controller->getState(&stream);
-        if (!stateSucceeded(result)) return PDPH_ERR_SDK;
-        if (result == kNotImplemented) return PDPH_OK;
+        pdph::StateStream stream;
+        bool implemented = false;
+        const auto result = pdph::readState(plugin, which, stream, &implemented);
+        if (result != PDPH_OK) return result;
+        if (!implemented) return PDPH_OK;
         *size = stream.getSize();
         *bytes = reinterpret_cast<uint8_t*>(stream.detachData());
         return PDPH_OK;

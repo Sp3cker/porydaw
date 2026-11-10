@@ -174,6 +174,28 @@ carries raw notes. No cumulative note-array snapshots cross to MainActor per bar
 Recorder initialization, synchronized baseline and pending restore are explicit
 phases; permission, pending edits and cancellation joins remain separate.
 
+VST control parsing borrows synchronous fields from each owned frame; only replies
+that cross suspension own independent bytes. Requests encode directly into their
+final frame. The helper writes stack fields and borrowed state spans, retaining
+one SDK state-stream capacity across digest polls without publishing old contents.
+Queued input frames, opaque state snapshots and published results remain owned.
+State replies validate their final range before materializing one owned byte array;
+ordinary replies keep owned Data. Empty child-read staging adopts incoming chunks.
+
+Capture keeps fixed wire output inline, uses compact pitch-bucket working storage,
+and appends live-take pairs directly into replacement output. Normalization keeps
+its fixed pitch map inline and reserves final notes from surviving candidates.
+Unchanged catalog projections compare lazy views; identity codecs write final
+hexadecimal strings/bytes directly. Stable iteration uses dictionary value views.
+Mutating asynchronous drains keep compact Task-handle snapshots: a value view
+would instead force a larger hash-table copy. Joins still await the original set.
+
+The Darwin host checks count allocations across 100 warmed insert callbacks and
+100 warmed Sequencer dispatches, including ring feedback. Those gates do not
+measure plugin/helper internals, setup, capture results or UI allocations, and
+ASAN skips the libmalloc logger. Use Release Allocations Statistics for broader
+churn measurements; Instruments authorization requires an unlocked desktop.
+
 Run `uv run --no-sync dev checks --filter swiftcore-pluginbridge` for real-helper
 transport, state, crash, hang and shutdown coverage; add `--asan` for sanitizer
 coverage. `swiftcore-pluginhost-abi` covers the native engine separately.

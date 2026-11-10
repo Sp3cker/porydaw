@@ -150,8 +150,8 @@ extension ProjectService {
             var sidecar = try JSONDecoder().decode(EffectsSidecar.self, from: bytes)
             var tracks: Set<Int> = []
             let count = sidecar.effects.count
-            sidecar.effects = sidecar.effects.filter { (effect: StoredEffect) in
-                (0..<trackCount).contains(effect.track) && tracks.insert(effect.track).inserted
+            sidecar.effects.removeAll { (effect: StoredEffect) in
+                !(0..<trackCount).contains(effect.track) || !tracks.insert(effect.track).inserted
             }
             var identities: Set<EffectID> = []
             guard

@@ -36,7 +36,7 @@ private final class CaptureWorker: @unchecked Sendable {
     private var stopping = false
     private var idleWaiters: [CheckedContinuation<Void, Never>] = []
     private var exitWaiters: [CheckedContinuation<Void, Never>] = []
-    private var output = [pdph_midi_event](repeating: pdph_midi_event(), count: 4096)
+    private var output = InlineArray<4096, pdph_midi_event>(repeating: pdph_midi_event())
 
     func start() {
         let thread = Thread { [self] in run() }
@@ -92,7 +92,7 @@ private final class CaptureWorker: @unchecked Sendable {
     }
 
     private func capture(
-        _ job: CaptureJob, output: inout [pdph_midi_event]
+        _ job: CaptureJob, output: inout InlineArray<4096, pdph_midi_event>
     ) throws -> CaptureResult {
         try check(job.generation)
         let transport: CaptureTransport

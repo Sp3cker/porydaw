@@ -374,7 +374,7 @@ public final class TrackEffectsController {
 
     public func deviceDidRebind() async {
         guard active, !stopped else { return }
-        for entry in Array(entries.values) where entry.live && !entry.retired {
+        for entry in entries.values where entry.live && !entry.retired {
             do { try await setLive(entry.effect.id, true) } catch {
                 if current(entry) { publish(entry.effect.id, .failed(String(describing: error))) }
             }
@@ -529,7 +529,7 @@ public final class TrackEffectsController {
 
     public func documentDidChange() {
         guard !stopped else { return }
-        for entry in Array(entries.values) {
+        for entry in entries.values {
             guard let next = effect(entry.effect.id),
                 next.config.plugin.modulePath == entry.effect.config.plugin.modulePath,
                 next.config.plugin.classUID == entry.effect.config.plugin.classUID
@@ -588,19 +588,26 @@ public final class TrackEffectsController {
 
     public func shutdown() async {
         if stopped {
-            let pending = Array(cleanups.values)
-            for cleanup in pending { await cleanup.task.value }
+            let pending = cleanups.values.map { (cleanup: (id: UUID, task: Task<Void, Never>)) -> Task<Void, Never> in
+                cleanup.task
+            }
+            for task in pending { await task.value }
             await timer?.value
             return
         }
-        for entry in Array(entries.values) { retire(entry) }
+        while let first = entries.first {
+            retire(first.value)
+            entries[first.key] = nil
+        }
         active = false
         generation &+= 1
         stopped = true
         let drainingTimer = timer
         drainingTimer?.cancel()
-        let pending = Array(cleanups.values)
-        for cleanup in pending { await cleanup.task.value }
+        let pending = cleanups.values.map { (cleanup: (id: UUID, task: Task<Void, Never>)) -> Task<Void, Never> in
+            cleanup.task
+        }
+        for task in pending { await task.value }
         await drainingTimer?.value
         outputs.clear()
         statuses.removeAll()

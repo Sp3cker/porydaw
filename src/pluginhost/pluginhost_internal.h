@@ -1,5 +1,6 @@
 #pragma once
 #include "pluginhost.h"
+#include "public.sdk/source/common/memorystream.h"
 #include "public.sdk/source/vst/hosting/eventlist.h"
 #include "public.sdk/source/vst/hosting/parameterchanges.h"
 #include "public.sdk/source/vst/hosting/plugprovider.h"
@@ -63,6 +64,15 @@ public:
     int32_t total = 0;
 };
 struct HeldNote { bool used = false; int32_t id = -1; uint8_t channel = 0, pitch = 0; uint64_t order = 0; };
+// SDK 3.8.1 logical reset: setSize(0) would release the reusable allocation.
+class StateStream final : public Steinberg::MemoryStream {
+public:
+    StateStream() = default;
+    StateStream(const StateStream&) = delete;
+    StateStream& operator=(const StateStream&) = delete;
+    void reset() { size = 0; cursor = 0; allocationError = false; }
+};
+pdph_result readState(pdph_plugin, int32_t which, StateStream&, bool* implemented = nullptr);
 pdph_result sdkResult(Steinberg::tresult);
 void error(pdph_error*, const char*);
 extern Steinberg::tresult (*hostQuery)(const Steinberg::TUID, void**);

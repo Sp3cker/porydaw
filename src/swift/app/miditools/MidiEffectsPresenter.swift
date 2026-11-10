@@ -56,6 +56,8 @@ public final class MidiEffectsPresenter: QmlUncreatable {
     private var effectID: EffectID?
     private var settingsGroup: HistoryGroup?
     private var visibleEntries: [PluginCatalogEntry] = []
+    private var folderInput: [String]?
+    private var normalizedFolders: [String] = []
     private var message = ""
     private var scanTask: Task<Void, Never>?
     private var scanID: UUID?
@@ -75,30 +77,36 @@ public final class MidiEffectsPresenter: QmlUncreatable {
     }
 
     private func refreshFolders() {
-        let next = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
-        if folders != next { folders = next }
+        let paths = preferences.strings(Self.foldersKey) ?? []
+        if folderInput != paths {
+            normalizedFolders = Self.normalized(paths)
+            folderInput = paths
+        }
+        if folders != normalizedFolders { folders = normalizedFolders }
     }
 
     private func persistFolders() {
         preferences.setStrings(Self.foldersKey, folders)
         preferences.synchronize()
+        folderInput = folders
+        normalizedFolders = folders
     }
 
     private func refreshPlugins() {
-        let entries = catalog.entries.filter { (entry: PluginCatalogEntry) -> Bool in
+        let entries = catalog.entries.lazy.filter { (entry: PluginCatalogEntry) -> Bool in
             entry.isMidiProducer || entry.blockedReason != nil
         }
-        if visibleEntries != entries {
-            visibleEntries = entries
+        if !visibleEntries.elementsEqual(entries) {
+            visibleEntries = Array(entries)
             plugins.reset(
-                to: entries.map { (entry: PluginCatalogEntry) -> MidiEffectPluginRow in
+                to: visibleEntries.map { (entry: PluginCatalogEntry) -> MidiEffectPluginRow in
                     MidiEffectPluginRow(entry: entry)
                 })
         }
         selectedPlugin = -1
         if let effect = session.document.effect(onTrack: sourceTrack) {
             selectedPlugin =
-                entries.firstIndex { (entry: PluginCatalogEntry) -> Bool in
+                visibleEntries.firstIndex { (entry: PluginCatalogEntry) -> Bool in
                     entry.modulePath == effect.config.plugin.modulePath
                         && entry.classUID == effect.config.plugin.classUID
                 } ?? -1
@@ -227,7 +235,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         self.catalog = catalog
         self.preferences = preferences
         colors = palette
-        folders = Self.normalized(preferences.strings(Self.foldersKey) ?? [])
+        refreshFolders()
         persistFolders()
         configure(fontPx: Double(typography.baseFontPx))
         refresh()

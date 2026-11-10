@@ -409,6 +409,20 @@ private func checkABIOptionalControllerState(
     report.expect(
         flags & Int32(PDPH_RESTART_PARAM_VALUES_CHANGED) != 0, cppID: "pluginhost/initial-state-handler",
         message: "the component handler receives parameter restart during initial state synchronization")
+    report.expectEqual(
+        expected: Int32(PDPH_OK), actual: abiRestore(plugin, abiState(fault: 0x4000_0000)),
+        cppID: "pluginhost/state-snapshot-length", what: "fixture enables its larger controller snapshot")
+    var detached: UnsafeMutablePointer<UInt8>?
+    var detachedSize: Int64 = 0
+    let detachedResult = pdph_plugin_get_state(plugin, 1, &detached, &detachedSize)
+    defer { pdph_free_buffer(detached) }
+    let detachedBytes =
+        detached.map { (pointer: UnsafeMutablePointer<UInt8>) -> [UInt8] in
+            Array(UnsafeBufferPointer(start: pointer, count: Int(detachedSize)))
+        } ?? []
+    report.expect(
+        detachedResult == PDPH_OK && detachedSize == 112, cppID: "pluginhost/state-snapshot-length",
+        message: "controller diagnostic state has its exact longer length")
     let componentState = abiState(offset: 7)
     report.expectEqual(
         expected: Int32(PDPH_OK), actual: abiRestore(plugin, componentState),
@@ -436,6 +450,13 @@ private func checkABIOptionalControllerState(
     report.expect(
         unchanged.0 == PDPH_OK && unchanged.1 == componentState, cppID: "pluginhost/state-error-preserves-component",
         message: "absent controller restoration and rejected malformed state leave component bytes unchanged")
+    if let detached {
+        report.expectEqual(
+            expected: detachedBytes,
+            actual: Array(UnsafeBufferPointer(start: detached, count: Int(detachedSize))),
+            cppID: "pluginhost/state-detached-ownership",
+            what: "later shorter component and absent controller reads do not mutate the ABI-owned buffer")
+    }
 }
 
 @MainActor
@@ -443,6 +464,17 @@ public func runPluginHostABIChecks(_ report: CheckReport) {
     let directory = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
     let fixture = directory.appendingPathComponent("vstfixtures/porydawtestgen.vst3")
     checkABIScanner(report, directory: directory, fixture: fixture)
+    #if !os(Windows)
+        let escapedDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "porydaw-scan-\"\\\t\n\u{01}-café-\(UUID().uuidString)", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: escapedDirectory, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: escapedDirectory) }
+            let escapedFixture = escapedDirectory.appendingPathComponent(fixture.lastPathComponent)
+            try FileManager.default.createSymbolicLink(at: escapedFixture, withDestinationURL: fixture)
+            checkABIScanner(report, directory: directory, fixture: escapedFixture)
+        } catch { report.fail("pluginhost/scan-escaping", "escaped fixture setup failed: \(error)") }
+    #endif
     var module: OpaquePointer?
     var error = pdph_error()
     let opened = fixture.path.withCString { (path: UnsafePointer<CChar>) -> Int32 in

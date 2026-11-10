@@ -180,6 +180,19 @@ private func checkCaptureTiming(_ check: CheckReport.Scoped) throws {
     check.expect(
         scheduled.inputs[0].id > 0 && scheduled.inputs[0].id != scheduled.inputs[1].id,
         message: "overlapping input notes have distinct positive paired IDs")
+    check.expect(
+        scheduled.inputs.count == 4 && scheduled.inputs[2].sample == scheduled.sample(for: 12)
+            && scheduled.inputs[2].id == scheduled.inputs[0].id
+            && scheduled.inputs[3].sample == scheduled.sample(for: 15)
+            && scheduled.inputs[3].id == scheduled.inputs[1].id,
+        message: "repeated-pitch releases consume chased input notes FIFO")
+    let clipped = try CaptureTransport(hostRequest(hostTimeline(mixed: true), start: 12, end: 14, input: .trackNotes))
+    check.expect(
+        clipped.inputs.count == 2 && clipped.inputs[0].id == 2 && clipped.inputs[0].velocity == 80
+            && clipped.inputs[0].sample == clipped.startSample
+            && clipped.inputs[1].id == 2 && clipped.inputs[1].velocity == 0
+            && clipped.inputs[1].sample == clipped.endSample,
+        message: "an excluded boundary release still consumes its onset; the next FIFO note keeps its ID and clips")
     let estimates: [(CaptureRequest, Double)] = [
         (hostRequest(timeline, start: 24, end: 144, preroll: 2), 3.75),
         (hostRequest(timeline, start: 24, end: 144), 3.25),
@@ -870,6 +883,50 @@ private func checkTakeStorage(_ check: CheckReport.Scoped) throws {
     check.expect(
         take.events.count == 2 && take.events.first?.pitch == 62 && take.events.last?.tick == 12,
         message: "span replacement removes the old complete pair by onset")
+    let fifo = [
+        RawNoteEvent(tick: 0, pitch: 60, velocity: 100, isOn: true),
+        RawNoteEvent(tick: 10, pitch: 60, velocity: 90, isOn: true, noteID: 0),
+        RawNoteEvent(tick: 20, pitch: 60, velocity: 0, isOn: false),
+        RawNoteEvent(tick: 30, pitch: 60, velocity: 0, isOn: false, noteID: -1),
+    ]
+    var incomingFIFO = LiveTake()
+    incomingFIFO.commitSegment(span: TimeRange(startTick: 5, endTick: 25), events: fifo)
+    check.expect(
+        incomingFIFO.events == [
+            fifo[1], RawNoteEvent(tick: 25, pitch: 60, velocity: 0, isOn: false, noteID: 0),
+        ] && !incomingFIFO.degraded,
+        message: "excluded incoming onsets consume FIFO offs before retained notes close at the segment endpoint")
+    var oldFIFO = LiveTake()
+    oldFIFO.commitSegment(span: TimeRange(startTick: 0, endTick: 40), events: fifo)
+    let retained = oldFIFO.events
+    oldFIFO.commitSegment(span: TimeRange(startTick: 0, endTick: 5), events: [])
+    check.expect(
+        oldFIFO.events == [
+            fifo[1], RawNoteEvent(tick: 30, pitch: 60, velocity: 0, isOn: false, noteID: 0),
+        ] && retained.count == 4 && retained[0] == fifo[0] && !oldFIFO.degraded,
+        message: "removed old onsets consume their offs without changing retained out-of-span pairs or snapshots")
+    var identified = LiveTake()
+    identified.commitSegment(
+        span: TimeRange(startTick: 0, endTick: 24),
+        events: [
+            RawNoteEvent(tick: 1, pitch: 99, velocity: 0, isOn: false, noteID: 7),
+            RawNoteEvent(tick: 2, pitch: 60, velocity: 100, isOn: true, noteID: 7),
+            RawNoteEvent(tick: 3, pitch: 62, velocity: 90, isOn: true, noteID: 7),
+            RawNoteEvent(tick: 6, pitch: 99, velocity: 0, isOn: false, noteID: 7),
+            RawNoteEvent(tick: 6, pitch: 64, velocity: 80, isOn: true),
+            RawNoteEvent(tick: 8, pitch: 99, velocity: 0, isOn: false, noteID: 7),
+        ])
+    check.expect(
+        identified.events == [
+            RawNoteEvent(tick: 2, pitch: 60, velocity: 100, isOn: true, noteID: 7),
+            RawNoteEvent(tick: 3, pitch: 62, velocity: 90, isOn: true, noteID: 7),
+            RawNoteEvent(tick: 6, pitch: 60, velocity: 0, isOn: false, noteID: 7),
+            RawNoteEvent(tick: 6, pitch: 64, velocity: 80, isOn: true),
+            RawNoteEvent(tick: 8, pitch: 62, velocity: 0, isOn: false, noteID: 7),
+            RawNoteEvent(tick: 24, pitch: 64, velocity: 0, isOn: false),
+        ] && !identified.degraded,
+        message:
+            "reused IDs pair FIFO across off pitches, ignore orphan offs, close open notes and sort offs before ons")
     var many: [RawNoteEvent] = []
     for index in 0..<32_769 {
         many.append(

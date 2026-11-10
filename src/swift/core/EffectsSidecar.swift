@@ -7,9 +7,8 @@ public struct EffectsSidecar: Equatable, Sendable, Codable {
 
     public init(effects: [TrackEffect]) {
         version = 2
-        self.effects = effects.sorted { (left: TrackEffect, right: TrackEffect) in
-            left.config.track < right.config.track
-        }.map { (effect: TrackEffect) in StoredEffect(effect) }
+        self.effects = effects.map { (effect: TrackEffect) in StoredEffect(effect) }
+        self.effects.sort { (left: StoredEffect, right: StoredEffect) in left.track < right.track }
     }
 
     private enum CodingKeys: String, CodingKey { case version, effects }
@@ -50,7 +49,17 @@ public struct StoredEffect: Equatable, Sendable, Codable {
         track = effect.config.track
         let plugin = effect.config.plugin
         modulePath = plugin.modulePath
-        classUID = plugin.classUID.map { (byte: UInt8) in String(format: "%02x", byte) }.joined()
+        classUID = String(unsafeUninitializedCapacity: plugin.classUID.count * 2) {
+            (buffer: UnsafeMutableBufferPointer<UInt8>) -> Int in
+            var output = OutputSpan<UInt8>(buffer: buffer, initializedCount: 0)
+            for byte in plugin.classUID {
+                let high = byte >> 4
+                let low = byte & 0xF
+                output.append(high < 10 ? 48 + high : 87 + high)
+                output.append(low < 10 ? 48 + low : 87 + low)
+            }
+            return output.count
+        }
         name = plugin.name
         input = plugin.input
         pacing = plugin.pacing
@@ -90,11 +99,13 @@ public struct StoredEffect: Equatable, Sendable, Codable {
 
     /// Restores the validated UID and opaque state without altering song data.
     public var effect: TrackEffect {
-        let hex = Array(classUID.utf8)
-        let uid = stride(from: 0, to: hex.count, by: 2).map { (offset: Int) in
-            let high = hex[offset] <= 57 ? hex[offset] - 48 : hex[offset] - 87
-            let low = hex[offset + 1] <= 57 ? hex[offset + 1] - 48 : hex[offset + 1] - 87
-            return high << 4 | low
+        var uid: [UInt8] = []
+        uid.reserveCapacity(classUID.utf8.count / 2)
+        var hex = classUID.utf8.makeIterator()
+        while let high = hex.next(), let low = hex.next() {
+            let highNibble = high <= 57 ? high - 48 : high - 87
+            let lowNibble = low <= 57 ? low - 48 : low - 87
+            uid.append(highNibble << 4 | lowNibble)
         }
         let state: PluginStateBlob?
         if let component, let controller {

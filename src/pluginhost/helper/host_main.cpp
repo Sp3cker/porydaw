@@ -122,8 +122,8 @@ int run(int argc, char** argv) {
         }
         host.resume();
         host.realtime = std::thread([&host] { processRequests(host); });
-        QByteArray ready(4, '\0'); ready[0] = PDPB_VERSION;
-        if (!sendFrame(PDPB_READY, 0, ready)) return 1;
+        const char ready[4] = {PDPB_VERSION, 0, 0, 0};
+        if (!sendFrame(PDPB_READY, 0, {QByteArrayView(ready, 4)})) return 1;
         host.reader = std::thread([&host] {
             try { readControls(host); } catch (...) { host.stop(1); }
         });

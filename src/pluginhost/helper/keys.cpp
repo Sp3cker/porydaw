@@ -6,6 +6,7 @@
 #include <array>
 #include <cstdlib>
 #include <bitset>
+#include <vector>
 #ifdef _WIN32
 #include <windows.h>
 #elif defined(__linux__)
@@ -205,30 +206,34 @@ void refreshShortcutWindows() {
     xcb_flush(xcb);
 #endif
 }
-pdph_result setEditorShortcuts(const int32_t* strokes, int32_t count, void (*callback)(void*, int32_t), void* user) {
-    if (count < 0 || (count && (!strokes || !callback))) return PDPH_ERR_ARGUMENT;
-    shortcuts.clear();
-    if (count) shortcuts.assign(strokes, strokes + count);
-    onShortcut = callback; shortcutUser = user;
-    if (shortcuts.empty()) swallowed.reset();
+pdph_result setEditorShortcuts(int32_t count, ShortcutStrokeReader readStroke, void* readerContext,
+    void (*callback)(void*, int32_t), void* user) {
+    if (count < 0 || (count && (!readStroke || !callback))) return PDPH_ERR_ARGUMENT;
+    try {
+        shortcuts.reserve(static_cast<size_t>(count));
+        shortcuts.clear();
+        for (int32_t index = 0; index < count; ++index) shortcuts.push_back(readStroke(readerContext, index));
+        onShortcut = callback; shortcutUser = user;
+        if (shortcuts.empty()) swallowed.reset();
 #ifdef __APPLE__
-    updateMacShortcuts(!shortcuts.empty());
+        updateMacShortcuts(!shortcuts.empty());
 #else
-    if (QCoreApplication::instance()) {
-        if (!shortcuts.empty() && !filterInstalled) {
-            QCoreApplication::instance()->installNativeEventFilter(&filter); filterInstalled = true;
-        } else if (shortcuts.empty() && filterInstalled) {
-            QCoreApplication::instance()->removeNativeEventFilter(&filter); filterInstalled = false;
+        if (QCoreApplication::instance()) {
+            if (!shortcuts.empty() && !filterInstalled) {
+                QCoreApplication::instance()->installNativeEventFilter(&filter); filterInstalled = true;
+            } else if (shortcuts.empty() && filterInstalled) {
+                QCoreApplication::instance()->removeNativeEventFilter(&filter); filterInstalled = false;
+            }
         }
-    }
 #if defined(__linux__)
-    if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
-        Bool supported = False;
-        XkbSetDetectableAutoRepeat(native->display(), True, &supported);
-    }
+        if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+            Bool supported = False;
+            XkbSetDetectableAutoRepeat(native->display(), True, &supported);
+        }
 #endif
 #endif
-    refreshShortcutWindows();
-    return PDPH_OK;
+        refreshShortcutWindows();
+        return PDPH_OK;
+    } catch (...) { return PDPH_ERR_INTERNAL; }
 }
 }

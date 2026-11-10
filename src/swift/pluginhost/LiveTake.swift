@@ -13,54 +13,73 @@ public struct LiveTake {
 
     public init() {}
 
-    private static func pairs(_ source: [RawNoteEvent], closeAt end: Int64) -> [(RawNoteEvent, RawNoteEvent)] {
-        var queues: [Int64: [Int]] = [:]
-        var heads: [Int64: Int] = [:]
-        var result: [(RawNoteEvent, RawNoteEvent)] = []
-        result.reserveCapacity(source.count / 2)
-        for event in source {
-            let key =
-                event.noteID.flatMap { (id: Int32) -> Int64? in id > 0 ? Int64(id) : nil }
-                ?? (-Int64(event.pitch) - 1)
-            if event.isOn && event.velocity > 0 {
-                queues[key, default: []].append(result.count)
-                let off = RawNoteEvent(tick: end, pitch: event.pitch, velocity: 0, isOn: false, noteID: event.noteID)
-                result.append((event, off))
-            } else if let queue = queues[key], heads[key, default: 0] < queue.count {
-                let head = heads[key, default: 0]
-                let index = queue[head]
-                heads[key] = head + 1
-                var off = event
-                off.pitch = result[index].0.pitch
-                off.noteID = result[index].0.noteID
-                result[index].1 = off
-            }
-        }
-        return result
-    }
-
     /// Replaces complete old note pairs by onset, retaining notes outside the segment.
     public mutating func commitSegment(span newSpan: TimeRange, events incoming: [RawNoteEvent]) {
         guard !newSpan.isEmpty, !newSpan.hasReservedEndpoint else { return }
         let oldEnd = Int64(span?.endTick ?? newSpan.endTick)
         var replacement: [RawNoteEvent] = []
         replacement.reserveCapacity(min(Self.eventLimit, events.count + incoming.count))
-        for (on, off) in Self.pairs(events, closeAt: oldEnd) {
-            if on.tick >= Int64(newSpan.startTick) && on.tick < Int64(newSpan.endTick) { continue }
-            replacement.append(on)
-            replacement.append(off)
+        func onsetCount(_ source: [RawNoteEvent]) -> Int {
+            var count = 0
+            for event in source where event.isOn && event.velocity > 0 { count += 1 }
+            return count
         }
-        for (on, off) in Self.pairs(incoming, closeAt: Int64(newSpan.endTick)) {
-            guard on.tick >= Int64(newSpan.startTick), on.tick < Int64(newSpan.endTick) else { continue }
-            guard replacement.count + 2 <= Self.eventLimit else {
-                degraded = true
-                continue
+        func pairingKey(_ event: RawNoteEvent) -> Int64 {
+            if let id = event.noteID, id > 0 { return Int64(id) }
+            return -Int64(event.pitch) - 1
+        }
+        var indices = [Int](repeating: -1, count: max(onsetCount(events), onsetCount(incoming)))
+        var queues: [Int64: (count: Int, start: Int, head: Int, tail: Int)] = [:]
+        var capped = false
+        func appendPairs(_ source: [RawNoteEvent], closeAt end: Int64, incoming: Bool) {
+            queues.removeAll(keepingCapacity: true)
+            for event in source where event.isOn && event.velocity > 0 {
+                queues[pairingKey(event), default: (0, -1, 0, 0)].count += 1
             }
-            replacement.append(on)
-            var closed = off
-            closed.tick = min(Int64(newSpan.endTick), max(on.tick, off.tick))
-            replacement.append(closed)
+            var offset = 0
+            for event in source {
+                let key = pairingKey(event)
+                if event.isOn && event.velocity > 0 {
+                    var queue = queues[key, default: (0, -1, 0, 0)]
+                    if queue.start < 0 {
+                        queue.start = offset
+                        queue.head = offset
+                        queue.tail = offset
+                        offset += queue.count
+                    }
+                    var index = -1
+                    let inSpan = event.tick >= Int64(newSpan.startTick) && event.tick < Int64(newSpan.endTick)
+                    if inSpan == incoming {
+                        if incoming && replacement.count + 2 > Self.eventLimit {
+                            capped = true
+                        } else {
+                            index = replacement.count
+                            replacement.append(event)
+                            replacement.append(
+                                RawNoteEvent(
+                                    tick: end, pitch: event.pitch, velocity: 0, isOn: false, noteID: event.noteID))
+                        }
+                    }
+                    indices[queue.tail] = index
+                    queue.tail += 1
+                    queues[key] = queue
+                } else if var queue = queues[key], queue.head < queue.tail {
+                    let index = indices[queue.head]
+                    queue.head += 1
+                    queues[key] = queue
+                    guard index >= 0 else { continue }
+                    let on = replacement[index]
+                    var off = event
+                    off.pitch = on.pitch
+                    off.noteID = on.noteID
+                    if incoming { off.tick = min(end, max(on.tick, off.tick)) }
+                    replacement[index + 1] = off
+                }
+            }
         }
+        appendPairs(events, closeAt: oldEnd, incoming: false)
+        appendPairs(incoming, closeAt: Int64(newSpan.endTick), incoming: true)
+        if capped { degraded = true }
         replacement.sort { (lhs: RawNoteEvent, rhs: RawNoteEvent) -> Bool in
             if lhs.tick != rhs.tick { return lhs.tick < rhs.tick }
             return !lhs.isOn && rhs.isOn

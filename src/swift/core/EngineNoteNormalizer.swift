@@ -88,8 +88,10 @@ public enum EngineNoteNormalizer {
             if leftOn != rightOn { return !leftOn }
             return lhs < rhs
         }
+        var onsetCount = 0
+        for event in events where event.isOn && event.velocity != 0 { onsetCount += 1 }
         var pending: [Pending] = []
-        pending.reserveCapacity(events.count / 2)
+        pending.reserveCapacity(onsetCount)
         var queues: [PairKey: Queue] = [:]
         for index in ordered {
             let event = events[index]
@@ -131,7 +133,7 @@ public enum EngineNoteNormalizer {
         let end = Int64(range.endTick)
         var candidates: [Candidate] = []
         candidates.reserveCapacity(pending.count)
-        var lastByPitch: [Int?] = Array(repeating: nil, count: 128)
+        var lastByPitch = InlineArray<128, Int?>(repeating: nil)
         for item in pending {
             if item.end == nil { report.unterminatedNotes += 1 }
             let tick = lattice.snap(item.event.tick)
@@ -173,7 +175,7 @@ public enum EngineNoteNormalizer {
             lastByPitch[item.event.pitch] = candidates.count
             candidates.append(candidate)
         }
-        lastByPitch = Array(repeating: nil, count: 128)
+        for pitch in 0..<128 { lastByPitch[pitch] = nil }
         for index in candidates.indices where candidates[index].survives {
             let pitch = Int(candidates[index].note.pitch)
             if let previous = lastByPitch[pitch] {
@@ -190,10 +192,12 @@ public enum EngineNoteNormalizer {
             }
             lastByPitch[pitch] = index
         }
+        var survivingCount = 0
+        for candidate in candidates where candidate.survives { survivingCount += 1 }
+        guard survivingCount <= noteLimit else { throw NormalizationError.tooManyNotes }
         var notes: [NewNote] = []
-        notes.reserveCapacity(min(candidates.count, noteLimit))
+        notes.reserveCapacity(survivingCount)
         for candidate in candidates where candidate.survives {
-            guard notes.count < noteLimit else { throw NormalizationError.tooManyNotes }
             notes.append(candidate.note)
             if candidate.snapped { report.snappedOnsets += 1 }
             if Int64(candidate.note.duration) != candidate.target { report.adjustedDurations += 1 }

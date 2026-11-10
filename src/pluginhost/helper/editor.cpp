@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <exception>
 #include <utility>
+#include <vector>
 
 using namespace Steinberg;
 namespace {
@@ -198,8 +199,8 @@ void* editorParent(QWindow& window) { return reinterpret_cast<void*>(window.winI
 bool isEditorWindow(uintptr_t handle) {
     return std::any_of(editors.cbegin(), editors.cend(), [handle](auto* editor) { return editor->plugin && uintptr_t(editor->winId()) == handle; });
 }
-std::vector<uintptr_t> editorWindows() {
-    std::vector<uintptr_t> windows;
+QVarLengthArray<uintptr_t, 1> editorWindows() {
+    QVarLengthArray<uintptr_t, 1> windows;
     for (const auto* editor : editors) if (editor->plugin) windows.push_back(uintptr_t(editor->winId()));
     return windows;
 }
@@ -298,8 +299,11 @@ void pdph_editor_raise(pdph_editor editor) {
 }
 void pdph_editor_close(pdph_editor editor) { delete editor; }
 pdph_result pdph_editor_set_shortcuts(const int32_t* strokes, int32_t count, void (*callback)(void*, int32_t), void* user) {
-    try { return pdph::helper::setEditorShortcuts(strokes, count, callback, user); }
-    catch (...) { return PDPH_ERR_INTERNAL; }
+    struct StrokeArray { const int32_t* values; } source{strokes};
+    const pdph::helper::ShortcutStrokeReader readStroke = [](void* context, int32_t index) noexcept {
+        return static_cast<const StrokeArray*>(context)->values[index];
+    };
+    return pdph::helper::setEditorShortcuts(count, strokes ? readStroke : nullptr, &source, callback, user);
 }
 }
 #include "editor.moc"

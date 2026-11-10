@@ -128,20 +128,28 @@ private final class CatalogChild {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Invalid scanner output."))
         }
         var entries: [PluginCatalogEntry] = []
+        entries.reserveCapacity(document.classes.count)
         var seen: Set<[UInt8]> = []
+        seen.reserveCapacity(document.classes.count)
         for plugin in document.classes {
-            let hex = Array(plugin.uid.utf8)
-            guard hex.count == 32,
-                hex.allSatisfy({ (byte: UInt8) in (48...57).contains(byte) || (97...102).contains(byte) }),
+            guard plugin.uid.utf8.count == 32,
                 plugin.eventIn >= 0, plugin.eventOut >= 0, plugin.audioIn >= 0, plugin.audioOut >= 0
             else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Invalid scanner output."))
             }
             var uid: [UInt8] = []
-            for index in stride(from: 0, to: 32, by: 2) {
-                let high = hex[index] <= 57 ? hex[index] - 48 : hex[index] - 87
-                let low = hex[index + 1] <= 57 ? hex[index + 1] - 48 : hex[index + 1] - 87
-                uid.append(high * 16 + low)
+            uid.reserveCapacity(16)
+            var hex = plugin.uid.utf8.makeIterator()
+            while let high = hex.next(), let low = hex.next() {
+                guard (48...57).contains(high) || (97...102).contains(high),
+                    (48...57).contains(low) || (97...102).contains(low)
+                else {
+                    throw DecodingError.dataCorrupted(
+                        .init(codingPath: [], debugDescription: "Invalid scanner output."))
+                }
+                let highNibble = high <= 57 ? high - 48 : high - 87
+                let lowNibble = low <= 57 ? low - 48 : low - 87
+                uid.append(highNibble * 16 + lowNibble)
             }
             guard seen.insert(uid).inserted else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "Invalid scanner output."))
@@ -206,10 +214,10 @@ private final class CatalogChild {
             let data = handle.availableData
             streams.bytes.withLock { (bytes: inout ScannerBytes) in
                 if isError {
-                    bytes.stderr.append(data)
+                    if bytes.stderr.isEmpty { bytes.stderr = data } else { bytes.stderr.append(data) }
                     bytes.stderrEnded = data.isEmpty
                 } else {
-                    bytes.stdout.append(data)
+                    if bytes.stdout.isEmpty { bytes.stdout = data } else { bytes.stdout.append(data) }
                     bytes.stdoutEnded = data.isEmpty
                 }
             }
@@ -383,12 +391,18 @@ public final class PluginCatalog {
     }
 
     private func publish() {
-        entries = records.values.flatMap { (record: CatalogRecord) in record.entries }
-        entries.sort { (left: PluginCatalogEntry, right: PluginCatalogEntry) in
+        let count = records.values.reduce(0) { (count: Int, record: CatalogRecord) -> Int in
+            count + record.entries.count
+        }
+        var next: [PluginCatalogEntry] = []
+        next.reserveCapacity(count)
+        for record in records.values { next.append(contentsOf: record.entries) }
+        next.sort { (left: PluginCatalogEntry, right: PluginCatalogEntry) in
             if left.name != right.name { return left.name < right.name }
             if left.modulePath != right.modulePath { return left.modulePath < right.modulePath }
             return left.classUID.lexicographicallyPrecedes(right.classUID)
         }
+        entries = next
         onChanged?()
     }
 
@@ -410,8 +424,13 @@ public final class PluginCatalog {
         let manager = FileManager.default
         var modules: [String: CatalogModule] = [:]
         var visited: Set<String> = []
-        var pending = (roots + folders).map { (path: String) in
-            URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
+        var pending: [URL] = []
+        pending.reserveCapacity(roots.count + folders.count)
+        for path in roots {
+            pending.append(URL(fileURLWithPath: NSString(string: path).expandingTildeInPath))
+        }
+        for path in folders {
+            pending.append(URL(fileURLWithPath: NSString(string: path).expandingTildeInPath))
         }
         while let folder = pending.popLast() {
             await Task.yield()
@@ -486,8 +505,12 @@ public final class PluginCatalog {
         guard let modules = await enumerate(folders: folders, scan: scan),
             !scan.cancelled, !Task.isCancelled
         else { return }
-        let paths = Set(modules.map(\.path))
-        records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) in paths.contains(element.key) }
+        let paths = Set(modules.lazy.map(\.path))
+        if records.keys.contains(where: { (path: String) -> Bool in !paths.contains(path) }) {
+            records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) -> Bool in
+                paths.contains(element.key)
+            }
+        }
         publish()
         persist()
         guard FileManager.default.isExecutableFile(atPath: scannerURL.path) else {
@@ -548,7 +571,11 @@ public final class PluginCatalog {
 
     /// Clears all cached blocks, retaining successful classes.
     public func retryAll() {
-        records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) in !element.value.isBlocked }
+        if records.values.contains(where: { (record: CatalogRecord) -> Bool in record.isBlocked }) {
+            records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) -> Bool in
+                !element.value.isBlocked
+            }
+        }
         persist()
         publish()
     }

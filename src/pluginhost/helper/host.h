@@ -1,12 +1,14 @@
 #pragma once
-#include "pluginhost.h"
+#include "pluginhost_internal.h"
 #include <QByteArray>
+#include <QByteArrayView>
 #include <QObject>
 #include <QTimer>
 #include <QString>
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <initializer_list>
 #include <thread>
 namespace pdph::helper {
 struct Frame { uint32_t type = 0, request = 0; QByteArray payload; };
@@ -22,6 +24,7 @@ struct Host {
     pdpb_channel* channel = nullptr;
     pdph_module module = nullptr;
     pdph_plugin plugin = nullptr;
+    pdph::StateStream stateStream;
     std::thread reader, realtime;
     std::atomic<bool> stopping{false}, controlPending{false};
     std::atomic<uint32_t> pendingControls{0};
@@ -43,7 +46,7 @@ struct Host {
     void drainCallbacks();
     void stop(int status);
 };
-bool sendFrame(uint32_t type, uint32_t request, const QByteArray& payload);
+bool sendFrame(uint32_t type, uint32_t request, std::initializer_list<QByteArrayView> payloads);
 void dispatch(Host&, Frame);
 void readControls(Host&);
 void processRequests(Host&);
