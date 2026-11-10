@@ -163,6 +163,12 @@ coverage. `swiftcore-pluginhost-abi` covers the native engine separately.
 Run `uv run --no-sync dev checks --filter swiftcore-pluginhost` for discovery,
 capture, lifecycle, live/take and warmed callback-allocation coverage.
 
+The ABI checks verify opaque state restoration through processed MIDI output,
+not the test plugin's private legacy state formats. All processing blocks and
+repeated instance cycles remain exercised; failures are aggregated with block
+or class/iteration context. Scanner JSON decoding checks required fields and
+types without requiring nonempty vendor-supplied metadata.
+
 To update the dependency:
 
 1. Check out the new upstream SDK tag cleanly and check out its recorded

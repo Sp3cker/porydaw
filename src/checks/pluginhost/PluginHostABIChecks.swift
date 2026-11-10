@@ -56,13 +56,13 @@ private func abiText<T>(_ value: T) -> String {
     }
 }
 
-private func abiState(offset: Int32 = 0, latency: Int32 = 128, size: Int = 16, fault: Int32 = 0) -> [UInt8] {
+private func abiState(offset: Int32 = 0, latency: Int32 = 128, fault: Int32 = 0) -> [UInt8] {
     var bytes: [UInt8] = []
     for value in [offset, latency, 0, fault] {
         let bits = UInt32(bitPattern: value)
         for shift in stride(from: 0, to: 32, by: 8) { bytes.append(UInt8(truncatingIfNeeded: bits >> shift)) }
     }
-    return Array(bytes.prefix(size))
+    return bytes
 }
 
 private func abiRestore(_ plugin: OpaquePointer, _ bytes: [UInt8], which: Int32 = 0) -> Int32 {
@@ -229,10 +229,6 @@ private func checkABIScanner(_ report: CheckReport, directory: URL, fixture: URL
             report.expectEqual(
                 expected: audioOutput ? 1 : 0, actual: entry.audioOut, cppID: "pluginhost/scan-buses",
                 what: "scanner audio output count")
-            report.expect(
-                !entry.vendor.isEmpty && !entry.version.isEmpty && !entry.sdkVersion.isEmpty
-                    && !entry.category.isEmpty && !entry.subCategories.isEmpty,
-                cppID: "pluginhost/scan-metadata", message: "scanner includes class metadata")
         }
         report.expectEqual(
             expected: Set(["TestGen", "TestGenAudio", "TestGenRealtimeOnly", "TestAudioOnly"]), actual: names,
@@ -291,12 +287,15 @@ private func checkABIGenerator(_ plugin: OpaquePointer, _ report: CheckReport) {
         expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_setup_processing(plugin, 0, 48_000, 256),
         cppID: "pluginhost/active-setup", what: "setup while active is rejected")
     let blocks = abiProcess(plugin, blocks: 64)
+    let failedBlock = blocks.firstIndex { (block: ABIBlock) -> Bool in block.status != PDPH_OK }
+    report.expect(
+        failedBlock == nil, cppID: "pluginhost/process",
+        message: failedBlock.map { (index: Int) -> String in
+            "offline block \(index) returned \(blocks[index].status)"
+        } ?? "all dedicated-thread offline processing blocks succeed")
     var notes: [ABIEvent] = []
     var other = 0
     for block in blocks {
-        report.expectEqual(
-            expected: Int32(PDPH_OK), actual: block.status, cppID: "pluginhost/process",
-            what: "dedicated-thread offline processing succeeds")
         for event in block.events {
             if event.kind == UInt8(PDPH_EVENT_OTHER) { other += 1 } else { notes.append(event) }
         }
@@ -359,23 +358,16 @@ private func checkABIGenerator(_ plugin: OpaquePointer, _ report: CheckReport) {
         overflow.count == 1 && overflow[0].events.count == 1 && overflow[0].total > 1, cppID: "pluginhost/overflow",
         message: "small capacity reports total greater than written")
     abiStop(plugin)
-    for size in [8, 12, 16] {
-        let state = abiState(offset: 5, size: size)
-        report.expectEqual(
-            expected: Int32(PDPH_OK), actual: abiRestore(plugin, state), cppID: "pluginhost/restore",
-            what: "legacy and fault-compatible component states restore")
-        let saved = abiReadState(plugin)
-        report.expect(
-            saved.0 == PDPH_OK && saved.1 == abiState(offset: 5), cppID: "pluginhost/state",
-            message: "state is sixteen little-endian bytes, legacy fault defaults to zero")
-        guard abiStart(plugin, report) else { return }
-        let changed = abiProcess(plugin)
-        let onsets = changed[0].events.filter { (event: ABIEvent) -> Bool in event.kind == UInt8(PDPH_EVENT_NOTE_ON) }
-        report.expectEqual(
-            expected: UInt8(65), actual: onsets.first?.pitch, cppID: "pluginhost/state-pitch",
-            what: "component restore changes processed pitch")
-        abiStop(plugin)
-    }
+    report.expectEqual(
+        expected: Int32(PDPH_OK), actual: abiRestore(plugin, abiState(offset: 5)), cppID: "pluginhost/restore",
+        what: "component state restores")
+    guard abiStart(plugin, report) else { return }
+    let changed = abiProcess(plugin)
+    let onsets = changed[0].events.filter { (event: ABIEvent) -> Bool in event.kind == UInt8(PDPH_EVENT_NOTE_ON) }
+    report.expectEqual(
+        expected: UInt8(65), actual: onsets.first?.pitch, cppID: "pluginhost/state-pitch",
+        what: "component restore changes processed pitch")
+    abiStop(plugin)
     let controllerState = abiReadState(plugin, which: 1)
     report.expect(
         controllerState.0 == PDPH_OK && abiRestore(plugin, controllerState.1, which: 1) == PDPH_OK,
@@ -455,6 +447,7 @@ public func runPluginHostABIChecks(_ report: CheckReport) {
         expected: Int32(PDPH_ERR_ARGUMENT), actual: pdph_module_class_count(nil), cppID: "pluginhost/null",
         what: "null module is rejected")
     var names: Set<String> = []
+    var lifecycleFailures: [String] = []
     for index in 0..<pdph_module_class_count(module) {
         var info = pdph_class_info()
         guard pdph_module_class_info(module, index, &info) == PDPH_OK else {
@@ -478,19 +471,19 @@ public func runPluginHostABIChecks(_ report: CheckReport) {
             }
             defer { withExtendedLifetime(restarts) { () -> Void in pdph_plugin_destroy(plugin) } }
             var buses = pdph_bus_counts()
-            report.expectEqual(
-                expected: Int32(PDPH_OK), actual: pdph_plugin_buses(plugin, &buses), cppID: "pluginhost/buses",
-                what: "bus query succeeds")
+            let busResult = pdph_plugin_buses(plugin, &buses)
             let audioOnly = name == "TestAudioOnly"
-            report.expectEqual(
-                expected: [
-                    Int32(audioOnly ? 0 : 1), audioOnly ? 0 : 1, audioOnly ? 1 : 0,
-                    audioOnly || name == "TestGenAudio" ? 1 : 0,
-                ], actual: [buses.event_in, buses.event_out, buses.audio_in, buses.audio_out],
-                cppID: "pluginhost/buses", what: "\(name) has its declared bus topology")
-            report.expectEqual(
-                expected: Int32(PDPH_ERR_STATE), actual: pdph_plugin_latency_samples(plugin),
-                cppID: "pluginhost/latency-before-setup", what: "latency is unavailable before setup")
+            let eventBuses: Int32 = audioOnly ? 0 : 1
+            let audioOutputs: Int32 = audioOnly || name == "TestGenAudio" ? 1 : 0
+            let latency = pdph_plugin_latency_samples(plugin)
+            if busResult != PDPH_OK || buses.event_in != eventBuses || buses.event_out != eventBuses
+                || buses.audio_in != (audioOnly ? 1 : 0) || buses.audio_out != audioOutputs
+                || latency != PDPH_ERR_STATE
+            {
+                lifecycleFailures.append(
+                    "\(name) instance \(iteration): bus query \(busResult), buses \(buses.event_in)/\(buses.event_out)/\(buses.audio_in)/\(buses.audio_out) expected \(eventBuses)/\(eventBuses)/\(audioOnly ? 1 : 0)/\(audioOutputs), pre-setup latency \(latency) expected \(PDPH_ERR_STATE)"
+                )
+            }
             if iteration != 0 { continue }
             if name == "TestGen" {
                 checkABIParameterBatch(plugin, report)
@@ -549,6 +542,11 @@ public func runPluginHostABIChecks(_ report: CheckReport) {
             }
         }
     }
+    report.expect(
+        lifecycleFailures.isEmpty, cppID: "pluginhost/lifecycle",
+        message: lifecycleFailures.isEmpty
+            ? "every repeated instance preserves bus topology and pre-setup latency state"
+            : lifecycleFailures.joined(separator: "; "))
     report.expectEqual(
         expected: Set(["TestGen", "TestGenAudio", "TestGenRealtimeOnly", "TestAudioOnly"]), actual: names,
         cppID: "pluginhost/classes", what: "enumeration returns exactly the fixture classes")

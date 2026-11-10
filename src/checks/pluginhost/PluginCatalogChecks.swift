@@ -99,13 +99,6 @@ private func checkCatalogDiscovery(_ report: CheckReport) async {
             check.expectEqual(
                 expected: producer, actual: catalog.entry(modulePath: moduleAlias, classUID: producer.classUID),
                 what: "lookup standardizes equivalent module paths without changing class identity")
-            let restoredIdentity = PluginCatalogEntry(
-                modulePath: producer.modulePath, classUID: producer.classUID, name: producer.name,
-                vendor: producer.vendor, version: producer.version, isMidiProducer: producer.isMidiProducer,
-                blockedReason: producer.blockedReason)
-            check.expectEqual(
-                expected: producer, actual: restoredIdentity,
-                what: "known plugin identity can be constructed without another scan")
         }
         check.expect(
             catalog.entry(modulePath: module.path, classUID: []) == nil, message: "lookup never aliases an unknown UID")
