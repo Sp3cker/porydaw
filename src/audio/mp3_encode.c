@@ -52,14 +52,14 @@ int pd_mp3_encode_s16(PdMp3Encoder *enc, const int16_t *pcm, int frames_per_chan
     if (!enc || !enc->gfp || !pcm || !out || frames_per_channel <= 0 || out_capacity <= 0)
         return -1;
     return lame_encode_buffer_interleaved(enc->gfp, (short *)pcm, frames_per_channel,
-                                          (char *)out, out_capacity);
+                                          out, out_capacity);
 }
 
 int pd_mp3_flush(PdMp3Encoder *enc, uint8_t *out, int out_capacity)
 {
     if (!enc || !enc->gfp || !out || out_capacity <= 0)
         return -1;
-    return lame_encode_flush(enc->gfp, (char *)out, out_capacity);
+    return lame_encode_flush(enc->gfp, out, out_capacity);
 }
 
 int pd_mp3_write_tag(PdMp3Encoder *enc, FILE *stream)
