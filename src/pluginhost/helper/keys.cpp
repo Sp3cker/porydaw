@@ -226,9 +226,11 @@ pdph_result setEditorShortcuts(int32_t count, ShortcutStrokeReader readStroke, v
             }
         }
 #if defined(__linux__)
-        if (auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>()) {
+        auto* native = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
+        // Offscreen can expose the native interface without an X11 display.
+        if (auto* display = native ? native->display() : nullptr) {
             Bool supported = False;
-            XkbSetDetectableAutoRepeat(native->display(), True, &supported);
+            XkbSetDetectableAutoRepeat(display, True, &supported);
         }
 #endif
 #endif

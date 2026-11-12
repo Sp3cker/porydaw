@@ -155,6 +155,9 @@ The helper writes framed protocol messages to stdout; plugins must not write
 there. Helper stderr is inherited from the parent, so native loader and sanitizer
 diagnostics reach the invoking terminal or check runner.
 
+On Linux, XKB auto-repeat is configured only when Qt supplies an X11 display;
+the native interface alone does not imply a connected display.
+
 The C++-driven app, QML type generator and check executables include
 `PorydawPluginHost` in their explicit Swift autolink archive/search lists. Windows
 CI also compiles `src/checks/pluginhost/PluginBridgeSmoke.c` against the built bridge
