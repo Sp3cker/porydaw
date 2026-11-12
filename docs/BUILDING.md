@@ -151,6 +151,10 @@ Its Swift sources depend on Core, Playback and the SDK-free C bridge, with
 no C++ interop. Discovery supervises separate scanner children and keeps usable
 cached entries during progressive scans and cancellation.
 
+The helper writes framed protocol messages to stdout; plugins must not write
+there. Helper stderr is inherited from the parent, so native loader and sanitizer
+diagnostics reach the invoking terminal or check runner.
+
 The C++-driven app, QML type generator and check executables include
 `PorydawPluginHost` in their explicit Swift autolink archive/search lists. Windows
 CI also compiles `src/checks/pluginhost/PluginBridgeSmoke.c` against the built bridge

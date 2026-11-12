@@ -397,7 +397,6 @@ final class HelperProcess {
         process.arguments = ["host", "--channel", channelName]
         process.standardInput = stdin
         process.standardOutput = stdout
-        process.standardError = FileHandle.nullDevice
         let streams = streams
         stdout.fileHandleForReading.readabilityHandler = { [weak self] (handle: FileHandle) in
             let data = handle.availableData
