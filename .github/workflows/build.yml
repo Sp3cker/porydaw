@@ -131,7 +131,7 @@ jobs:
           swift-version: swift-6.4.0-release
           swift-build: 6.4.0-RELEASE
 
-      # Artifact builds don't run harnesses; the asan-checks job compiles them.
+      # Artifact builds omit the full harness catalog; asan-checks compiles it.
       - name: Configure
         run: >-
           cmake -S . -B build -G Ninja
@@ -142,6 +142,15 @@ jobs:
 
       - name: Build
         run: cmake --build build
+
+      - name: Check Windows shared-memory bridge
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --build build --target porydaw_pluginbridge_smoke
+          if ($LASTEXITCODE -ne 0) { throw "Shared-memory bridge smoke compilation failed" }
+          & build/porydaw_pluginbridge_smoke.exe
+          if ($LASTEXITCODE -ne 0) { throw "Shared-memory bridge admission or transport failed" }
 
       - name: sccache stats
         run: sccache --show-stats || true

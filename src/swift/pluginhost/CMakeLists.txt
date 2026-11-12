@@ -13,16 +13,21 @@ set_target_properties(PorydawPluginBridge PROPERTIES
     AUTORCC OFF
 )
 target_include_directories(PorydawPluginBridge PUBLIC "${porydaw_pluginbridge_dir}")
+target_compile_features(PorydawPluginBridge PUBLIC c_std_11)
 target_compile_options(PorydawPluginBridge PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${porydaw_pluginbridge_dir}/bridge.modulemap>"
-)
-target_compile_options(PorydawPluginBridge PRIVATE
     "$<$<COMPILE_LANG_AND_ID:C,MSVC>:/experimental:c11atomics>"
 )
 if(UNIX AND NOT APPLE)
     target_link_libraries(PorydawPluginBridge PRIVATE rt)
 elseif(WIN32)
     target_link_libraries(PorydawPluginBridge PRIVATE kernel32 synchronization)
+    add_executable(porydaw_pluginbridge_smoke EXCLUDE_FROM_ALL
+        "${PROJECT_SOURCE_DIR}/src/checks/pluginhost/PluginBridgeSmoke.c")
+    set_target_properties(porydaw_pluginbridge_smoke PROPERTIES
+        AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+    target_link_libraries(porydaw_pluginbridge_smoke PRIVATE PorydawPluginBridge)
 endif()
 
 add_library(PorydawPluginHost STATIC

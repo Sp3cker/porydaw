@@ -483,6 +483,7 @@ if(WIN32)
         "$<TARGET_FILE_DIR:PorydawBackups>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
+        "$<TARGET_FILE_DIR:PorydawPluginHost>"
         "$<TARGET_FILE_DIR:PorydawCore>"
         "$<TARGET_FILE_DIR:PorydawSample>"
         "$<TARGET_FILE_DIR:BinaryParsing>"
@@ -490,7 +491,7 @@ if(WIN32)
 endif()
 porydaw_link_linux_swift_runtime(porydaw_qmltypes
     PorydawApp QtBridge PorydawAppCommands PorydawAppAudio PorydawAppEventList PorydawAppPresentation
-    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawCore PorydawSample
+    PorydawDocument PorydawVoicegroup PorydawBackups PorydawProject PorydawPlayback PorydawPluginHost PorydawCore PorydawSample
     PorydawSampleUI PorydawKitStudio BinaryParsing)
 set(porydaw_qmltypes_files
     "${porydaw_qmltypes_import_path}/PorydawApp/qmldir"
@@ -612,12 +613,13 @@ if(WIN32)
         "$<TARGET_FILE_DIR:PorydawBackups>"
         "$<TARGET_FILE_DIR:PorydawProject>"
         "$<TARGET_FILE_DIR:PorydawPlayback>"
+        "$<TARGET_FILE_DIR:PorydawPluginHost>"
         "$<TARGET_FILE_DIR:PorydawCore>"
         "$<TARGET_FILE_DIR:PorydawSample>"
         "$<TARGET_FILE_DIR:BinaryParsing>")
 endif()
 porydaw_link_linux_swift_runtime(porydaw
-    porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawCore
+    porydaw_shell_entry PorydawApp PorydawAppPresentation QtBridge PorydawDocument PorydawProject PorydawPlayback PorydawPluginHost PorydawCore
     PorydawVoicegroup PorydawBackups PorydawSample PorydawSampleUI PorydawKitStudio BinaryParsing)
 
 if(PORYDAW_BUILD_CHECKS)

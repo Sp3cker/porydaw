@@ -140,14 +140,25 @@ into `AppDir/usr/bin/` beside the executable.
 `PorydawPluginBridge` compiles the SDK-free shared-memory wire format and C11
 wait/wake implementation. The helper links the same bridge library plus Qt Gui;
 Swift imports its C module without C++ interop or SDK linkage. MSVC enables
-`/experimental:c11atomics` on that C target only. C/C++ assertions enforce matching
-lock-free atomic sizes, alignment, field offsets and wire size. POSIX backing may
-be page-rounded; mappings still expose only the logical wire extent.
+`/experimental:c11atomics` for the bridge's C compilation. Static assertions enforce
+atomic sizes, alignment, field offsets and wire size. Mapping admission additionally
+requires every actual shared/private wait atomic to be lock-free; MSVC's conservative
+type-level "sometimes lock-free" macros do not decide admission. POSIX backing may be
+page-rounded; mappings still expose only the logical wire extent.
 
 `PorydawPluginHost` owns discovery, framed control, capture and live insertion.
 Its Swift sources depend on Core, Playback and the SDK-free C bridge, with
 no C++ interop. Discovery supervises separate scanner children and keeps usable
 cached entries during progressive scans and cancellation.
+
+The C++-driven app, QML type generator and check executables include
+`PorydawPluginHost` in their explicit Swift autolink archive/search lists. Windows
+CI also compiles `src/checks/pluginhost/PluginBridgeSmoke.c` against the built bridge
+archive and exercises real mapping admission, request/reply and heartbeat visibility.
+That probe does not load a plugin or the SDK.
+The Windows-only smoke target is excluded from default builds; CI builds it
+explicitly with the bridge's inherited C11/atomic requirements.
+
 Setup validity is a request key paired with the invalidation revision captured
 before reconfiguration. Interrupted reconfiguration leaves no valid cache;
 a restart during setup cannot be erased by that setup's completion.

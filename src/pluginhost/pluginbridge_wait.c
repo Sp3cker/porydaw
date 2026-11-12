@@ -24,7 +24,6 @@
 #include <sys/syscall.h>
 #endif
 #endif
-_Static_assert(ATOMIC_INT_LOCK_FREE == 2 && ATOMIC_LLONG_LOCK_FREE == 2, "Shared atomics must be lock-free");
 _Static_assert(sizeof(pdph_midi_event) == 16 && sizeof(pdph_process_context) == 72, "Task 6 POD ABI");
 _Static_assert(sizeof(_Atomic(uint32_t)) == 4 && sizeof(_Atomic(uint64_t)) == 8, "Wire atomic ABI");
 _Static_assert(_Alignof(_Atomic(uint32_t)) == 4 && _Alignof(_Atomic(uint64_t)) == 8 &&
@@ -129,6 +128,10 @@ static int32_t channel_map(const char* name, pdpb_channel** out, int create) {
     channel->shared = mapping;
 #endif
     channel->owner = create;
+    // MSVC's C atomics report "sometimes lock-free"; require it for every actual object.
+    if (!atomic_is_lock_free(&channel->shared->request_seq) || !atomic_is_lock_free(&channel->shared->reply_seq) ||
+        !atomic_is_lock_free(&channel->shared->request_word) || !atomic_is_lock_free(&channel->shared->reply_word) ||
+        !atomic_is_lock_free(&channel->shared->heartbeat) || !atomic_is_lock_free(&channel->signal_count)) goto failed;
     if (create) {
         memset(channel->shared, 0, sizeof(pdpb_shared));
         atomic_init(&channel->shared->request_seq, 0); atomic_init(&channel->shared->reply_seq, 0);
