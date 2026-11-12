@@ -25,10 +25,17 @@ public func pdcSuiteRun(
     case PDC_SUITE_MIDI_CODEC: onMain(report, runMidiCodecSuite)
     case PDC_SUITE_MUSICAL_SEMANTICS: onMain(report, runMusicalSemanticsSuite)
     case PDC_SUITE_PLAYBACK: runPlaybackSuite(report)
+    case PDC_SUITE_PLUGINHOST_ABI: onMain(report, runPluginHostABIChecks)
+    case PDC_SUITE_PLUGINBRIDGE: onMain(report, runPluginBridgeChecks)
+    case PDC_SUITE_PLUGINHOST: onMain(report, runPluginHostChecks)
+    case PDC_SUITE_PLUGINHOST_EDITOR: onMain(report, runPluginHostEditorChecks)
+    case PDC_SUITE_TRACKEFFECTS_EDITOR: onMain(report, runTrackEffectsControllerEditorSuite)
     case PDC_SUITE_NOTE_EDITS:
         onMain(report) {
             coreEditCorpusLoadCheck($0); runNoteEditsSuite($0)
             runArpeggiatorChecks($0)
+            runEngineNoteNormalizerChecks($0)
+            runTrackEffectModelChecks($0)
         }
     case PDC_SUITE_DOCUMENT_HISTORY: onMain(report, runDocumentHistorySuite)
     case PDC_SUITE_EVENT_EDITS: onMain(report, runEventEditsSuite)

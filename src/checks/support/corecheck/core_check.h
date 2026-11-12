@@ -63,6 +63,11 @@ enum PdcSuite {
     PDC_SUITE_BANK_OWNERSHIP = 55,
     PDC_SUITE_VOICE_LOCATOR = 56,
     PDC_SUITE_KIT_DRAFT = 57,
+    PDC_SUITE_PLUGINHOST_ABI = 58,
+    PDC_SUITE_PLUGINBRIDGE = 59,
+    PDC_SUITE_PLUGINHOST = 60,
+    PDC_SUITE_PLUGINHOST_EDITOR = 61,
+    PDC_SUITE_TRACKEFFECTS_EDITOR = 62,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

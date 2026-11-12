@@ -164,6 +164,7 @@ public struct EditorDrawerChromeState: Equatable, Sendable {
     public var velocity = DrawerChromeSection(visible: false)
     public var automation = DrawerChromeSection(visible: true)
     public var voiceChanges = DrawerChromeSection(visible: false)
+    public var effectOutput = DrawerChromeSection(visible: false)
     public var activePage: DrawerSectionKind = .automation
 
     public init() {}

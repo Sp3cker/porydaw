@@ -77,6 +77,36 @@ internal struct ConfigChange: Sendable {
     let after: SongConfig
 }
 
+internal enum EffectChange: Sendable {
+    case insertEffect(TrackEffect)
+    case removeEffect(TrackEffect)
+    case effectConfig(EffectID, before: TrackEffectConfig, after: TrackEffectConfig)
+    case pluginState(EffectID, before: PluginStateBlob?, after: PluginStateBlob?)
+
+    func apply(to effects: inout [TrackEffect], direction: HistoryDirection) {
+        switch self {
+        case .insertEffect(let effect):
+            if direction == .redo {
+                effects.append(effect)
+            } else {
+                effects.removeAll { (item: TrackEffect) in item.id == effect.id }
+            }
+        case .removeEffect(let effect):
+            if direction == .redo {
+                effects.removeAll { (item: TrackEffect) in item.id == effect.id }
+            } else {
+                effects.append(effect)
+            }
+        case .effectConfig(let id, let before, let after):
+            guard let index = effects.firstIndex(where: { (effect: TrackEffect) in effect.id == id }) else { return }
+            effects[index].config = direction == .redo ? after : before
+        case .pluginState(let id, let before, let after):
+            guard let index = effects.firstIndex(where: { (effect: TrackEffect) in effect.id == id }) else { return }
+            effects[index].pluginState = direction == .redo ? after : before
+        }
+    }
+}
+
 /// A compact reversible record assembled by an accepted document mutation.
 /// Retains exact inserted and removed values, not unrelated song state.
 internal struct DocumentChangeSet: Sendable {
@@ -88,11 +118,15 @@ internal struct DocumentChangeSet: Sendable {
     var fileMetadata: FileMetadataChange?
     var tempo: TempoChange?
     var config: ConfigChange?
+    var effects: [EffectChange] = []
 
-    var isEmpty: Bool {
+    private var hasOnlyEffectDeltas: Bool {
         events.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty && chunkMoves.isEmpty && chunkEnds.isEmpty
             && fileMetadata == nil && tempo == nil && config == nil
     }
+
+    var isEmpty: Bool { effects.isEmpty && hasOnlyEffectDeltas }
+    var effectsOnly: Bool { !effects.isEmpty && hasOnlyEffectDeltas }
 
     func apply(to state: inout SongState, direction: HistoryDirection) {
         if direction == .undo { applyChunkEnds(to: &state, direction: direction) }
@@ -110,6 +144,14 @@ internal struct DocumentChangeSet: Sendable {
         }
         if let tempo { applyTempo(tempo, to: &state.tempo, direction: direction) }
         if let config { state.config = direction == .redo ? config.after : config.before }
+        guard !effects.isEmpty else { return }
+        switch direction {
+        case .redo:
+            for change in effects { change.apply(to: &state.effects, direction: direction) }
+        case .undo:
+            for change in effects.reversed() { change.apply(to: &state.effects, direction: direction) }
+        }
+        state.effects.sort { (left: TrackEffect, right: TrackEffect) in left.config.track < right.config.track }
     }
 
     private func applyChunkEnds(

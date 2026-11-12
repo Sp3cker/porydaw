@@ -157,6 +157,7 @@ enum EditorQmlLane {
         EditorQmlBootstrap.registerQmlElement()
         PreferencesStore.registerQmlElement()
         DisplayListProbe.registerQmlElement()
+        GridInputClipProbe.registerQmlElement()
 
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
             .appendingPathComponent(file).path
@@ -189,7 +190,11 @@ enum EditorQmlLane {
             ),
             (
                 "Headers",
-                "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay"
+                "quickSurfacePublishesAndRendersHeaders trackActivityRenderedMeterParity headerVoiceChangeAltersRetainedRaster hoveringHeadersDoesNotCreateTooltip headerCtrlScopeKeepsPrimaryAndRendersOverlay headerEffectBadgesRenderWithAccessibleInk"
+            ),
+            (
+                "EffectOutput",
+                "outputSelectionCopyPasteClearAndOrigin fourSectionGeometryAndCameraAlignment timeRangePrecedenceAndNarrowControlReachability"
             ),
             (
                 "VelocityRaster",

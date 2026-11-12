@@ -6,6 +6,7 @@ import PorydawProject
 import PorydawVoicegroup
 import PorydawPlaybackNative
 import PorydawAppAudio
+import PorydawPluginHost
 
 public enum NativeAudioError: Error, Equatable, Sendable {
     case initializationFailed(String)
@@ -145,6 +146,22 @@ public final class NativeAudio {
 
     private func voidOperation() -> (UInt64, AudioOperation<Void>) {
         operation { (_: Bool, receipt: AudioOperation<Void>) in receipt.resolve(()) }
+    }
+
+    /// Enqueues a borrowed live slot installation on audio control.
+    /// Await the receipt before transferring producer ownership again.
+    public func attachLiveInsert(track: Int, insert: LiveInsert) -> AudioOperation<Void> {
+        let (id, receipt) = voidOperation()
+        control.submit(.attachLiveInsert(track, insert, id))
+        return receipt
+    }
+
+    /// Enqueues detachment only if this exact insert is still installed.
+    /// Await the receipt before releasing its callback reservation or storage.
+    public func detachLiveInsert(track: Int, insert: LiveInsert) -> AudioOperation<Void> {
+        let (id, receipt) = voidOperation()
+        control.submit(.detachLiveInsert(track, insert, id))
+        return receipt
     }
 
     private func markTransport(_ state: AudioTransportState) -> UInt64 {

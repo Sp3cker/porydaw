@@ -29,10 +29,12 @@ public enum EditorViewStatePreferences {
         state.velocity = loadSection("velocity", defaultVisible: state.velocity.visible, store: store)
         state.automation = loadSection("automation", defaultVisible: state.automation.visible, store: store)
         state.voiceChanges = loadSection("voiceChanges", defaultVisible: state.voiceChanges.visible, store: store)
+        state.effectOutput = loadSection("effectOutput", defaultVisible: state.effectOutput.visible, store: store)
         switch store.string(key: chromePrefix + "activePage", fallback: "") {
         case "velocity": state.activePage = .velocity
         case "voiceChanges": state.activePage = .voiceChanges
         case "automations": state.activePage = .automation
+        case "effectOutput": state.activePage = .effectOutput
         default: break
         }
         return state
@@ -60,6 +62,7 @@ public enum EditorViewStatePreferences {
             ("velocity", state.velocity),
             ("automation", state.automation),
             ("voiceChanges", state.voiceChanges),
+            ("effectOutput", state.effectOutput),
         ] {
             store.setBool(key: chromePrefix + name + "Visible", value: section.visible)
             let heightKey = chromePrefix + name + "Height"

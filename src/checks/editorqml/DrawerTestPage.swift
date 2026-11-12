@@ -77,6 +77,8 @@ final class DrawerTestPage: EditorDrawerPage {
         case .velocity:
             // Production's velocity default keeps a smaller font-relative band.
             return min(max(hostHeight / 6, metrics.minimumBody * 2), metrics.minimumBody * 4)
+        case .effectOutput:
+            return max(hostHeight / 5, metrics.minimumBody)
         }
     }
 }

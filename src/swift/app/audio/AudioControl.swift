@@ -3,6 +3,7 @@ import PorydawAppAudio
 import PorydawCore
 import PorydawPlayback
 import PorydawVoicegroup
+import PorydawPluginHost
 import Synchronization
 
 struct AudioDeviceInfo: Sendable {
@@ -57,6 +58,8 @@ enum AudioCommand: Sendable {
     case unload(UInt64)
     case settings(AudioSettings, UInt64)
     case voicegroup(ProjectBankLease, UInt64)
+    case attachLiveInsert(Int, LiveInsert, UInt64)
+    case detachLiveInsert(Int, LiveInsert, UInt64)
     case hot(AudioHotCommand, UInt64)
     case suppression(Bool)
     case metronome(Bool)
@@ -73,9 +76,25 @@ enum AudioCommand: Sendable {
     case shutdown(UInt64?)
 }
 
+private final class AudioControlExecutor: SerialExecutor {
+    let queue = DispatchQueue(label: "com.porydaw.audio-control")
+
+    func enqueue(_ job: consuming ExecutorJob) {
+        let unowned = UnownedJob(job)
+        queue.async {
+            unowned.runSynchronously(on: self.asUnownedSerialExecutor())
+        }
+    }
+
+    func checkIsolated() {
+        dispatchPrecondition(condition: .onQueue(queue))
+    }
+}
+
 actor AudioControl {
-    nonisolated let queue = DispatchSerialQueue(label: "com.porydaw.audio-control")
-    nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
+    private nonisolated let executor = AudioControlExecutor()
+    nonisolated var queue: DispatchQueue { executor.queue }
+    nonisolated var unownedExecutor: UnownedSerialExecutor { executor.asUnownedSerialExecutor() }
     nonisolated let events: AsyncStream<AudioEvent>
     nonisolated let sampleStatus: SampleAuditionStatus
     nonisolated let hotCompleted = Atomic<UInt64>(0)
@@ -83,6 +102,8 @@ actor AudioControl {
     private let continuation: AsyncStream<AudioEvent>.Continuation
     private var device: AudioDevice?
     private var bankLease: ProjectBankLease?
+    // Bind/unload clear live notes but keep slots installed; retain their owners until detach or device shutdown.
+    private var liveInserts = [LiveInsert?](repeating: nil, count: TrackLimits.hardwareCapacity)
     private var sampleLease: UInt64?
     private var sampleClaimGeneration: UInt64 = 0
     private var pendingSample: SampleAuditionNote?
@@ -244,10 +265,13 @@ actor AudioControl {
             if let lease = sampleLease {
                 sampleStatus.publish(lease: lease, note: .unassigned, generation: 0)
             }
-            withExtendedLifetime(bankLease) { device?.shutdown() }
+            withExtendedLifetime(bankLease) {
+                withExtendedLifetime(liveInserts) { device?.shutdown() }
+            }
             started.store(false, ordering: .releasing)
             device = nil
             bankLease = nil
+            liveInserts.removeAll()
             if let operation { continuation.yield(.completed(operation, true)) }
             continuation.finish()
             return
@@ -291,6 +315,22 @@ actor AudioControl {
                 bankLease = bank
             }
             processSampleFeedback(renderer)
+            continuation.yield(.completed(operation, true))
+        case .attachLiveInsert(let track, let insert, let operation):
+            device.withRenderingExcluded {
+                if (0..<TrackLimits.hardwareCapacity).contains(track) {
+                    renderer.attachLiveInsert(track: track, slot: insert.slot)
+                    liveInserts[track] = insert
+                }
+            }
+            continuation.yield(.completed(operation, true))
+        case .detachLiveInsert(let track, let insert, let operation):
+            device.withRenderingExcluded {
+                if (0..<TrackLimits.hardwareCapacity).contains(track), liveInserts[track] === insert {
+                    renderer.detachLiveInsert(track: track)
+                    liveInserts[track] = nil
+                }
+            }
             continuation.yield(.completed(operation, true))
         case .hot(let hot, let sequence):
             hot.apply(to: renderer.endpoint)
@@ -337,7 +377,9 @@ actor AudioControl {
 
     isolated deinit {
         stopFeedbackWaiter()
-        withExtendedLifetime(bankLease) { device?.shutdown() }
+        withExtendedLifetime(bankLease) {
+            withExtendedLifetime(liveInserts) { device?.shutdown() }
+        }
         continuation.finish()
     }
 }

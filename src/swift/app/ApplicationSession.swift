@@ -9,14 +9,37 @@ import PorydawAppAudio
 import PorydawAppCommands
 import PorydawAppHistory
 import PorydawAppPresentation
+import PorydawPluginHost
+
+@MainActor
+struct SaveConflictRequest {
+    enum Target {
+        case fileSave
+        case closeGate(tabId: Int)
+    }
+
+    let target: Target
+    weak var session: DocumentSession?
+    let songLabel: String
+    let detail: String
+
+    init(session: DocumentSession, target: Target) {
+        self.target = target
+        self.session = session
+        songLabel = session.document.source.label
+        detail =
+            "\(songLabel) changed on disk since it was last loaded or saved. Overwrite it with your edits, register your edits as a new song, or cancel."
+    }
+}
 
 @MainActor
 @QtBridgeable
 public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var saveInProgress = false
     @QtTracked public var lastSaveError = ""
-    /// Save-conflict prompt: empty label means no prompt. The fork name field
-    /// follows the New Song label law through acceptSaveConflictLabelEdit.
+    @QtTracked public var lastOpenNotice = ""
+    /// Only this owner publishes the prompt; QML edits the proposed fork label.
+    /// These fields project the request and never authorize a save by themselves.
     @QtTracked public var saveConflictSongLabel = ""
     @QtTracked public var saveConflictDetail = ""
     @QtTracked public var saveConflictNewSongLabel = ""
@@ -58,6 +81,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public let undoHistory: UndoHistoryPanel = UndoHistoryPanel()
     @QtTracked public let virtualKeyboard: VirtualKeyboardPresenter = VirtualKeyboardPresenter()
     private var undoHistoryVisible = false
+    @QtIgnored public let pluginCatalog: PluginCatalog
 
     @QtIgnored
     public internal(set) var projectRoot = ""
@@ -68,6 +92,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtIgnored var onStatusMessage: ((String) -> Void)?
     @QtIgnored var onFailure: ((String, String) -> Void)?
     @QtIgnored var onSaveStateChanged: (() -> Void)?
+    @QtIgnored var onOpenNoticeChanged: (() -> Void)?
     @QtIgnored var onProjectStateChanged: (() -> Void)?
     @QtIgnored var onDocumentStateChanged: ((Bool) -> Void)?
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
@@ -178,11 +203,36 @@ public final class ApplicationSession: QmlInstantiableStatus {
     var isHostCloseWalk = false
     @QtIgnored
     var isReplacingProject = false
-    /// Close-gate tab awaiting the save-conflict answer, or -1 for File Save.
     @QtIgnored
-    var pendingSaveConflictTabId = -1
+    var saveConflictRequest: SaveConflictRequest?
+
+    private static func pluginCacheDirectory() -> URL {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let data: URL
+        #if os(macOS)
+            data = home.appendingPathComponent("Library/Application Support", isDirectory: true)
+        #elseif os(Windows)
+            if let local = ProcessInfo.processInfo.environment["LOCALAPPDATA"], !local.isEmpty {
+                data = URL(fileURLWithPath: local, isDirectory: true)
+            } else {
+                data = home.appendingPathComponent("AppData/Local", isDirectory: true)
+            }
+        #else
+            if let xdg = ProcessInfo.processInfo.environment["XDG_DATA_HOME"], xdg.hasPrefix("/") {
+                data = URL(fileURLWithPath: xdg, isDirectory: true)
+            } else {
+                data = home.appendingPathComponent(".local/share", isDirectory: true)
+            }
+        #endif
+        return data.appendingPathComponent("porydaw/Plugins", isDirectory: true)
+    }
+
+    static var pluginCatalogFactory: @MainActor () -> PluginCatalog = { @MainActor () -> PluginCatalog in
+        PluginCatalog(cacheDirectory: ApplicationSession.pluginCacheDirectory())
+    }
 
     public required init() {
+        pluginCatalog = Self.pluginCatalogFactory()
         let palette = GridPalette()
         self.palette = palette
         songTabs = SongTabsController(palette: palette)
@@ -234,6 +284,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
         transportBar.attach(session: self)
         wavExport.attach(session: self)
         songDock.attach(session: self)
+        pluginCatalog.onChanged = { [weak self] in
+            guard let self, !self.isDisposed else { return }
+            for tab in self.songTabs.tabs {
+                tab.workspace.effects.catalogDidChange()
+                tab.workspace.midiEffects.catalogDidChange()
+            }
+        }
     }
 
     public func configureTypography(baseFontPx: Int) {
@@ -436,6 +493,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.pitchBend
     }
 
+    public func midiEffectsPresenter() -> Optional<MidiEffectsPresenter> { workspace?.midiEffects }
+
     public func trackHeadersPresenter() -> TrackHeadersPresenter {
         guard let workspace else {
             preconditionFailure("Track headers requested without an open song")
@@ -485,14 +544,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.voiceChangesPage
     }
 
-    /// The document-bound Automation page, with the same document lifetime as the
-    /// other two pages.
+    /// The document-bound Automation page, with the same document lifetime as its siblings.
     public func automationPage() -> AutomationPage {
         guard let workspace else {
             preconditionFailure("Automation page requested without an open song")
         }
         return workspace.automationPage
     }
+
+    public func effectOutputPage() -> Optional<EffectOutputPage> { workspace?.effectOutputPage }
 
     /// The one shared playhead. Unlike a workspace's drawer it is application
     /// state: it publishes an empty, detached presentation until a document is
@@ -581,6 +641,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// the document-bound owners until the host acknowledges scene removal
     /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
+        pluginCatalog.cancelScan()
+        pluginCatalog.onChanged = nil
         hostClosingImpl()
     }
 

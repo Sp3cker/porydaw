@@ -25,6 +25,12 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         let errorSurface: SourceErrorSurface
     }
 
+    private enum SourceDecision {
+        case idle
+        case stereoDecision(SourceRequest)
+        case zoneDecision(SourceRequest, Sf2File)
+    }
+
     private struct VoiceDestination {
         let group: VoicegroupSession
         let slot: Int
@@ -37,7 +43,21 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var wave: MarkerWaveformModel?
     private var player: SampleStudioAudition?
     private let libraryHost: StudioLibraryHost
-    private var pendingSource: SourceRequest?
+    private var sourceDecision: SourceDecision = .idle {
+        didSet {
+            switch sourceDecision {
+            case .idle:
+                stereoPromptOpen = false
+                zonePickerOpen = false
+            case .stereoDecision:
+                stereoPromptOpen = true
+                zonePickerOpen = false
+            case .zoneDecision:
+                stereoPromptOpen = false
+                zonePickerOpen = true
+            }
+        }
+    }
     private var committedSource: SourceRecord?
     private var committing = false
     private var pendingTask: Task<Void, Never>?
@@ -45,12 +65,13 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     private var destination: VoiceDestination?
     private var editName: String?
     private var reopenFromSource = false
-    private var sf2File: Sf2File?
+    // The Loader retains its proxy until zonePickerReleased(), after the decision ends.
     private var zonePresenter: Sf2ZonePickerPresenter?
     private let sourcePreparation: SampleSourcePreparation
     private var sourceGeneration = 0
     private var canStageSource: Bool {
-        editorOpen && !committing && !stereoPromptOpen && !zonePickerOpen
+        guard case .idle = sourceDecision else { return false }
+        return editorOpen && !committing
     }
 
     @QtTracked public var noteFormat = NumberFieldFormat(kind: .note)
@@ -119,7 +140,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     public func requestImport(slot: Int) {
         guard let session, session.projectOpen, let service = session.catalogService,
-            !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+            !editorOpen, case .idle = sourceDecision, !committing, pendingTask == nil,
             slot < 0
                 || (slot < VoiceListController.slotCount
                     && session.voiceList.isBound && !session.voiceList.isLoading
@@ -162,7 +183,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
 
     public func requestEdit(slot: Int) {
         guard let session, session.projectOpen, let service = session.catalogService,
-            !editorOpen, !zonePickerOpen, !stereoPromptOpen, !committing, pendingTask == nil,
+            !editorOpen, case .idle = sourceDecision, !committing, pendingTask == nil,
             slot >= 0, slot < VoiceListController.slotCount,
             session.voiceList.isBound, !session.voiceList.isLoading,
             session.voiceList.voicegroup != nil, session.voiceList.editingEnabled
@@ -222,36 +243,30 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     }
 
     public func answerStereoPrompt(leftOnly: Bool) {
-        guard stereoPromptOpen, var request = pendingSource else { return }
-        stereoPromptOpen = false
-        pendingSource = nil
+        guard case .stereoDecision(var request) = sourceDecision else { return }
+        sourceDecision = .idle
         request.source.leftOnly = leftOnly
         prepareSource(.decode(request.source, prompt: false), surface: request.errorSurface)
     }
 
     /// Dismisses the stereo question without replacing the current editor source.
     public func cancelStereoPrompt() {
-        guard stereoPromptOpen, pendingSource != nil else { return }
-        stereoPromptOpen = false
-        pendingSource = nil
+        guard case .stereoDecision = sourceDecision else { return }
         invalidateSourcePreparation()
     }
 
     public func zonePicker() -> Optional<Sf2ZonePickerPresenter> { zonePresenter }
 
     public func acceptZone() {
-        guard zonePickerOpen, let sf2File, let zonePresenter,
-            zonePresenter.canAccept, var request = pendingSource
+        guard case .zoneDecision(var request, let file) = sourceDecision, let zonePresenter,
+            zonePresenter.canAccept
         else { return }
         request.source.zone = zonePresenter.selectedZone
-        prepareSource(.zone(sf2File, request.source), surface: request.errorSurface)
+        prepareSource(.zone(file, request.source), surface: request.errorSurface)
     }
 
     public func cancelZone() {
-        guard zonePickerOpen else { return }
-        zonePickerOpen = false
-        sf2File = nil
-        pendingSource = nil
+        guard case .zoneDecision = sourceDecision else { return }
         invalidateSourcePreparation()
     }
 
@@ -345,11 +360,7 @@ public final class SampleStudioWorkflow: QmlUncreatable {
         stopLibraryPreview()
         libraryHost.pane?.showMessage(text: "")
         libraryHost.pane?.clearFileSelection()
-        stereoPromptOpen = false
         pickerRequested = false
-        zonePickerOpen = false
-        sf2File = nil
-        pendingSource = nil
         committedSource = nil
         destination = nil
         editName = nil
@@ -373,17 +384,14 @@ public final class SampleStudioWorkflow: QmlUncreatable {
     }
 
     public func zonePickerReleased() {
-        guard !zonePickerOpen else { return }
+        if case .zoneDecision = sourceDecision { return }
         zonePresenter = nil
     }
 
     private func invalidateSourcePreparation() {
         sourceGeneration += 1
         sourcePreparation.cancel()
-        pendingSource = nil
-        stereoPromptOpen = false
-        zonePickerOpen = false
-        sf2File = nil
+        sourceDecision = .idle
     }
 
     private func sourceAcceptance(session: ApplicationSession) -> () -> Bool {
@@ -432,19 +440,14 @@ public final class SampleStudioWorkflow: QmlUncreatable {
                     self.sourceError(SampleSourcePreparation.message(for: error), surface: surface)
                 }
             case .success(.stereo(let source)):
-                self.pendingSource = SourceRequest(source: source, errorSurface: surface)
                 self.stereoPromptText =
                     "The left and right channels of \(URL(fileURLWithPath: source.path).lastPathComponent) are phase-cancelling — the mono mix may sound hollow.\n\nImport the left channel only instead?"
-                self.stereoPromptOpen = true
+                self.sourceDecision = .stereoDecision(SourceRequest(source: source, errorSurface: surface))
             case .success(.zones(let file, let source)):
-                self.pendingSource = SourceRequest(source: source, errorSurface: surface)
-                self.sf2File = file
                 self.zonePresenter = Sf2ZonePickerPresenter(file: file)
-                self.zonePickerOpen = true
+                self.sourceDecision = .zoneDecision(SourceRequest(source: source, errorSurface: surface), file)
             case .success(.prepared(let document, let source, let fromSource)):
-                self.zonePickerOpen = false
-                self.sf2File = nil
-                self.pendingSource = nil
+                self.sourceDecision = .idle
                 if let editName {
                     self.editName = editName
                     self.reopenFromSource = fromSource

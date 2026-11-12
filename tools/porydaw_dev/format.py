@@ -4,6 +4,7 @@ import ast
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from .build import swift_bin_dir
@@ -25,27 +26,12 @@ def git(args: list[str]) -> str:
     return result.stdout
 
 
-def changed_swift(base: str) -> dict[Path, Ranges]:
-    since = "HEAD" if base == "HEAD" else git(["merge-base", base, "HEAD"]).strip()
-    diff = git(
-        [
-            "diff",
-            "--unified=0",
-            "--no-color",
-            "--no-ext-diff",
-            "--src-prefix=a/",
-            "--dst-prefix=b/",
-            "--diff-filter=AMR",
-            since,
-            "--",
-            "*.swift",
-        ]
-    )
+def swift_ranges(diff: str) -> dict[Path, Ranges]:
     changed: dict[Path, Ranges] = {}
     ranges: list[tuple[int, int]] | None = None
     for line in diff.splitlines():
         if line.startswith("+++ "):
-            filename = line[4:]
+            filename = line[4:].split("\t", 1)[0]
             if filename.startswith('"'):
                 filename = ast.literal_eval(filename)
             if not filename.startswith("b/"):
@@ -57,6 +43,27 @@ def changed_swift(base: str) -> dict[Path, Ranges]:
             count = int(hunk[2]) if hunk[2] is not None else 1
             if count:
                 ranges.append((start, start + count - 1))
+    return changed
+
+
+def changed_swift(base: str) -> dict[Path, Ranges]:
+    since = "HEAD" if base == "HEAD" else git(["merge-base", base, "HEAD"]).strip()
+    changed = swift_ranges(
+        git(
+            [
+                "diff",
+                "--unified=0",
+                "--no-color",
+                "--no-ext-diff",
+                "--src-prefix=a/",
+                "--dst-prefix=b/",
+                "--diff-filter=AMR",
+                since,
+                "--",
+                "*.swift",
+            ]
+        )
+    )
     for filename in git(
         ["ls-files", "--others", "--exclude-standard", "-z", "--", "*.swift"]
     ).split("\0"):
@@ -98,6 +105,12 @@ def run(check: bool, base: str, files: list[Path], whole: bool) -> int:
             }
     if not targets:
         return 0
+    return check_swift(targets, check, root)
+
+
+def check_swift(targets: dict[Path, Ranges], check: bool, root: Path) -> int:
+    if not targets:
+        return 0
     selected = swift_bin_dir()
     driver = (
         str(selected / ("swift.exe" if sys.platform == "win32" else "swift"))
@@ -132,3 +145,98 @@ def run(check: bool, base: str, files: list[Path], whole: bool) -> int:
                 print(f"  {path}", file=sys.stderr)
             return 1
     return 0
+
+
+def run_staged() -> int:
+    root = Path.cwd()
+    targets = swift_ranges(
+        git(
+            [
+                "diff",
+                "--cached",
+                "--unified=0",
+                "--no-color",
+                "--no-ext-diff",
+                "--src-prefix=a/",
+                "--dst-prefix=b/",
+                "--diff-filter=ACMR",
+                "--",
+                "*.swift",
+            ]
+        )
+    )
+    targets = {path: spans for path, spans in targets.items() if spans}
+    python = [
+        Path(path)
+        for path in git(
+            [
+                "diff",
+                "--cached",
+                "--name-only",
+                "--diff-filter=ACMR",
+                "-z",
+                "--",
+                "*.py",
+            ]
+        ).split("\0")
+        if path
+    ]
+    if not targets and not python:
+        return 0
+    configs = [
+        Path(path)
+        for path in git(
+            [
+                "ls-files",
+                "--cached",
+                "-z",
+                "--",
+                ".swift-format",
+                "*/.swift-format",
+                "pyproject.toml",
+                "*/pyproject.toml",
+                "ruff.toml",
+                "*/ruff.toml",
+                ".ruff.toml",
+                "*/.ruff.toml",
+            ]
+        ).split("\0")
+        if path
+    ]
+    sources = {*configs, *python, *(path.relative_to(root) for path in targets)}
+    with tempfile.TemporaryDirectory(prefix="porydaw-format-index-") as temp:
+        snapshot = Path(temp)
+        for path in sorted(sources):
+            result = subprocess.run(
+                ["git", "show", f":{path.as_posix()}"],
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode:
+                raise RuntimeError(
+                    f"cannot read staged {path}: {result.stderr.decode()}"
+                )
+            destination = snapshot / path
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(result.stdout)
+        if python:
+            result = subprocess.run(
+                [
+                    "ruff",
+                    "format",
+                    "--check",
+                    *(str(snapshot / path) for path in python),
+                ],
+                cwd=snapshot,
+                check=False,
+            )
+            if result.returncode:
+                return result.returncode
+        return check_swift(
+            {
+                snapshot / path.relative_to(root): spans
+                for path, spans in targets.items()
+            },
+            True,
+            snapshot,
+        )

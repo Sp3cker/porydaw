@@ -1,6 +1,7 @@
 add_library(PorydawPlayback STATIC
     Sequencer.swift
     PlaybackBridge.swift
+    live/LiveInsertSlot.swift
     audition/AudioAudition.swift
     audition/AudioBandAudition.swift
     audition/AudioAuditionVoices.swift

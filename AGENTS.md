@@ -18,6 +18,7 @@ src/
   swift/document/  — PorydawDocument: DocumentSession, service/ (ProjectService), view/ (viewport, time axis, grid, camera, scale, voice-list and automation view types)
   swift/sample/    — PorydawSample: sample import/decode, DSP, resampling, render, sample WAV I/O
   swift/playback/  — PorydawPlayback: sequencer, C playback bridge
+  swift/pluginhost/ — PorydawPluginHost: Core + Playback + PorydawPluginBridge
   swift/project/   — Swift project store (asm/midi.cfg/bank files)
   swift/app/       — PorydawApp: session, presenters, audio, drawer, roll, timeline, shell
     shell/                         # PorydawShellApp @main, ShellPresenter, ShellAppearance
@@ -36,12 +37,7 @@ docs/plans/        — implementation plans; one directory per plan
 
 ## Native boundary
 
-C/C++ exists only at: `src/app/`, `src/audio/`, `src/project/`,
-`src/ui/songview/quick/swiftroll/native/font_metrics.cpp`, and the
-display-list boundary in `src/render/`: a C wire format + decoder
-(`display_list.{h,c}`, imported by Swift) and one Qt scene-graph uploader
-(`display_list_item.{h,cpp}`). Native code never projects, culls, lays out or
-decides visibility; Swift emits results into the display list.
+C/C++ exists only at: `src/app/`, `src/audio/`, `src/project/`, `src/pluginhost/`, `src/ui/songview/quick/swiftroll/native/font_metrics.cpp`, and the display-list boundary in `src/render/` … `src/pluginhost/` builds `porydaw-vst3-host`, the helper executable that scans and hosts every VST3 plugin in its own process, and `pluginbridge.h`, the C wire format (shared-memory layout, control frames, cross-process wait/wake) that Swift imports. Porydaw's process never loads a plugin module. Steinberg SDK types, plugin threads, editor windows and editor key interception stay inside the helper. Native code never decides scan policy, capture pacing, crash or hang policy, which keys Porydaw owns, or which events reach the document.
 
 Bridge timing facts: QtBridge NOTIFYs coalesce into one queued flush per
 event-loop turn; `QListModel` row updates are synchronous. Anything that must
@@ -83,6 +79,7 @@ fold back unless a separately named concept.
 
 Modules point one way toward `PorydawCore` (each `CMakeLists.txt` is the
 authority): Project/Playback/Document build on Core (Document also on Project);
+`PorydawPluginHost` (`src/swift/pluginhost/`) depends on Core, Playback, and PorydawPluginBridge;
 `AppAudio`/`AppEventList`/`AppCommands` see only Core (+Playback for audio);
 `PorydawAppPresentation` (`src/swift/app/presentation`) depends on Core, Document, Project, AppCommands, and QtBridge; `PorydawApp` sits on top. Shared code lives in the lowest module all consumers
 already import; single-consumer code stays in its consumer; never add a

@@ -103,6 +103,7 @@ public final class EditorDrawerPresenter {
     @QtTracked public var automationSection: EditorDrawerSectionState = EditorDrawerSectionState()
     @QtTracked public var velocitySection: EditorDrawerSectionState = EditorDrawerSectionState()
     @QtTracked public var voiceChangesSection: EditorDrawerSectionState = EditorDrawerSectionState()
+    @QtTracked public var effectOutputSection: EditorDrawerSectionState = EditorDrawerSectionState()
 
     /// Swift-only hook for pages that were hidden during shared-playhead publication.
     @QtIgnored public var onSectionVisibilityChanged: ((DrawerSectionKind, Bool) -> Void)?
@@ -121,6 +122,7 @@ public final class EditorDrawerPresenter {
         case .automation: return automationSection
         case .velocity: return velocitySection
         case .voiceChanges: return voiceChangesSection
+        case .effectOutput: return effectOutputSection
         }
     }
 
@@ -152,6 +154,9 @@ public final class EditorDrawerPresenter {
         state.voiceChanges = .init(
             visible: layout.isVisible(.voiceChanges),
             height: layout.storedBodyHeight(.voiceChanges))
+        state.effectOutput = .init(
+            visible: layout.isVisible(.effectOutput),
+            height: layout.storedBodyHeight(.effectOutput))
         state.activePage = layout.activePage
         return state
     }
@@ -166,6 +171,8 @@ public final class EditorDrawerPresenter {
                 automationHeight: state.automation.height ?? 0,
                 voiceChangesVisible: state.voiceChanges.visible ? 1 : 0,
                 voiceChangesHeight: state.voiceChanges.height ?? 0,
+                effectOutputVisible: state.effectOutput.visible ? 1 : 0,
+                effectOutputHeight: state.effectOutput.height ?? 0,
                 activePage: state.activePage.rawValue))
     }
 
@@ -177,6 +184,7 @@ public final class EditorDrawerPresenter {
             case .automation: state.automation.visible.toggle()
             case .velocity: state.velocity.visible.toggle()
             case .voiceChanges: state.voiceChanges.visible.toggle()
+            case .effectOutput: state.effectOutput.visible.toggle()
             }
             state.activePage = section
             publishDetachedChange(state, section: section)
@@ -195,6 +203,7 @@ public final class EditorDrawerPresenter {
             case .automation: state.automation.visible = visible
             case .velocity: state.velocity.visible = visible
             case .voiceChanges: state.voiceChanges.visible = visible
+            case .effectOutput: state.effectOutput.visible = visible
             }
             publishDetachedChange(state, section: section)
             return
@@ -214,6 +223,7 @@ public final class EditorDrawerPresenter {
             case .automation: state.automation.height = stored
             case .velocity: state.velocity.height = stored
             case .voiceChanges: state.voiceChanges.height = stored
+            case .effectOutput: state.effectOutput.height = stored
             }
             publishDetachedChange(state, section: section)
             return
@@ -231,6 +241,7 @@ public final class EditorDrawerPresenter {
         case .automation: preference = state.automation
         case .velocity: preference = state.velocity
         case .voiceChanges: preference = state.voiceChanges
+        case .effectOutput: preference = state.effectOutput
         }
         drawerSectionPreferenceChanged(
             kind: section.rawValue, visible: preference.visible,
@@ -358,5 +369,6 @@ public final class EditorDrawerPresenter {
         detentIconInset = snapshot.detentIconInset
         velocitySection.apply(snapshot.velocity)
         voiceChangesSection.apply(snapshot.voiceChanges)
+        effectOutputSection.apply(snapshot.effectOutput)
     }
 }

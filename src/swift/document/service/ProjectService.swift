@@ -238,6 +238,12 @@ public struct SongListing: Equatable, Sendable {
     public var registrationIncomplete: Bool { !registered || !registrationGaps.isEmpty }
 }
 
+/// Sidecar recovery performed while opening a song.
+public enum LoadedEffects: Sendable {
+    case restored(EffectsSidecar, dropped: Int)
+    case corrupt(movedTo: String)
+}
+
 /// An opened song: Swift-owned MIDI bytes plus borrowed-then-copied metadata
 /// and the owned bank lease. Swift alone parses/encodes the MIDI bytes.
 public struct LoadedSong: Sendable {
@@ -254,6 +260,7 @@ public struct LoadedSong: Sendable {
     public var midiBytes: [UInt8]
     public var bank: ProjectBankLease
     public var bankSlots: [BankSlotView]
+    public var effects: LoadedEffects? = nil
 }
 
 /// A confirmed bank transition: the replacement lease plus its copied view.

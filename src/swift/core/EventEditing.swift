@@ -56,6 +56,7 @@ extension SongDocument {
         let remap = makeTrackRemap(
             before: before.file, after: mutation.state.file,
             chunkMap: Array(before.file.chunks.indices).map(Optional.some))
+        mutation.remapEffects(remap)
         commit(mutation, group: nil, operation: .addTrack, trackRemap: remap)
         let updated = mutation.state.file.engineTracks()
         return updated.tracks[..<updated.usedTrackCount].firstIndex { $0.midiChunk == chunk }
@@ -92,6 +93,7 @@ extension SongDocument {
         let remap = makeTrackRemap(
             before: before.file, after: mutation.state.file,
             chunkMap: Array(before.file.chunks.indices).map(Optional.some))
+        mutation.remapEffects(remap)
         commit(mutation, group: nil, operation: .duplicateTrack, trackRemap: remap)
         let updatedMap = mutation.state.file.engineTracks()
         return updatedMap.tracks[..<updatedMap.usedTrackCount].firstIndex {
@@ -126,6 +128,7 @@ extension SongDocument {
         let remap = makeTrackRemap(
             before: before.file, after: mutation.state.file,
             chunkMap: chunkMap)
+        mutation.remapEffects(remap)
         commit(mutation, group: nil, operation: .deleteTrack, trackRemap: remap)
     }
 
@@ -164,6 +167,7 @@ extension SongDocument {
         let remap = makeTrackRemap(
             before: before.file, after: mutation.state.file,
             chunkMap: chunkMap)
+        mutation.remapEffects(remap)
         commit(mutation, group: nil, operation: .moveTrack, trackRemap: remap)
         return true
     }

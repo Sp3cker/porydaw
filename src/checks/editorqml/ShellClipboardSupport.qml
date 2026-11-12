@@ -28,10 +28,13 @@ ShellLaneSupport {
 
     laneBootstrap: bootstrap
 
+    function preDestroyShell() { bootstrap.children.length = 0 }
+
     function openRoute101() {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        bootstrap.children.push(shell.shellPresenter)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session

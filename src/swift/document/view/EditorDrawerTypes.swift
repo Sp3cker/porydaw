@@ -2,17 +2,17 @@ import Foundation
 
 // MARK: - Section identity
 
-/// The three fixed drawer sections. Raw values are the production page values in
-/// `src/ui/editordrawer/drawerpage.h` and travel to QML unchanged.
+/// The fixed drawer sections; raw values travel to QML unchanged.
 public enum DrawerSectionKind: Int, CaseIterable, Sendable {
     case automation = 0
     case velocity = 1
     case voiceChanges = 2
+    case effectOutput = 3
 
     /// Top-to-bottom order of the stacked bodies (`DrawerSections::sectionOrder`).
-    public static let stackOrder: [DrawerSectionKind] = [.velocity, .voiceChanges, .automation]
+    public static let stackOrder: [DrawerSectionKind] = [.velocity, .voiceChanges, .automation, .effectOutput]
     /// Left-to-right order of the chrome toggles (`DrawerChrome`).
-    public static let toggleOrder: [DrawerSectionKind] = [.voiceChanges, .automation, .velocity]
+    public static let toggleOrder: [DrawerSectionKind] = [.voiceChanges, .automation, .velocity, .effectOutput]
 
     /// Historical `activePage` value, also the human name of the section.
     public var name: String {
@@ -20,6 +20,7 @@ public enum DrawerSectionKind: Int, CaseIterable, Sendable {
         case .automation: "automations"
         case .velocity: "velocity"
         case .voiceChanges: "voiceChanges"
+        case .effectOutput: "effectOutput"
         }
     }
 
@@ -30,6 +31,7 @@ public enum DrawerSectionKind: Int, CaseIterable, Sendable {
         case .automation: "automation"
         case .velocity: "velocity"
         case .voiceChanges: "voiceChanges"
+        case .effectOutput: "effectOutput"
         }
     }
 
@@ -39,6 +41,7 @@ public enum DrawerSectionKind: Int, CaseIterable, Sendable {
         case .voiceChanges: 0
         case .automation: 1
         case .velocity: 2
+        case .effectOutput: 3
         }
     }
 }
@@ -136,6 +139,7 @@ public struct EditorDrawerSnapshot: Equatable, Sendable {
     public var automation = EditorDrawerSectionGeometry()
     public var velocity = EditorDrawerSectionGeometry()
     public var voiceChanges = EditorDrawerSectionGeometry()
+    public var effectOutput = EditorDrawerSectionGeometry()
 
     public init() {}
 
@@ -145,6 +149,7 @@ public struct EditorDrawerSnapshot: Equatable, Sendable {
             case .automation: return automation
             case .velocity: return velocity
             case .voiceChanges: return voiceChanges
+            case .effectOutput: return effectOutput
             }
         }
         set {
@@ -152,6 +157,7 @@ public struct EditorDrawerSnapshot: Equatable, Sendable {
             case .automation: automation = newValue
             case .velocity: velocity = newValue
             case .voiceChanges: voiceChanges = newValue
+            case .effectOutput: effectOutput = newValue
             }
         }
     }

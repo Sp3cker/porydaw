@@ -47,6 +47,21 @@ Item {
         }
     }
     Loader {
+        id: midiEffectsLoader
+        objectName: "midiEffectsLoader"
+        anchors.fill: parent
+        z: 14
+        active: promptHost.root.midiEffectsModel !== null && promptHost.root.midiEffectsModel.isOpen
+        sourceComponent: Component {
+            MidiEffectsPanel {
+                anchors.fill: parent
+                model: promptHost.root.midiEffectsModel
+                focusOrigin: promptHost.trackHeaders
+                Component.onCompleted: model.configure(promptHost.root.baseFontPx)
+            }
+        }
+    }
+    Loader {
         id: headerVoicePickerLoader
         objectName: "headerVoicePickerLoader"
         anchors.fill: parent

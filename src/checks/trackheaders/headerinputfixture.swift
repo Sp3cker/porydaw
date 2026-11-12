@@ -53,7 +53,7 @@ extension TrackHeadersFixture {
         headers.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
         headers.configureTextMetrics(
             titleLineSpacing: 18, boldLineSpacing: 18,
-            subtitleLineSpacing: 16)
+            subtitleLineSpacing: 16, effectsTextWidth: 40, liveTextWidth: 40)
     }
 }
 

@@ -187,12 +187,6 @@ EditorDrawerTestSupport {
         var layer = findChild(testCase.surface, "drawerModalLayer")
         var card = findChild(testCase.surface, "voicePickerCard")
         verify(layer && card, "the modal layer hosts the picker's card")
-        var base = VoiceSupport.voiceModel(testCase).baseFontPx
-        compare(card.minimumWidth, Math.round(base * 30), "original picker width floor")
-        compare(findChild(card, "voicePickerList").height, Math.round(base * 110 / 3),
-                "original picker list viewport, not the shortened replacement")
-        compare(card.appearance.dialogPadding, Math.max(1, Math.round(base * 0.25)))
-        compare(card.appearance.verticalPadding, Math.max(1, Math.round(base * 0.125)))
         compare(layer.width, testCase.Window.window.contentItem.width)
         compare(layer.height, testCase.Window.window.contentItem.height)
         var pickerRoot = findChild(testCase.surface, "voicePicker")

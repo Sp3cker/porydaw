@@ -21,7 +21,8 @@ public struct EditorDrawerLayout {
     private var sections = KindValues(
         automation: Section(visible: true, storedBodyHeight: nil),
         velocity: Section(visible: false, storedBodyHeight: nil),
-        voiceChanges: Section(visible: false, storedBodyHeight: nil))
+        voiceChanges: Section(visible: false, storedBodyHeight: nil),
+        effectOutput: Section(visible: false, storedBodyHeight: nil))
     private var resize: ResizeSession?
     private var focusRevision = 0
 
@@ -149,14 +150,17 @@ public struct EditorDrawerLayout {
         velocityVisible: Int, velocityHeight: Int,
         automationVisible: Int, automationHeight: Int,
         voiceChangesVisible: Int, voiceChangesHeight: Int,
+        effectOutputVisible: Int, effectOutputHeight: Int,
         activePage: Int
     ) -> EditorDrawerChangeSet {
         applyRestoredVisibility(velocityVisible, to: .velocity)
         applyRestoredVisibility(automationVisible, to: .automation)
         applyRestoredVisibility(voiceChangesVisible, to: .voiceChanges)
+        applyRestoredVisibility(effectOutputVisible, to: .effectOutput)
         sections[.velocity].storedBodyHeight = Self.restoredHeight(velocityHeight)
         sections[.automation].storedBodyHeight = Self.restoredHeight(automationHeight)
         sections[.voiceChanges].storedBodyHeight = Self.restoredHeight(voiceChangesHeight)
+        sections[.effectOutput].storedBodyHeight = Self.restoredHeight(effectOutputHeight)
         if let page = DrawerSectionKind(rawValue: activePage) { self.activePage = page }
         return publish()
     }
@@ -389,8 +393,7 @@ public struct EditorDrawerLayout {
         next.barWidth = width
         next.barHeight = barHeight
 
-        // Under the host clamp, Voice Changes takes its height first, Automations
-        // keeps its height second and Velocity takes the remainder.
+        // Preserve the existing section priorities; Effect Output takes the remaining height last.
         var remaining = max(0, next.height - barHeight - handleHeight * handleCount)
         var drawn = KindValues(0)
         if isVisible(.voiceChanges) && isAvailable(.voiceChanges) {
@@ -403,6 +406,10 @@ public struct EditorDrawerLayout {
         }
         if isVisible(.velocity) && isAvailable(.velocity) {
             drawn.velocity = min(bodyHeight(.velocity), remaining)
+            remaining -= drawn.velocity
+        }
+        if isVisible(.effectOutput) && isAvailable(.effectOutput) {
+            drawn.effectOutput = min(bodyHeight(.effectOutput), remaining)
         }
 
         // Bodies and handles stack top to bottom in stackOrder; the bar spans the
@@ -422,11 +429,11 @@ public struct EditorDrawerLayout {
         }
         next.barY = y
 
-        // The three toggle slots stay put, right-aligned under the keyboard keys:
-        // the group's right edge meets the plot origin. Only available kinds render.
+        // Toggle slots stay put under the keyboard; an unattached output page adds no slot.
         let inset = max(0, metrics.toggleInset)
         let buttonSize = max(max(1, metrics.pixel), barHeight - 2 * inset)
-        let groupWidth = 3 * buttonSize + 2 * inset
+        let count = DrawerSectionKind.toggleOrder.count - (isAvailable(.effectOutput) ? 0 : 1)
+        let groupWidth = count * buttonSize + max(0, count - 1) * inset
         let groupX = min(max(origin - groupWidth, 0), max(0, width - groupWidth))
         for kind in DrawerSectionKind.toggleOrder where isAvailable(kind) {
             var geometry = next[kind]
@@ -573,17 +580,20 @@ public struct EditorDrawerLayout {
         var automation: Value
         var velocity: Value
         var voiceChanges: Value
+        var effectOutput: Value
 
         init(_ value: Value) {
             automation = value
             velocity = value
             voiceChanges = value
+            effectOutput = value
         }
 
-        init(automation: Value, velocity: Value, voiceChanges: Value) {
+        init(automation: Value, velocity: Value, voiceChanges: Value, effectOutput: Value) {
             self.automation = automation
             self.velocity = velocity
             self.voiceChanges = voiceChanges
+            self.effectOutput = effectOutput
         }
 
         subscript(kind: DrawerSectionKind) -> Value {
@@ -592,6 +602,7 @@ public struct EditorDrawerLayout {
                 case .automation: return automation
                 case .velocity: return velocity
                 case .voiceChanges: return voiceChanges
+                case .effectOutput: return effectOutput
                 }
             }
             set {
@@ -599,6 +610,7 @@ public struct EditorDrawerLayout {
                 case .automation: automation = newValue
                 case .velocity: velocity = newValue
                 case .voiceChanges: voiceChanges = newValue
+                case .effectOutput: effectOutput = newValue
                 }
             }
         }

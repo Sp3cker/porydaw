@@ -67,6 +67,12 @@ enum ShellQmlRegistry {
                 name: "shell-arpeggiator", inputFileName: "tst_ShellArpeggiator.qml",
                 fixtureFiles: songs("mus_route101")),
             Entry(
+                name: "shell-midieffects", inputFileName: "tst_ShellMidiEffects.qml",
+                fixtureFiles: songs("mus_route101")),
+            Entry(
+                name: "shell-effect-output", inputFileName: "tst_ShellEffectOutput.qml",
+                fixtureFiles: songs("mus_route101")),
+            Entry(
                 name: "shell-startup", inputFileName: "tst_ShellStartup.qml",
                 fixtureFiles: songs("mus_route101", "mus_littleroot_test"), windowing: "window-system"),
             Entry(

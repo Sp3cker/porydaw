@@ -52,7 +52,9 @@ public struct Sequencer: ~Copyable {
     /// Suspend event hooks while stopped or while reconstructing a seek.
     public mutating func stopCpuCost() { costHooks = false }
 
-    public init() {
+    /// Allocate fixed scheduler storage off the callback.
+    /// - Parameter liveInserts: Allocate live MIDI buffers; leave off for export and pattern players.
+    public init(liveInserts: Bool = false) {
         precondition(
             ChaseLatest.count == Self.chaseSlotCount && PerTrack.count == TrackLimits.hardwareCapacity,
             "scratch literals mirror TrackLimits.hardwareCapacity")
@@ -64,6 +66,19 @@ public struct Sequencer: ~Copyable {
         pendingReleases.initialize(
             repeating: PendingRelease(),
             count: Self.maximumPendingReleases)
+        if liveInserts {
+            let input = UnsafeMutablePointer<LiveInputEvent>.allocate(capacity: LiveInsertCall.eventCapacity)
+            input.initialize(repeating: LiveInputEvent(), count: LiveInsertCall.eventCapacity)
+            liveInput = input
+            let output = UnsafeMutablePointer<LiveOutputEvent>.allocate(
+                capacity: TrackLimits.hardwareCapacity * LiveInsertCall.eventCapacity)
+            output.initialize(
+                repeating: LiveOutputEvent(), count: TrackLimits.hardwareCapacity * LiveInsertCall.eventCapacity)
+            liveOutput = output
+        } else {
+            liveInput = nil
+            liveOutput = nil
+        }
     }
 
     deinit {
@@ -73,21 +88,31 @@ public struct Sequencer: ~Copyable {
         keyedOnTick.deallocate()
         pendingReleases.deinitialize(count: Self.maximumPendingReleases)
         pendingReleases.deallocate()
+        liveInput?.deinitialize(count: LiveInsertCall.eventCapacity)
+        liveInput?.deallocate()
+        liveOutput?.deinitialize(count: TrackLimits.hardwareCapacity * LiveInsertCall.eventCapacity)
+        liveOutput?.deallocate()
     }
 
     public mutating func reset() {
         position = 0
         cursor = 0
         clearKeyState()
+        signalLiveDiscontinuity(.stop)
     }
 
     public mutating func seek(_ position: UInt64, timeline: borrowing PlaybackTimeline) {
         clearKeyState()
-        replaceTimeline(position, timeline: timeline)
+        signalLiveDiscontinuity(.seek)
+        self.position = position
+        timeline.events.withUnsafeBufferPointer { (events: UnsafeBufferPointer<PlaybackEvent>) in
+            cursor = lowerBound(in: SwiftEventBuffer(events), sample: position)
+        }
     }
 
     public mutating func replaceTimeline(_ position: UInt64, timeline: borrowing PlaybackTimeline) {
         self.position = position
+        signalLiveDiscontinuity(.timelineAdoption)
         timeline.events.withUnsafeBufferPointer {
             cursor = lowerBound(in: SwiftEventBuffer($0), sample: position)
         }
@@ -111,6 +136,18 @@ public struct Sequencer: ~Copyable {
         }
     }
 
+    private mutating func transitionAfterLoopDispatch<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?, liveMask: UInt32
+    ) {
+        if costHooks, let driver = engine.pointee.driver {
+            m4a_driver_cpu_loop_point(driver, true)
+        }
+        wrapNotes(engine: engine, source: source, audition: audition, liveMask: liveMask)
+        position = source.loopStartSample
+        cursor = lowerBound(in: source, sample: position)
+        if costHooks { seekCpuMeterMarks(source) }
+    }
+
     /// Render scheduled events with an optional shared interactive owner. Without
     /// that owner, offline rendering uses the original native ingress and DSP path.
     public mutating func render(
@@ -118,7 +155,9 @@ public struct Sequencer: ~Copyable {
         timeline: borrowing PlaybackTimeline,
         left: UnsafeMutableBufferPointer<Float>,
         right: UnsafeMutableBufferPointer<Float>,
-        looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil
+        looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil,
+        liveMask: UInt32 = 0,
+        liveSlots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?> = .init(start: nil, count: 0)
     ) {
         precondition(left.count == right.count)
         guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else {
@@ -130,9 +169,43 @@ public struct Sequencer: ~Copyable {
             startCpuCost(driver: driver, timeline: timeline, trackBudget: costTrackCount, continuing: true)
         }
         withSwiftSource(timeline) { source in
-            render(
-                engine: engine, source: source, left: leftBase, right: rightBase,
-                frames: left.count, looping: looping, muteMask: muteMask, audition: audition)
+            if liveMask == 0 {
+                render(
+                    engine: engine, source: source, left: leftBase, right: rightBase,
+                    frames: left.count, looping: looping, muteMask: muteMask, audition: audition)
+                return
+            }
+            var done = 0
+            while done < left.count {
+                if looping && source.hasLoop && position >= source.loopEndSample {
+                    dispatchDueEvents(
+                        engine: engine, source: source, loop: true, muteMask: muteMask,
+                        liveMask: liveMask, audition: audition)
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
+                }
+                var count = min(8192, left.count - done)
+                if looping && source.hasLoop {
+                    count = Int(min(UInt64(count), source.loopEndSample - position))
+                }
+                prepareLive(
+                    engine: engine, source: source, frames: count, playing: true, looping: looping,
+                    slots: liveSlots, liveMask: liveMask, audition: audition)
+                render(
+                    engine: engine, source: source, left: leftBase + done, right: rightBase + done,
+                    frames: count, looping: looping, muteMask: muteMask, audition: audition, liveMask: liveMask)
+                for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+                    reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .position)
+                }
+                if looping && source.hasLoop && position == source.loopEndSample {
+                    dispatchDueEvents(
+                        engine: engine, source: source, loop: true, muteMask: muteMask,
+                        liveMask: liveMask, audition: audition)
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
+                }
+                done += count
+            }
         }
     }
 
@@ -152,6 +225,19 @@ public struct Sequencer: ~Copyable {
     private let keyedOnTick: UnsafeMutablePointer<UInt32>
     private let pendingReleases: UnsafeMutablePointer<PendingRelease>
     private var pendingReleaseCount = 0
+    private var liveOwners = InlineArray<2048, Int64>(repeating: 0)
+    private let liveInput: UnsafeMutablePointer<LiveInputEvent>?
+    private let liveOutput: UnsafeMutablePointer<LiveOutputEvent>?
+    private var liveCalls = InlineArray<16, LiveInsertCall>(repeating: LiveInsertCall())
+    private var liveIndices = InlineArray<16, Int>(repeating: 0)
+    private var liveFlags = InlineArray<16, LiveDiscontinuity>(repeating: .arm)
+    private var inputOns = InlineArray<2048, Int64>(repeating: 0)
+    private var inputOffs = InlineArray<2048, Int64>(repeating: 0)
+    private var liveWasPlaying = InlineArray<16, Bool>(repeating: false)
+    private var liveHeld = InlineArray<2048, Bool>(repeating: false)
+    private var liveChunkStart: UInt64 = 0
+    public private(set) var liveInputOverflow: UInt64 = 0
+    public private(set) var liveOutputOverflow: UInt64 = 0
 }
 
 private struct PendingRelease {
@@ -184,6 +270,7 @@ private protocol TimelineSource: EventBuffer {
     var usedTrackCount: Int { get }
     var extendedClocks: Bool { get }
     func sample(for tick: Tick) -> UInt64
+    func tick(for sample: UInt64) -> Double
     var meterCount: Int { get }
     func meter(at index: Int) -> PlaybackTimeSignature
     var trackEndCount: Int { get }
@@ -213,6 +300,25 @@ private struct SwiftEventBuffer: EventBuffer {
     }
 }
 
+private func timelineTick<Segments: PlaybackTempoSegmentView>(
+    for sample: UInt64, segments: Segments, ticksPerBeat: UInt32, sampleRate: Double
+) -> Double {
+    let samplePosition = Double(sample)
+    var first = 0
+    var end = segments.count
+    while first < end {
+        let middle = first + (end - first) / 2
+        if segments[middle].sampleOrigin <= samplePosition {
+            first = middle + 1
+        } else {
+            end = middle
+        }
+    }
+    let point = segments[max(0, first - 1)]
+    let samplesPerTick = Double(point.microsecondsPerQuarterNote) * sampleRate / Double(ticksPerBeat) / 1_000_000
+    return Double(point.tick) + (samplePosition - point.sampleOrigin) / samplesPerTick
+}
+
 // Borrowed views over PlaybackTimeline storage. Stored `Span` members need the experimental
 // `Lifetimes` feature on Swift 6.4, so the buffer pointers stay until that lands.
 private struct SwiftTimelineSource: TimelineSource {
@@ -231,7 +337,7 @@ private struct SwiftTimelineSource: TimelineSource {
     var trackEndCount: Int { trackEnds.count }
     func trackEnd(at index: Int) -> PlaybackTrackEnd { trackEnds[index] }
 
-    var hasDefaultMeter: Bool { signatures.first?.tick != 0 }
+    var hasDefaultMeter: Bool { signatures.count == 0 || signatures[0].tick != 0 }
     var meterCount: Int { signatures.count + (hasDefaultMeter ? 1 : 0) }
 
     func meter(at index: Int) -> PlaybackTimeSignature {
@@ -253,6 +359,12 @@ private struct SwiftTimelineSource: TimelineSource {
     func sample(for tick: Tick) -> UInt64 {
         playbackSample(
             for: UInt64(tick), segments: PlaybackTempoPointView(tempos),
+            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+    }
+
+    func tick(for sample: UInt64) -> Double {
+        timelineTick(
+            for: sample, segments: PlaybackTempoPointView(tempos),
             ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     }
 }
@@ -285,6 +397,14 @@ private struct NativeTimelineSource: TimelineSource {
             for: UInt64(tick),
             segments: NativeTempoPointView(
                 points: data.pointee.tempoMap!, count: data.pointee.tempoPointCount),
+            ticksPerBeat: ticksPerBeat, sampleRate: data.pointee.sampleRate)
+    }
+
+    func tick(for sample: UInt64) -> Double {
+        guard let points = data.pointee.tempoMap else { preconditionFailure("Native timeline requires tempo map") }
+        return timelineTick(
+            for: sample,
+            segments: NativeTempoPointView(points: points, count: data.pointee.tempoPointCount),
             ticksPerBeat: ticksPerBeat, sampleRate: data.pointee.sampleRate)
     }
 }
@@ -377,10 +497,332 @@ extension Sequencer {
             frames: frames, looping: looping, muteMask: muteMask)
     }
 
+    /// Flag a track, or every track, for an input flush and chase on its next insert call.
+    public mutating func signalLiveDiscontinuity(_ flags: LiveDiscontinuity, track: Int? = nil) {
+        if let track {
+            precondition((0..<TrackLimits.hardwareCapacity).contains(track))
+            liveFlags[track].formUnion(flags)
+        } else {
+            for index in 0..<TrackLimits.hardwareCapacity { liveFlags[index].formUnion(flags) }
+        }
+    }
+
+    /// Stopped insert output is heard but never captured: only notes on a playing track enter the
+    /// take, while positions and boundaries still delimit its segments.
+    private func reportLive(
+        track: Int, sample: UInt64, tick: Double, note: LiveOutputEvent = LiveOutputEvent(),
+        kind: LiveTakeEvent.Kind = .note, flags: LiveDiscontinuity = []
+    ) {
+        guard let sink = liveCalls[track].takeSink, kind != .note || liveWasPlaying[track] else { return }
+        var event = LiveTakeEvent(
+            sample: sample, tick: tick, note: note, kind: kind, discontinuity: flags)
+        withUnsafePointer(to: &event) { (pointer: UnsafePointer<LiveTakeEvent>) in
+            sink(liveCalls[track].takeContext, UnsafeRawPointer(pointer))
+        }
+    }
+
+    private mutating func releaseLiveNotes<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>, track: Int, source: Source, audition: AudioAudition?,
+        flags: LiveDiscontinuity
+    ) {
+        for key in 0..<128 {
+            let index = track * 128 + key
+            guard liveHeld[index] else { continue }
+            Self.releaseSequencedNote(engine: engine, track: Int32(track), key: UInt8(key), audition: audition)
+            reportLive(
+                track: track, sample: position, tick: source.tick(for: position),
+                note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: flags)
+            liveOwners[index] = 0
+            liveHeld[index] = false
+            keyedOn[index] = 0
+            keyedOnTick[index] = 0
+        }
+    }
+
+    /// Call after releasing the engine's track voices, on the callback or while rendering is parked.
+    public mutating func clearLiveTrack(
+        _ track: Int, discontinuity: LiveDiscontinuity = .stop, tick: Double? = nil
+    ) {
+        precondition((0..<TrackLimits.hardwareCapacity).contains(track))
+        let tick = tick ?? liveCalls[track].tick
+        for key in 0..<128 {
+            let index = track * 128 + key
+            if liveHeld[index] {
+                reportLive(
+                    track: track, sample: position, tick: tick,
+                    note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: discontinuity)
+            }
+            liveOwners[index] = 0
+            liveHeld[index] = false
+            keyedOn[index] = 0
+            keyedOnTick[index] = 0
+        }
+        var index = 0
+        while index < pendingReleaseCount {
+            if Int(pendingReleases[index].track) == track {
+                pendingReleaseCount -= 1
+                pendingReleases[index] = pendingReleases[pendingReleaseCount]
+            } else {
+                index += 1
+            }
+        }
+        reportLive(track: track, sample: position, tick: tick, kind: .boundary, flags: discontinuity)
+        liveFlags[track].formUnion(discontinuity)
+        liveCalls[track] = LiveInsertCall()
+        liveIndices[track] = 0
+    }
+
+    private mutating func prepareLive(
+        engine: UnsafeMutablePointer<M4AEngine>, source: SwiftTimelineSource, frames: Int,
+        playing: Bool, looping: Bool, slots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>,
+        liveMask: UInt32, audition: AudioAudition?
+    ) {
+        guard let liveInput, let liveOutput else {
+            preconditionFailure("Live rendering requires Sequencer(liveInserts: true)")
+        }
+        liveChunkStart = position
+        for track in 0..<TrackLimits.hardwareCapacity {
+            liveIndices[track] = 0
+            liveCalls[track].outputCount = 0
+            guard track < slots.count, let slot = slots[track], liveMask & (1 << UInt32(track)) != 0 else { continue }
+            if liveWasPlaying[track] != playing {
+                liveFlags[track].insert(playing ? .transport : .stop)
+            }
+            if slot.pointee.inputDiscontinuity.exchange(false, ordering: .acquiringAndReleasing) {
+                liveFlags[track].insert(.restore)
+            }
+            let flags = liveFlags[track]
+            if !flags.isEmpty {
+                // Held notes close under the transport that started them, so played takes keep their offs.
+                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: flags)
+            }
+            liveWasPlaying[track] = playing
+            var call = LiveInsertCall()
+            call.track = Int32(track)
+            call.position = position
+            call.frames = Int32(frames)
+            call.playing = playing
+            call.looping = looping && source.hasLoop
+            call.discontinuity = flags
+            call.sampleRate = source.sampleRate
+            call.ticksPerBeat = source.ticksPerBeat
+            call.tick = source.tick(for: position)
+            call.loopStartSample = source.loopStartSample
+            call.loopEndSample = source.loopEndSample
+            call.loopStartTick = source.loopStartTick
+            call.loopEndTick = source.loopEndTick
+            call.timelineEvents = source.events.baseAddress
+            call.timelineEventCount = source.events.count
+            call.tempoMap = source.tempos.baseAddress
+            call.tempoCount = source.tempos.count
+            call.timeSignatures = source.signatures.baseAddress
+            call.timeSignatureCount = source.signatures.count
+            var tempoIndex = 0
+            while tempoIndex + 1 < source.tempos.count && source.tempos[tempoIndex + 1].sampleOrigin <= Double(position)
+            {
+                tempoIndex += 1
+            }
+            call.tempoBPM = 60_000_000 / Double(source.tempos[tempoIndex].microsecondsPerQuarterNote)
+            for index in 0..<source.meterCount {
+                let meter = source.meter(at: index)
+                if Double(meter.tick) > call.tick { break }
+                call.numerator = meter.numerator
+                call.denominatorPowerOfTwo = meter.denominatorPowerOfTwo
+                let barTicks =
+                    Double(source.ticksPerBeat) * 4 * Double(meter.numerator)
+                    / Double(UInt64(1) << min(31, Int(meter.denominatorPowerOfTwo)))
+                if barTicks > 0 {
+                    call.barStartTick =
+                        Double(meter.tick) + ((call.tick - Double(meter.tick)) / barTicks).rounded(.down) * barTicks
+                }
+            }
+            call.input = UnsafePointer(liveInput)
+            call.output = liveOutput + track * LiveInsertCall.eventCapacity
+            call.takeSink = slot.pointee.takeSink
+            call.takeContext = slot.pointee.takeContext
+            if playing {
+                if !flags.isEmpty {
+                    // FIFO IDs are one-based per-pitch onset ordinals, interleaved across 128 keys.
+                    for key in 0..<128 {
+                        inputOns[track * 128 + key] = 0
+                        inputOffs[track * 128 + key] = 0
+                    }
+                }
+                let first = flags.isEmpty ? lowerBound(in: source, sample: position) : 0
+                for index in first..<source.count {
+                    let event = source[index]
+                    if event.sample >= position + UInt64(frames) { break }
+                    guard Int(event.track) == track && (event.type == 0x8 || event.type == 0x9) else { continue }
+                    let key = event.data0 & 0x7F
+                    let stateIndex = track * 128 + Int(key)
+                    let on = event.type == 0x9 && event.data1 > 0
+                    let ordinal: Int64
+                    if on {
+                        inputOns[stateIndex] += 1
+                        ordinal = inputOns[stateIndex]
+                    } else {
+                        if inputOffs[stateIndex] < inputOns[stateIndex] {
+                            inputOffs[stateIndex] += 1
+                            ordinal = inputOffs[stateIndex]
+                        } else {
+                            ordinal = 0
+                        }
+                    }
+                    guard event.sample >= position else { continue }
+                    if call.inputCount < LiveInsertCall.eventCapacity {
+                        liveInput[call.inputCount] = LiveInputEvent(
+                            sampleOffset: Int32(event.sample - position), key: key,
+                            velocity: on ? min(127, event.data1) : 0,
+                            noteId: ordinal > 0 ? (ordinal - 1) * 128 + Int64(key) + 1 : 0)
+                        call.inputCount += 1
+                    } else {
+                        call.inputOverflow += 1
+                    }
+                }
+            }
+            withUnsafeMutablePointer(to: &call) { (pointer: UnsafeMutablePointer<LiveInsertCall>) in
+                slot.pointee.process(slot.pointee.context, UnsafeMutableRawPointer(pointer))
+            }
+            liveInputOverflow &+= call.inputOverflow
+            liveOutputOverflow &+= call.outputOverflow
+            if call.outputCount > LiveInsertCall.eventCapacity {
+                liveOutputOverflow &+= UInt64(call.outputCount - LiveInsertCall.eventCapacity)
+            }
+            call.outputCount = max(0, min(LiveInsertCall.eventCapacity, call.outputCount))
+            liveCalls[track] = call
+            liveFlags[track] = []
+            if !flags.isEmpty {
+                reportLive(track: track, sample: position, tick: call.tick, kind: .boundary, flags: flags)
+            }
+            if call.missed {
+                releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: .missed)
+                liveCalls[track].outputCount = 0
+                liveFlags[track].insert(.missed)
+                reportLive(track: track, sample: position, tick: call.tick, kind: .boundary, flags: .missed)
+            }
+        }
+    }
+
+    /// Dispatch live output due by `now` on the chunk clock that starts at `liveChunkStart`: playback
+    /// passes its song position, stopped rendering the chunk start plus its block-local offset.
+    private mutating func dispatchLive<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, now: UInt64, muteMask: UInt32,
+        liveMask: UInt32, audition: AudioAudition?
+    ) {
+        guard liveMask != 0, let liveOutput else { return }
+        let tick = source.tick(for: position)
+        let clock = Tick(max(0, min(Double(Tick.max), tick.rounded())))
+        for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+            while liveIndices[track] < liveCalls[track].outputCount {
+                let event = liveOutput[track * LiveInsertCall.eventCapacity + liveIndices[track]]
+                if event.sampleOffset >= 0 && liveChunkStart + UInt64(event.sampleOffset) > now { break }
+                liveIndices[track] += 1
+                guard event.sampleOffset >= 0 && event.sampleOffset < liveCalls[track].frames,
+                    event.key < 128, muteMask & (1 << UInt32(track)) == 0
+                else { continue }
+                let index = track * 128 + Int(event.key)
+                if event.velocity == 0 {
+                    guard liveHeld[index] && liveOwners[index] == event.noteId else { continue }
+                    Self.releaseSequencedNote(engine: engine, track: Int32(track), key: event.key, audition: audition)
+                    liveOwners[index] = 0
+                    liveHeld[index] = false
+                    keyedOn[index] = 0
+                } else {
+                    if liveHeld[index] {
+                        Self.releaseSequencedNote(
+                            engine: engine, track: Int32(track), key: event.key, audition: audition)
+                        reportLive(
+                            track: track, sample: position, tick: tick,
+                            note: LiveOutputEvent(
+                                sampleOffset: event.sampleOffset, key: event.key, noteId: liveOwners[index]))
+                    }
+                    Self.dispatch(
+                        engine: engine,
+                        event: SequencedEvent(
+                            sample: position, tick: clock, type: 0x9, track: UInt8(track),
+                            data0: event.key, data1: min(127, event.velocity)),
+                        muteMask: muteMask, audition: audition)
+                    liveOwners[index] = event.noteId
+                    liveHeld[index] = true
+                    keyedOn[index] = 1
+                    keyedOnTick[index] = clock
+                }
+                reportLive(track: track, sample: position, tick: tick, note: event)
+            }
+        }
+    }
+
+    /// Chunk-clock sample of the earliest undispatched live output, or `UInt64.max` when none remains.
+    private func nextLiveSample(liveMask: UInt32) -> UInt64 {
+        var next = UInt64.max
+        guard let liveOutput else { return next }
+        for track in 0..<TrackLimits.hardwareCapacity
+        where liveMask & (1 << UInt32(track)) != 0 && liveIndices[track] < liveCalls[track].outputCount {
+            let event = liveOutput[track * LiveInsertCall.eventCapacity + liveIndices[track]]
+            next = min(next, liveChunkStart + UInt64(max(0, event.sampleOffset)))
+        }
+        return next
+    }
+
+    /// Render the shared engine through the interactive owner when one is supplied.
+    private static func synthesize(
+        engine: UnsafeMutablePointer<M4AEngine>, audition: AudioAudition?,
+        left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>, frames: Int
+    ) {
+        if let audition {
+            audition.render(main: engine, left: left, right: right, frames: frames)
+        } else {
+            m4a_engine_process(engine, left, right, Int32(frames))
+        }
+    }
+
+    /// Render stopped or paused output with armed inserts' MIDI at block-local sample offsets; song time
+    /// stays fixed and inserts see transport stopped with no song notes.
+    public mutating func renderStoppedLive(
+        engine: UnsafeMutablePointer<M4AEngine>, timeline: borrowing PlaybackTimeline,
+        left: UnsafeMutableBufferPointer<Float>, right: UnsafeMutableBufferPointer<Float>,
+        looping: Bool, muteMask: UInt32, liveMask: UInt32,
+        liveSlots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>,
+        audition: AudioAudition? = nil
+    ) {
+        precondition(left.count == right.count)
+        guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else {
+            return
+        }
+        withSwiftSource(timeline) { (source: SwiftTimelineSource) in
+            var done = 0
+            while done < left.count {
+                let count = min(8192, left.count - done)
+                prepareLive(
+                    engine: engine, source: source, frames: count, playing: false, looping: looping,
+                    slots: liveSlots, liveMask: liveMask, audition: audition)
+                var offset = 0
+                while offset < count {
+                    // Chunk time advances by block-local offset while song position stays at its start.
+                    let now = liveChunkStart + UInt64(offset)
+                    dispatchLive(
+                        engine: engine, source: source, now: now, muteMask: muteMask, liveMask: liveMask,
+                        audition: audition)
+                    let frames = Int(min(UInt64(count - offset), nextLiveSample(liveMask: liveMask) - now))
+                    Self.synthesize(
+                        engine: engine, audition: audition, left: leftBase + done + offset,
+                        right: rightBase + done + offset, frames: frames)
+                    offset += frames
+                }
+                for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+                    reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .position)
+                }
+                done += count
+            }
+        }
+    }
+
     mutating func clearKeyState() {
         for index in 0..<Self.keyStateCount {
             keyedOn[index] = 0
             keyedOnTick[index] = 0
+            liveOwners[index] = 0
+            liveHeld[index] = false
         }
         pendingReleaseCount = 0
     }
@@ -547,62 +989,72 @@ extension Sequencer {
         }
     }
 
+    private mutating func dispatchDueEvents<Source: TimelineSource>(
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, loop: Bool,
+        muteMask: UInt32, liveMask: UInt32, audition: AudioAudition?
+    ) {
+        if costHooks, let driver = engine.pointee.driver {
+            dispatchCpuMarks(source, driver: driver)
+        }
+        var pendingIndex = 0
+        while pendingIndex < pendingReleaseCount {
+            let pending = pendingReleases[pendingIndex]
+            if pending.sample <= position {
+                if liveMask & (1 << UInt32(pending.track)) == 0 {
+                    Self.releaseSequencedNote(
+                        engine: engine, track: Int32(pending.track), key: pending.key, audition: audition)
+                    keyedOn[keyIndex(track: pending.track, key: pending.key)] = 0
+                }
+                pendingReleaseCount -= 1
+                pendingReleases[pendingIndex] = pendingReleases[pendingReleaseCount]
+            } else {
+                pendingIndex += 1
+            }
+        }
+        while cursor < source.count && source[cursor].sample <= position {
+            let event = source[cursor]
+            cursor += 1
+            if (event.type == 0x8 || event.type == 0x9) && liveMask & (1 << UInt32(event.track)) != 0 {
+                continue
+            }
+            if loop && event.type == 0x9 && event.sample >= source.loopEndSample {
+                continue
+            }
+            if event.type == 0x9 && (muteMask >> UInt32(event.track)) & 1 == 0 {
+                let stateIndex = keyIndex(track: event.track, key: event.data0 & 0x7F)
+                keyedOn[stateIndex] = 1
+                keyedOnTick[stateIndex] = event.tick
+            } else if event.type == 0x8 {
+                keyedOn[keyIndex(track: event.track, key: event.data0 & 0x7F)] = 0
+            }
+            Self.dispatch(engine: engine, event: event, muteMask: muteMask, audition: audition)
+        }
+        dispatchLive(
+            engine: engine, source: source, now: position, muteMask: muteMask, liveMask: liveMask,
+            audition: audition)
+        // EOF follows same-sample commands; a compiled loop's GOTO precedes FINE.
+        if costHooks && !loop, let driver = engine.pointee.driver {
+            dispatchCpuTrackEnds(source, driver: driver)
+        }
+    }
+
     private mutating func render<Source: TimelineSource>(
         engine: UnsafeMutablePointer<M4AEngine>, source: Source,
         left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>,
-        frames: Int, looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil
+        frames: Int, looping: Bool, muteMask: UInt32, audition: AudioAudition? = nil,
+        liveMask: UInt32 = 0
     ) {
         let loop = looping && source.hasLoop
         var done = 0
         while done < frames {
             while true {
-                if costHooks, let driver = engine.pointee.driver {
-                    dispatchCpuMarks(source, driver: driver)
-                }
-                var pendingIndex = 0
-                while pendingIndex < pendingReleaseCount {
-                    let pending = pendingReleases[pendingIndex]
-                    if pending.sample <= position {
-                        Self.releaseSequencedNote(
-                            engine: engine, track: Int32(pending.track), key: pending.key, audition: audition)
-                        keyedOn[keyIndex(track: pending.track, key: pending.key)] = 0
-                        pendingReleaseCount -= 1
-                        pendingReleases[pendingIndex] = pendingReleases[pendingReleaseCount]
-                    } else {
-                        pendingIndex += 1
-                    }
-                }
-
-                while cursor < source.count && source[cursor].sample <= position {
-                    let event = source[cursor]
-                    cursor += 1
-                    if loop && event.type == 0x9 && event.sample >= source.loopEndSample {
-                        continue
-                    }
-                    if event.type == 0x9 && (muteMask >> UInt32(event.track)) & 1 == 0 {
-                        let stateIndex = keyIndex(track: event.track, key: event.data0 & 0x7F)
-                        keyedOn[stateIndex] = 1
-                        keyedOnTick[stateIndex] = event.tick
-                    } else if event.type == 0x8 {
-                        let stateIndex = keyIndex(track: event.track, key: event.data0 & 0x7F)
-                        keyedOn[stateIndex] = 0
-                    }
-                    Self.dispatch(engine: engine, event: event, muteMask: muteMask, audition: audition)
-                }
-                // EOF follows same-sample commands at existing boundaries, never partitioning audio.
-                // A compiled loop's GOTO precedes FINE, even when its MIDI chunk ends earlier.
-                if costHooks && !loop, let driver = engine.pointee.driver {
-                    dispatchCpuTrackEnds(source, driver: driver)
-                }
+                dispatchDueEvents(
+                    engine: engine, source: source, loop: loop, muteMask: muteMask,
+                    liveMask: liveMask, audition: audition)
 
                 if loop && position >= source.loopEndSample {
-                    if costHooks, let driver = engine.pointee.driver {
-                        m4a_driver_cpu_loop_point(driver, true)
-                    }
-                    wrapNotes(engine: engine, source: source, audition: audition)
-                    position = source.loopStartSample
-                    cursor = lowerBound(in: source, sample: position)
-                    if costHooks { seekCpuMeterMarks(source) }
+                    transitionAfterLoopDispatch(
+                        engine: engine, source: source, audition: audition, liveMask: liveMask)
                     continue
                 }
                 break
@@ -613,6 +1065,7 @@ extension Sequencer {
             for index in 0..<pendingReleaseCount {
                 next = min(next, pendingReleases[index].sample)
             }
+            next = min(next, nextLiveSample(liveMask: liveMask))
             if loop { next = min(next, source.loopEndSample) }
             if costHooks {
                 if costMark < source.meterCount {
@@ -626,14 +1079,9 @@ extension Sequencer {
                 count = Int(min(UInt64(count), next - position))
             }
             if count == 0 { count = 1 }
-            if let audition {
-                audition.render(
-                    main: engine, left: left.advanced(by: done), right: right.advanced(by: done), frames: count)
-            } else {
-                m4a_engine_process(
-                    engine, left.advanced(by: done), right.advanced(by: done),
-                    Int32(count))
-            }
+            Self.synthesize(
+                engine: engine, audition: audition, left: left.advanced(by: done), right: right.advanced(by: done),
+                frames: count)
             position += UInt64(count)
             done += count
         }
@@ -647,8 +1095,13 @@ extension Sequencer {
     }
 
     private mutating func wrapNotes<Source: TimelineSource>(
-        engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?
+        engine: UnsafeMutablePointer<M4AEngine>, source: Source, audition: AudioAudition?, liveMask: UInt32 = 0
     ) {
+        for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
+            releaseLiveNotes(engine: engine, track: track, source: source, audition: audition, flags: .wrap)
+            reportLive(track: track, sample: position, tick: source.tick(for: position), kind: .boundary, flags: .wrap)
+            signalLiveDiscontinuity(.wrap, track: track)
+        }
         for index in 0..<pendingReleaseCount {
             pendingReleases[index].tick = source.loopStartTick &+ (pendingReleases[index].tick &- source.loopEndTick)
             pendingReleases[index].sample = source.sample(for: pendingReleases[index].tick)

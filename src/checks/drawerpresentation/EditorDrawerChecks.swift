@@ -149,17 +149,21 @@ func drawerLayoutMakeDrawerPage(
         drawerLayoutDrawerStubPage(
             kind: .automation, url: drawerLayoutDrawerAutomationUrl,
             policy: drawerLayoutDrawerStubPolicy(), harness: harness)
+    case .effectOutput:
+        drawerLayoutDrawerStubPage(
+            kind: .effectOutput, url: EffectOutputPage.contentUrl,
+            policy: drawerLayoutDrawerStubPolicy(), harness: harness)
     }
 }
 
 @MainActor
-func drawerLayoutAttachDrawerPages(
+func drawerLayoutAttachLegacyThreeDrawerPages(
     _ harness: drawerLayoutDrawerHarness
 )
     -> [DrawerSectionKind: drawerLayoutDrawerStubPage]
 {
     var pages: [DrawerSectionKind: drawerLayoutDrawerStubPage] = [:]
-    for kind in DrawerSectionKind.stackOrder {
+    for kind: DrawerSectionKind in [.velocity, .voiceChanges, .automation] {
         let page = drawerLayoutMakeDrawerPage(kind, harness: harness)
         pages[kind] = page
         harness.apply { $0.attachPage(page) }
@@ -168,8 +172,8 @@ func drawerLayoutAttachDrawerPages(
 }
 
 @MainActor
-func drawerLayoutShowEveryDrawerSection(_ harness: drawerLayoutDrawerHarness) {
-    for kind in DrawerSectionKind.stackOrder {
+func drawerLayoutShowLegacyThreeDrawerSections(_ harness: drawerLayoutDrawerHarness) {
+    for kind: DrawerSectionKind in [.velocity, .voiceChanges, .automation] {
         harness.apply { $0.setSectionVisible(kind, visible: true, drawerOwnsFocus: false) }
     }
 }
@@ -188,8 +192,8 @@ func drawerLayoutMakeStoredDrawerHarness(
     -> (harness: drawerLayoutDrawerHarness, pages: [DrawerSectionKind: drawerLayoutDrawerStubPage])
 {
     let harness = drawerLayoutMakeDrawerHarness(hostHeight: hostHeight)
-    let pages = drawerLayoutAttachDrawerPages(harness)
-    drawerLayoutShowEveryDrawerSection(harness)
+    let pages = drawerLayoutAttachLegacyThreeDrawerPages(harness)
+    drawerLayoutShowLegacyThreeDrawerSections(harness)
     drawerLayoutStoreDrawerHeight(harness, .velocity, 60)
     drawerLayoutStoreDrawerHeight(harness, .voiceChanges, 50)
     drawerLayoutStoreDrawerHeight(harness, .automation, 100)

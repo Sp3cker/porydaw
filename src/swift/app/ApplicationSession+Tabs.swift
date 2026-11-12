@@ -87,7 +87,10 @@ extension ApplicationSession {
             _ = await prior?.value
             // Component.onDestruction precedes child destruction. Retire on the
             // existing async boundary, after the QML destruction stack unwinds.
+            await tab.workspace.effectOutputPage.shutdown()
+            await tab.workspace.effects.shutdown()
             tab.workspace.teardown()
+            await tab.workspace.awaitAudioRelease()
             _ = await tab.workspace.session.close()
         }
     }
@@ -124,7 +127,7 @@ extension ApplicationSession {
                 songTabs.selectTab(tabId: live.tabId)
                 return
             }
-            songTabs.requestReload(tabId: live.tabId)
+            songTabs.requestReload(tabId: live.tabId, label: live.title)
             return
         }
         startOpen(label: label, at: nil)
@@ -135,12 +138,12 @@ extension ApplicationSession {
         guard !songTabs.isClosingAll else { return }
         if let live = songTabs.tab(label: label) {
             if live.tabId == songTabs.selectedId, !newTab {
-                songTabs.requestReload(tabId: live.tabId)
+                songTabs.requestReload(tabId: live.tabId, label: live.title)
             } else {
                 songTabs.selectTab(tabId: live.tabId)
             }
         } else if !newTab, let selected = songTabs.selectedPage {
-            songTabs.requestReplacement(tabId: selected.tabId, label: label)
+            songTabs.requestReload(tabId: selected.tabId, label: label)
         } else {
             startOpen(label: label, at: nil)
         }
@@ -203,7 +206,8 @@ extension ApplicationSession {
             let viewport = DocumentViewport(session: session)
             viewport.applyEditorViewStateProjection(editorViewState)
             let workspace = DocumentWorkspace(
-                viewport: viewport, audio: audio, playhead: playhead,
+                viewport: viewport, audio: audio, pluginCatalog: pluginCatalog, preferences: preferences,
+                playhead: playhead,
                 playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 typography: typography, callbacks: makeCallbacks(for: session))
             viewport.onEditorViewStateChanged = { [weak self, weak viewport] state in
@@ -251,7 +255,10 @@ extension ApplicationSession {
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
                 if let pending { songTabs.cancelReload(tabId: pending.tabId) }
+                await workspace.effectOutputPage.shutdown()
+                await workspace.effects.shutdown()
                 workspace.teardown()
+                await workspace.awaitAudioRelease()
                 _ = await session.close()
                 return
             }
@@ -267,7 +274,10 @@ extension ApplicationSession {
                         songTabs.tab(id: pending.tabId).map {
                             !pending.matches($0)
                         } ?? false
+                    await workspace.effectOutputPage.shutdown()
+                    await workspace.effects.shutdown()
                     workspace.teardown()
+                    await workspace.awaitAudioRelease()
                     _ = await session.close()
                     if changedWhileLoading {
                         failOpen("The song changed while reloading; its original tab was kept.")
@@ -277,6 +287,8 @@ extension ApplicationSession {
             } else {
                 songTabs.add(tabSession, at: index)
             }
+            publish(\.lastOpenNotice, session.lastOpenNotice)
+            if !lastOpenNotice.isEmpty { onOpenNoticeChanged?() }
         } catch {
             if Task.isCancelled {
                 if let pending { songTabs.cancelReload(tabId: pending.tabId) }

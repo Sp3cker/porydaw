@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.24)
 # InlineArray (core, playback, sample) sets the floor at macOS 26.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0)
 project(porydaw VERSION 1.0.5 LANGUAGES C CXX)
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
 
 find_package(Git QUIET)
 if(Git_FOUND)
@@ -173,9 +176,11 @@ if(NOT APPLE AND CMAKE_Swift_COMPILER_VERSION VERSION_LESS 6.4)
 endif()
 include(cmake/BinaryParsing.cmake)
 include(cmake/Lame.cmake)
+add_subdirectory(src/pluginhost)
 add_subdirectory(src/swift/core)
 add_subdirectory(src/swift/backups)
 add_subdirectory(src/swift/playback)
+add_subdirectory(src/swift/pluginhost)
 add_subdirectory(src/swift/sample)
 add_subdirectory(src/swift/voicegroup)
 add_subdirectory(src/swift/project)
@@ -269,9 +274,11 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/PianoRollCanvas.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/PromptAction.qml
         src/ui/songview/quick/PromptOverlay.qml
         src/ui/songview/quick/VelocityPrompt.qml
         src/ui/songview/quick/ArpeggiatorPanel.qml
+        src/ui/songview/quick/MidiEffectsPanel.qml
         src/ui/songview/quick/ArpeggiatorStepPad.qml
         src/ui/songview/quick/ArpeggiatorKnob.qml
         src/ui/songview/quick/VoicePickerPrompt.qml
@@ -320,6 +327,7 @@ qt_add_qml_module(porydaw_app
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
         src/ui/songview/quick/drawer/AutomationPage.qml
+        src/ui/songview/quick/drawer/EffectOutputPage.qml
         src/ui/songview/quick/drawer/AutomationPlot.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml
         src/ui/songview/quick/drawer/AutomationMenu.qml
@@ -543,11 +551,21 @@ set(porydaw_fonts
     "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleNext-SemiBold.ttf"
     "${PROJECT_SOURCE_DIR}/resources/AtkinsonHyperlegibleMono-Regular.ttf"
     "${PROJECT_SOURCE_DIR}/resources/icons/PorydawIcons.otf")
-set_source_files_properties(${shell_qml} ${porydaw_fonts} PROPERTIES
+set(porydaw_vst3_license "${CMAKE_CURRENT_BINARY_DIR}/VST3-SDK-LICENSE.txt")
+configure_file(
+    "${PROJECT_SOURCE_DIR}/external/vst3sdk/public.sdk/LICENSE.txt"
+    "${porydaw_vst3_license}" COPYONLY)
+set_source_files_properties(${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license} PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
-qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts})
+qt_add_executable(porydaw ${shell_qml} ${porydaw_fonts} ${porydaw_vst3_license})
+add_dependencies(porydaw porydaw-vst3-host)
 if(NOT APPLE)
     target_sources(porydaw PRIVATE src/app/qt_main_executor.cpp)
+    add_custom_command(TARGET porydaw POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "${PROJECT_SOURCE_DIR}/external/vst3sdk/public.sdk/LICENSE.txt"
+                "$<TARGET_FILE_DIR:porydaw>/VST3-SDK-LICENSE.txt"
+        VERBATIM)
 endif()
 if(NOT APPLE)
     foreach(qml IN LISTS shell_qml)
@@ -683,6 +701,7 @@ if(WIN32)
     # `cmake --install` stages the release folder from runtime files only, not the build tree.
     install(TARGETS porydaw RUNTIME DESTINATION .)
     install(FILES ${shell_qml} ${porydaw_fonts} ${porydaw_swift_runtime_dlls} DESTINATION .)
+    install(FILES "${porydaw_vst3_license}" DESTINATION .)
     if(TARGET Qt6::windeployqt AND NOT porydaw_qt_core_type STREQUAL "STATIC_LIBRARY")
         set(porydaw_install_deploy_args "")
         foreach(arg IN LISTS porydaw_windeployqt_args)

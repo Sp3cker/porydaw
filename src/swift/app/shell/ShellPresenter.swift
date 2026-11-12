@@ -4,6 +4,7 @@ import PorydawAppPresentation
 import PorydawBackups
 import PorydawDocument
 import PorydawNativeHost
+import PorydawPluginHost
 import QtBridge
 
 @MainActor
@@ -92,6 +93,7 @@ public final class ShellPresenter: QmlInstantiableStatus {
             self?.presentFailure(title: title, message: message)
         }
         session.onSaveStateChanged = { [weak self] in self?.saveStateChanged() }
+        session.onOpenNoticeChanged = { [weak self] in self?.openNoticeChanged() }
         session.onProjectStateChanged = { [weak self] in self?.projectStateChanged() }
         session.onDocumentStateChanged = { [weak self] songOpenChanged in
             self?.documentStateChanged(songOpenChanged: songOpenChanged)
@@ -107,6 +109,13 @@ public final class ShellPresenter: QmlInstantiableStatus {
         }
         clipboardObserver = clipboard.addChangeObserver { [weak self] in
             self?.refreshActionStates()
+        }
+        let transportStrokes = keybindings.sequences("transport.play_pause").compactMap {
+            (sequence: KeybindingSequence) -> Int? in
+            sequence.strokes.count == 1 ? sequence.strokes[0] : nil
+        }
+        PluginEditorShortcuts.install(strokes: transportStrokes) { [weak self] (_: Int) in
+            self?.activate(id: "transport.play_pause")
         }
         pd_startup_trace_mark("presenter-end")
     }
@@ -481,6 +490,12 @@ public final class ShellPresenter: QmlInstantiableStatus {
         if songOpenChanged && session.songOpen { statusText = "Song open" }
         refreshWindowChrome()
         refreshActionStates()
+    }
+
+    private func openNoticeChanged() {
+        guard !session.lastOpenNotice.isEmpty else { return }
+        criticalRequested(title: "MIDI effects", message: session.lastOpenNotice)
+        session.publish(\.lastOpenNotice, "")
     }
 
     private func saveStateChanged() {

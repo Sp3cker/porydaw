@@ -22,15 +22,29 @@ struct HeaderRect: Equatable {
 }
 
 struct HeaderPoint: Equatable { var x: Double = 0; var y: Double = 0 }
-struct HeaderTextMetrics: Equatable { var title: Int; var bold: Int; var subtitle: Int }
+struct HeaderTextMetrics: Equatable {
+    var title: Int
+    var bold: Int
+    var subtitle: Int
+    var effectsWidth: Double
+    var liveWidth: Double
+}
 
 struct TrackHeaderSnapshot: Equatable {
     var isAddTrack = false
     var track = -1
     var title = ""
     var subtitle = ""
+    var effectName: String = ""
+    var hasEffect = false
+    var liveEnabled = false
+    var liveArmed = false
+    var effectStopped = false
     var titleRect = HeaderRect()
     var subtitleRect = HeaderRect()
+    var effectRect = HeaderRect()
+    var liveRect = HeaderRect()
+    var effectNameRect = HeaderRect()
     var selectedTitleOffset = HeaderPoint()
     var titleFont: QmlFont
     var subtitleFont: QmlFont
@@ -45,6 +59,10 @@ struct TrackHeaderSnapshot: Equatable {
     var mutePressed = false
     var soloHovered = false
     var soloPressed = false
+    var effectHovered = false
+    var effectPressed = false
+    var liveHovered = false
+    var livePressed = false
     var addHovered = false
     var addPressed = false
     var activityDimColor = QmlColor.clear
@@ -113,19 +131,45 @@ struct TrackHeadersGeometry {
             width: max(0, width - Double(renameEditorRight)),
             height: Double(renameEditorHeight))
     }
-    func textRects(width: Double, metrics: HeaderTextMetrics?) -> (HeaderRect, HeaderRect) {
-        guard rowHeight > 0, let metrics else { return (HeaderRect(), HeaderRect()) }
+    func textRects(width: Double, metrics: HeaderTextMetrics?) -> (HeaderRect, HeaderRect, HeaderRect) {
+        guard rowHeight > 0, let metrics else { return (HeaderRect(), HeaderRect(), HeaderRect()) }
         let primaryHeight = max(metrics.title, metrics.bold)
-        let total = primaryHeight + spaceHalf + metrics.subtitle
-        let y = (max(0, rowHeight - separatorWidth) - total) / 2
+        let effectHeight = metrics.subtitle
+        let available = Double(max(0, rowHeight - separatorWidth))
+        let total = Double(primaryHeight + metrics.subtitle + effectHeight)
+        let gap = min(Double(spaceHalf), max(0, (available - total) / 2))
+        let y = max(0, (available - total - 2 * gap) / 2)
         let textWidth = max(0, Int(width.rounded()) - buttonColumnWidth - textLeft - spaceOne)
         let title = HeaderRect(
-            x: Double(textLeft), y: Double(y),
+            x: Double(textLeft), y: y,
             width: Double(textWidth), height: Double(primaryHeight))
         let subtitle = HeaderRect(
-            x: Double(textLeft), y: Double(y + primaryHeight + spaceHalf),
+            x: Double(textLeft), y: y + Double(primaryHeight) + gap,
             width: Double(textWidth), height: Double(metrics.subtitle))
-        return (title, subtitle)
+        let effect = HeaderRect(
+            x: Double(textLeft), y: subtitle.y + subtitle.height + gap,
+            width: Double(textWidth), height: Double(effectHeight))
+        return (title, subtitle, effect)
+    }
+    func effectRects(
+        in line: HeaderRect, metrics: HeaderTextMetrics?, hasEffect: Bool
+    )
+        -> (button: HeaderRect, live: HeaderRect, name: HeaderRect)
+    {
+        guard let metrics else { return (HeaderRect(), HeaderRect(), HeaderRect()) }
+        let padding = Double(2 * spaceOne)
+        let gap = Double(spaceOne)
+        let buttonWidth = min(line.width, ceil(metrics.effectsWidth) + padding)
+        let button = HeaderRect(x: line.x, y: line.y, width: buttonWidth, height: line.height)
+        guard hasEffect else { return (button, HeaderRect(), HeaderRect()) }
+        let remaining = max(0, line.width - buttonWidth - gap)
+        let liveWidth = min(remaining, ceil(metrics.liveWidth) + padding)
+        let live = HeaderRect(
+            x: line.x + line.width - liveWidth, y: line.y, width: liveWidth, height: line.height)
+        let name = HeaderRect(
+            x: button.x + button.width + gap, y: line.y,
+            width: max(0, remaining - liveWidth - gap), height: line.height)
+        return (button, live, name)
     }
 
 }
@@ -261,6 +305,24 @@ extension TrackHeadersPresenter {
         row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1
+        let effect = session.document.effect(onTrack: track)
+        let controls = geometry.effectRects(
+            in: rects.2, metrics: textMetrics, hasEffect: effect != nil)
+        row.effectRect = controls.button
+        row.liveRect = controls.live
+        row.effectNameRect = controls.name
+        if let effect {
+            row.hasEffect = true
+            row.liveEnabled = effects?.canToggleLive(effect.id) == true
+            row.effectName = effect.config.plugin.name
+            row.liveArmed = effects?.isLive(effect.id) == true
+            if let status = effects?.status(effect.id) {
+                switch status {
+                case .crashed, .unavailable: row.effectStopped = true
+                case .idle, .loading, .ready, .rendering, .nothingHeard, .failed: break
+                }
+            }
+        }
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
         let scoped = !primary && session.selectedTracks.contains(track)
         if scoped {

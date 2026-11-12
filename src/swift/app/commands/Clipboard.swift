@@ -255,7 +255,7 @@ public enum ClipboardSemantics {
         unterminatedDuration: Tick
     ) -> PorydawClip? {
         guard !notes.isEmpty, notes.allSatisfy({ $0.track == sourceTrack }),
-            let base = notes.map(\.tick).min()
+            let base = notes.min(by: { (lhs: Note, rhs: Note) -> Bool in lhs.tick < rhs.tick })?.tick
         else { return nil }
         let copied = notes.map { note in
             ClipNote(
@@ -264,6 +264,21 @@ public enum ClipboardSemantics {
                     ? max(1, unterminatedDuration)
                     : max(1, note.duration),
                 velocity: note.velocity)
+        }
+        return PorydawClip(tracks: [ClipTrack(track: sourceTrack, notes: copied)])
+    }
+
+    public static func copyNotes(_ notes: [NewNote], from sourceTrack: Int) -> PorydawClip? {
+        guard !notes.isEmpty else { return nil }
+        var base = Tick.max
+        for note in notes {
+            guard note.track == sourceTrack else { return nil }
+            base = min(base, note.tick)
+        }
+        let copied = notes.map { (note: NewNote) -> ClipNote in
+            ClipNote(
+                relTick: note.tick - base, key: note.pitch,
+                duration: max(1, note.duration), velocity: note.velocity)
         }
         return PorydawClip(tracks: [ClipTrack(track: sourceTrack, notes: copied)])
     }

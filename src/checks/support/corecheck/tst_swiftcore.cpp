@@ -39,6 +39,31 @@ void SwiftCoreTest::playback()
     pdc_suite_run(PDC_SUITE_PLAYBACK, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::pluginHostABI()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINHOST_ABI, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::pluginBridge()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINBRIDGE, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::pluginHost()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINHOST, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::pluginHostEditor()
+{
+    pdc_suite_run(PDC_SUITE_PLUGINHOST_EDITOR, reportSwiftCheck, this);
+}
+
+void SwiftCoreTest::trackEffectsEditor()
+{
+    pdc_suite_run(PDC_SUITE_TRACKEFFECTS_EDITOR, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::audioController()
 {
     pdc_suite_run(PDC_SUITE_AUDIO_CONTROLLER, reportSwiftCheck, this);

@@ -3,7 +3,7 @@ import PorydawCore
 import PorydawDocument
 
 // Order is shared with the production hit-target contract.
-enum HeaderHitTarget: Int { case none, body, voice, mute, solo, addTrack }
+enum HeaderHitTarget: Int { case none, body, voice, mute, solo, addTrack, effects, live }
 
 struct HeaderPointerState {
     var hoverRow = -1
@@ -35,7 +35,9 @@ extension TrackHeadersPresenter {
         let localY = y + scrollY - Double(row * rowHeight)
         if geometry.muteRect(width: viewportWidth).contains(x: x, y: localY) { return .mute }
         if geometry.soloRect(width: viewportWidth).contains(x: x, y: localY) { return .solo }
-        if geometry.textRects(width: viewportWidth, metrics: textMetrics).1.contains(x: x, y: localY) {
+        if snapshots[row].effectRect.contains(x: x, y: localY) { return .effects }
+        if snapshots[row].hasEffect, snapshots[row].liveRect.contains(x: x, y: localY) { return .live }
+        if snapshots[row].subtitleRect.contains(x: x, y: localY) {
             return .voice
         }
         return .body
@@ -61,6 +63,10 @@ extension TrackHeadersPresenter {
             row.mutePressed = !row.isAddTrack && pressed(.mute)
             row.soloHovered = !row.isAddTrack && hovered(.solo)
             row.soloPressed = !row.isAddTrack && pressed(.solo)
+            row.effectHovered = !row.isAddTrack && hovered(.effects)
+            row.effectPressed = !row.isAddTrack && pressed(.effects)
+            row.liveHovered = !row.isAddTrack && row.liveEnabled && hovered(.live)
+            row.livePressed = !row.isAddTrack && row.liveEnabled && pressed(.live)
             row.addHovered = row.isAddTrack && hovered(.addTrack)
             row.addPressed = row.isAddTrack && pressed(.addTrack)
             publishRow(row, at: index)
@@ -88,7 +94,7 @@ extension TrackHeadersPresenter {
             selectTrack(track: track)
             showHeaderMenu(track: track, x: x, y: y)
             return true
-        } else if target != .mute && target != .solo {
+        } else if target != .mute && target != .solo && target != .effects && target != .live {
             let action: DocumentSession.TrackScopeAction =
                 modifiers & 0x0400_0000 != 0
                 ? .toggle : modifiers & 0x0200_0000 != 0 ? .range : .plain
@@ -146,6 +152,8 @@ extension TrackHeadersPresenter {
         case .addTrack: activateAddTrack()
         case .mute: activateMute(track: pressed.pressedTrack)
         case .solo: activateSolo(track: pressed.pressedTrack)
+        case .effects: activateMidiEffects(track: pressed.pressedTrack)
+        case .live: activateLive(track: pressed.pressedTrack)
         case .body, .voice: onRevealTrackVoiceRequested?(pressed.pressedTrack)
         case .none: break
         }

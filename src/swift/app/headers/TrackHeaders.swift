@@ -88,8 +88,10 @@ public final class TrackHeadersPresenter {
     @QtIgnored public var onChangeTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onRevealTrackVoiceRequested: ((Int) -> Void)?
     @QtIgnored public var onArpeggiatorRequested: ((Int) -> Void)?
+    @QtIgnored public var onMidiEffectsRequested: ((Int) -> Void)?
     @QtIgnored public var onContextMenuRequested: ((Double, Double) -> Void)?
     @QtIgnored var session: DocumentSession?
+    @QtIgnored weak var effects: TrackEffectsController?
     @QtIgnored var palette = GridPalette()
     @QtIgnored var geometry = TrackHeadersGeometry()
     @QtIgnored var pointer = HeaderPointerState()
@@ -141,6 +143,7 @@ public final class TrackHeadersPresenter {
     public func detach() {
         cancelTransientState()
         session = nil
+        effects = nil
         appliedRevision = nil
         structuralRevision = nil
         pendingVoice = nil
@@ -160,6 +163,7 @@ public final class TrackHeadersPresenter {
         onChangeTrackVoiceRequested = nil
         onRevealTrackVoiceRequested = nil
         onArpeggiatorRequested = nil
+        onMidiEffectsRequested = nil
         onContextMenuRequested = nil
     }
 
@@ -322,16 +326,19 @@ public final class TrackHeadersPresenter {
     /// QML's FontMetrics supplies native Qt measurements, not layout policy.
     public func configureTextMetrics(
         titleLineSpacing: Double, boldLineSpacing: Double,
-        subtitleLineSpacing: Double
+        subtitleLineSpacing: Double, effectsTextWidth: Double, liveTextWidth: Double
     ) {
         guard titleLineSpacing.isFinite, boldLineSpacing.isFinite,
             subtitleLineSpacing.isFinite, titleLineSpacing > 0,
-            boldLineSpacing > 0, subtitleLineSpacing > 0
+            boldLineSpacing > 0, subtitleLineSpacing > 0,
+            effectsTextWidth.isFinite, liveTextWidth.isFinite,
+            effectsTextWidth > 0, liveTextWidth > 0
         else { return }
         let next = HeaderTextMetrics(
             title: Int(titleLineSpacing.rounded()),
             bold: Int(boldLineSpacing.rounded()),
-            subtitle: Int(subtitleLineSpacing.rounded()))
+            subtitle: Int(subtitleLineSpacing.rounded()),
+            effectsWidth: effectsTextWidth, liveWidth: liveTextWidth)
         guard next != textMetrics else { return }
         textMetrics = next
         publishGeometry()
@@ -355,6 +362,21 @@ public final class TrackHeadersPresenter {
     public func activateSolo(track: Int) {
         guard let session, validTrack(track) else { return }
         if !session.soloedTracks.insert(track).inserted { session.soloedTracks.remove(track) }
+    }
+
+    /// Opens MIDI effects setup after selecting the requested current track.
+    /// - Parameter track: Engine track in the attached document.
+    public func activateMidiEffects(track: Int) {
+        guard validTrack(track) else { return }
+        selectTrack(track: track)
+        onMidiEffectsRequested?(track)
+    }
+
+    public func activateLive(track: Int) {
+        guard let session, validTrack(track),
+            let effect = session.document.effect(onTrack: track)
+        else { return }
+        effects?.toggleLive(effect.id)
     }
 
     public func activateAddTrack() {
@@ -438,7 +460,7 @@ public final class TrackHeadersPresenter {
     }
 
     public func activateHeaderMenuAction(actionId: Int) {
-        guard let target = pendingMenu, (1...6).contains(actionId) else { return }
+        guard let target = pendingMenu, (1...7).contains(actionId) else { return }
         if actionId == 4, session?.document.canAddTrack != true { return }
         dismissHeaderMenu()
         guard let session, target.matches(session.document), validTrack(target.track) else { return }
@@ -453,6 +475,7 @@ public final class TrackHeadersPresenter {
             session.document.deleteTrack(target.track)
             refreshFromDocument()
         case 6: onArpeggiatorRequested?(target.track)
+        case 7: activateMidiEffects(track: target.track)
         default: break
         }
     }
@@ -528,7 +551,7 @@ public final class TrackHeadersPresenter {
         dismissHeaderMenu()
         let labels = [
             "Change voice...", "Show voice in voicegroup", "Rename track...",
-            "Duplicate track", "Delete track", "Arpeggiator...",
+            "Duplicate track", "Delete track", "Arpeggiator...", "MIDI Effects...",
         ]
         menuItems.reset(
             to: labels.enumerated().map { (index: Int, text: String) -> MenuRow in
@@ -565,9 +588,20 @@ public final class TrackHeaderRowHandle {
     public var track: Int = -1
     public var title: String = ""
     public var subtitle: String = ""
+    public var effectName: String = ""
+    public var hasEffect: Bool = false
+    public var liveEnabled: Bool = false
+    public var liveArmed: Bool = false
+    public var effectStopped: Bool = false
     @QtTracked public var titleRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     @QtTracked public var subtitleRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var effectRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var liveRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var effectNameRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     public var selectedTitleOffsetX: Double = 0
     public var selectedTitleOffsetY: Double = 0
@@ -584,6 +618,10 @@ public final class TrackHeaderRowHandle {
     public var mutePressed: Bool = false
     public var soloHovered: Bool = false
     public var soloPressed: Bool = false
+    public var effectHovered: Bool = false
+    public var effectPressed: Bool = false
+    public var liveHovered: Bool = false
+    public var livePressed: Bool = false
     public var addHovered: Bool = false
     public var addPressed: Bool = false
     public var activityDimColor: QmlColor = .clear
@@ -601,8 +639,16 @@ public final class TrackHeaderRowHandle {
         publish(\.track, row.track)
         publish(\.title, row.title)
         publish(\.subtitle, row.subtitle)
+        publish(\.effectName, row.effectName)
+        publish(\.hasEffect, row.hasEffect)
+        publish(\.liveEnabled, row.liveEnabled)
+        publish(\.liveArmed, row.liveArmed)
+        publish(\.effectStopped, row.effectStopped)
         _ = titleRect.update(row.titleRect.sceneValue)
         _ = subtitleRect.update(row.subtitleRect.sceneValue)
+        _ = effectRect.update(row.effectRect.sceneValue)
+        _ = liveRect.update(row.liveRect.sceneValue)
+        _ = effectNameRect.update(row.effectNameRect.sceneValue)
         publish(\.selectedTitleOffsetX, row.selectedTitleOffset.x)
         publish(\.selectedTitleOffsetY, row.selectedTitleOffset.y)
         publish(\.titleFont, row.titleFont)
@@ -618,6 +664,10 @@ public final class TrackHeaderRowHandle {
         publish(\.mutePressed, row.mutePressed)
         publish(\.soloHovered, row.soloHovered)
         publish(\.soloPressed, row.soloPressed)
+        publish(\.effectHovered, row.effectHovered)
+        publish(\.effectPressed, row.effectPressed)
+        publish(\.liveHovered, row.liveHovered)
+        publish(\.livePressed, row.livePressed)
         publish(\.addHovered, row.addHovered)
         publish(\.addPressed, row.addPressed)
         publish(\.activityDimColor, row.activityDimColor)

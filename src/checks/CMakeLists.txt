@@ -83,6 +83,8 @@ function(add_porydaw_check name)
         PorydawSampleUI PorydawKitStudio BinaryParsing)
     # The Python check runner requires mid2agb beside the build-root harnesses.
     add_dependencies(${name} mid2agb)
+    add_dependencies(${name} porydaw-vst3-host
+        porydawtestgen porydawtestcrash porydawtesthang)
 endfunction()
 
 qt_add_executable(porydaw_checks
@@ -94,6 +96,7 @@ qt_add_executable(porydaw_checks
     fixturecatalog.cpp
     fixturecatalog.hpp
     fwd.hpp
+    pluginhost/ParameterBatchChecks.cpp
     support/checkstartup.cpp
     support/checkstartup.h
 )
@@ -102,6 +105,9 @@ set_target_properties(porydaw_checks PROPERTIES
     LINKER_LANGUAGE CXX)
 target_include_directories(porydaw_checks PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 porydaw_enable_project_warnings(porydaw_checks)
+add_subdirectory(vstfixture)
+add_dependencies(porydaw_checks porydaw-vst3-host
+    porydawtestgen porydawtestcrash porydawtesthang)
 
 if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Every core-check module gets these; only SwiftCoreCheck adds the app/render maps
@@ -130,6 +136,10 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         support/NumericCheckSupport.swift
         LINK_LIBRARIES ${core_check_libraries}
     )
+    target_compile_options(swift_core_check_support INTERFACE
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+    )
     add_porydaw_check_lane(swift_core_check_logic
         MODULE_NAME SwiftCoreCheckLogic
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check_logic"
@@ -137,6 +147,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         SOURCES
         lanes/SwiftCoreCheckLogicLane.swift
         arpeggiator/ArpeggiatorChecks.swift
+        editcheck/EngineNoteNormalizerChecks.swift
+        editcheck/TrackEffectModelChecks.swift
         audio/AudioAuditionChecks.swift
         audio/controllerfixture.swift
         audio/resonancefixture.swift
@@ -174,6 +186,12 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editcheck/tst_songdocument_songraw.swift
         midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
+        playback/LiveInsertChecks.swift
+        pluginhost/PluginHostABIChecks.swift
+        pluginhost/BridgeChecks.swift
+        pluginhost/PluginCatalogChecks.swift
+        pluginhost/PluginHostChecks.swift
+        pluginhost/PluginHostEditorChecks.swift
         playback/ResonanceSuppressionChecks.swift
         playback/cgb.swift
         playback/export.swift
@@ -239,6 +257,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         workspace/voicegroup_creation.swift
         LINK_LIBRARIES swift_core_check_support ${core_check_libraries}
     )
+    target_compile_options(swift_core_check_logic PUBLIC
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_SOURCE_DIR}/src/pluginhost/module.modulemap>")
+    target_link_libraries(swift_core_check_logic PRIVATE porydaw_pluginhost PUBLIC PorydawPluginHost)
     add_porydaw_check_lane(swift_core_check
         MODULE_NAME SwiftCoreCheck
         MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swift_core_check"
@@ -424,6 +445,9 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         projectstore/ExportCaptureChecks.swift
         projectstore/ExportChecks.swift
         workspace/SessionChecks.swift
+        workspace/EffectPersistenceChecks.swift
+        miditools/TrackEffectsControllerChecks.swift
+        miditools/MidiEffectsPresenterChecks.swift
         workspace/bank_sharing.swift
         workspace/bank_undo_publication.swift
         workspace/editor_view_state_checks.swift
@@ -482,6 +506,15 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
                     "$<TARGET_FILE:porydaw_checks>" "${PROJECT_BINARY_DIR}/porydaw_checks"
             VERBATIM
         )
+        add_custom_target(porydaw_check_pluginhost_runtime
+            COMMAND "${CMAKE_COMMAND}" -E make_directory
+                "$<TARGET_FILE_DIR:porydaw_checks>"
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+                "$<TARGET_FILE:porydaw-vst3-host>"
+                "$<TARGET_FILE_DIR:porydaw_checks>/porydaw-vst3-host"
+            DEPENDS porydaw-vst3-host
+            VERBATIM)
+        add_dependencies(porydaw_checks porydaw_check_pluginhost_runtime)
     endif()
 endif()
 
@@ -491,6 +524,8 @@ target_link_libraries(porydaw_checks PRIVATE
     Qt6::Test
     Qt6::Widgets
     QtBridgeCpp
+    porydaw_pluginhost
+    porydaw_vst3_sdk
 )
 porydaw_link_linux_swift_runtime(porydaw_checks
     swift_core_check swift_core_check_logic swift_core_check_support PorydawApp QtBridge
@@ -550,15 +585,16 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/EditorQmlProfileEvidence.swift
         editorqml/EditorQmlBootstrap.swift
         editorqml/EditorQmlBootstrapSupport.swift
+        editorqml/EditorMidiEffectsFixture.swift
+        editorqml/GridInputClipProbe.swift
+        support/WorkspacePresenterFixture.swift
         editorqml/DisplayListProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
         SWIFT_COMPILE_OPTIONS
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
-        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        SWIFT_LINK_LIBRARIES QtBridge PorydawApp
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp swift_core_check_support
         SOURCES
         editorqml/EditorQmlPaths.swift.in
         # Source-directory inputs resolve NativeWait.js imports without staging.
@@ -614,6 +650,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         AUTOMOC OFF
         SWIFT_SOURCES
         editorqml/ShellQmlTests.swift
+        editorqml/PluginFaultInjector.swift
         editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift
         editorqml/GatedVisualsProbe.swift
@@ -631,7 +668,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         SWIFT_COMPILE_OPTIONS
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
         "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
-        SWIFT_LINK_LIBRARIES QtBridge PorydawApp PorydawCore
+        SWIFT_LINK_LIBRARIES QtBridge PorydawApp PorydawCore swift_core_check_support
         SOURCES
         editorqml/EditorQmlPaths.swift.in
         editorqml/NativeWait.js
@@ -657,6 +694,8 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/tst_ShellGridInputAutomation.qml
         editorqml/ShellPitchBendSupport.qml
         editorqml/tst_ShellArpeggiator.qml
+        editorqml/tst_ShellMidiEffects.qml
+        editorqml/tst_ShellEffectOutput.qml
         editorqml/tst_ShellPitchBendCancellation.qml
         editorqml/tst_ShellPitchBendControls.qml
         editorqml/tst_ShellPitchBendPointer.qml

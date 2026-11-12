@@ -19,6 +19,11 @@ uv run --no-sync dev checks:backups                 # Foundation-only Swift pack
 AGENTS.md § Build & checks is the task index; this file is the pipeline
 reference. For `checks:bridge`, `format`, and `setup` see that table.
 
+The commit hook runs `uv run --no-sync dev format --check --staged`. It checks
+indexed Swift hunks and Python files using indexed formatter configuration;
+unstaged edits and untracked files are excluded. Fix formatting in the working
+tree and stage the intended result again; the hook never rewrites the index.
+
 Swift compiler warnings remain visible without being promoted to errors.
 This applies to Porydaw and third-party targets, including imported Qt headers
 and Debug type-check timing diagnostics.
@@ -36,6 +41,12 @@ accept a MIDI number 0...127 or a note name such as `C#4` (`midiKey(from:)`).
 Any other text keeps the current value. Search boxes share `SearchQuery`: every
 whitespace-separated word must appear, case- and diacritic-insensitively, in
 some searchable field. Menu type-ahead stays prefix-based.
+
+Workflow enums own decisions; QtBridge fields are observable projections, not
+second authorities. Sample Studio's stereo/zone decision is separate from its
+editor and Loader-release lifetimes. MIDI import distinguishes loading, wizard
+editing and registration. Tab close/reload requests carry their target together;
+save-conflict requests keep only a weak document identity.
 
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 
@@ -94,6 +105,127 @@ macOS/Windows artifact builds and the standalone Linux harness-test job also
 remain GitHub-hosted.
 Startup benchmark commands remain available, but their synthetic process and
 statistics tests are excluded from the harness suite.
+
+## Vendored VST3 SDK
+
+`external/vst3sdk/` contains the source subset from `steinbergmedia/vst3sdk`
+tag `v3.8.1_build_84` (SDK 3.8.1). `VERSION.txt` records the SDK commit, the
+tag's exact `base`, `pluginterfaces`, and `public.sdk` submodule commits,
+and the `cmake` commit used to compare the hosting source list.
+This is an in-tree copy, not a submodule or a configure-time download.
+
+The byte-identical subset is `base/{source,thread}/`,
+`pluginterfaces/{base,gui,vst}/`, `public.sdk/source/{common,main,vst}/`,
+and `public.sdk/LICENSE.txt`. Every `samples`, `testsuite`, and `test*`
+directory is excluded. Copied SDK sources must not be edited.
+The SDK's CMake and VSTGUI are not used.
+
+`src/pluginhost/CMakeLists.txt` declares `porydaw_vst3_sdk`, a static C++17
+target with an explicit source list based on the pinned
+`cmake/modules/SMTG_VST3_SDK.cmake` hosting macro and its base dependencies.
+It selects exactly one platform module loader; the macOS loader uses
+Objective-C++17 with ARC. Debug uses `DEVELOPMENT=1`; other configurations
+use `RELEASE=1` and `NDEBUG`. Project warning flags are not applied to the SDK.
+Its include directory is a system include for native helper/check consumers
+only: no SDK includes in Swift module maps, and no SDK linkage in Porydaw's
+process. The helper owns plugin loading.
+
+The MIT notice in `public.sdk/LICENSE.txt` is copied without changes as
+`VST3-SDK-LICENSE.txt`. On macOS it is a `porydaw` bundle resource in
+`Contents/Resources/`, using the shell QML/font resource mechanism. Windows
+and Linux copy it beside the executable after building. Windows installation
+includes it in the staged release folder; Linux AppImage packaging copies it
+into `AppDir/usr/bin/` beside the executable.
+
+`PorydawPluginBridge` compiles the SDK-free shared-memory wire format and C11
+wait/wake implementation. The helper links the same bridge library plus Qt Gui;
+Swift imports its C module without C++ interop or SDK linkage. MSVC enables
+`/experimental:c11atomics` on that C target only. C/C++ assertions enforce matching
+lock-free atomic sizes, alignment, field offsets and wire size. POSIX backing may
+be page-rounded; mappings still expose only the logical wire extent.
+
+`PorydawPluginHost` owns discovery, framed control, capture and live insertion.
+Its Swift sources depend on Core, Playback and the SDK-free C bridge, with
+no C++ interop. Discovery supervises separate scanner children and keeps usable
+cached entries during progressive scans and cancellation.
+Setup validity is a request key paired with the invalidation revision captured
+before reconfiguration. Interrupted reconfiguration leaves no valid cache;
+a restart during setup cannot be erased by that setup's completion.
+
+Each instance lazily launches one helper. One non-Sendable producer owns
+request/reply payload access; a separate main-actor mapping monitors atomics and
+unlinks the name after `Ready`. An atomic reservation excludes the audio callback
+from the dedicated capture worker; detach/join precedes transfer and reclamation.
+Control/state operations are async, never main-actor blocking.
+Swift owns control, watchdog and shutdown deadlines; native teardown never adds
+a competing hang policy. The helper supports both `scan` and `host --channel`.
+The native engine owns four phases: unprepared, prepared, active and processing.
+The helper reads that authority under processing ownership instead of mirroring
+it. Parameter flushing uses one request/acknowledgment flag: the RT thread
+publishes its result and restores control ownership before release-clearing it.
+
+Live feedback carries actual dispatches, completed positions and boundaries in
+one bounded SPSC ring. Callback-resolved ticks preserve old-timeline endpoints
+and silent tails across seeks and adoption; the main-thread drain never estimates
+them from a later transport snapshot. Loop input offs precede chase at offset
+zero of the first wrapped block, under the new loop context.
+Render reports percentage progress per completed bar; only its final result
+carries raw notes. No cumulative note-array snapshots cross to MainActor per bar.
+Recorder initialization, synchronized baseline and pending restore are explicit
+phases; permission, pending edits and cancellation joins remain separate.
+
+VST control parsing borrows synchronous fields from each owned frame; only replies
+that cross suspension own independent bytes. Requests encode directly into their
+final frame. The helper writes stack fields and borrowed state spans, retaining
+one SDK state-stream capacity across digest polls without publishing old contents.
+Queued input frames, opaque state snapshots and published results remain owned.
+State replies validate their final range before materializing one owned byte array;
+ordinary replies keep owned Data. Empty child-read staging adopts incoming chunks.
+
+Capture keeps fixed wire output inline, uses compact pitch-bucket working storage,
+and appends live-take pairs directly into replacement output. Normalization keeps
+its fixed pitch map inline and reserves final notes from surviving candidates.
+Unchanged catalog projections compare lazy views; identity codecs write final
+hexadecimal strings/bytes directly. Stable iteration uses dictionary value views.
+Mutating asynchronous drains keep compact Task-handle snapshots: a value view
+would instead force a larger hash-table copy. Joins still await the original set.
+
+The Darwin host checks count allocations across 100 warmed insert callbacks and
+100 warmed Sequencer dispatches, including ring feedback. Those gates do not
+measure plugin/helper internals, setup, capture results or UI allocations, and
+ASAN skips the libmalloc logger. Use Release Allocations Statistics for broader
+churn measurements; Instruments authorization requires an unlocked desktop.
+
+Run `uv run --no-sync dev checks --filter swiftcore-pluginbridge` for real-helper
+transport, state, crash, hang and shutdown coverage; add `--asan` for sanitizer
+coverage. `swiftcore-pluginhost-abi` covers the native engine separately.
+Run `uv run --no-sync dev checks --filter swiftcore-pluginhost` for discovery,
+capture, lifecycle, live/take and warmed callback-allocation coverage.
+
+The ABI checks verify opaque state restoration through processed MIDI output,
+not the test plugin's private legacy state formats. All processing blocks and
+repeated instance cycles remain exercised; failures are aggregated with block
+or class/iteration context. Scanner JSON decoding checks required fields and
+types without requiring nonempty vendor-supplied metadata.
+
+To update the dependency:
+
+1. Check out the new upstream SDK tag cleanly and check out its recorded
+   `base`, `pluginterfaces`, `public.sdk`, and `cmake` submodule commits.
+2. Re-copy only the directories and license listed above, retaining the
+   directory exclusions and removing files no longer present upstream.
+   Do not patch copied sources or add a Porydaw submodule.
+3. Update `external/vst3sdk/VERSION.txt` with the tag and all recorded commits.
+4. Re-check the explicit source list against
+   `smtg_create_public_sdk_hosting_target` in the new tag's
+   `cmake/modules/SMTG_VST3_SDK.cmake` and its base/common dependencies.
+   Name any extra link-required source explicitly and retain its macro
+   provenance comment; keep the single platform-loader selection.
+5. Run `uv run --no-sync dev build:checks` and
+   `uv run --no-sync dev format --check`. Confirm
+   `build/debug/porydaw.app/Contents/Resources/VST3-SDK-LICENSE.txt`
+   exists on macOS. CI supplies Windows MSVC and Linux compile coverage;
+   packaged releases must retain the notice on every platform.
 
 ## Standalone backup module
 
@@ -225,6 +357,10 @@ in the `SendNonSendable` SIL pass — access such structs through the pointer
 `.github/workflows/build.yml` and `release.yml` call `cmake` directly (sccache,
 `cmake --install`); that is the only permitted direct caller.
 
+The `QtKeybindings` Clang module names only the project-owned bridge header.
+That header includes Qt through the `Qt6::Gui` target's normal header/framework
+search paths; do not name a kit's forwarding headers directly in the module map.
+
 Actions uploads expire after one day. Artifact retention runs hourly, manually, and
 after Build, All checks, or Release completes; it keeps unfinished runs and the
 newest successful run with unexpired artifacts per workflow, deleting older or
@@ -350,6 +486,21 @@ expressions (see `.omp/rules/swift-typecheck-complexity.md`).
 (Qt-free, no interop) shows the payoff at ~1 s per edit with no downstream rebuild
 when the interface is unchanged.
 
+`PorydawPluginHost` isolates the new SDK-free hosting behavior from the app module.
+Task 7 measured the same warm Debug app probe before and after adding its runtime,
+before the later off-main audio integration:
+
+| Hosting runtime | `build:app` samples (s) | Median (s) |
+|---|---|---:|
+| Before task 7 | 7.5, 7.5, 7.5 | 7.5 |
+| After task 7 | 8.3, 7.5, 7.9 | 7.9 |
+
+Each sample touched `src/swift/app/shell/ShellPresenter.swift` then ran
+`uv run --no-sync dev build:app`, without concurrent builds or indexing.
+These are harness-reported build times; median Ninja phases were 7.335 s and
+7.689 s. The app edit floor did not improve; the boundary provides isolation,
+not a measured app-compilation speedup.
+
 `PorydawAppHistory` owns the history presenter and retained row type; `PorydawApp`
 only supplies session context and shell callbacks. Replay and labels stay in
 Document/Core. A history-only edit rebuilds the two-source leaf, not the app module.
@@ -416,6 +567,20 @@ at most the block in flight, and applies the change; blocks arriving meanwhile r
 One main-actor task consumes completions, sample events and telemetry. Control
 drains CPU frames and activity peaks; main coalesces delivered batches. Telemetry
 epochs and generations discard late batches after invalidation.
+
+VST Live attachment uses the same cold FIFO and receipts. Commands carry a retained
+`LiveInsert` owner; control installs its borrowed slot under callback exclusion.
+Detach matches exact owner identity, so late cleanup cannot remove a successor,
+and clears notes, take state and the slot before acknowledging. Host awaits that
+receipt before transferring the bridge producer to Render or reclaiming storage.
+Main never dereferences the slot. The dedicated control executor uses portable
+`DispatchQueue`/`SerialExecutor`, including queue isolation checks for direct submits.
+
+Render timeouts return typed data to the MainActor helper owner, which records
+stopped-responding before terminating the process; later EOF cannot replace the
+first cause. The armed 50 ms take/watchdog drain never awaits helper IPC.
+Digest polling coalesces into one owned task per instance and is awaited during
+cleanup, independently of that drain.
 
 `NativeAudio.beginSampleAudition` claims a main-actor `SampleAuditionLease`; a new
 lease displaces the old holder. Leases submit value notes (PCM, wave or kit) to

@@ -75,6 +75,46 @@ After a finite track's source end, the meter stops charging track processing
 while its audio release tail continues. EOF accounting uses existing render
 boundaries; it does not split audio processing for metering.
 
+## VST3 MIDI effects
+
+Porydaw hosts VST3 plug-ins that **generate MIDI notes**, not VST instruments
+or audio effects. The generated notes play through the track's project
+voicegroup; plug-in audio output is not mixed into the song.
+
+1. Click **MIDI Effects...** beneath the voice name in a track header. After
+   adding a plug-in, that same button shows its name. Right-clicking the
+   header and choosing **MIDI Effects...** is an optional alternate route.
+2. Choose a MIDI-producing plug-in. Use **Add Folder** for another VST3 folder
+   or **Rescan** to refresh the catalog.
+3. Configure **Input**, **Pacing**, and **Pre-roll**. **Track notes** sends the
+   track's recorded notes to the plug-in; **None** lets a generator run without
+   note input. Use Realtime pacing for plug-ins that need wall-clock time.
+4. Show **Effect Output** in the drawer and turn **Live** on. Playback uses
+   the plug-in's notes instead of that track's recorded notes.
+
+Closing setup leaves Live running and keeps an opened plug-in editor.
+
+On macOS, plug-in editors stay above Porydaw's ordinary windows while
+Porydaw or one of its editors is foreground. Clicking Porydaw keeps keyboard
+focus in Porydaw without covering the editors. Switching to another app lets
+that app cover them; editors are not globally always on top. Ordering alone
+does not activate a window or restore a hidden or minimized editor.
+
+**Render** captures the active time selection, or the song range when no time
+selection is active. Stop playback before rendering a Live effect.
+The duration estimate includes pre-roll without preparing note events. Render
+prepares its input schedule once on the capture worker and normalizes captured
+notes off the UI thread; canceling waits for capture to settle before restoring
+an armed Live effect.
+**Grab played** captures notes produced during playback. Select output notes,
+or leave the selection empty to copy all, then **Copy** and use ordinary roll
+Paste; Paste is undoable. Clear removes captured output, not song notes.
+
+Captured output is session-only and is never written to the song or exported
+automatically. Reopening a song restores its plug-in settings with Live off.
+A failed helper shows **Stopped**; **Reload Plug-in** restores the recorded
+plug-in state.
+
 ## Track arpeggiator
 
 Right-click a track header and choose **Arpeggiator...**. The tool reads one

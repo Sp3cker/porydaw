@@ -6,6 +6,7 @@ Implement the in-helper VST3 engine behind the `pdph_` C ABI: module loading, cl
 - src/pluginhost/pluginhost.h: spec ABI without the editor half; define `pdph_midi_event`, `pdph_process_context`, `PDPH_EVENT_*` and `PDPH_CTX_*` here initially. Task 13 moves these POD types and constants into `pluginbridge.h` and makes this header include it.
 - src/pluginhost/pluginhost.cpp: modules, factory, `PlugProvider` instances, host application, component handler, parameter queue, state
 - src/pluginhost/pluginhost_process.cpp: setup, activation, processing, event conversion
+- src/pluginhost/pluginhost_internal.h: controller-authorized private declarations shared by the two implementation translation units; no `.cpp` inclusion.
 - src/pluginhost/module.modulemap: `module PorydawPluginHostNative { header "pluginhost.h" export * }`
 - src/pluginhost/scanner/scanner_main.cpp (new): `porydaw-vst3-host scan <modulePath>` prints one JSON document per spec
 - src/pluginhost/CMakeLists.txt: target `porydaw_pluginhost` (static, linking `porydaw_vst3_sdk` PRIVATE), linked only by `porydaw-vst3-host` and the checks binary; the helper executable's output directory, Apple bundle copy (`POST_BUILD` into `$<TARGET_BUNDLE_CONTENT_DIR:porydaw>/MacOS`), `WIN32_EXECUTABLE` and Windows install rule, exactly per spec.md "Build and packaging"
@@ -26,7 +27,8 @@ Task 5 (`porydaw_vst3_sdk`, vendored `external/vst3sdk`).
 Exactly spec.md "Native boundary" minus the editor half (task 8 adds the editor in the helper), plus the mechanics below:
 - **Signatures and threading.** Setup, activation, bus activation, latency and state run on the helper's main thread. `process` runs on its processing thread for live and Render, never concurrently. Setup and `set_processing` run through the helper's control path. Document each rule in the header.
 - **Errors.** Errors fill `pdph_error.message` with the SDK/loader reason. Null handles return `PDPH_ERR_ARGUMENT`.
-- **`pdph_standard_module_paths`** returns `VST3::Hosting::Module::getModulePaths()`.
+- **ABI constants (controller ruling).** `PDPH_OK=0`, `PDPH_ERR_ARGUMENT=-1`, `PDPH_ERR_STATE=-2`, `PDPH_ERR_SDK=-3`, `PDPH_ERR_INTERNAL=-4`; reserve `PDPH_ERR_NO_EDITOR=-5` and `PDPH_ERR_UNSUPPORTED_PLATFORM=-6` for task 8. `PDPH_EVENT_NOTE_ON=0`, `PDPH_EVENT_NOTE_OFF=1`, `PDPH_EVENT_OTHER=2`. Context and restart flags use the SDK values unchanged. Task 13 moves these POD declarations/constants unchanged.
+- Standard plugin roots are owned by Swift `PluginCatalog`; the native engine accepts explicit module paths. Task 17 removes the unused native path-enumeration API.
 - **`pdph_module_class_info`** lists only classes of category `kVstAudioEffectClass`. `pdph_module_class_count` counts the same set.
 - **`pdph_plugin_create`.**
   - Host context: installs the host context with `PluginContextFactory::instance().setPluginContext(host)` (once per process) before `PlugProvider::initialize`. `host` is a `HostApplication` subclass overriding `getName` to return "Porydaw".

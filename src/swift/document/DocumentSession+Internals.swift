@@ -126,6 +126,10 @@ extension DocumentSession {
     /// Reconciles selection before rebuilding with retained scratch, publishing
     /// playback, and notifying presentation.
     internal func handleDocumentChange(_ change: DocumentChange) {
+        if change.effectsOnly {
+            publishChange([.effects, .dirty, .history])
+            return
+        }
         withStateChanges {
             if let remap = change.trackRemap {
                 onViewportRepair?(.trackRemap(remap))

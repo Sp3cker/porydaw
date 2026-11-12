@@ -41,7 +41,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
+          sudo apt-get install -y libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb1-dev libx11-dev
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -63,12 +63,24 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      - name: Start packaged Linux helper
+        run: |
+          set +e
+          reason=$(env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u LD_LIBRARY_PATH build/porydaw-vst3-host scan /porydaw-nonexistent.vst3 2>&1)
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test -n "$reason"
+          test "$(printf '%s\n' "$reason" | wc -l)" -eq 1
+
       - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
           retention-days: 1
           name: porydaw-linux
-          path: build/porydaw
+          path: |
+            build/porydaw
+            build/porydaw-vst3-host
   build-native:
     strategy:
       fail-fast: false
@@ -137,8 +149,15 @@ jobs:
       - name: Package macOS Disk Image
         if: runner.os == 'macOS'
         run: |
-          macdeployqt build/porydaw.app -codesign=-
+          macdeployqt build/porydaw.app -executable=build/porydaw.app/Contents/MacOS/porydaw-vst3-host -codesign=-
           codesign --verify --deep --strict --verbose=2 build/porydaw.app
+          set +e
+          reason=$(env -u QT_PLUGIN_PATH -u QML2_IMPORT_PATH -u DYLD_LIBRARY_PATH build/porydaw.app/Contents/MacOS/porydaw-vst3-host scan /porydaw-nonexistent.vst3 2>&1)
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test -n "$reason"
+          test "$(printf '%s\n' "$reason" | wc -l)" -eq 1
           mkdir dmg-root
           cp -R build/porydaw.app dmg-root/
           if [ -f "RUN AFTER INSTALL.txt" ]; then cp "RUN AFTER INSTALL.txt" dmg-root/; fi
@@ -168,6 +187,18 @@ jobs:
         run: |
           cmake --install build --prefix porydaw-windows
           if (Test-Path RELEASE-README.txt) { Copy-Item RELEASE-README.txt porydaw-windows/README.txt }
+
+      - name: Start packaged Windows helper
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:Path = "$env:SystemRoot\System32;$env:SystemRoot"
+          Remove-Item Env:QT_PLUGIN_PATH, Env:QML2_IMPORT_PATH -ErrorAction SilentlyContinue
+          $helper = Start-Process -FilePath porydaw-windows\porydaw-vst3-host.exe -ArgumentList "scan", "C:\porydaw-nonexistent.vst3" -Wait -PassThru -RedirectStandardError helper-stderr.txt -RedirectStandardOutput helper-stdout.txt
+          if ($helper.ExitCode -ne 1) { throw "Packaged helper did not return scan failure" }
+          $reason = @(Get-Content helper-stderr.txt)
+          if ($reason.Count -ne 1 -or [string]::IsNullOrWhiteSpace($reason[0])) { throw "Expected one scan failure reason" }
+          if ((Get-Item helper-stdout.txt).Length -ne 0) { throw "Failed scan wrote stdout" }
 
       # Proves the staged folder is self-contained: the first QML frame with no Qt or Swift on PATH.
       - name: Launch staged porydaw.exe
@@ -201,7 +232,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y lld pulseaudio libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0
+          sudo apt-get install -y lld pulseaudio libasound2-dev libgl1-mesa-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb1-dev libx11-dev
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4

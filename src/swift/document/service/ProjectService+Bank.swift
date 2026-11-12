@@ -128,6 +128,57 @@ extension ProjectService {
         do { return try await store.mintSynth(descriptor) } catch { throw projectFailure(error) }
     }
 
+    internal func writeEffectsSidecar(_ sidecar: EffectsSidecar?, label: String) throws {
+        let directory = projectRoot + "/.porydaw/midi-effects"
+        let path = directory + "/\(label).json"
+        guard let sidecar else {
+            if ProjectFileStore.exists(path) { try ProjectFileStore.remove(path) }
+            return
+        }
+        try ProjectFileStore.mkpath(directory)
+        try ProjectFileStore.writeAtomic(path, data: sidecar.encoded())
+    }
+
+    internal func loadEffectsSidecar(
+        label: String, trackCount: Int, now: Date = Date()
+    ) throws -> LoadedEffects? {
+        let directory = projectRoot + "/.porydaw/midi-effects"
+        let path = directory + "/\(label).json"
+        guard ProjectFileStore.exists(path) else { return nil }
+        let bytes = try ProjectFileStore.read(path)
+        do {
+            var sidecar = try JSONDecoder().decode(EffectsSidecar.self, from: bytes)
+            var tracks: Set<Int> = []
+            let count = sidecar.effects.count
+            sidecar.effects.removeAll { (effect: StoredEffect) in
+                !(0..<trackCount).contains(effect.track) || !tracks.insert(effect.track).inserted
+            }
+            var identities: Set<EffectID> = []
+            guard
+                sidecar.effects.allSatisfy({ (effect: StoredEffect) in
+                    identities.insert(effect.id).inserted
+                })
+            else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "Duplicate MIDI-effect identities."))
+            }
+            return .restored(sidecar, dropped: count - sidecar.effects.count)
+        } catch {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyyMMdd-HHmmss"
+            let base = directory + "/\(label).corrupt-" + formatter.string(from: now)
+            var destination = base + ".json"
+            var suffix = 1
+            while ProjectFileStore.exists(destination) {
+                destination = base + "-\(suffix).json"
+                suffix += 1
+            }
+            try ProjectFileStore.move(from: path, to: destination)
+            return .corrupt(movedTo: destination)
+        }
+    }
+
     /// Opens a playable song: raw MIDI bytes, metadata and the owned bank lease.
     /// Unknown labels and unreadable stages throw.
     public func openSong(label: String) async throws -> LoadedSong {
@@ -159,6 +210,13 @@ extension ProjectService {
             let published = appliedBank(bank, token: nil)
             await publish(published, from: store)
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            let effects: LoadedEffects?
+            if ProjectFileStore.exists(projectRoot + "/.porydaw/midi-effects/\(song.label).json") {
+                let trackCount = try MidiFile.decode(bytes).engineTracks().usedTrackCount
+                effects = try loadEffectsSidecar(label: song.label, trackCount: trackCount)
+            } else {
+                effects = nil
+            }
             return LoadedSong(
                 label: song.label, midiPath: midiPath, constant: song.constant,
                 player: song.player, trackBudget: snapshot?.trackBudgetFor(song: song) ?? 16,
@@ -167,7 +225,8 @@ extension ProjectService {
                 source: SongSource(
                     label: song.label, midiPath: midiPath,
                     hasConfig: song.hasCfg),
-                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots)
+                midiBytes: Array(bytes), bank: published.lease, bankSlots: published.slots,
+                effects: effects)
         } catch {
             let failure = projectFailure(error)
             guard case let .operationFailed(message) = failure else { throw failure }
@@ -175,7 +234,7 @@ extension ProjectService {
         }
     }
 
-    /// Writes song MIDI, flags and backups only; voicegroups save independently.
+    /// Writes song MIDI, effects and flags; backups remain MIDI-only.
     public func save(_ snapshot: SaveSnapshot) async throws {
         let store = try requireStore()
         do {
@@ -196,6 +255,7 @@ extension ProjectService {
                     label: snapshot.destination.label, path: path)
             }
             guard !closed, self.store === store else { throw ProjectServiceError.serviceClosed }
+            try writeEffectsSidecar(snapshot.effectsSidecar, label: snapshot.destination.label)
             if snapshot.flagsNeeded {
                 let midiDir = URL(filePath: snapshot.destination.midiPath)
                     .deletingLastPathComponent()

@@ -49,7 +49,10 @@ Item {
     function configureTextMetrics(): void {
         root.headersModel.configureTextMetrics(Math.round(normalTitleMetrics.lineSpacing),
                                                Math.round(boldTitleMetrics.lineSpacing),
-                                               Math.round(subtitleMetrics.lineSpacing))
+                                               Math.round(subtitleMetrics.lineSpacing),
+                                               subtitleMetrics.advanceWidth(qsTr("Effects")),
+                                               Math.max(subtitleMetrics.advanceWidth(qsTr("Live")),
+                                                        subtitleMetrics.advanceWidth(qsTr("Stopped"))))
     }
 
     function restoreHeaderFocus(): void {

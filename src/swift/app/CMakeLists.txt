@@ -29,6 +29,11 @@ endfunction()
 add_library(PorydawApp STATIC
     DocumentWorkspace.swift
     arpeggiator/ArpeggiatorPresenter.swift
+    miditools/TrackEffectsController.swift
+    miditools/PluginStateRecorder.swift
+    miditools/PluginEffectRenderer.swift
+    miditools/EffectOutputStore.swift
+    miditools/MidiEffectsPresenter.swift
     NativeAudio.swift
     audio/AudioControl.swift
     export/WavExportJob.swift
@@ -105,6 +110,7 @@ add_library(PorydawApp STATIC
     timeline/RulerMenuPresenter.swift
     drawer/EditorDrawer.swift
     drawer/EditorDrawerLayout.swift
+    drawer/effectoutput/EffectOutputPage.swift
     drawer/otherEvents/OtherEventsStrip.swift
     drawer/otherEvents/OtherEventsBandPresenter.swift
     drawer/velocity/VelocityContext.swift
@@ -174,19 +180,6 @@ configure_file(
     @ONLY
 )
 
-# Resolve the actual imported QtGui headers rather than assuming a framework
-# layout; the generated Clang module must name an existing qkeysequence.h.
-get_target_property(qt_gui_includes Qt6::Gui INTERFACE_INCLUDE_DIRECTORIES)
-set(QT_GUI_HEADERS "")
-foreach(qt_include IN LISTS qt_gui_includes)
-    if(EXISTS "${qt_include}/qkeysequence.h")
-        set(QT_GUI_HEADERS "${qt_include}")
-        break()
-    endif()
-endforeach()
-if(NOT QT_GUI_HEADERS)
-    message(FATAL_ERROR "Qt6::Gui does not expose qkeysequence.h for Swift keybindings")
-endif()
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/commands")
 configure_file(
     commands/QtKeybindings.modulemap.in
@@ -219,7 +212,7 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src/render>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
-target_link_libraries(PorydawApp PUBLIC PorydawBackups PorydawCore PorydawDocument PorydawPlayback PorydawProject PorydawSample QtBridge Qt6::Gui)
+target_link_libraries(PorydawApp PUBLIC PorydawBackups PorydawCore PorydawDocument PorydawPlayback PorydawPluginHost PorydawProject PorydawSample QtBridge Qt6::Gui)
 
 add_dependencies(PorydawApp QtBridgeMacros)
 
@@ -292,6 +285,7 @@ add_library(PorydawAppPresentation STATIC
     presentation/QListModelSync.swift
     presentation/IntegerInputPolicy.swift
     presentation/NumberFieldFormat.swift
+    presentation/MidiEffectDiagnostics.swift
     presentation/drawer/DrawerPan.swift
     presentation/drawer/DrawerStaticsContent.swift
     presentation/drawer/LaneCaptionMetrics.swift

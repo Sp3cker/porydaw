@@ -578,3 +578,145 @@ private func bankNetZeroAndUnchangedPublication(_ report: CheckReport, fixtureRo
         report.fail(id, "canonical clean save-point scenario threw: \(error)")
     }
 }
+
+@MainActor
+internal func typedCloseRequestChecks(_ report: CheckReport, fixtureRoot: String) {
+    let id = "swiftcore/DocumentWorkspace::typedCloseRequests"
+    let root = stageTestProject(in: fixtureRoot, projectName: "swiftcore-typed-close-requests")
+    let app = ApplicationSession()
+    defer {
+        app.hostClosing()
+        app.acknowledgeGridDetached()
+    }
+    do {
+        try runBlocking {
+            app.openProjectAndSong(path: root, label: "mus_session_test")
+            await app.activeReplacementTask?.value
+            await app.songTabs.closeSettlementTask?.value
+            await app.activeReplacementTask?.value
+            guard let original = app.selectedDocument else {
+                report.fail(id, "real app failed to open the close-request fixture")
+                return
+            }
+            let tabId = app.songTabs.selectedId
+            let tick = (original.document.state.file.chunks.map(\.endTick).max() ?? 0) + 96
+            _ = try original.document.addNotes([
+                NewNote(track: 0, tick: tick, pitch: 74, duration: 24, velocity: 90)
+            ])
+            app.openSongFromDock(label: "mus_session_test2", newTab: false)
+            report.expect(
+                app.songTabs.pendingCloseId == tabId && app.selectedDocument === original,
+                cppID: id, message: "replacement asks about the original dirty song before opening its target")
+            app.songTabs.cancelClose()
+            report.expect(
+                app.songTabs.pendingCloseId == -1 && app.songTabs.tabCount == 1
+                    && app.selectedDocument === original && original.document.isDirty
+                    && app.songTabs.reloadsInFlight.isEmpty,
+                cppID: id, message: "replacement Cancel keeps the original edits and starts no reload")
+
+            app.openSong(label: "mus_session_test")
+            report.expect(
+                app.songTabs.pendingCloseId == tabId,
+                cppID: id, message: "a later reload raises a fresh dirty-song gate")
+            app.songTabs.confirmDiscard()
+            await app.activeReplacementTask?.value
+            guard let approvedReload = app.selectedDocument else {
+                report.fail(id, "approved reload left no selected document")
+                return
+            }
+            report.expect(
+                app.songTabs.tabCount == 1 && app.songTabs.selectedId == tabId
+                    && app.songTabs.selectedPage?.title == "mus_session_test"
+                    && approvedReload !== original && !approvedReload.document.isDirty
+                    && app.songTabs.pendingCloseId == -1 && app.songTabs.reloadsInFlight.isEmpty,
+                cppID: id, message: "reload Discard replaces in place without inheriting the cancelled target")
+            app.songTabs.pageReleased(tabId: tabId)
+            await app.retireChain?.value
+
+            _ = try approvedReload.document.addNotes([
+                NewNote(track: 0, tick: tick, pitch: 74, duration: 24, velocity: 90)
+            ])
+            app.openSongFromDock(label: "mus_session_test2", newTab: false)
+            report.expect(
+                app.songTabs.pendingCloseId == tabId && app.selectedDocument === approvedReload,
+                cppID: id, message: "replacement raises its dirty gate before whole-strip release")
+            app.songTabs.releaseAllDetached()
+            await app.retireChain?.value
+            report.expect(
+                app.songTabs.tabCount == 0 && app.songTabs.pendingCloseId == -1
+                    && approvedReload.isClosed,
+                cppID: id, message: "whole-strip release retires the gated replacement's original song")
+
+            app.openSong(label: "mus_session_test")
+            await app.activeReplacementTask?.value
+            guard let reopened = app.selectedDocument else {
+                report.fail(id, "whole-strip release prevented reopening the original song")
+                return
+            }
+            let reopenedId = app.songTabs.selectedId
+            report.expect(
+                reopened.document.source.label == "mus_session_test" && !reopened.document.isDirty,
+                cppID: id, message: "the original song reopens clean after dropping a replacement gate")
+            app.openSong(label: "mus_session_test")
+            await app.activeReplacementTask?.value
+            guard let reloaded = app.selectedDocument else {
+                report.fail(id, "clean reload after whole-strip release left no document")
+                return
+            }
+            report.expect(
+                app.songTabs.tabCount == 1 && app.songTabs.selectedId == reopenedId
+                    && app.songTabs.selectedPage?.title == "mus_session_test"
+                    && reloaded.document.source.label == "mus_session_test"
+                    && reloaded !== reopened && !reloaded.document.isDirty
+                    && app.songTabs.pendingCloseId == -1,
+                cppID: id,
+                message: "clean reload cannot inherit the replacement label dropped with the previous strip")
+            app.songTabs.pageReleased(tabId: reopenedId)
+            await app.retireChain?.value
+
+            let midiPath = root + "/sound/songs/midi/mus_session_test.mid"
+            guard var externalBytes = bytes(at: midiPath) else {
+                report.fail(id, "stale File Save target requires the real staged MIDI")
+                return
+            }
+            _ = try reloaded.document.addNotes([
+                NewNote(track: 0, tick: tick + 96, pitch: 76, duration: 24, velocity: 91)
+            ])
+            externalBytes.append(0x7F)
+            try externalBytes.write(to: URL(fileURLWithPath: midiPath), options: .atomic)
+            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+                app.onSaveStateChanged = {
+                    guard !app.saveInProgress else { return }
+                    app.onSaveStateChanged = nil
+                    continuation.resume()
+                }
+                app.requestSaveSong()
+            }
+            guard app.saveConflictSongLabel == "mus_session_test" else {
+                report.fail(id, "the real externally changed File Save did not raise its conflict")
+                return
+            }
+            report.expect(
+                reloaded.document.isDirty && bytes(at: midiPath) == externalBytes,
+                cppID: id, message: "File Save conflict retains dirty edits without writing the changed MIDI")
+            app.openSong(label: "mus_session_test2")
+            await app.activeReplacementTask?.value
+            guard let selected = app.selectedDocument, selected !== reloaded else {
+                report.fail(id, "stale target setup could not select the other real song")
+                return
+            }
+            app.resolveSaveConflictOverwrite()
+            report.expect(
+                !app.saveInProgress && app.saveConflictSongLabel.isEmpty
+                    && app.saveConflictDetail.isEmpty && app.saveConflictNewSongLabel.isEmpty
+                    && app.lastSaveError == "The conflicted song mus_session_test is no longer open."
+                    && app.selectedDocument === selected && !selected.document.isDirty
+                    && reloaded.document.isDirty && bytes(at: midiPath) == externalBytes
+                    && app.songTabs.tabCount == 2 && app.songTabs.pendingCloseId == -1,
+                cppID: id,
+                message: "stale File Save refuses overwrite without saving either song or closing a tab")
+        }
+    } catch {
+        report.fail(id, "typed close-request scenario threw: \(error)")
+    }
+}

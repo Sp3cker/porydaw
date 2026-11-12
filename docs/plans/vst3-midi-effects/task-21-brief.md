@@ -1,0 +1,20 @@
+# Typed close and save-conflict requests
+# Execution
+Worktree: /Users/spencer/dev/cProjects/porydaw/.worktrees/vst3-midi-effects
+BASE: d73c6a1ec20a910e762265f61ea3abd4dde705f6
+Read plan.md Global Constraints and linked spec.md. This is the user-approved cleanup extension, not a new feature. SHARED_TREE: no builds, checks, linters, formatters, index/reconfigure, desktop actions, subdelegation or commits. Read-only file-local inspection is required; controller runs named verification on settled sources. SourceKit semantic references were unavailable; report that honestly and trace consumers if still unavailable. Use existing patterns. No generic FSM, new dispatcher, fallback, compatibility alias or task-lifetime collapse. No proof ledgers exist for these VST checks. Return full result fields: status (DONE|DONE_WITH_CONCERNS|BLOCKED|NEEDS_CONTEXT), summary, implementation, tests (commands/output, DEFERRED_TO_CONTROLLER where unrun), changedFiles, selfReviewFindings (before/after symbols/diagnostics, permitted vs actual scope changes, unavailable tooling), concerns. Write no reports/scratch files.
+
+# Exact write set
+src/swift/app/SongTabsController.swift; SongTabsController+Close.swift; ApplicationSession.swift; ApplicationSession+Close.swift; ApplicationSession+Tabs.swift only request caller migration; ApplicationSession+Commands.swift only the File Save presentSaveConflict caller; existing src/checks/workspace/bank_undo_publication.swift and src/checks/editorqml/tst_ShellOpenFailure.qml only if existing behavior assertions need adaptation. Over-cap: one cross-owner close/save request protocol, preserving app/tab division. No project-opening, shell presenter, studio, MIDI import, registration or QML production edits. Prefer new local types within existing owner file; no arbitrary fragments.
+# Four steps
+1. Inspect all reads/writes of reloadId/replacementLabel/pendingCloseId/savingCloseId and save-conflict label/detail/proposed label/pendingSaveConflictTabId plus save/close callbacks. Record local symbols/diagnostics and references.
+2. Replace internal reload/replacement sentinel combinations with typed close intent carrying tab identity and replacement payload. Preserve public pendingCloseId projection for QML and all live test consumers; no public forwarding shim just to preserve dead internal names. Keep close-all walk, busy observers, settlement task, retained tabs, pending bank identities, independent in-flight reloads and retirement/service teardown ownership separate.
+3. Make save-conflict request explicit with File Save vs close-gate target and conflict identity/payload. Existing QtBridge title/detail/edit field remain observable projections, not removed as dead state; mutation/publication is owner-controlled. Preserve current selected-session identity validation, clear-before-save, save completion close behavior, cancel aborting close/project switch, errors/service-replacement guards. Remove replaced internal sentinel authority. Do not turn save conflicts into a global close FSM or conflate savingCloseId with dialog visibility.
+4. Migrate every caller/check affected by internal changes. Retain exact existing UI wording and behavior; add/adjust only discriminating stale target, close cancellation or reload transition coverage if missing. Complete local inspection.
+# Acceptance
+Close/reload/replace/save-conflict intent is typed and payload-complete; existing dirty-tab/bank project replacement, cancellation, save and retirement outcomes stay unchanged with the same observable bridge surface.
+# Controller verification
+uv run --no-sync dev build:checks
+uv run --no-sync dev checks --filter projectsession --filter bankhistory --no-windowing-checks --pool=1
+uv run --no-sync dev checks:shell --filter shell-open-failure --filter shell-tabs-close --filter shell-tabs-reload --filter shell-tabs-window-close --no-windowing-checks --pool=1
+checks:bridge; checks:qml-aot; lsp:swift. Flag stale filter with exact registry alternative, do not silently narrow.

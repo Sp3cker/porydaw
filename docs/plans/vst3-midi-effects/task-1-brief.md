@@ -22,6 +22,7 @@ Exactly spec.md "EngineNoteLattice and EngineNoteNormalizer", with these details
 - `normalize(_:track:range:lattice:) throws -> (notes, report)` applies rules 1–9 in order. Counting is exact: each event increments at most one `dropped*` counter. `snappedOnsets`, `adjustedDurations`, `velocityClamped`, `overlapsTrimmed` and `duplicatesSuppressed` count adjustments to surviving notes. `report.notes` equals the output count.
 - Batch `normalize` is the only normalizer; the live path uses none.
 - `Arpeggiator`'s public API, errors and `ArpeggiatorResult` fields (`quantumTicks`, `quantumClocks`, `gateClocks`, …) are unchanged. Its 65,536 limit reads `EngineNoteNormalizer.noteLimit`.
+- Canonical declarations and the controller's pairing/release-target rulings are recorded in spec.md's same Core section. `range` is `TimeRange`; signed raw ticks retain pre-roll. The lattice initializer throws `ArpeggiatorError.unsupportedTiming` for zero division.
 
 # Implementation steps
 

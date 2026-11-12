@@ -21,7 +21,8 @@ internal enum HistoryStepLabel {
         case .addTrack, .duplicateTrack, .deleteTrack, .moveTrack, .renameTrack,
             .setChunkEnd, .setConfig, .editTempo, .editRawAndTempo, .setLoop,
             .setTimeSignature, .moveTimeSignature, .deleteTimeSignature,
-            .applyRangeEdit, .moveRange, .removeTime, .insertBlankTime, .duplicateTime:
+            .applyRangeEdit, .moveRange, .removeTime, .insertBlankTime, .duplicateTime,
+            .addEffect, .removeEffect, .updateEffect, .editPluginState:
             return fixedPhrase(for: operation)
         }
 
@@ -96,6 +97,10 @@ internal enum HistoryStepLabel {
         case .removeTime: "Remove time"
         case .insertBlankTime: "Insert time"
         case .duplicateTime: "Duplicate time"
+        case .addEffect: "add MIDI effect"
+        case .removeEffect: "remove MIDI effect"
+        case .updateEffect: "edit MIDI effect"
+        case .editPluginState: "edit plugin settings"
         }
     }
 }

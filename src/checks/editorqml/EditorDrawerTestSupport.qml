@@ -136,6 +136,8 @@ ShellLaneSupport {
                    "the container phase releases the production voice page before it mounts")
             verify(bootstrap.detachProductionSection(testCase.automationKind),
                    "the container phase releases the production automation page before it mounts")
+            verify(bootstrap.detachProductionSection(3),
+                   "the container phase releases the production output page before it mounts")
         }
         testCase.createSurface()
     }
@@ -166,6 +168,7 @@ ShellLaneSupport {
         bootstrap.detachTestSection(velocityKind)
         bootstrap.detachTestSection(voiceChangesKind)
         bootstrap.detachTestSection(automationKind)
+        bootstrap.detachTestSection(3)
         verify(bootstrap.cancelInput(), "no interaction is live at a case boundary")
         // A playhead case holds the production polling task for determinism;
         // every case starts with it running again.
@@ -206,6 +209,7 @@ ShellLaneSupport {
         var state = { "velocityVisible": false, "velocityHeight": 0,
                       "automationVisible": false, "automationHeight": 0,
                       "voiceChangesVisible": false, "voiceChangesHeight": 0,
+                      "effectOutputVisible": false, "effectOutputHeight": 0,
                       "activePage": "" }
         for (var key in values)
             state[key] = values[key]

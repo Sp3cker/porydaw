@@ -212,7 +212,7 @@ public enum Arpeggiator {
         )
     }
 
-    private static let limit = 65_536
+    private static let limit = EngineNoteNormalizer.noteLimit
 
     private static func validate(_ settings: ArpeggiatorSettings) throws {
         guard (1...4).contains(settings.octaves), (-12...12).contains(settings.transpose),
@@ -310,19 +310,17 @@ public enum Arpeggiator {
     }
 
     private struct Timing {
-        let quantumTicks: Int64
-        let quantumClocks: Int64
+        private let lattice: EngineNoteLattice
+        var quantumTicks: Int64 { lattice.quantumTicks }
+        var quantumClocks: Int64 { lattice.quantumClocks }
         let stepTicks: Int64
         let shuffleTicks: Int64
-        private let lowFixedClocks: [Int64]
 
         init(division: UInt32, playback: PlaybackSettings, settings: ArpeggiatorSettings) throws {
+            lattice = try EngineNoteLattice(ticksPerBeat: division, playbackSettings: playback)
+            let quantumTicks = lattice.quantumTicks
+            let quantumClocks = lattice.quantumClocks
             let clocks: Int64 = playback.extendedClocks ? 48 : 24
-            var a = Int64(division)
-            var b = clocks
-            while b != 0 { (a, b) = (b, a % b) }
-            quantumTicks = Int64(division) / a
-            quantumClocks = clocks / a
             var rateGCD = Int64(settings.rateNumerator)
             var remainder = Int64(settings.rateDenominator)
             while remainder != 0 { (rateGCD, remainder) = (remainder, rateGCD % remainder) }
@@ -352,43 +350,15 @@ public enum Arpeggiator {
             let requested = (Double(quanta) * Double(settings.shuffle) / 100).rounded()
             let offset = min(Int64(requested), quanta - minimum)
             shuffleTicks = offset * quantumTicks
-            var fixed: [Int64] = []
-            for clock in 1..<96 where Int64(clock) % quantumClocks == 0 {
-                let duration = Int64(clock) / quantumClocks * quantumTicks
-                let effective = mid2agbEffectiveDuration(
-                    duration, division: division, extendedClocks: playback.extendedClocks, exactGate: playback.exactGate
-                )
-                if effective == clock { fixed.append(Int64(clock)) }
-            }
-            lowFixedClocks = fixed
         }
 
         func duration(target: Double, maximum: Int64) throws -> Int64 {
-            let maximumClocks = maximum / quantumTicks * quantumClocks
-            let targetClocks = target / Double(quantumTicks) * Double(quantumClocks)
-            var best: Int64?
-            var distance = Double.infinity
-            func consider(_ clock: Int64) {
-                guard clock > 0, clock <= maximumClocks else { return }
-                let delta = abs(Double(clock) - targetClocks)
-                if delta < distance || (delta == distance && clock > (best ?? 0)) {
-                    best = clock
-                    distance = delta
-                }
-            }
-            for clock in lowFixedClocks { consider(clock) }
-            let minimumLarge = (96 + quantumClocks - 1) / quantumClocks
-            let maximumLarge = maximumClocks / quantumClocks
-            if minimumLarge <= maximumLarge {
-                let nearest = Int64((targetClocks / Double(quantumClocks)).rounded())
-                consider(min(max(nearest, minimumLarge), maximumLarge) * quantumClocks)
-            }
-            guard let best else {
+            guard let duration = lattice.durationTicks(target: target, maximum: maximum) else {
                 throw ArpeggiatorError.unsupportedTiming(
                     "No positive gate duration fits this slot on the shared lattice under the current Exact Gate policy."
                 )
             }
-            return best / quantumClocks * quantumTicks
+            return duration
         }
     }
 

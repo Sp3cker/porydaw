@@ -1,0 +1,4 @@
+module PorydawPluginBridge {
+    header "pluginbridge.h"
+    export *
+}

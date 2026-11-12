@@ -22,7 +22,7 @@ Gate G1 approved by the user.
   - `external/vst3sdk/pluginterfaces/{base,gui,vst}/`;
   - `external/vst3sdk/public.sdk/source/{common,main,vst}/`, excluding every `samples`, `testsuite` or `test*` directory;
   - `external/vst3sdk/public.sdk/LICENSE.txt`.
-- **`external/vst3sdk/VERSION`.** Records the tag, the three upstream commit SHAs, and the exact directory list above.
+- **`external/vst3sdk/VERSION.txt`.** Records the tag, the three upstream commit SHAs, and the exact directory list above.
 - **`porydaw_vst3_sdk`.** A static C++17 target with an explicit source list mirroring `cmake/modules/SMTG_VST3_SDK.cmake` of that tag:
   - `base/source/{baseiids,fbuffer,fdebug,fdynlib,fobject,fstreamer,fstring,timer,updatehandler}.cpp`
   - `base/thread/source/{fcondition,flock}.cpp`
@@ -37,9 +37,9 @@ Gate G1 approved by the user.
 - **License resource.** `external/vst3sdk/public.sdk/LICENSE.txt` is added through the `porydaw` target's existing bundle-resource mechanism (as shell QML and fonts are) as `VST3-SDK-LICENSE.txt` on macOS. On Windows and Linux a `POST_BUILD` copy places it beside the executable, and the existing deploy steps carry it.
 
 # Implementation steps
-1. Copy the subset from a clean checkout of the tag. Write `VERSION`.
+1. Copy the subset from a clean checkout of the tag. Write `VERSION.txt`.
 2. Add the SDK target, the root subdirectory and the license resource for each platform.
-3. Document the subset, the pin, the update procedure (re-copy from a new tag, update `VERSION`, re-check the source list against the hosting macro) and the license in docs/BUILDING.md.
+3. Document the subset, the pin, the update procedure (re-copy from a new tag, update `VERSION.txt`, re-check the source list against the hosting macro) and the license in docs/BUILDING.md.
 4. Apply the G1 AGENTS.md text verbatim.
 
 # Acceptance predicate

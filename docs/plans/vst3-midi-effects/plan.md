@@ -16,6 +16,14 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 | D8 | The built-in arpeggiator is unchanged. It keeps its own panel, Copy Notes and solo audition, and is not a track-effect kind. | Reworking it into a live effect: scope; its generate-then-copy flow already matches D1. |
 | D9 | Crash or hang detaches the insert, cancels Render and marks the effect stopped without changing the document. A manual Reload Plug-in restores the last recorded state and re-arms Live if previously armed. | Automatic restart: the user must control recovery. Modal alert: interrupts the session. |
 
+Execution ruling approved by the user: loop-wrap input offs precede chased ons at offset 0 of the first wrapped block; both use the new loop context. Keep exact boundary timing and one bridge request per chunk. Task 7 also repairs the Playback take seam with completed-position records and explicitly flagged discontinuity releases, so silent tails and old-timeline endpoints remain exact.
+
+User-directed alignment gate: import fork-main `ff15770a` before accepting tasks 8–9. `AudioControl` owns device/renderer work off MainActor; VST attach/detach use acknowledged cold operations through callback exclusion. MainActor retains intent and asynchronous helper IPC. Task 14 migrates the ownership seam and checks without rewriting pushed history.
+
+User-approved review fixes preserve that audio ownership: cleanup tails are per effect and joined collectively at teardown; `PluginStateRecorder` owns edit-history observation separately from the demand-lived Live pump. App owns the sole Grab publication policy, `LiveInsert` performs the sole input wire encoding, and `Sequencer` owns one post-dispatch loop transition. These fixes do not waive the native editor and input acceptance gates.
+
+User-approved gate timing: implementation checkpoints may proceed after independent review and the covering Debug/ASAN headless gates. Desktop-dependent editor, focused-keyboard and installed-plugin smoke remain mandatory at final feature acceptance, explicitly pending until executed. This changes checkpoint timing only; it does not waive native behavior or treat static review as runtime proof.
+
 ## Gates
 
 - G1 — approved by the user (out-of-process wording). Task 5 applies this AGENTS.md "Native boundary" amendment verbatim:
@@ -29,7 +37,7 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 - Follow spec.md exactly. Implementers never invent names; a missing decision is NEEDS_CONTEXT.
 - Do not include external product names, links, logos or vendor assets in committed content, except the open-source host names cited as technical precedent in this plan. No VST logo in the UI.
 - The song is the truth: the `.mid`, WAV export, CPU profile, backups, clipboard sources and every editing surface read `SongDocument` state, which never contains plugin output (D1). Only the audio callback's live path sounds plugin output.
-- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 is the only task that edits `Sequencer`/`AudioRenderEngine`; `AudioDevice` is untouched.
+- Realtime: live and Render never use the instance concurrently. Porydaw's callback-side code is allocation-, lock- and dispatch-free; its one deliberate blocking call is bounded `pdpb_wait_reply` (D4). Task 4 owns the callback seam; task 7 preserves exact take endpoints. Task 14 aligns `NativeAudio`/`AudioControl`/`AudioRenderEngine` and Host lifetime with upstream ownership. VST work does not modify upstream `AudioDevice`.
 - Threads: every VST3 call runs inside the helper. Its Qt main thread dispatches control, editor windows, Linux `IRunLoop` and key interception; its RT thread processes requests. A stdin reader posts control frames to the main thread. Porydaw's main actor sends control frames; plugin callbacks only flip atomics or enqueue.
 - QML: follow rule://qtbridge-surface and rule://text-contrast. Geometry comes from the resolved base font through existing layout policies; no hard-coded pixels. Persistent chrome never claims bare `Space`; Space reaches `transport.play_pause` from the main window and from plugin editor windows (D6).
 - Swift: rule://swift-standards, rule://swift-locality, rule://swift-typecheck-complexity. Explicit closure types. Comments are at most 2 lines.
@@ -38,6 +46,14 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 - New checks test behavior through the module's interface (`@testable import` is the checks' existing convention); no source-text or wiring checks. No `proof.*.txt` ledgers exist under `src/checks`; none are in scope.
 - Use `--release` on build and check commands if the Debug cache's Qt kit disagrees with the checkout-local kit (the arpeggiator plan's precedent); otherwise run them as written.
 - No commits until a checkpoint. At each checkpoint the controller commits the accepted tasks, then pushes the branch to `origin`. Untracked `docs/ideas/memacc-flow-ableton-wayfinding.md`, `profiler/` and `prototypes/` stay untracked and uncommitted.
+
+- User-approved cleanup extension (tasks 17–22): remove confirmed dead code and make local closed protocols explicit without a global state machine. Preserve independent setup/editor/live/render generations, cancellation joins, audio ownership and QML Loader release lifetimes.
+- Task 18 intentionally removes unused realtime progress note snapshots and `CaptureResult.pacing`; percentage progress, final captured events, pacing execution and UI behavior remain unchanged. Its spec/brief updates supersede the original payload requirements.
+- App workflow tasks preserve the current QtBridge surface and observable projections; an internal enum does not justify removing a QML notification or releasing a presenter before its Loader.
+- Allocation extension (tasks 23–26): remove avoidable Porydaw-owned allocations only in VST paths; preserve behavior, cross-thread/async ownership, required published results and SDK/plugin contracts. No SDK patches, generic allocator/pool, arbitrary bounds or unrelated app/audio changes. Native targets remain C++17.
+- Compare identical Release fixtures/operation counts when profiling is authorized. Instruments requires an unlocked Mac and interactive authorization; unusable/partial traces never support allocation counts or zero-allocation claims. SDK/framework and plugin-internal allocations are separate from host-owned redundant buffers.
+
+- Energy extension (tasks 27–28): callbacks use a coalesced queued drain; queued notification allocation is user-approved, but app callback/native processing invariants remain. Lifecycle mutations alone hold exclusive processing ownership; state/editor work uses only required parameter synchronization. Exposed-editor polling settles silent edits on hide/close. Scanner bus discovery initializes only components; actual creation validates controllers. Healthy unchanged catalog scans avoid redundant cache encoding and replacement. Audio-bus deactivation, Render block-size changes and panel prewarm policy are excluded.
 
 ## Tasks
 
@@ -56,14 +72,33 @@ A track can host one VST3 MIDI-producing plugin as a **live insert**. With Live 
 | 11 | `MidiEffectsPanel.qml` (setup only) + mount + shell check + contrast | SDD, sdd-implementer: QML surface. Over-cap (6 files) | 10 (may be drafted alongside it) | [task-11-brief.md](task-11-brief.md) |
 | 12 | Effect Output drawer section: header controls including Reload, page, publication, selection, Copy, QML, drawer registration + shell check | SDD, sdd-implementer: drawer section on the roll camera. Over-cap (11 files): one surface | 9, 10, 11 (its shell check uses task 11's `injectPluginFault`) | [task-12-brief.md](task-12-brief.md) |
 | 13 | Per-instance helper host mode, shared-memory bridge and Swift transport | SDD, qt-cpp-reviewer: process, Qt threading and realtime IPC. Over-cap (15 files): one bridge behavior | 6 | [task-13-brief.md](task-13-brief.md) |
+| 14 | Align VST attachment and lifetime with fork-main off-main audio ownership | SDD, sdd-implementer: asynchronous borrowed-slot ownership and migration conflicts; over-cap, one cross-module lifetime behavior | 4, 7 | [task-14-brief.md](task-14-brief.md) |
+| 15 | Remove duplicate editor dispatch; bound parameter batches, fail closed on callback loss, and contain editor exceptions | SDD, qt-cpp-reviewer: one native helper correctness surface; over-cap, shared dispatcher/lifecycle ownership | 8, 13, 14 | [task-15-brief.md](task-15-brief.md) |
+| 16 | Canonical cheap capture timing, one worker-owned input schedule, off-main Render normalization | SDD, sdd-implementer: one render request across presentation and worker execution; over-cap | 7, 9, 12 | [task-16-brief.md](task-16-brief.md) |
+| 17 | Remove unused native discovery/log capability, canonicalize helper state, simplify parameter-flush handshake and name engine lifecycle | SDD, qt-cpp-reviewer Implement; over-cap, one native lifecycle/control behavior | 15 | [task-17-brief.md](task-17-brief.md) |
+| 18 | Explicit setup cache and removal of unused capture payloads/contracts | SDD, sdd-implementer; over-cap, one Swift host/capture contract | 16; task 17 log cutover interface | [task-18-brief.md](task-18-brief.md) |
+| 19 | Explicit recorder synchronization phase | SDD, sdd-implementer | 9 | [task-19-brief.md](task-19-brief.md) |
+| 20 | Explicit Sample Studio source decisions with retained Loader resources | SDD, sdd-implementer | — | [task-20-brief.md](task-20-brief.md) |
+| 21 | Typed close/reload/replace and save-conflict requests | SDD, sdd-implementer; over-cap, one close/save request lifecycle | — | [task-21-brief.md](task-21-brief.md) |
+| 22 | Explicit MIDI import I/O lifecycle, retaining wizard page state | SDD, sdd-implementer | — | [task-22-brief.md](task-22-brief.md) |
+| 23 | Native control/state/scanner allocation removal | SDD, qt-cpp-reviewer Implement; over-cap, one native serialization/ownership seam | 17–18 | [task-23-brief.md](task-23-brief.md) |
+| 24 | Swift helper framing and state-copy removal | SDD, sdd-implementer; bounded protocol ownership change | 18; unchanged task23 wire contract | [task-24-brief.md](task-24-brief.md) |
+| 25 | Compact capture/live-take working storage | SDD, sdd-implementer; over-cap, one capture/take ownership behavior | 16, 18 | [task-25-brief.md](task-25-brief.md) |
+| 26 | Allocation-free unchanged catalog projections and lean VST notification snapshots | SDD, sdd-implementer; over-cap, one discovery/notification behavior | 17–19 | [task-26-brief.md](task-26-brief.md) |
+| 27 | Event-driven helper coordination, coherent state snapshots and exposure-aware recording; component-only scanner discovery | SDD, user-selected m1 / Claude Opus 5.5; over-cap, one native lifecycle/observation protocol writer | 23–26 | [task-27-brief.md](task-27-brief.md) |
+| 28 | Idempotent catalog persistence without duplicate snapshots or unchanged writes | SDD, user-selected m1 / Claude Opus 5.5; disjoint catalog owner | 26 | [task-28-brief.md](task-28-brief.md) |
 
 Parallelism (disjoint write sets):
 - tasks 1 ∥ 2 ∥ 4 ∥ 5;
 - then 3 (after 2) ∥ 6 (after 5);
 - then 13 (after 6), then 7 (after 1, 2, 4, 13);
 - then 8 ∥ 9;
+- user-directed task 14 gates implementation acceptance of the in-flight tasks 8–9; preserve their drafts, integrate the newer audio model, and pass combined review/headless verification before checkpointing. Desktop-dependent gates remain pending for final feature acceptance.
 - then 10;
 - then 11, then 12 (task 12 drafting may overlap 11; its shell check needs task 11's bootstrap).
+- user-approved thermo repairs 15 ∥ 16 use disjoint native/Swift write sets after the reviewed ordering predecessor is checkpointed; controller serializes all build/check configurations and owns registration.
+- Cleanup tasks 17–22 have disjoint write sets and may implement concurrently; 17 removes the native/decoder log arm while 18 removes its `PluginInstance` consumer. No shared build runs until the cutover settles. Controller owns docs/BUILDING.md and plan.md; task 18 alone owns the capture spec and original task-7 contract edits. Review accepted tasks in bounded batches, with user-selected Claude Opus 5.5 assessing quality. Checkpoint before any later task reuses an accepted task's files.
+- Allocation tasks 23–26 have disjoint source/check write sets and preserve all inter-task interfaces; they may implement concurrently after the c27eaa14 cleanup checkpoint. Controller owns all builds, profiling, docs and registration. One accepted allocation milestone follows covering Debug/ASAN/Release runtime gates and independent review.
 
 ## Checkpoints
 
@@ -74,8 +109,31 @@ Parallelism (disjoint write sets):
 - **B1** — after tasks 6 and 13. Commit and push before task 7 reuses bridge and module files.
 - **B** — after task 7. Commit and push before task 8 re-edits helper and instance files; then tasks 8 ∥ 9.
   After tasks 8–9, checkpoint accepted work before task 10 re-edits `DocumentWorkspace.swift` and `ApplicationSession+Tabs.swift`.
+  The task-14 upstream merge stays uncommitted until the alignment and task 8–9 milestone pass their review and covering Debug/ASAN headless gates; conflict-marker removal alone is not acceptance. The user-approved gate timing above defers native execution to final acceptance, allowing task 10 integration to proceed.
 - **C** — after task 10. Commit and push before task 12 re-edits `DocumentWorkspace.swift`.
-- **Final** — after tasks 11–12, plus the final verification below.
+- **Ordering predecessor** — `15933295`: reviewed macOS ordering policy, Debug/ASAN headless gates passed; pushed before task 15 reuses editor files. Native window/input acceptance remains pending under the gate-timing ruling.
+- **Final** — after tasks 11–12 and approved thermo repairs 15–16, plus the final verification below.
+- **Cleanup checkpoint** — tasks 17–22 accepted after independent task reviews and m1 / Claude Opus 5.5 final source-quality PASS (no critical/important findings). Final repaired Debug and ASAN each passed 8 focused harnesses; production shell passed 13. Bridge: 0 baselined findings; AOT: 8782/8866 compiled (99.1%), 84 rejected; format check and all 26 Swift index targets passed.
+  Installed-plugin/native final acceptance is still open: the fresh app's saved installed VST instance stalled inside its constructor's soundfont filesystem enumeration, before changed setup/phase/flush operations. Standalone scanner instantiation passed from both worktree and root cwd; cause and baseline reproduction are not established. No timeout/launch/SDK workaround was applied. Editor Space, reversible parameter editing, focus/stacking and native Debug/ASAN acceptance are not claimed complete.
+- **Allocation checkpoint** — tasks 23–26 accepted by independent spec/quality reviews and m1 / Claude Opus 5.5 final source/integration review (Task23 r2; Tasks24/26 r1; Task25 source unchanged after r0). No remaining blocking source findings. Opus-directed repairs removed the extra state-reply copy and chunk staging allocations; guaranteed-mutating drains retain compact Task snapshots instead of forcing whole-table COW.
+  Repaired Swift Debug and ASAN each passed 5 focused harnesses. The final scanner-only delta was rebuilt in both and passed four actual CLI error cases byte-for-byte against the pre-change baseline; final Release passed all 5 harnesses and the same four CLI cases. Release includes the existing 100-call insert and 100-render Sequencer zero-host-allocation assertions. Production rack/output QML passed 2 harnesses; bridge: 0 baselined findings; AOT: 8782/8866 compiled (99.1%), 84 rejected; 29 files formatted and all 26 Swift index targets passed.
+  Native lint exited 1 with 8 unchanged findings: 3 required mutable standard-container loops and 5 baseline direct-brace style exceptions, none introduced. Retained the counted LiveTake slab after Opus adjudication: linking would add per-onset storage for repeated keys. Existing catalog publication/cache writes remain necessary for callbacks and cache create/repair/error retry; no extra cache revisions were added.
+  Quantitative whole-host allocation profiling remains blocked: exact-target Instruments launch awaits interactive SecurityAgent authorization while the Mac is locked; the partial trace is unusable. No numerical savings, whole-process zero-allocation result or new native UI acceptance is claimed.
+- **Energy follow-up (tasks 27–28, before integration)** — user-selected Opus implemented callback/work wakeups, lifecycle-only processing ownership, paired snapshot digests, exposure-aware state settlement, component-only scanner discovery and idempotent catalog persistence. Independent task gates approved source/spec with no remaining critical or important findings. No-op catalog retries no longer republish unchanged records.
+  Debug build and the five focused headless lanes passed; the new in-flight-state/MIDI regression passed. Native exposure/minimize/restore/close passed, and the controller editor lane passed after silent-close and stale-pitch-precondition repairs. The final stricter shutdown predicate derives the fixture's allowed output from actual state; it is compiled/formatted/reviewed but awaits its native rerun.
+  ASAN build and the five focused headless lanes passed; final Swift indexing passed 26/26 targets and changed-file formatting passed. Full native acceptance remains open: the plugin-editor lane fails at owner focus before stacking assertions while an unrelated application is foreground. Controlled-desktop confirmation timed out unanswered; no forced takeover or timeout/test waiver was applied. Windows/Linux runtime verification and numerical energy measurements are not claimed. No commit, push or merge was performed.
+
+## Integration authorization
+
+The user subsequently authorized committing the accepted VST, menu/header, stopped-audition and energy work, merging it into `fork-main`, pushing and resolving CI. This supersedes earlier no-commit/no-merge constraints in the three affected plans, not their behavioral contracts or pending native acceptance gates. The desktop is currently locked; foreground editor/keyboard acceptance remains explicitly unverified.
+
+Baseline Build run `42951843760` on `fork-main` (`8003ca8a`) failed on unavailable `DispatchSerialQueue` (Linux/Windows/ASAN) and the direct Qt keybinding forwarding-header import (macOS). Existing feature commits already replace the executor portably and route Qt keybindings through the project bridge. Independent CI diagnosis required no workflow changes; hosted integration must still verify previously unreached packaging, startup and full ASAN execution.
+
+Final local integration preflight rebuilt ASAN checks and passed all 63 non-windowing harnesses (project-store parity separately, then 62 remaining lanes). Post-format Swift indexing passed all 26 targets. These results do not cover native foreground editor/keyboard gates or substitute for hosted cross-platform CI.
+
+Final whole-branch Opus review approved source/spec with no critical or important findings. Its stopped-audition finding was repaired before integration: the helper advances project samples, PPQ and bar position between sub-blocks only when playing. The existing real-helper context check now observes an 8192-frame playing and stopped request near a bar boundary. Debug and ASAN each rebuilt and passed both affected host lanes; focused re-review accepted the exact two-source delta.
+
+Ruling: defer the four non-blocking review notes outside this merge/CI pass: duplicate note-ID/chase ownership, unused live-call fields, repeated workspace retirement ordering, and render-progress-triggered full header refreshes. Costs if left indefinitely: note-ID/lifetime-order drift and unnecessary callback/header work. Native desktop acceptance remains open; source approval and headless/CI results do not waive it.
 
 ## Final verification (controller)
 

@@ -30,6 +30,7 @@ public final class ImportControllerRow {
 }
 
 /// Owns the import wizard's source lifetime and publishes only bridged choices.
+/// Bridged values are controller-owned projections of the private lifecycle.
 @MainActor
 @QtBridgeable
 public final class MidiImportController: QmlUncreatable {
@@ -71,10 +72,19 @@ public final class MidiImportController: QmlUncreatable {
     @QtSignal public func sourcePickerRequested()
     @QtSignal public func warningRequested(title: String, message: String)
 
+    private enum Lifecycle {
+        case idle
+        case loading
+        case editing(MidiImportWizardState)
+        case importing
+    }
+
     private weak var dock: SongDockController?
     private weak var session: ApplicationSession?
     private var service: ProjectService?
-    private var state: MidiImportWizardState?
+    private var lifecycle: Lifecycle = .idle {
+        didSet { publish() }
+    }
     private var operation: Task<Void, Never>?
     private var publishedRows: [ImportControllerRowValue] = []
 
@@ -89,8 +99,7 @@ public final class MidiImportController: QmlUncreatable {
         operation?.cancel()
         operation = nil
         self.service = service
-        busy = false
-        cancel()
+        lifecycle = .idle
     }
 
     @QtIgnored
@@ -98,14 +107,14 @@ public final class MidiImportController: QmlUncreatable {
         operation?.cancel()
         operation = nil
         service = nil
-        busy = false
-        cancel()
+        lifecycle = .idle
         dock = nil
         session = nil
     }
 
     private var canIntake: Bool {
-        session?.projectOpen == true && service != nil && !busy && !wizardOpen && dock?.busy == false
+        guard case .idle = lifecycle else { return false }
+        return session?.projectOpen == true && service != nil && dock?.busy == false
             && dock?.confirmation.isEmpty == true && session?.saveInProgress == false
     }
 
@@ -131,35 +140,34 @@ public final class MidiImportController: QmlUncreatable {
         let preferences = PreferencesStore()
         preferences.setString(key: "lastImportDir", value: url.deletingLastPathComponent().path)
         preferences.synchronize()
-        busy = true
+        lifecycle = .loading
         operation = Task { [weak self] in
             guard let self else { return }
             do {
                 let project = try await service.importProjectData()
                 guard !Task.isCancelled, self.service === service else { return }
-                self.state = MidiImportWizardState(
-                    source: source,
-                    sourceFileName: url.lastPathComponent, project: project,
-                    takenLabels: self.dock?.presenter.registeredLabels() ?? [])
-                self.publish()
-                self.wizardOpen = true
+                self.lifecycle = .editing(
+                    MidiImportWizardState(
+                        source: source,
+                        sourceFileName: url.lastPathComponent, project: project,
+                        takenLabels: self.dock?.presenter.registeredLabels() ?? []))
             } catch {
                 guard !Task.isCancelled, self.service === service else { return }
                 self.session?.publishOperationFailure(message: String(describing: error))
+                self.lifecycle = .idle
             }
-            if !Task.isCancelled, self.service === service { self.busy = false }
         }
     }
 
     public func selectPlayer(index: Int) { change { $0.selectPlayer(index) } }
     public func setRescale(value: Bool) { change { $0.rescale = value } }
     public func editLabel(text: String) -> String {
-        guard state != nil else { return "" }
+        guard case .editing = lifecycle else { return "" }
         change { _ = $0.editLabel(text) }
         return label
     }
     public func editConstant(text: String) -> String {
-        guard state != nil else { return "" }
+        guard case .editing = lifecycle else { return "" }
         change { _ = $0.editConstant(text) }
         return constant
     }
@@ -174,7 +182,7 @@ public final class MidiImportController: QmlUncreatable {
     public func back() { change { _ = $0.back() } }
 
     public func finish() {
-        guard !busy, wizardOpen, let state, let service else { return }
+        guard case .editing(let state) = lifecycle, let service else { return }
         let plan: ImportFinishPlan
         switch state.finishPlan() {
         case .failure(let refusal):
@@ -182,8 +190,7 @@ public final class MidiImportController: QmlUncreatable {
             return
         case .success(let value): plan = value
         }
-        wizardOpen = false
-        self.state = nil
+        lifecycle = .idle
         let midi: MidiFile
         do {
             midi = try MidiImport.prepareImportedSong(
@@ -193,7 +200,7 @@ public final class MidiImportController: QmlUncreatable {
             publishWarning(title: "Import MIDI", message: String(describing: error))
             return
         }
-        busy = true
+        lifecycle = .importing
         let request = SongImportRequest(
             label: plan.label, constant: plan.constant,
             player: plan.player, config: plan.config,
@@ -203,7 +210,7 @@ public final class MidiImportController: QmlUncreatable {
             await registerImportedSong(
                 request: request, service: service, dock: self.dock, session: self.session,
                 isCurrent: { self.service === service })
-            if !Task.isCancelled, self.service === service { self.busy = false }
+            if !Task.isCancelled, self.service === service { self.lifecycle = .idle }
         }
     }
 
@@ -212,20 +219,25 @@ public final class MidiImportController: QmlUncreatable {
     }
 
     public func cancel() {
-        wizardOpen = false
-        state = nil
-        publish()
+        guard case .editing = lifecycle else { return }
+        lifecycle = .idle
     }
 
     private func change(_ mutation: (inout MidiImportWizardState) -> Void) {
-        guard var state else { return }
+        guard case .editing(var state) = lifecycle else { return }
         mutation(&state)
-        self.state = state
-        publish()
+        lifecycle = .editing(state)
     }
 
     private func publish() {
-        guard let state else {
+        let isBusy: Bool
+        switch lifecycle {
+        case .idle, .editing: isBusy = false
+        case .loading, .importing: isBusy = true
+        }
+        if busy != isBusy { busy = isBusy }
+        guard case .editing(let state) = lifecycle else {
+            if wizardOpen { wizardOpen = false }
             page = 0
             windowTitle = ""
             sourceFileName = ""
@@ -298,5 +310,6 @@ public final class MidiImportController: QmlUncreatable {
         exactGate = state.exactGate
         extendedClocks = state.extendedClocks
         noCompression = state.noCompression
+        if !wizardOpen { wizardOpen = true }
     }
 }
