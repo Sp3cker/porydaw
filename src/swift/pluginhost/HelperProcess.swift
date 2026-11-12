@@ -35,12 +35,19 @@ public struct HelperBuses: Equatable, Sendable {
     public let audioOut: Int32
 }
 
+/// One helper state read paired with the FNV-1a digest of exactly these bytes.
+struct HelperStateSnapshot: Equatable, Sendable {
+    let bytes: [UInt8]
+    let digest: UInt64
+}
+
 enum HelperEvent: Equatable, Sendable {
     case ready(UInt32)
     case endEdit(UInt32)
     case restartComponent(UInt32)
     case setDirty(Bool)
     case editorClosed
+    case editorExposed(Bool)
     case shortcut(UInt32)
     case eof
     case terminated(Int32)
@@ -108,10 +115,11 @@ private struct ControlPayload {
         guard offset == end else { throw HelperProcessError.invalidPayload }
     }
 
-    mutating func readState() throws -> [UInt8] {
+    mutating func readSnapshot() throws -> HelperStateSnapshot {
+        let digest = try read(UInt64.self)
         let range = try readByteRange()
         try requireEnd()
-        return Array(data[range])
+        return HelperStateSnapshot(bytes: Array(data[range]), digest: digest)
     }
 
     mutating func readText() throws -> String {
@@ -171,7 +179,7 @@ final class HelperProcess {
     private enum Lifecycle { case idle, starting, ready, stopping, stopped }
     private enum Reply: Sendable {
         case data(Data)
-        case state([UInt8])
+        case state(HelperStateSnapshot)
     }
     private struct Pending {
         let type: UInt32
@@ -287,8 +295,7 @@ final class HelperProcess {
             if result == 0 {
                 if pendingRequest.type == PDPB_GET_STATE {
                     do {
-                        let state = try payload.readState()
-                        outcome = .success(.state(state))
+                        outcome = .success(.state(try payload.readSnapshot()))
                     } catch {
                         outcome = .failure(HelperProcessError.invalidPayload)
                     }
@@ -329,6 +336,10 @@ final class HelperProcess {
             guard value <= 1 else { throw HelperProcessError.invalidPayload }
             event = .setDirty(value != 0)
         case UInt32(PDPB_EDITOR_CLOSED): event = .editorClosed
+        case UInt32(PDPB_EDITOR_EXPOSED):
+            let value = try payload.read(UInt32.self)
+            guard value <= 1 else { throw HelperProcessError.invalidPayload }
+            event = .editorExposed(value != 0)
         case UInt32(PDPB_SHORTCUT): event = .shortcut(try payload.read(UInt32.self))
         default: throw HelperProcessError.invalidPayload
         }
@@ -509,7 +520,7 @@ final class HelperProcess {
         }
     }
 
-    func getState(which: UInt32) async throws -> [UInt8] {
+    func getState(which: UInt32) async throws -> HelperStateSnapshot {
         let reply = try await request(UInt32(PDPB_GET_STATE), payloadSize: 4) { (frame: inout ControlPayload) in
             frame.append(which)
         }

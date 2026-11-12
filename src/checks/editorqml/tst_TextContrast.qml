@@ -490,17 +490,24 @@ ShellLaneSupport {
                 list.positionViewAtIndex(index, ListView.Contain)
                 list.forceLayout()
                 const row = list.itemAtIndex(index)
-                if (row && row.name === "TestGen" && !row.blocked) {
+                if (row && row.name === "TestGen") {
                     generator = index
                     return true
                 }
             }
             return false
         }, 30000), "the real MIDI fixture is available for contrast states")
-        model.selectPlugin(generator)
+        model.choosePlugin(generator)
+        model.applyPlugin()
         verify(waitForNative(function() { return model.hasEffect && !model.isLoading }, 30000),
                "the actual effect loads before enabled-control capture")
         auditMidiSurface(context + " MIDI setup loaded", panel)
+        model.showPluginChooser()
+        tryCompare(model, "browsingPlugins", true)
+        model.choosePlugin(generator)
+        auditMidiSurface(context + " MIDI replacement chooser", panel)
+        model.cancelPluginChooser()
+        tryCompare(model, "browsingPlugins", false)
         model.close()
         tryCompare(model, "isOpen", false)
     }
@@ -522,7 +529,8 @@ ShellLaneSupport {
                "real rendered notes enable Copy and expose output diagnostics")
         auditMidiSurface(context + " effect output rendered", item)
         model.setLive(true)
-        verify(waitForNative(function() { return model.live }, 10000), "Live becomes attached")
+        verify(waitForNative(function() { return model.live && !model.busy && model.canOperate }, 10000),
+               "Live configuration completes before crash-state capture")
         auditMidiSurface(context + " effect output Live", item)
         verify(bootstrap.injectPluginFault(surface.gridModel.trackIndex, 1))
         verify(waitForNative(function() { return model.canReload }, 10000), "the committed crash exposes Reload")

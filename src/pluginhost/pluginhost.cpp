@@ -143,6 +143,9 @@ tresult PLUGIN_API ComponentHandler::finishGroupEdit() { return kResultOk; }
 void ComponentHandler::editorClosed() {
     notify([](const pdph_host_callbacks& c) { if (c.editor_closed) c.editor_closed(c.user); });
 }
+void ComponentHandler::editorExposed(bool exposed) {
+    notify([exposed](const pdph_host_callbacks& c) { if (c.editor_exposed) c.editor_exposed(c.user, exposed); });
+}
 void ComponentHandler::detach() {
     enabled.store(false, std::memory_order_seq_cst);
     while (inFlight.load(std::memory_order_seq_cst) != 0) std::this_thread::yield();
@@ -191,6 +194,32 @@ pdph_result pdph_module_class_info(pdph_module module, int32_t index, pdph_class
         copyText(out->version, info.version()); copyText(out->sdk_version, info.sdkVersion());
         return PDPH_OK;
     } catch (...) { return PDPH_ERR_INTERNAL; }
+}
+pdph_result pdph_module_class_buses(pdph_module module, int32_t index, pdph_bus_counts* out, pdph_error* error) {
+    if (!module || !out || index < 0 || index >= pdph_module_class_count(module)) {
+        pdph::error(error, "Null module, class index or output"); return PDPH_ERR_ARGUMENT;
+    }
+    *out = {};
+    try {
+        const auto& info = module->classes[index];
+        auto& host = hostContext();
+        module->module->getFactory().setHostContext(&host);
+        auto component = module->module->getFactory().createInstance<IComponent>(info.ID());
+        const auto failure = [&](const char* what) {
+            if (error) std::snprintf(error->message, sizeof(error->message), "%s of %s!", what, info.name().c_str());
+            return PDPH_ERR_SDK;
+        };
+        if (!component) return failure("Failed to create component instance");
+        if (component->initialize(&host) != kResultOk) return failure("Failed to initialize component");
+        struct Terminate {
+            IComponent* component;
+            ~Terminate() { try { component->terminate(); } catch (...) {} }
+        } terminate{component.get()};
+        *out = {component->getBusCount(kEvent, kInput), component->getBusCount(kEvent, kOutput),
+                component->getBusCount(kAudio, kInput), component->getBusCount(kAudio, kOutput)};
+        return PDPH_OK;
+    } catch (const std::exception& e) { pdph::error(error, e.what()); return PDPH_ERR_INTERNAL; }
+    catch (...) { pdph::error(error, "Unexpected component discovery exception"); return PDPH_ERR_INTERNAL; }
 }
 pdph_result pdph_plugin_create(pdph_module module, const uint8_t uid[16], pdph_host_callbacks callbacks,
     pdph_plugin* out, pdph_error* error) {

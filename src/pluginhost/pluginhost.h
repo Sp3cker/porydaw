@@ -28,6 +28,7 @@ typedef struct {
     void (*restart_component)(void*, int32_t flags);
     void (*set_dirty)(void*, int32_t dirty);
     void (*editor_closed)(void*);
+    void (*editor_exposed)(void*, int32_t exposed);
 } pdph_host_callbacks;
 
 // Main thread. Instances retain the loaded module independently of the module handle.
@@ -35,6 +36,9 @@ pdph_result pdph_module_open(const char* utf8_path, pdph_module*, pdph_error*);
 void pdph_module_close(pdph_module);
 int32_t pdph_module_class_count(pdph_module);
 pdph_result pdph_module_class_info(pdph_module, int32_t index, pdph_class_info*);
+// Main thread discovery: initializes, counts and terminates only the class's component; no controller,
+// state synchronization or parameters. Actual creation still validates the controller.
+pdph_result pdph_module_class_buses(pdph_module, int32_t index, pdph_bus_counts*, pdph_error*);
 // Main thread. Callback user storage must survive until destroy returns.
 pdph_result pdph_plugin_create(pdph_module, const uint8_t uid[16], pdph_host_callbacks, pdph_plugin*, pdph_error*);
 // Main thread, after detaching the insert and joining processing; no callbacks after return.

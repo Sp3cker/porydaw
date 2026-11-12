@@ -4,6 +4,7 @@
 #include "pluginterfaces/gui/iplugviewcontentscalesupport.h"
 #include <QCoreApplication>
 #include <QEvent>
+#include <QExposeEvent>
 #include <QGuiApplication>
 #include <QResizeEvent>
 #include <QScreen>
@@ -167,7 +168,7 @@ public:
     }
     pdph_plugin plugin;
     IPtr<IPlugView> view;
-    bool attached = false, resizing = false;
+    bool attached = false, resizing = false, exposed = false;
 #if defined(__linux__)
     IPtr<RunLoop> runLoop = owned(new RunLoop);
 #endif
@@ -180,7 +181,13 @@ protected:
             return true;
         }
         if (event->type() == QEvent::DevicePixelRatioChange) updateScale();
-        return QWindow::event(event);
+        const bool handled = QWindow::event(event);
+        if (event->type() == QEvent::WindowStateChange || event->type() == QEvent::Hide) reportExposure();
+        return handled;
+    }
+    void exposeEvent(QExposeEvent* event) override {
+        QWindow::exposeEvent(event);
+        reportExposure();
     }
     void resizeEvent(QResizeEvent* event) override {
         QWindow::resizeEvent(event);
@@ -189,6 +196,13 @@ protected:
         resizeView(view, &rect);
     }
 private:
+    // Detach clears plugin first, so a closed editor never reports exposure again.
+    void reportExposure() noexcept {
+        const bool now = isVisible() && isExposed() && !(windowStates() & Qt::WindowMinimized);
+        if (!plugin || now == exposed) return;
+        exposed = now;
+        try { plugin->handler->editorExposed(now); } catch (...) { std::fprintf(stderr, "Could not notify editor exposure\n"); }
+    }
     uint32 references = 1;
 };
 
@@ -226,6 +240,7 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
     try {
     if (plugin->editor) {
         auto* editor = plugin->editor;
+        editor->setWindowStates(editor->windowStates() & ~Qt::WindowMinimized);
         editor->show(); editor->raise(); editor->requestActivate();
 #ifdef __APPLE__
         pdph::helper::refreshMacEditorWindows();
@@ -291,6 +306,8 @@ pdph_result pdph_editor_open(pdph_plugin plugin, const char* title, pdph_editor*
 void pdph_editor_raise(pdph_editor editor) {
     if (!editor) return;
     try {
+        // An explicit open or raise restores a minimized editor; window ordering alone never does.
+        editor->setWindowStates(editor->windowStates() & ~Qt::WindowMinimized);
         editor->show(); editor->raise(); editor->requestActivate();
 #ifdef __APPLE__
         pdph::helper::refreshMacEditorWindows();

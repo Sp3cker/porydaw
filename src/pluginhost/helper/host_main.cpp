@@ -48,24 +48,12 @@ uint32_t decode32(const unsigned char* bytes) {
     return uint32_t(bytes[0]) | (uint32_t(bytes[1]) << 8) | (uint32_t(bytes[2]) << 16) | (uint32_t(bytes[3]) << 24);
 }
 }
-static bool inputClosed() {
-#ifdef _WIN32
-    DWORD available = 0;
-    return !PeekNamedPipe(GetStdHandle(STD_INPUT_HANDLE), nullptr, 0, nullptr, &available, nullptr);
-#else
-    pollfd input = {STDIN_FILENO, POLLIN, 0};
-    return poll(&input, 1, 0) > 0 && (input.revents & (POLLHUP | POLLERR | POLLNVAL));
-#endif
-}
 Host::Host() {
     for (uint32_t index = 0; index < callbackSlots.size(); ++index) callbackSlots[index].sequence.store(index, std::memory_order_relaxed);
     installEditors();
-    QObject::connect(&callbackTimer, &QTimer::timeout, &context, [this] { drainCallbacks(); });
-    callbackTimer.start(10ms);
 }
 Host::~Host() {
     stop(exitStatus.load(std::memory_order_relaxed));
-    callbackTimer.stop();
     if (reader.joinable()) reader.join();
     if (realtime.joinable()) realtime.join();
     if (plugin) pdph_plugin_destroy(plugin);
@@ -75,8 +63,15 @@ Host::~Host() {
 }
 void Host::stop(int status) {
     if (status) exitStatus.store(status, std::memory_order_relaxed);
-    stopping.store(true, std::memory_order_release);
+    stopping.store(true, std::memory_order_seq_cst);
+    if (channel) { pdpb_wake_request(channel); pdpb_post_signal(channel); }
+    { std::lock_guard<std::mutex> lock(controlMutex); }
+    controlDone.notify_all();
     QMetaObject::invokeMethod(&context, [] { QCoreApplication::quit(); }, Qt::QueuedConnection);
+}
+void Host::finishControl() {
+    { std::lock_guard<std::mutex> lock(controlMutex); controlInFlight = false; }
+    controlDone.notify_all();
 }
 void readControls(Host& host) {
     while (!host.stopping.load(std::memory_order_acquire)) {
@@ -87,16 +82,17 @@ void readControls(Host& host) {
         if (size > PDPB_MAX_CONTROL_BYTES || !frame.request) { host.stop(1); return; }
         frame.payload.resize(size);
         if (!readExact(host, frame.payload.data(), size)) { host.stop(0); return; }
-        host.pendingControls.store(1, std::memory_order_release);
+        { std::lock_guard<std::mutex> lock(host.controlMutex); host.controlInFlight = true; }
         if (!QMetaObject::invokeMethod(&host.context, [&host, frame = std::move(frame)]() mutable {
             try { if (!host.stopping.load(std::memory_order_acquire)) dispatch(host, std::move(frame)); }
             catch (...) { host.stop(1); }
-            host.pendingControls.store(0, std::memory_order_release);
+            host.finishControl();
         }, Qt::QueuedConnection)) { host.stop(1); return; }
-        while (host.pendingControls.load(std::memory_order_acquire) && !host.stopping.load(std::memory_order_acquire)) {
-            if (inputClosed()) { host.stop(0); return; }
-            std::this_thread::sleep_for(1ms);
-        }
+        // Stop also notifies, so a frame the quitting loop never runs cannot strand the reader.
+        std::unique_lock<std::mutex> lock(host.controlMutex);
+        host.controlDone.wait(lock, [&host] {
+            return !host.controlInFlight || host.stopping.load(std::memory_order_acquire);
+        });
     }
 }
 int run(int argc, char** argv) {

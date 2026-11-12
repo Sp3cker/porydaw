@@ -20,6 +20,12 @@ public enum PluginHostError: Error, Equatable, Sendable, CustomStringConvertible
     }
 }
 
+/// Both plugin states, with the component digest describing exactly the captured component bytes.
+public struct PluginStateSnapshot: Sendable {
+    public let state: PluginStateBlob
+    public let componentDigest: UInt64
+}
+
 /// One lazily spawned helper, one exclusive payload producer and one capture Thread.
 @MainActor
 public final class PluginInstance {
@@ -43,7 +49,10 @@ public final class PluginInstance {
     public var onEdit: (() -> Void)?
     public var onFailure: ((PluginHostError) -> Void)?
     public var onEditorClosed: (() -> Void)?
+    /// Fires when the open editor's native window gains or loses exposure.
+    public var onEditorExposure: (() -> Void)?
     public private(set) var isEditorOpen = false
+    public var isEditorExposed: Bool { isEditorOpen && editorExposed }
     public private(set) var liveInsert: LiveInsert?
     public private(set) var isLiveArmed = false
     public private(set) var isLivePlaying = false
@@ -55,6 +64,7 @@ public final class PluginInstance {
     private var reloadTask: Task<Void, any Error>?
     private var editorOperation: Task<Void, any Error>?
     private var editorRevision: UInt64 = 0
+    private var editorExposed = false
     private var generation: UInt64 = 1
     private var stopped = false
     private var shutdownFinished = false
@@ -156,6 +166,7 @@ public final class PluginInstance {
         failure = reason
         editorRevision &+= 1
         isEditorOpen = false
+        editorExposed = false
         if let helper { PluginEditorShortcuts.unregister(helper) }
         capture.failed(reason)
         _ = beginLiveDetach()
@@ -177,7 +188,11 @@ public final class PluginInstance {
         case .editorClosed:
             editorRevision &+= 1
             isEditorOpen = false
+            editorExposed = false
             onEditorClosed?()
+        case .editorExposed(let exposed):
+            editorExposed = exposed
+            onEditorExposure?()
         case .shortcut(let index):
             if isEditorOpen { PluginEditorShortcuts.receive(index) }
         case .ready, .setDirty(false), .eof, .terminated: break
@@ -249,8 +264,8 @@ public final class PluginInstance {
             guard let old = self.helper, !self.stopped else { throw CancellationError() }
             let token = self.generation
             do {
-                let component = try await old.getState(which: 0)
-                let controller = try await old.getState(which: 1)
+                let component = try await old.getState(which: 0).bytes
+                let controller = try await old.getState(which: 1).bytes
                 try self.validate(token)
                 await self.detachLive()
                 try self.validate(token)
@@ -318,6 +333,8 @@ public final class PluginInstance {
             if self.isEditorOpen {
                 try await helper.raiseEditor()
             } else {
+                // Every exposure event after the prior close reply belongs to this new window.
+                self.editorExposed = false
                 try await helper.openEditor(title: title)
             }
             try self.validate(token)
@@ -376,16 +393,21 @@ public final class PluginInstance {
         try validate(token)
     }
 
-    public func state() async throws -> PluginStateBlob {
+    /// Reads the controller, then the component with the digest of exactly its returned bytes.
+    public func snapshot() async throws -> PluginStateSnapshot {
         try await ready()
         guard let helper else { throw PluginHostError.native("Plugin unavailable.") }
         let token = generation
-        let component = try await helper.getState(which: 0)
-        try validate(token)
         let controller = try await helper.getState(which: 1)
         try validate(token)
-        return PluginStateBlob(component: component, controller: controller)
+        let component = try await helper.getState(which: 0)
+        try validate(token)
+        return PluginStateSnapshot(
+            state: PluginStateBlob(component: component.bytes, controller: controller.bytes),
+            componentDigest: component.digest)
     }
+
+    public func state() async throws -> PluginStateBlob { try await snapshot().state }
 
     public func stateDigest() async -> UInt64? {
         do {

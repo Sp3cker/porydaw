@@ -22,7 +22,7 @@ target_compile_options(PorydawPluginBridge PRIVATE
 if(UNIX AND NOT APPLE)
     target_link_libraries(PorydawPluginBridge PRIVATE rt)
 elseif(WIN32)
-    target_link_libraries(PorydawPluginBridge PRIVATE kernel32)
+    target_link_libraries(PorydawPluginBridge PRIVATE kernel32 synchronization)
 endif()
 
 add_library(PorydawPluginHost STATIC

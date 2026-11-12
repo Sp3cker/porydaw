@@ -26,7 +26,7 @@ ShellClipboardSupport {
         if (list) {
             for (let index = 0; index < list.count; ++index) {
                 const row = list.itemAtIndex(index)
-                rows.push(row ? row.name + ":blocked=" + row.blocked + ":" + row.detail
+                rows.push(row ? row.name + ":" + row.detail
                               : index + ":not instantiated")
             }
         }
@@ -79,14 +79,17 @@ ShellClipboardSupport {
                 const row = list.itemAtIndex(index)
                 if (row && row.name === "TestGen") {
                     generator = row
-                    return !row.blocked && row.enabled
+                    return row.enabled
                 }
             }
             return false
         }, 30000), "TestGen becomes selectable after native catalog scanning" + effectDiagnostics())
         mouseClick(generator, generator.width / 2, generator.height / 2)
+        compareNative(panelModel, "hasEffect", false)
+        activate(view, "midiEffectsApply")
         compareNative(panelModel, "hasEffect", true, 30000)
         compareNative(panelModel, "isLoading", false, 30000)
+        compareNative(panelModel, "inputMode", 1)
         activate(view, "midiEffectsClose")
         compareNative(panelModel, "isOpen", false)
         const model = app.effectOutputPage()
@@ -145,7 +148,6 @@ ShellClipboardSupport {
     function test_liveRenderGrabCopyPasteUndoClear() {
         const p = setup()
         const before = noteFacts(p.grid)
-        activate(p.view, "effectOutputLive")
         compareNative(p.model, "live", true, 30000)
         compareNative(control(p.view, "timelineHeaderEffectCaption_0"), "text", "Live")
         keyClick(Qt.Key_Space)
@@ -232,6 +234,19 @@ ShellClipboardSupport {
         compareNative(p.model, "noteCount", 0)
         compare(control(p.view, "effectOutputEmptyText").text, "Render or grab played to see output here")
         compare(noteFacts(p.grid), before, "Clear affects only session output")
+
+        activate(p.view, "effectOutputLive")
+        compareNative(p.model, "live", false, 30000)
+        activate(p.view, "timelineHeaderEffectsButton_0")
+        compareNative(p.panel, "isOpen", true)
+        p.panel.setInputMode(0)
+        activate(p.view, "midiEffectsClose")
+        activate(p.view, "timelineHeaderEffectsButton_0")
+        compareNative(p.panel, "isOpen", true)
+        compareNative(p.panel, "isLoading", false, 30000)
+        compareNative(p.panel, "inputMode", 0)
+        compareNative(p.model, "live", false)
+        activate(p.view, "midiEffectsClose")
     }
 
     function test_crashAndWatchdogReloadKeepOtherTracksPlaying() {

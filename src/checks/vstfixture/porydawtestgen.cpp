@@ -27,6 +27,11 @@ constexpr uint32 diagnosticMagic = 0x44584450u, diagnosticVersion = 1;
 constexpr std::size_t diagnosticBytes = 112;
 // Diagnostic opt-in uses fault bit 30; component word 8 counts editor key-downs.
 constexpr uint32 diagnosticFlag = 0x40000000u;
+// Scanner regression opt-in: controller-only APIs abort, so discovery must stay component-only.
+bool componentOnlyProbe() {
+    static const bool enabled = std::getenv("PORYDAW_TESTGEN_COMPONENT_ONLY") != nullptr;
+    return enabled;
+}
 struct Pending { bool used = false; int64 sample = 0; uint64 order = 0; Event event{}; };
 struct Diagnostics {
     uint64 calls = 0;
@@ -180,18 +185,32 @@ public:
     }
     tresult PLUGIN_API getState(IBStream* stream) override {
         std::array<uint8, 16> bytes{};
-        const int32 fields[] = {offset, latency, keysReceived.load(std::memory_order_relaxed), fault};
+        int32 observed = keysReceived.load(std::memory_order_relaxed);
+        if (faultCode() == 11) {
+            // Bounded snapshot gate: word 8 reports whether a processed block arrived during this read.
+            const auto start = processedBlocks.load(std::memory_order_acquire);
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+            while (processedBlocks.load(std::memory_order_acquire) == start && std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            observed = processedBlocks.load(std::memory_order_acquire) != start ? 1 : 0;
+        }
+        const int32 fields[] = {offset, latency, observed, fault};
         for (int field = 0; field < 4; ++field) for (int byte = 0; byte < 4; ++byte)
             bytes[field * 4 + byte] = static_cast<uint8>(uint32(fields[field]) >> (8 * byte));
         int32 written = 0;
         return stream && stream->write(bytes.data(), 16, &written) == kResultOk && written == 16 ? kResultOk : kResultFalse;
     }
     tresult PLUGIN_API setComponentState(IBStream* stream) override {
+        if (componentOnlyProbe()) std::abort();
         if (variant == 2) {
             if (componentHandler) componentHandler->restartComponent(kParamValuesChanged);
             return kNotImplemented;
         }
         return setState(stream);
+    }
+    int32 PLUGIN_API getParameterCount() override {
+        if (componentOnlyProbe()) std::abort();
+        return SingleComponentEffect::getParameterCount();
     }
     tresult PLUGIN_API setEditorState(IBStream* stream) override {
         if (diagnosticsEnabled()) return setDiagnosticState(stream);
@@ -221,6 +240,7 @@ public:
             }
         }
         if (data.numSamples == 0) return kResultOk;
+        processedBlocks.fetch_add(1, std::memory_order_release);
         if (!data.processContext || !(data.processContext->state & ProcessContext::kPlaying)) {
             pending = {}; wasPlaying = false; return kResultOk;
         }
@@ -356,6 +376,7 @@ private:
     const int variant;
     int32 offset = 0, latency = 128, fault = 0, nextID = 100000;
     std::atomic<int32> keysReceived{0};
+    std::atomic<uint64> processedBlocks{0};
     uint64 order = 0;
     bool wasPlaying = false;
     bool delayPending = false;

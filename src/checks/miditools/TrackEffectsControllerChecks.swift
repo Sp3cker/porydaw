@@ -125,6 +125,68 @@ private final class EffectsFixture {
 }
 
 @MainActor
+private func effectsHeaderLiveOwnership(
+    _ fixture: EffectsFixture, entry: PluginCatalogEntry, check: CheckReport.Scoped
+) async throws {
+    let controller = fixture.controller
+    let headers = fixture.workspace.trackHeaders
+    let document = fixture.session.document
+    let id = try fixture.add(entry, pacing: .realtime)
+    let before = document.state
+    let history = document.history.currentIdentity
+    check.expect(
+        controller.instance(for: id) == nil && headers.rows[0].liveEnabled,
+        message: "a configured unloaded effect can enable Live directly from its header")
+    let onChanged = controller.onChanged
+    var renderPreparing = false
+    var retoggled = false
+    controller.onChanged = { (changed: EffectID) in
+        onChanged?(changed)
+        guard changed == id, renderPreparing, !retoggled,
+            controller.outputs[id] == nil, controller.canToggleLive(id)
+        else { return }
+        retoggled = true
+        headers.activateLive(track: 0)
+    }
+    defer { controller.onChanged = onChanged }
+    headers.activateLive(track: 0)
+    let pendingRender = Task { @MainActor in
+        renderPreparing = true
+        try await controller.render(id, range: TimeRange(startTick: 0, endTick: 24))
+    }
+    try await pendingRender.value
+    guard let instance = controller.instance(for: id) else { throw EffectsCheckError.fixture }
+    check.expect(
+        retoggled && !controller.isLive(id) && !instance.isLiveArmed
+            && controller.outputs[id]?.range == TimeRange(startTick: 0, endTick: 72)
+            && controller.canToggleLive(id),
+        message: "render joins a second header command arriving as the lazy first command completes")
+    for armed in [false, true] {
+        try await controller.setLive(id, armed)
+        let render = Task { @MainActor in
+            try await controller.render(id, range: TimeRange(startTick: 0, endTick: 24))
+        }
+        try await effectsWait {
+            if case .rendering(let progress) = controller.status(id) { return progress > 0 }
+            return false
+        }
+        check.expect(
+            !headers.rows[0].liveEnabled && !controller.canToggleLive(id),
+            message: "render ownership disables header Live while initial arming is \(armed)")
+        headers.activateLive(track: 0)
+        try await render.value
+        check.expect(
+            controller.instance(for: id) === instance && controller.isLive(id) == armed
+                && instance.isLiveArmed == armed && headers.rows[0].liveEnabled
+                && controller.outputs[id]?.notes.isEmpty == false,
+            message: "a header activation during Render preserves output, instance and prior Live intent \(armed)")
+    }
+    check.expect(
+        document.state == before && document.history.currentIdentity == history,
+        message: "header Live and render ownership transitions never edit song data or history")
+}
+
+@MainActor
 private func effectsRangesAndRender(
     _ fixture: EffectsFixture, entry: PluginCatalogEntry, check: CheckReport.Scoped
 ) async throws {
@@ -410,21 +472,25 @@ private func effectsControllerOnlyState(
     check.expect(
         document.effects[0].pluginState?.component.first == 3,
         message: "stable component digest polling records a non-parameter edit as one step")
+    try await instance.restore(effectsState(pitch: 4, diagnostic: true))
     await fixture.controller.closeEditor(id)
     check.expect(!instance.isEditorOpen, message: "controller closes the real helper editor")
+    check.expect(
+        document.history.undoCount == count + 2 && document.effects[0].pluginState?.component.first == 4,
+        message: "closing settles a silent change made just before close as exactly one step")
     try await instance.restore(effectsState(pitch: 5, diagnostic: true))
     await effectsElapse(.milliseconds(1200))
     check.expect(
-        document.history.undoCount == count + 1,
+        document.history.undoCount == count + 2,
         message: "closing the editor makes component-digest observation quiescent")
     try await fixture.controller.openEditor(id)
-    try await effectsWait { document.history.undoCount == count + 2 }
+    try await effectsWait { document.history.undoCount == count + 3 }
     check.expect(
         document.effects[0].pluginState?.component.first == 5,
         message: "reopening starts a fresh stable-digest observation instead of reviving an old polling task")
     try await fixture.controller.render(id, range: TimeRange(startTick: 0, endTick: 24))
     try await instance.restore(effectsState(pitch: 7, diagnostic: true))
-    try await effectsWait { document.history.undoCount == count + 3 }
+    try await effectsWait { document.history.undoCount == count + 4 }
     check.expect(
         document.effects[0].pluginState?.component.first == 7,
         message: "Render rejoins recorder work and restarts editor observation after its exclusive capture")
@@ -788,8 +854,19 @@ private func effectsActiveShutdown(
         fixture.controller.instance(for: id) === instance && instance.liveInsert?.isAttached == true,
         message: "an active device rebind re-arms the existing instance instead of replacing it")
     try await fixture.controller.openEditor(id)
+    // TestGen plays 60 + offset + 2 * (step % 4); its editor attach edit sets the offset read here.
+    let component = try await instance.state().component
+    guard component.count >= 4 else { throw EffectsCheckError.fixture }
+    var field: UInt32 = 0
+    for (index, byte) in component.prefix(4).enumerated() { field |= UInt32(byte) << (index * 8) }
+    let offset = Int(Int32(bitPattern: field))
+    guard (0...12).contains(offset) else { throw EffectsCheckError.fixture }
+    let generated = Set((0..<4).map { (step: Int) -> UInt8 in UInt8(60 + offset + 2 * step) })
     fixture.audio.play()
-    try await effectsWait { effectsHeldKeys(fixture.audio, track: 0)?.contains(60) == true }
+    try await effectsWait {
+        guard let keys = effectsHeldKeys(fixture.audio, track: 0) else { return false }
+        return !keys.isEmpty && keys.isSubset(of: generated)
+    }
     await fixture.controller.shutdown()
     try await effectsWait {
         let keys = effectsHeldKeys(fixture.audio, track: 0)
@@ -860,6 +937,9 @@ private func runEffectsControllerChecks(
         case .headless:
             try run { (fixture: EffectsFixture) in
                 try await effectsRangesAndRender(fixture, entry: generator, check: check)
+            }
+            try run { (fixture: EffectsFixture) in
+                try await effectsHeaderLiveOwnership(fixture, entry: generator, check: check)
             }
             try run { (fixture: EffectsFixture) in
                 try await effectsStateHistory(fixture, entry: realtime, check: check)

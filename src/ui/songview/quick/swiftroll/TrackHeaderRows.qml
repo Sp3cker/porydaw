@@ -18,11 +18,6 @@ Item {
     height: parent.height
     clip: true
 
-    FontMetrics {
-        id: subtitleMetrics
-        font: root.headersModel.subtitleFont
-    }
-
     function itemAt(index: int): Item {
         return trackHeaderRows.itemAt(index)
     }
@@ -120,11 +115,15 @@ Item {
                 required property string title
                 required property string subtitle
                 required property string effectName
+                required property bool hasEffect
+                required property bool liveEnabled
                 required property bool liveArmed
                 required property bool effectStopped
                 required property App.SceneRect titleRect
                 required property App.SceneRect subtitleRect
                 required property App.SceneRect effectRect
+                required property App.SceneRect liveRect
+                required property App.SceneRect effectNameRect
                 required property real selectedTitleOffsetX
                 required property real selectedTitleOffsetY
                 required property color baseColor
@@ -142,6 +141,8 @@ Item {
                 required property bool soloPressed
                 required property bool effectHovered
                 required property bool effectPressed
+                required property bool liveHovered
+                required property bool livePressed
                 required property bool addHovered
                 required property bool addPressed
                 required property color activityDimColor
@@ -275,8 +276,6 @@ Item {
                     height: trackHeaderRow.effectRect.height
                     visible: !trackHeaderRow.isAddTrack
                     activeFocusOnTab: true
-                    readonly property real padding: trackHeaderRow.subtitleFont.pixelSize / 4
-                    readonly property real gap: caption.visible ? padding : 0
                     readonly property color stateBackground: trackHeaderRow.effectPressed
                         ? root.appearance.buttonPressedBackground
                         : trackHeaderRow.effectHovered
@@ -301,63 +300,110 @@ Item {
                     Keys.onEnterPressed: (event) => effectBadge.activateFromKeyboard(event)
 
                     Accessible.role: Accessible.Button
-                    Accessible.name: qsTr("MIDI effects for %1").arg(trackHeaderRow.title)
-                    Accessible.description: qsTr("Open MIDI effects setup for this track")
+                    Accessible.name: qsTr("Effects for %1").arg(trackHeaderRow.title)
+                    Accessible.description: qsTr("Open effects setup for this track")
                     Accessible.focusable: true
                     Accessible.onPressAction: effectBadge.activate()
 
                     Rectangle {
-                        width: Math.max(0, effectBadge.width - caption.width - effectBadge.gap)
-                        height: parent.height
+                        anchors.fill: parent
                         color: effectBadge.stateBackground
                         border.color: effectBadge.stateOutline
                         border.width: 1
 
                         Text {
-                            objectName: "timelineHeaderEffect_" + trackHeaderRow.track
-                            x: effectBadge.padding
-                            width: Math.max(0, parent.width - 2 * effectBadge.padding)
-                            height: parent.height
+                            anchors.fill: parent
                             color: effectBadge.stateText
                             font: trackHeaderRow.subtitleFont
-                            text: trackHeaderRow.effectName.length > 0
-                                ? trackHeaderRow.effectName : qsTr("MIDI Effects...")
+                            text: qsTr("Effects")
                             textFormat: Text.PlainText
                             renderType: Text.NativeRendering
                             elide: Text.ElideRight
                             maximumLineCount: 1
+                            horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
                     }
+                }
+
+                Text {
+                    objectName: "timelineHeaderEffect_" + trackHeaderRow.track
+                    x: trackHeaderRow.effectNameRect.x
+                    y: trackHeaderRow.effectNameRect.y
+                    width: trackHeaderRow.effectNameRect.width
+                    height: trackHeaderRow.effectNameRect.height
+                    visible: trackHeaderRow.hasEffect && !trackHeaderRow.isAddTrack
+                    color: trackHeaderRow.subtitleColor
+                    font: trackHeaderRow.subtitleFont
+                    text: trackHeaderRow.effectName
+                    textFormat: Text.PlainText
+                    renderType: Text.NativeRendering
+                    elide: Text.ElideRight
+                    maximumLineCount: 1
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                Item {
+                    id: liveToggle
+                    objectName: "timelineHeaderLive_" + trackHeaderRow.track
+                    x: trackHeaderRow.liveRect.x
+                    y: trackHeaderRow.liveRect.y
+                    width: trackHeaderRow.liveRect.width
+                    height: trackHeaderRow.liveRect.height
+                    visible: trackHeaderRow.hasEffect && !trackHeaderRow.isAddTrack
+                    enabled: trackHeaderRow.liveEnabled
+                    activeFocusOnTab: true
+                    readonly property bool down: trackHeaderRow.livePressed || trackHeaderRow.liveArmed
+                    readonly property color stateBackground: down
+                        ? root.appearance.buttonPressedBackground
+                        : trackHeaderRow.liveHovered
+                          ? root.appearance.buttonHoverBackground : root.appearance.buttonBackground
+                    readonly property color stateText: down
+                        ? root.appearance.buttonPressedText
+                        : trackHeaderRow.liveHovered
+                          ? root.appearance.buttonHoverText : root.appearance.buttonText
+
+                    function activate(): void {
+                        if (enabled)
+                            root.headersModel.activateLive(trackHeaderRow.track)
+                    }
+
+                    function activateFromKeyboard(event: KeyEvent): void {
+                        activate()
+                        event.accepted = true
+                    }
+
+                    Keys.onReturnPressed: (event) => liveToggle.activateFromKeyboard(event)
+                    Keys.onEnterPressed: (event) => liveToggle.activateFromKeyboard(event)
+
+                    Accessible.role: Accessible.Button
+                    Accessible.name: qsTr("Live for %1").arg(trackHeaderRow.title)
+                    Accessible.description: trackHeaderRow.effectStopped
+                        ? qsTr("Stopped. Open Effects to reload the plug-in.")
+                        : trackHeaderRow.liveArmed ? qsTr("Live on") : qsTr("Live off")
+                    Accessible.focusable: true
+                    Accessible.checkable: true
+                    Accessible.checked: trackHeaderRow.liveArmed
+                    Accessible.onPressAction: liveToggle.activate()
 
                     Rectangle {
-                        id: caption
-
-                        x: effectBadge.width - width
-                        width: visible ? Math.min(effectBadge.width,
-                            subtitleMetrics.advanceWidth(captionText.text) + 2 * effectBadge.padding) : 0
-                        height: parent.height
-                        visible: trackHeaderRow.effectStopped || trackHeaderRow.liveArmed
-                        color: root.appearance.buttonPressedBackground
-                        border.color: effectBadge.stateOutline
+                        anchors.fill: parent
+                        color: liveToggle.stateBackground
+                        border.color: liveToggle.activeFocus
+                            ? root.appearance.focusOutline : root.appearance.buttonOutline
                         border.width: 1
+                    }
 
-                        Text {
-                            id: captionText
-
-                            objectName: "timelineHeaderEffectCaption_" + trackHeaderRow.track
-                            x: effectBadge.padding
-                            width: Math.max(0, parent.width - 2 * effectBadge.padding)
-                            height: parent.height
-                            color: root.appearance.buttonPressedText
-                            font: trackHeaderRow.subtitleFont
-                            text: trackHeaderRow.effectStopped ? qsTr("Stopped") : qsTr("Live")
-                            textFormat: Text.PlainText
-                            renderType: Text.NativeRendering
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
-                            verticalAlignment: Text.AlignVCenter
-                        }
+                    Text {
+                        objectName: "timelineHeaderEffectCaption_" + trackHeaderRow.track
+                        anchors.fill: parent
+                        color: liveToggle.stateText
+                        font: trackHeaderRow.subtitleFont
+                        text: trackHeaderRow.effectStopped ? qsTr("Stopped") : qsTr("Live")
+                        textFormat: Text.PlainText
+                        renderType: Text.NativeRendering
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
                     }
                 }
 

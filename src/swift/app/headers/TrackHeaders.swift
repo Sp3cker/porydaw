@@ -326,16 +326,19 @@ public final class TrackHeadersPresenter {
     /// QML's FontMetrics supplies native Qt measurements, not layout policy.
     public func configureTextMetrics(
         titleLineSpacing: Double, boldLineSpacing: Double,
-        subtitleLineSpacing: Double
+        subtitleLineSpacing: Double, effectsTextWidth: Double, liveTextWidth: Double
     ) {
         guard titleLineSpacing.isFinite, boldLineSpacing.isFinite,
             subtitleLineSpacing.isFinite, titleLineSpacing > 0,
-            boldLineSpacing > 0, subtitleLineSpacing > 0
+            boldLineSpacing > 0, subtitleLineSpacing > 0,
+            effectsTextWidth.isFinite, liveTextWidth.isFinite,
+            effectsTextWidth > 0, liveTextWidth > 0
         else { return }
         let next = HeaderTextMetrics(
             title: Int(titleLineSpacing.rounded()),
             bold: Int(boldLineSpacing.rounded()),
-            subtitle: Int(subtitleLineSpacing.rounded()))
+            subtitle: Int(subtitleLineSpacing.rounded()),
+            effectsWidth: effectsTextWidth, liveWidth: liveTextWidth)
         guard next != textMetrics else { return }
         textMetrics = next
         publishGeometry()
@@ -367,6 +370,13 @@ public final class TrackHeadersPresenter {
         guard validTrack(track) else { return }
         selectTrack(track: track)
         onMidiEffectsRequested?(track)
+    }
+
+    public func activateLive(track: Int) {
+        guard let session, validTrack(track),
+            let effect = session.document.effect(onTrack: track)
+        else { return }
+        effects?.toggleLive(effect.id)
     }
 
     public func activateAddTrack() {
@@ -579,6 +589,8 @@ public final class TrackHeaderRowHandle {
     public var title: String = ""
     public var subtitle: String = ""
     public var effectName: String = ""
+    public var hasEffect: Bool = false
+    public var liveEnabled: Bool = false
     public var liveArmed: Bool = false
     public var effectStopped: Bool = false
     @QtTracked public var titleRect = SceneRect(
@@ -586,6 +598,10 @@ public final class TrackHeaderRowHandle {
     @QtTracked public var subtitleRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     @QtTracked public var effectRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var liveRect = SceneRect(
+        x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
+    @QtTracked public var effectNameRect = SceneRect(
         x: 0, y: 0, width: 0, height: 0, fillColor: .clear)
     public var selectedTitleOffsetX: Double = 0
     public var selectedTitleOffsetY: Double = 0
@@ -604,6 +620,8 @@ public final class TrackHeaderRowHandle {
     public var soloPressed: Bool = false
     public var effectHovered: Bool = false
     public var effectPressed: Bool = false
+    public var liveHovered: Bool = false
+    public var livePressed: Bool = false
     public var addHovered: Bool = false
     public var addPressed: Bool = false
     public var activityDimColor: QmlColor = .clear
@@ -622,11 +640,15 @@ public final class TrackHeaderRowHandle {
         publish(\.title, row.title)
         publish(\.subtitle, row.subtitle)
         publish(\.effectName, row.effectName)
+        publish(\.hasEffect, row.hasEffect)
+        publish(\.liveEnabled, row.liveEnabled)
         publish(\.liveArmed, row.liveArmed)
         publish(\.effectStopped, row.effectStopped)
         _ = titleRect.update(row.titleRect.sceneValue)
         _ = subtitleRect.update(row.subtitleRect.sceneValue)
         _ = effectRect.update(row.effectRect.sceneValue)
+        _ = liveRect.update(row.liveRect.sceneValue)
+        _ = effectNameRect.update(row.effectNameRect.sceneValue)
         publish(\.selectedTitleOffsetX, row.selectedTitleOffset.x)
         publish(\.selectedTitleOffsetY, row.selectedTitleOffset.y)
         publish(\.titleFont, row.titleFont)
@@ -644,6 +666,8 @@ public final class TrackHeaderRowHandle {
         publish(\.soloPressed, row.soloPressed)
         publish(\.effectHovered, row.effectHovered)
         publish(\.effectPressed, row.effectPressed)
+        publish(\.liveHovered, row.liveHovered)
+        publish(\.livePressed, row.livePressed)
         publish(\.addHovered, row.addHovered)
         publish(\.addPressed, row.addPressed)
         publish(\.activityDimColor, row.activityDimColor)

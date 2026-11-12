@@ -11,14 +11,12 @@ public final class MidiEffectPluginRow: QmlUncreatable {
     public let name: String
     public let vendor: String
     public let detail: String
-    public let blocked: Bool
 
     @QtIgnored
     init(entry: PluginCatalogEntry) {
         name = entry.name
         vendor = entry.vendor
-        detail = entry.blockedReason ?? entry.version
-        blocked = entry.blockedReason != nil
+        detail = entry.version
     }
 }
 
@@ -32,6 +30,10 @@ public final class MidiEffectsPresenter: QmlUncreatable {
     public var diagnostics: String = ""
     public var plugins: QListModel<MidiEffectPluginRow> = QListModel()
     public var selectedPlugin: Int = -1
+    public var candidatePlugin: Int = -1
+    public var browsingPlugins: Bool = false
+    public var effectName: String = ""
+    public var isLive: Bool = false
     public var hasEffect: Bool = false
     public var isScanning: Bool = false
     public var isLoading: Bool = false
@@ -56,6 +58,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
     private var effectID: EffectID?
     private var settingsGroup: HistoryGroup?
     private var visibleEntries: [PluginCatalogEntry] = []
+    private var pendingPlugin: PluginCatalogEntry?
     private var folderInput: [String]?
     private var normalizedFolders: [String] = []
     private var message = ""
@@ -64,7 +67,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
     private var operationTask: Task<Void, Never>?
     private var operationID: UUID?
 
-    private enum Operation { case load, openEditor, closeEditor, reload }
+    private enum Operation { case load, startLive, openEditor, closeEditor, reload }
 
     private static func normalized(_ paths: [String]) -> [String] {
         var seen: Set<String> = []
@@ -94,7 +97,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
 
     private func refreshPlugins() {
         let entries = catalog.entries.lazy.filter { (entry: PluginCatalogEntry) -> Bool in
-            entry.isMidiProducer || entry.blockedReason != nil
+            entry.isMidiProducer && entry.blockedReason == nil
         }
         if !visibleEntries.elementsEqual(entries) {
             visibleEntries = Array(entries)
@@ -111,8 +114,15 @@ public final class MidiEffectsPresenter: QmlUncreatable {
                         && entry.classUID == effect.config.plugin.classUID
                 } ?? -1
         }
+        candidatePlugin = -1
+        if let pendingPlugin {
+            candidatePlugin =
+                visibleEntries.firstIndex { (entry: PluginCatalogEntry) -> Bool in
+                    entry.modulePath == pendingPlugin.modulePath && entry.classUID == pendingPlugin.classUID
+                } ?? -1
+            if candidatePlugin < 0 { self.pendingPlugin = nil }
+        }
     }
-
 
     private func refresh() {
         refreshFolders()
@@ -127,6 +137,8 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         trackLabel = name.isEmpty ? "Track \(sourceTrack + 1)" : name
         let effect = session.document.effect(onTrack: sourceTrack)
         hasEffect = effect != nil
+        effectName = effect?.config.plugin.name ?? ""
+        isLive = effect.map { (effect: TrackEffect) -> Bool in effects.isLive(effect.id) } ?? false
         inputMode = effect?.config.plugin.input.rawValue ?? 0
         pacing = effect?.config.plugin.pacing.rawValue ?? 0
         prerollBars = effect?.config.plugin.prerollBars ?? 0
@@ -194,6 +206,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
             do {
                 switch operation {
                 case .load: try await effects.load(id)
+                case .startLive: try await effects.setLive(id, true)
                 case .openEditor: try await effects.openEditor(id)
                 case .closeEditor: await effects.closeEditor(id)
                 case .reload: try await effects.reload(id)
@@ -278,6 +291,7 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         guard !session.isClosed, (0..<session.document.engineTracks.usedTrackCount).contains(track) else { return }
         sourceTrack = track
         effectID = session.document.effect(onTrack: track)?.id
+        browsingPlugins = effectID == nil
         settingsGroup = HistoryGroup()
         isOpen = true
         startScan(force: false)
@@ -300,6 +314,11 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         message = ""
         diagnostics = ""
         selectedPlugin = -1
+        pendingPlugin = nil
+        candidatePlugin = -1
+        browsingPlugins = false
+        effectName = ""
+        isLive = false
         hasEffect = false
         isLoading = false
         canOpenEditor = false
@@ -310,10 +329,31 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         prerollBars = 0
     }
 
-    public func selectPlugin(index: Int) {
-        guard isOpen, visibleEntries.indices.contains(index) else { return }
+    public func showPluginChooser() {
+        guard isOpen, !isLoading else { return }
+        pendingPlugin = nil
+        candidatePlugin = -1
+        browsingPlugins = true
+    }
+
+    public func cancelPluginChooser() {
+        pendingPlugin = nil
+        candidatePlugin = -1
+        browsingPlugins = !hasEffect
+    }
+
+    public func choosePlugin(index: Int) {
+        guard isOpen, browsingPlugins, !isLoading, !isScanning, visibleEntries.indices.contains(index) else { return }
         let entry = visibleEntries[index]
-        guard entry.isMidiProducer, entry.blockedReason == nil else { return }
+        pendingPlugin = entry
+        candidatePlugin = index
+    }
+
+    public func applyPlugin() {
+        refreshPlugins()
+        guard isOpen, browsingPlugins, !isLoading, !isScanning,
+            candidatePlugin >= 0, candidatePlugin != selectedPlugin, let entry = pendingPlugin
+        else { return }
         let replacing = session.document.effect(onTrack: sourceTrack)?.id
         effectID = nil
         do {
@@ -321,11 +361,14 @@ public final class MidiEffectsPresenter: QmlUncreatable {
                 track: sourceTrack,
                 plugin: PluginEffectConfig(
                     modulePath: entry.modulePath, classUID: entry.classUID, name: entry.name,
-                    input: .none, pacing: .offline, prerollBars: 0))
+                    input: .trackNotes, pacing: .offline, prerollBars: 0))
             effectID = try session.document.addEffect(config, replacing: replacing)
             message = ""
+            pendingPlugin = nil
+            candidatePlugin = -1
+            browsingPlugins = false
             refresh()
-            perform(.load)
+            perform(.startLive)
         } catch {
             effectID = replacing
             message = String(describing: error)
@@ -339,12 +382,6 @@ public final class MidiEffectsPresenter: QmlUncreatable {
         scanTask?.cancel()
         catalog.cancelScan()
         refresh()
-    }
-
-    public func retryBlocked(index: Int) {
-        guard visibleEntries.indices.contains(index), visibleEntries[index].blockedReason != nil else { return }
-        catalog.retry(modulePath: visibleEntries[index].modulePath)
-        startScan(force: false)
     }
 
     public func addFolder(path: String) {

@@ -3,6 +3,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck
 import Porydaw.Ui
+import "NativeWait.js" as NativeWait
 
 ShellClipboardSupport {
     id: testCase
@@ -154,7 +155,7 @@ ShellClipboardSupport {
         const p = openFromTrackHeader(1)
         verify(bootstrap.vstFixtureFolder.length > 0)
         p.model.addFolder(bootstrap.vstFixtureFolder)
-        const list = findChild(p.panel, "midiEffectsPluginList")
+        let list = findChild(p.panel, "midiEffectsPluginList")
         verify(!!list, "Object exists")
         verify(waitForNative(function() {
             if (p.model.isScanning)
@@ -179,19 +180,27 @@ ShellClipboardSupport {
             names.push(row.name)
             if (row.name === "TestGen") {
                 generator = index
-                compare(row.blocked, false)
             }
         }
         verify(names.indexOf("TestGen") >= 0)
         verify(names.indexOf("TestGenAudio") >= 0)
         verify(names.indexOf("TestGenRealtimeOnly") >= 0)
+        compare(names.indexOf("porydawtestcrash"), -1)
+        compare(names.indexOf("porydawtesthang"), -1)
         compare(names.indexOf("TestAudioOnly"), -1)
         verify(generator >= 0)
         verify(waitForNative(function() { return !p.model.isLoading }, 30000),
                "MIDI effect setup settles: " + midiEffectsDiagnostics(p.model, list))
         const generatorRow = pluginRow(list, generator)
         tryCompare(generatorRow, "enabled", true, 30000)
+        const beforeAdd = p.app.undoHistory.currentRow
         mouseClick(generatorRow, generatorRow.width / 2, generatorRow.height / 2)
+        tryCompare(p.model, "candidatePlugin", generator)
+        compare(p.model.hasEffect, false)
+        compare(p.app.undoHistory.currentRow, beforeAdd)
+        const apply = findChild(p.panel, "midiEffectsApply")
+        tryCompare(apply, "enabled", true)
+        mouseClick(apply, apply.width / 2, apply.height / 2)
         verify(waitForNative(function() {
             return p.model.hasEffect && !p.model.isLoading && p.model.canOpenEditor
                 && p.model.selectedPlugin === generator
@@ -208,10 +217,47 @@ ShellClipboardSupport {
         tryCompare(badge, "visible", true)
         const caption = findChild(p.row, "timelineHeaderEffectCaption_" + p.track)
         verify(!!caption, "Object exists")
-        tryCompare(caption, "visible", false)
         verifyCardFits(p.panel)
 
-        const editor = findChild(p.panel, "midiEffectsOpenEditor")
+        const originalHistory = p.app.undoHistory.currentRow
+        p.model.showPluginChooser()
+        tryCompare(p.model, "browsingPlugins", true)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the chooser layout is submitted before clicking a candidate")
+        const replacement = names.indexOf("TestGenAudio")
+        verify(replacement >= 0)
+        const replacementRow = pluginRow(list, replacement)
+        mouseClick(replacementRow, replacementRow.width / 2, replacementRow.height / 2)
+        tryCompare(p.model, "candidatePlugin", replacement)
+        compare(p.model.effectName, "TestGen")
+        compare(p.row.effectName, "TestGen")
+        compare(p.app.undoHistory.currentRow, originalHistory)
+        const back = findChild(p.panel, "midiEffectsCancelChoice")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(p.model, "browsingPlugins", false)
+        compare(p.model.candidatePlugin, -1)
+        compare(p.model.effectName, "TestGen")
+        compare(p.app.undoHistory.currentRow, originalHistory)
+
+        p.model.showPluginChooser()
+        p.model.choosePlugin(replacement)
+        verify(NativeWait.waitForSubmittedFrame(bootstrap, function(ms) { wait(ms) }, shell, 5000),
+               "the replacement action is submitted before clicking Apply")
+        mouseClick(apply, apply.width / 2, apply.height / 2)
+        tryCompare(p.model, "effectName", "TestGenAudio")
+        verify(waitForNative(function() { return !p.model.isLoading && p.model.canOpenEditor }, 30000),
+               "replacement finishes loading through the native main-actor pump")
+        tryCompare(p.row, "effectName", "TestGenAudio")
+        p.model.showPluginChooser()
+        p.model.choosePlugin(generator)
+        p.model.applyPlugin()
+        tryCompare(p.model, "effectName", "TestGen")
+        verify(waitForNative(function() { return !p.model.isLoading && p.model.canOpenEditor }, 30000),
+               "restoring the original plug-in finishes loading")
+        tryCompare(p.model, "isLive", true, 30000)
+        tryCompare(p.model, "browsingPlugins", false)
+
+        let editor = findChild(p.panel, "midiEffectsOpenEditor")
         verify(!!editor, "Object exists")
         tryCompare(editor, "enabled", true)
         const close = findChild(p.panel, "midiEffectsClose")
@@ -228,6 +274,46 @@ ShellClipboardSupport {
         tryCompare(p.model, "hasEffect", true)
         shell.shellPresenter.activate("transport.stop")
         tryCompare(transport, "state", 1)
+
+        mouseClick(close, close.width / 2, close.height / 2)
+        tryCompare(p.model, "isOpen", false)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") === null })
+        const live = findChild(p.row, "timelineHeaderLive_" + p.track)
+        verify(!!live, "the track has an independent Live toggle")
+        tryCompare(live, "visible", true)
+        tryCompare(live, "enabled", true)
+        const liveHistory = p.app.undoHistory.currentRow
+        const liveTrack = p.view.gridModel.trackIndex
+        mouseClick(live, live.width / 2, live.height / 2)
+        verify(waitForNative(function() { return !p.row.liveArmed && live.enabled }, 10000),
+               "header Live disarms the existing effect")
+        compare(p.model.isOpen, false)
+        compare(p.view.gridModel.trackIndex, liveTrack)
+        compare(p.app.undoHistory.currentRow, liveHistory)
+        live.forceActiveFocus(Qt.TabFocusReason)
+        tryCompare(live, "activeFocus", true)
+        keyClick(Qt.Key_Return)
+        verify(waitForNative(function() { return p.row.liveArmed && live.enabled }, 10000),
+               "Return on header Live rearms the same effect")
+        compare(p.model.isOpen, false)
+        compare(p.app.undoHistory.currentRow, liveHistory)
+        keyClick(Qt.Key_Space)
+        tryCompare(transport, "state", 3)
+        compare(p.row.liveArmed, true)
+        compare(p.model.isOpen, false)
+        keyClick(Qt.Key_Space)
+        tryCompare(transport, "state", 2)
+        shell.shellPresenter.activate("transport.stop")
+        tryCompare(transport, "state", 1)
+        compare(p.app.undoHistory.currentRow, liveHistory)
+        mouseClick(p.button, p.button.width / 2, p.button.height / 2)
+        tryCompare(p.model, "isOpen", true)
+        tryVerify(function() { return findChild(p.view, "midiEffectsPanel") !== null })
+        p.panel = findChild(p.view, "midiEffectsPanel")
+        list = findChild(p.panel, "midiEffectsPluginList")
+        editor = findChild(p.panel, "midiEffectsOpenEditor")
+        verify(waitForNative(function() { return editor.enabled && !p.model.isLoading }, 10000),
+               "rack reopening settles through the native main-actor pump")
 
         const undoRow = p.app.undoHistory.currentRow
         verify(bootstrap.injectPluginFault(p.track, 1))
@@ -260,7 +346,6 @@ ShellClipboardSupport {
         tryCompare(editor, "enabled", true)
         tryCompare(p.row, "effectName", "TestGen")
         tryCompare(p.row, "effectStopped", false)
-        tryCompare(caption, "visible", false)
         tryCompare(badge, "text", "TestGen")
         tryCompare(badge, "visible", true)
         verifyCardFits(p.panel)

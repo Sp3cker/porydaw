@@ -968,6 +968,16 @@ private func checkTakeStorage(_ check: CheckReport.Scoped) throws {
             hostAllocationState.withLock { (state: inout (calls: Int, thread: UInt)) in state.calls += 1 }
         }
     }
+
+    /// Nonallocating stopped-audition producer: each call retriggers, releases and re-holds one pitch.
+    private func hostStoppedProducer(_: UnsafeMutableRawPointer?, _ raw: UnsafeMutableRawPointer) {
+        let call = raw.assumingMemoryBound(to: LiveInsertCall.self)
+        guard let output = call.pointee.output, call.pointee.outputCapacity >= 3 else { return }
+        output[0] = LiveOutputEvent(sampleOffset: 16, key: 60, velocity: 100, noteId: 1)
+        output[1] = LiveOutputEvent(sampleOffset: 48, key: 60, noteId: 1)
+        output[2] = LiveOutputEvent(sampleOffset: 64, key: 60, velocity: 100, noteId: 2)
+        call.pointee.outputCount = 3
+    }
 #endif
 
 @MainActor
@@ -1045,6 +1055,43 @@ private func checkHostAllocations(_ entries: [PluginCatalogEntry], _ check: Chec
             check.expect(
                 dispatchAllocations == 0 && insert.ring.dropped == 0,
                 message: "warmed real Sequencer dispatch, note/position feedback and SPSC publication allocate nothing")
+            let producer = UnsafeMutablePointer<LiveInsertSlot>.allocate(capacity: 1)
+            producer.initialize(
+                to: LiveInsertSlot(
+                    process: hostStoppedProducer, context: nil, takeSink: insert.slot.pointee.takeSink,
+                    takeContext: insert.slot.pointee.takeContext))
+            defer {
+                producer.deinitialize(count: 1)
+                producer.deallocate()
+            }
+            let played = sequencer.position
+            let stopped: [UnsafeMutablePointer<LiveInsertSlot>?] = [producer]
+            stopped.withUnsafeBufferPointer { (stopped: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>) in
+                left.withUnsafeMutableBufferPointer { (left: inout UnsafeMutableBufferPointer<Float>) in
+                    right.withUnsafeMutableBufferPointer { (right: inout UnsafeMutableBufferPointer<Float>) in
+                        for _ in 0..<32 {
+                            sequencer.renderStoppedLive(
+                                engine: engine, timeline: timeline, left: left, right: right, looping: false,
+                                muteMask: 0, liveMask: 1, liveSlots: stopped)
+                        }
+                        hostAllocationState.withLock { (state: inout (calls: Int, thread: UInt)) in state.calls = 0 }
+                        slot.pointee = hostMallocLogger
+                        for _ in 0..<100 {
+                            sequencer.renderStoppedLive(
+                                engine: engine, timeline: timeline, left: left, right: right, looping: false,
+                                muteMask: 0, liveMask: 1, liveSlots: stopped)
+                        }
+                        slot.pointee = saved
+                    }
+                }
+            }
+            let stoppedAllocations = hostAllocationState.withLock { (state: inout (calls: Int, thread: UInt)) in
+                state.calls
+            }
+            check.expect(
+                stoppedAllocations == 0 && sequencer.position == played && playbackCheckPcmKeys(engine) == [60]
+                    && insert.ring.dropped == 0,
+                message: "warmed stopped audition dispatch allocates nothing, holds its output and keeps song time")
             try await instance.disarmLive()
         }
     #else
@@ -1131,7 +1178,7 @@ private func checkRealDispatch(_ entries: [PluginCatalogEntry], _ check: CheckRe
 @MainActor
 private func hostRenderFrames(
     _ sequencer: inout Sequencer, engine: UnsafeMutablePointer<M4AEngine>,
-    timeline: borrowing PlaybackTimeline, insert: LiveInsert, frames: Int, looping: Bool = false
+    timeline: borrowing PlaybackTimeline, insert: LiveInsert, frames: Int, looping: Bool = false, playing: Bool = true
 ) {
     var left = [Float](repeating: 0, count: frames)
     var right = left
@@ -1139,9 +1186,15 @@ private func hostRenderFrames(
     slots.withUnsafeBufferPointer { (slots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>) in
         left.withUnsafeMutableBufferPointer { (left: inout UnsafeMutableBufferPointer<Float>) in
             right.withUnsafeMutableBufferPointer { (right: inout UnsafeMutableBufferPointer<Float>) in
-                sequencer.render(
-                    engine: engine, timeline: timeline, left: left, right: right, looping: looping,
-                    muteMask: 0, liveMask: 1, liveSlots: slots)
+                if playing {
+                    sequencer.render(
+                        engine: engine, timeline: timeline, left: left, right: right, looping: looping,
+                        muteMask: 0, liveMask: 1, liveSlots: slots)
+                } else {
+                    sequencer.renderStoppedLive(
+                        engine: engine, timeline: timeline, left: left, right: right, looping: looping,
+                        muteMask: 0, liveMask: 1, liveSlots: slots)
+                }
             }
         }
     }
@@ -1221,11 +1274,8 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
                 sequencer.clearLiveTrack(0, discontinuity: .stop, tick: old.tick(for: sequencer.position))
                 try await instance.disarmLive()
             } else {
-                let slots: [UnsafeMutablePointer<LiveInsertSlot>?] = [insert.slot]
-                slots.withUnsafeBufferPointer { (slots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>) in
-                    sequencer.processStoppedLive(
-                        engine: engine, timeline: old, frames: 4096, looping: false, liveMask: 1, liveSlots: slots)
-                }
+                hostRenderFrames(
+                    &sequencer, engine: engine, timeline: old, insert: insert, frames: 4096, playing: false)
             }
             take.drain(insert.ring, finish: true)
             check.expect(
@@ -1255,11 +1305,8 @@ private func checkTakeEndpoints(_ entries: [PluginCatalogEntry], _ check: CheckR
             take.span == TimeRange(startTick: 71, endTick: 72),
             message:
                 "loop-end and loop-start boundaries never commit the empty intermediate old-end to new-start interval")
-        let slots: [UnsafeMutablePointer<LiveInsertSlot>?] = [insert.slot]
-        slots.withUnsafeBufferPointer { (slots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>) in
-            sequencer.processStoppedLive(
-                engine: engine, timeline: old, frames: 4096, looping: true, liveMask: 1, liveSlots: slots)
-        }
+        hostRenderFrames(
+            &sequencer, engine: engine, timeline: old, insert: insert, frames: 4096, looping: true, playing: false)
         take.drain(insert.ring, finish: true)
         check.expect(
             take.events.contains { (event: RawNoteEvent) in event.pitch == 60 && !event.isOn && event.tick == 1 },
@@ -1297,11 +1344,33 @@ private func checkObservedContexts(_ entries: [PluginCatalogEntry], _ check: Che
         check.expect(
             observed.integer(24, count: 4) & mask == mask,
             message: "actual playing loop context carries every required validity flag")
-        _ = script.process(position: 8192, playing: false, flags: .stop)
+        // An 8192-frame request at this position has a last 1024-frame subblock in the next 3/4 bar.
+        let crossingPosition: UInt64 = 70_000
+        let division = Double(script.timeline.ticksPerBeat)
+        let barTicks = 3 * division
+        let stoppedTick = script.timeline.tick(for: crossingPosition)
+        let lastSubblockTick = script.timeline.tick(for: crossingPosition + 7168)
+        guard floor(lastSubblockTick / barTicks) > floor(stoppedTick / barTicks) else { throw HostCheckError.fixture }
+        check.expect(
+            !script.process(position: crossingPosition, frames: 8192).0,
+            message: "real fixture plays a bar-crossing chunk")
+        let playing = try HostObservation(try await instance.state().controller)
+        check.expect(
+            playing.integer(88) == crossingPosition + 7168
+                && abs(playing.real(48) - lastSubblockTick / division) < 1e-9
+                && playing.real(56) == floor(lastSubblockTick / barTicks) * barTicks / division,
+            message: "playing subblocks advance project sample and PPQ and resnap the bar across the bar line")
+        let stoppedPosition = crossingPosition
+        _ = script.process(position: stoppedPosition, frames: 8192, playing: false, flags: .stop)
         let stopped = try HostObservation(try await instance.state().controller)
         check.expect(
-            stopped.integer(24, count: 4) & UInt64(PDPH_CTX_PLAYING) == 0 && stopped.integer(8) == 9,
-            message: "stopped callback still reaches the plugin with playing clear")
+            stopped.integer(24, count: 4) & UInt64(PDPH_CTX_PLAYING) == 0
+                && stopped.integer(8) == playing.integer(8) + 8 && stopped.integer(20, count: 4) == 1024,
+            message: "a stopped 8192-frame callback still reaches the plugin in eight subblocks with playing clear")
+        check.expect(
+            stopped.integer(88) == stoppedPosition && stopped.real(48) == stoppedTick / division
+                && stopped.real(56) == floor(stoppedTick / barTicks) * barTicks / division,
+            message: "every stopped subblock keeps the request's project sample, PPQ and bar instead of advancing")
         try await instance.armLive(
             input: .none, sampleRate: 96_000, periodFrames: 512,
             attach: { (_: LiveInsert) in }, detach: { (_: LiveInsert) in })

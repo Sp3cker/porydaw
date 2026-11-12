@@ -2,7 +2,6 @@
 #include "editor.h"
 #include <QCoreApplication>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -54,18 +53,29 @@ void endEdit(void* user, uint32_t id) { static_cast<Host*>(user)->enqueue(PDPB_E
 void restart(void* user, int32_t flags) { static_cast<Host*>(user)->enqueue(PDPB_RESTART_COMPONENT, static_cast<uint32_t>(flags)); }
 void dirty(void* user, int32_t on) { static_cast<Host*>(user)->enqueue(PDPB_SET_DIRTY, on != 0); }
 void editorClosed(void* user) { static_cast<Host*>(user)->enqueue(PDPB_EDITOR_CLOSED, 0); }
+void editorExposed(void* user, int32_t on) { static_cast<Host*>(user)->enqueue(PDPB_EDITOR_EXPOSED, on != 0); }
 void shortcut(void* user, int32_t index) { static_cast<Host*>(user)->enqueue(PDPB_SHORTCUT, uint32_t(index)); }
+uint64_t fnv1a(QByteArrayView bytes) {
+    uint64_t digest = 14695981039346656037ull;
+    for (const auto byte : bytes) { digest ^= static_cast<unsigned char>(byte); digest *= 1099511628211ull; }
+    return digest;
+}
+// Replies carry a u32 result, an optional u64 digest and a u32 size before the state bytes.
 bool state(Host& host, int32_t which, QByteArrayView& bytes, QString& error) {
     const auto result = pdph::readState(host.plugin, which, host.stateStream);
     if (result != PDPH_OK) { error = sdkError(result); return false; }
     const auto size = host.stateStream.getSize();
     const auto raw = host.stateStream.getData();
-    if (size < 0 || size > PDPB_MAX_CONTROL_BYTES - 8 || (size && !raw)) {
+    if (size < 0 || size > PDPB_MAX_CONTROL_BYTES - 16 || (size && !raw)) {
         host.stateStream.setSize(0);
         error = QStringLiteral("Plugin state exceeds the bridge limit"); return false;
     }
     bytes = QByteArrayView(raw, static_cast<qsizetype>(size));
     return true;
+}
+bool exclusive(uint32_t type) {
+    return type == PDPB_CREATE_PLUGIN || type == PDPB_SETUP_PROCESSING || type == PDPB_SET_ACTIVE ||
+        type == PDPB_SET_PROCESSING || type == PDPB_SET_STATE || type == PDPB_QUIT;
 }
 }
 bool sendFrame(uint32_t type, uint32_t request, std::initializer_list<QByteArrayView> payloads) {
@@ -82,27 +92,39 @@ bool sendFrame(uint32_t type, uint32_t request, std::initializer_list<QByteArray
     return std::fflush(stdout) == 0;
 }
 bool Host::quiesce() {
-    controlPending.store(true, std::memory_order_release);
+    controlPending.store(true, std::memory_order_seq_cst);
     for (;;) {
+        const uint32_t seen = pdpb_signal_count(channel);
         uint32_t owner = 0;
-        if (processingOwner.compare_exchange_strong(owner, 2, std::memory_order_acquire) || owner == 2) return true;
+        if (processingOwner.compare_exchange_strong(owner, 2, std::memory_order_seq_cst)) { leaseHeld = true; return true; }
         if (stopping.load(std::memory_order_acquire)) return false;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // The RT thread signals when it releases a request while a lease is pending.
+        if (pdpb_wait_signal(channel, seen, 100) == PDPB_ERROR) return false;
     }
 }
 void Host::resume() {
-    controlPending.store(false, std::memory_order_release);
-    processingOwner.store(0, std::memory_order_release);
+    leaseHeld = false;
+    controlPending.store(false, std::memory_order_seq_cst);
+    processingOwner.store(0, std::memory_order_seq_cst);
+    if (channel) pdpb_post_signal(channel);
+    if (drainAfterLease) { drainAfterLease = false; scheduleDrain(); }
+}
+void Host::releaseProcessing() {
+    processingOwner.store(0, std::memory_order_seq_cst);
+    if (controlPending.load(std::memory_order_seq_cst)) pdpb_post_signal(channel);
 }
 bool Host::flushParameters() {
+    Q_ASSERT(!leaseHeld);
     if (!plugin || !plugin->handler->hasPendingEdits()) return true;
-    parameterFlushRequested.store(true, std::memory_order_release);
-    processingOwner.store(0, std::memory_order_release);
-    while (parameterFlushRequested.load(std::memory_order_acquire)) {
+    parameterFlushRequested.store(true, std::memory_order_seq_cst);
+    pdpb_wake_request(channel);
+    for (;;) {
+        // Read the count before the predicate so a completion after the check still wakes this wait.
+        const uint32_t seen = pdpb_signal_count(channel);
+        if (!parameterFlushRequested.load(std::memory_order_acquire)) return parameterFlushResult == PDPH_OK;
         if (stopping.load(std::memory_order_acquire)) return false;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (pdpb_wait_signal(channel, seen, 100) == PDPB_ERROR) return false;
     }
-    return parameterFlushResult == PDPH_OK;
 }
 void Host::enqueue(uint32_t type, uint32_t value) {
     uint32_t position = callbackWrite.load(std::memory_order_relaxed);
@@ -112,11 +134,21 @@ void Host::enqueue(uint32_t type, uint32_t value) {
         const int32_t difference = static_cast<int32_t>(sequence - position);
         if (difference < 0) break;
         if (difference == 0 && callbackWrite.compare_exchange_weak(position, position + 1, std::memory_order_relaxed)) {
-            slot.event = {type, value}; slot.sequence.store(position + 1, std::memory_order_release); return;
+            slot.event = {type, value}; slot.sequence.store(position + 1, std::memory_order_release);
+            scheduleDrain(); return;
         }
         position = callbackWrite.load(std::memory_order_relaxed);
     }
     callbacksOverflowed.store(true, std::memory_order_relaxed);
+    scheduleDrain();
+}
+void Host::scheduleDrain() {
+    // One queued drain covers every slot published before it clears the flag.
+    if (drainPosted.exchange(true, std::memory_order_acq_rel)) return;
+    if (!QMetaObject::invokeMethod(&context, [this] {
+        drainPosted.exchange(false, std::memory_order_acq_rel);
+        drainCallbacks();
+    }, Qt::QueuedConnection)) stop(1);
 }
 void Host::drainCallbacks() {
     if (stopping.load(std::memory_order_acquire)) { QCoreApplication::quit(); return; }
@@ -124,12 +156,11 @@ void Host::drainCallbacks() {
         std::fprintf(stderr, "Plugin callback queue overflow: stream integrity lost\n");
         stop(1); return;
     }
+    // A nested plugin event loop inside a lifecycle lease must not publish before its edits flush.
+    if (leaseHeld) { drainAfterLease = true; return; }
     const auto& next = callbackSlots[callbackRead % PDPB_MAX_EVENTS];
-    if (plugin && next.sequence.load(std::memory_order_acquire) == callbackRead + 1) {
-        if (!quiesce()) return;
-        const bool flushed = flushParameters();
-        resume();
-        if (!flushed) { stop(1); return; }
+    if (plugin && next.sequence.load(std::memory_order_acquire) == callbackRead + 1 && !flushParameters()) {
+        stop(1); return;
     }
     for (uint32_t count = 0; count < PDPB_MAX_EVENTS; ++count) {
         auto& slot = callbackSlots[callbackRead % PDPB_MAX_EVENTS];
@@ -142,16 +173,20 @@ void Host::drainCallbacks() {
     }
 }
 void dispatch(Host& host, Frame frame) {
-    if (!host.quiesce()) return;
-    struct Resume { Host& host; ~Resume() { host.resume(); } } resume{host};
     Payload input = {frame.payload}; char fixedOutput[16] = {}; QByteArrayView output, stateBytes; QString error;
     auto operation = [&](int32_t result) { if (result != PDPH_OK) error = sdkError(result); return result == PDPH_OK; };
     const auto malformed = [&] { error = QStringLiteral("Malformed control payload"); };
     if (frame.type != PDPB_CREATE_PLUGIN && frame.type != PDPB_QUIT && frame.type != PDPB_SET_SHORTCUTS && !host.plugin) {
         reply(host, frame, {}, QStringLiteral("No plugin has been created")); return;
     }
+    // The RT thread stays the sole parameter consumer; flushing never runs inside a lease.
     if ((frame.type == PDPB_GET_STATE || frame.type == PDPB_GET_STATE_DIGEST || frame.type == PDPB_SET_STATE) && !host.flushParameters()) {
         reply(host, frame, {}, QStringLiteral("Could not flush plugin parameter edits")); return;
+    }
+    struct Lease { Host* host = nullptr; ~Lease() { if (host) host->resume(); } } lease;
+    if (exclusive(frame.type)) {
+        if (!host.quiesce()) return;
+        lease.host = &host;
     }
     switch (frame.type) {
     case PDPB_CREATE_PLUGIN: {
@@ -161,7 +196,7 @@ void dispatch(Host& host, Frame frame) {
         pdph_error reason = {};
         const QByteArray terminatedPath(path.data(), path.size());
         if (pdph_module_open(terminatedPath.constData(), &host.module, &reason) != PDPH_OK) { error = QString::fromUtf8(reason.message); break; }
-        const pdph_host_callbacks callbacks{&host, endEdit, restart, dirty, editorClosed};
+        const pdph_host_callbacks callbacks{&host, endEdit, restart, dirty, editorClosed, editorExposed};
         if (pdph_plugin_create(host.module, reinterpret_cast<const uint8_t*>(uid.data()), callbacks, &host.plugin, &reason) != PDPH_OK) {
             error = QString::fromUtf8(reason.message); pdph_module_close(host.module); host.module = nullptr; break;
         }
@@ -195,8 +230,9 @@ void dispatch(Host& host, Frame frame) {
         const auto which = input.u32();
         if (!input.done() || which > 1) { malformed(); break; }
         if (state(host, which, stateBytes, error)) {
-            encode32(fixedOutput, static_cast<uint32_t>(stateBytes.size()));
-            output = QByteArrayView(fixedOutput, 4);
+            encode64(fixedOutput, fnv1a(stateBytes));
+            encode32(fixedOutput + 8, static_cast<uint32_t>(stateBytes.size()));
+            output = QByteArrayView(fixedOutput, 12);
         }
         break;
     }
@@ -208,12 +244,8 @@ void dispatch(Host& host, Frame frame) {
     }
     case PDPB_GET_STATE_DIGEST: {
         if (!input.done()) { malformed(); break; }
-        uint64_t digest = 14695981039346656037ull;
         QByteArrayView bytes;
-        if (state(host, 0, bytes, error)) {
-            for (const auto byte : bytes) { digest ^= static_cast<unsigned char>(byte); digest *= 1099511628211ull; }
-        }
-        if (error.isEmpty()) { encode64(fixedOutput, digest); output = QByteArrayView(fixedOutput, 8); }
+        if (state(host, 0, bytes, error)) { encode64(fixedOutput, fnv1a(bytes)); output = QByteArrayView(fixedOutput, 8); }
         break;
     }
     case PDPB_GET_LATENCY: {

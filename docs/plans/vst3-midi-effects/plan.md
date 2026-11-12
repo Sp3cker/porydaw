@@ -53,6 +53,8 @@ User-approved gate timing: implementation checkpoints may proceed after independ
 - Allocation extension (tasks 23–26): remove avoidable Porydaw-owned allocations only in VST paths; preserve behavior, cross-thread/async ownership, required published results and SDK/plugin contracts. No SDK patches, generic allocator/pool, arbitrary bounds or unrelated app/audio changes. Native targets remain C++17.
 - Compare identical Release fixtures/operation counts when profiling is authorized. Instruments requires an unlocked Mac and interactive authorization; unusable/partial traces never support allocation counts or zero-allocation claims. SDK/framework and plugin-internal allocations are separate from host-owned redundant buffers.
 
+- Energy extension (tasks 27–28): callbacks use a coalesced queued drain; queued notification allocation is user-approved, but app callback/native processing invariants remain. Lifecycle mutations alone hold exclusive processing ownership; state/editor work uses only required parameter synchronization. Exposed-editor polling settles silent edits on hide/close. Scanner bus discovery initializes only components; actual creation validates controllers. Healthy unchanged catalog scans avoid redundant cache encoding and replacement. Audio-bus deactivation, Render block-size changes and panel prewarm policy are excluded.
+
 ## Tasks
 
 | # | Task | Route / seat | Depends | Brief |
@@ -83,6 +85,8 @@ User-approved gate timing: implementation checkpoints may proceed after independ
 | 24 | Swift helper framing and state-copy removal | SDD, sdd-implementer; bounded protocol ownership change | 18; unchanged task23 wire contract | [task-24-brief.md](task-24-brief.md) |
 | 25 | Compact capture/live-take working storage | SDD, sdd-implementer; over-cap, one capture/take ownership behavior | 16, 18 | [task-25-brief.md](task-25-brief.md) |
 | 26 | Allocation-free unchanged catalog projections and lean VST notification snapshots | SDD, sdd-implementer; over-cap, one discovery/notification behavior | 17–19 | [task-26-brief.md](task-26-brief.md) |
+| 27 | Event-driven helper coordination, coherent state snapshots and exposure-aware recording; component-only scanner discovery | SDD, user-selected m1 / Claude Opus 5.5; over-cap, one native lifecycle/observation protocol writer | 23–26 | [task-27-brief.md](task-27-brief.md) |
+| 28 | Idempotent catalog persistence without duplicate snapshots or unchanged writes | SDD, user-selected m1 / Claude Opus 5.5; disjoint catalog owner | 26 | [task-28-brief.md](task-28-brief.md) |
 
 Parallelism (disjoint write sets):
 - tasks 1 ∥ 2 ∥ 4 ∥ 5;
@@ -115,6 +119,21 @@ Parallelism (disjoint write sets):
   Repaired Swift Debug and ASAN each passed 5 focused harnesses. The final scanner-only delta was rebuilt in both and passed four actual CLI error cases byte-for-byte against the pre-change baseline; final Release passed all 5 harnesses and the same four CLI cases. Release includes the existing 100-call insert and 100-render Sequencer zero-host-allocation assertions. Production rack/output QML passed 2 harnesses; bridge: 0 baselined findings; AOT: 8782/8866 compiled (99.1%), 84 rejected; 29 files formatted and all 26 Swift index targets passed.
   Native lint exited 1 with 8 unchanged findings: 3 required mutable standard-container loops and 5 baseline direct-brace style exceptions, none introduced. Retained the counted LiveTake slab after Opus adjudication: linking would add per-onset storage for repeated keys. Existing catalog publication/cache writes remain necessary for callbacks and cache create/repair/error retry; no extra cache revisions were added.
   Quantitative whole-host allocation profiling remains blocked: exact-target Instruments launch awaits interactive SecurityAgent authorization while the Mac is locked; the partial trace is unusable. No numerical savings, whole-process zero-allocation result or new native UI acceptance is claimed.
+- **Energy follow-up (tasks 27–28, before integration)** — user-selected Opus implemented callback/work wakeups, lifecycle-only processing ownership, paired snapshot digests, exposure-aware state settlement, component-only scanner discovery and idempotent catalog persistence. Independent task gates approved source/spec with no remaining critical or important findings. No-op catalog retries no longer republish unchanged records.
+  Debug build and the five focused headless lanes passed; the new in-flight-state/MIDI regression passed. Native exposure/minimize/restore/close passed, and the controller editor lane passed after silent-close and stale-pitch-precondition repairs. The final stricter shutdown predicate derives the fixture's allowed output from actual state; it is compiled/formatted/reviewed but awaits its native rerun.
+  ASAN build and the five focused headless lanes passed; final Swift indexing passed 26/26 targets and changed-file formatting passed. Full native acceptance remains open: the plugin-editor lane fails at owner focus before stacking assertions while an unrelated application is foreground. Controlled-desktop confirmation timed out unanswered; no forced takeover or timeout/test waiver was applied. Windows/Linux runtime verification and numerical energy measurements are not claimed. No commit, push or merge was performed.
+
+## Integration authorization
+
+The user subsequently authorized committing the accepted VST, menu/header, stopped-audition and energy work, merging it into `fork-main`, pushing and resolving CI. This supersedes earlier no-commit/no-merge constraints in the three affected plans, not their behavioral contracts or pending native acceptance gates. The desktop is currently locked; foreground editor/keyboard acceptance remains explicitly unverified.
+
+Baseline Build run `42951843760` on `fork-main` (`8003ca8a`) failed on unavailable `DispatchSerialQueue` (Linux/Windows/ASAN) and the direct Qt keybinding forwarding-header import (macOS). Existing feature commits already replace the executor portably and route Qt keybindings through the project bridge. Independent CI diagnosis required no workflow changes; hosted integration must still verify previously unreached packaging, startup and full ASAN execution.
+
+Final local integration preflight rebuilt ASAN checks and passed all 63 non-windowing harnesses (project-store parity separately, then 62 remaining lanes). Post-format Swift indexing passed all 26 targets. These results do not cover native foreground editor/keyboard gates or substitute for hosted cross-platform CI.
+
+Final whole-branch Opus review approved source/spec with no critical or important findings. Its stopped-audition finding was repaired before integration: the helper advances project samples, PPQ and bar position between sub-blocks only when playing. The existing real-helper context check now observes an 8192-frame playing and stopped request near a bar boundary. Debug and ASAN each rebuilt and passed both affected host lanes; focused re-review accepted the exact two-source delta.
+
+Ruling: defer the four non-blocking review notes outside this merge/CI pass: duplicate note-ID/chase ownership, unused live-call fields, repeated workspace retirement ordering, and render-progress-triggered full header refreshes. Costs if left indefinitely: note-ID/lifetime-order drift and unnecessary callback/header work. Native desktop acceptance remains open; source approval and headless/CI results do not waive it.
 
 ## Final verification (controller)
 

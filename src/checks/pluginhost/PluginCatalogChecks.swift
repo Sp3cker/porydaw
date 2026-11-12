@@ -426,12 +426,54 @@ private func checkCatalogFailureAndUserRoots(_ report: CheckReport) async {
     }
 }
 
+@MainActor
+private func checkCatalogCacheRecovery(_ report: CheckReport) async {
+    let check = report.scoped(cppID: pluginCatalogID)
+    do {
+        let fixture = try CatalogCheckFixture()
+        defer { fixture.cleanup(check) }
+        _ = try fixture.copy("porydawtestgen")
+        try Data("not a cache directory".utf8).write(to: fixture.cache)
+        let catalog = fixture.catalog(timeout: .seconds(10))
+        await catalog.scan(folders: [])
+        check.expect(catalog.error != nil, message: "an unwritable cache reports its write failure")
+        check.expectEqual(
+            expected: 4, actual: catalog.entries.count, what: "a cache write failure keeps scanned entries usable")
+        try FileManager.default.removeItem(at: fixture.cache)
+        await catalog.scan(folders: [])
+        check.expect(catalog.error == nil, message: "an unchanged scan retries the failed cache write")
+        check.expectEqual(
+            expected: 1, actual: fixture.launches.count, what: "retrying the cache write launches no children")
+        check.expectEqual(
+            expected: catalog.entries, actual: fixture.catalog().entries,
+            what: "the retried write persists the unchanged scan results")
+        let cacheFile = fixture.cache.appendingPathComponent("PluginCatalog.json")
+        try FileManager.default.removeItem(at: cacheFile)
+        await catalog.scan(folders: [])
+        check.expectEqual(
+            expected: catalog.entries, actual: fixture.catalog().entries,
+            what: "an unchanged scan recreates a deleted cache file")
+
+        try Data("{".utf8).write(to: cacheFile)
+        let repaired = fixture.catalog(timeout: .seconds(10))
+        check.expect(repaired.entries.isEmpty, message: "a malformed cache restores no entries")
+        await repaired.scan(folders: [])
+        check.expectEqual(
+            expected: 2, actual: fixture.launches.count, what: "a malformed cache re-probes its modules")
+        check.expectEqual(
+            expected: catalog.entries, actual: fixture.catalog().entries,
+            what: "the next scan replaces a malformed cache")
+    } catch {
+        check.fail("catalog cache recovery fixture: \(error)")
+    }
+}
+
 /// Runs the catalog's real scanner/fixture checks through the shared main-actor runner.
 @MainActor
 public func runPluginCatalogChecks(_ report: CheckReport) {
     let cases: [@MainActor (CheckReport) async -> Void] = [
         checkCatalogDiscovery, checkCatalogContainment, checkCatalogParallelAndCancel,
-        checkCatalogRunningCancellation, checkCatalogFailureAndUserRoots,
+        checkCatalogRunningCancellation, checkCatalogFailureAndUserRoots, checkCatalogCacheRecovery,
     ]
     do {
         for operation in cases {

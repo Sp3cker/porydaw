@@ -48,7 +48,7 @@ private struct CatalogModule: Codable, Equatable, Sendable {
     let size: UInt64
 }
 
-private struct CatalogRecord: Codable, Sendable {
+private struct CatalogRecord: Codable, Equatable, Sendable {
     let module: CatalogModule
     let entries: [PluginCatalogEntry]
 
@@ -317,6 +317,8 @@ public final class PluginCatalog {
     private let childLaunched: ((String, Int32) -> Void)?
     private let childTerminated: ((String, Int32) -> Void)?
     private var records: [String: CatalogRecord] = [:]
+    /// Whether `PluginCatalog.json` may differ from `records`; only a successful load or write clears it.
+    private var cacheWritePending = true
     private var activeScan: CatalogScan?
 
     #if os(Windows)
@@ -384,6 +386,7 @@ public final class PluginCatalog {
             let data = try Data(contentsOf: cacheURL)
             let cached = try JSONDecoder().decode([CatalogRecord].self, from: data)
             for record in cached { records[record.module.path] = record }
+            cacheWritePending = records.count != cached.count
         } catch {
             // Missing or invalid cache is rebuilt by the next scan.
         }
@@ -407,6 +410,7 @@ public final class PluginCatalog {
     }
 
     private func persist() {
+        guard cacheWritePending else { return }
         do {
             try FileManager.default.createDirectory(
                 at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -414,6 +418,7 @@ public final class PluginCatalog {
                 left.module.path < right.module.path
             }
             try JSONEncoder().encode(cached).write(to: cacheURL, options: .atomic)
+            cacheWritePending = false
         } catch {
             self.error = error.localizedDescription
             onChanged?()
@@ -510,8 +515,11 @@ public final class PluginCatalog {
             records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) -> Bool in
                 paths.contains(element.key)
             }
+            cacheWritePending = true
+            publish()
         }
-        publish()
+        // The cache is exclusively owned; a file deleted while running is recreated at the next scan.
+        if !FileManager.default.fileExists(atPath: cacheURL.path) { cacheWritePending = true }
         persist()
         guard FileManager.default.isExecutableFile(atPath: scannerURL.path) else {
             error = "Plugin scanner is missing from this installation."
@@ -535,8 +543,9 @@ public final class PluginCatalog {
             }
             while let result = await group.next() {
                 if Task.isCancelled { cancelScan() }
-                if !scan.cancelled, let result {
+                if !scan.cancelled, let result, records[result.module.path] != result {
                     records[result.module.path] = result
+                    cacheWritePending = true
                     persist()
                     publish()
                 }
@@ -565,17 +574,18 @@ public final class PluginCatalog {
         let path = URL(fileURLWithPath: NSString(string: modulePath).expandingTildeInPath).standardizedFileURL.path
         guard records[path]?.isBlocked == true else { return }
         records[path] = nil
+        cacheWritePending = true
         persist()
         publish()
     }
 
     /// Clears all cached blocks, retaining successful classes.
     public func retryAll() {
-        if records.values.contains(where: { (record: CatalogRecord) -> Bool in record.isBlocked }) {
-            records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) -> Bool in
-                !element.value.isBlocked
-            }
+        guard records.values.contains(where: { (record: CatalogRecord) -> Bool in record.isBlocked }) else { return }
+        records = records.filter { (element: Dictionary<String, CatalogRecord>.Element) -> Bool in
+            !element.value.isBlocked
         }
+        cacheWritePending = true
         persist()
         publish()
     }

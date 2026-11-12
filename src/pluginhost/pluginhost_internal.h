@@ -39,6 +39,7 @@ public:
     bool pop(ParameterEdit&, uint32_t endpoint);
     void detach();
     void editorClosed();
+    void editorExposed(bool exposed);
     bool hasPendingEdits() const { return readIndex.load(std::memory_order_acquire) != writeIndex.load(std::memory_order_acquire); }
 private:
     template<class F> void notify(F function) {

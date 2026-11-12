@@ -114,6 +114,53 @@ private func renderLiveCheck(
     }
 }
 
+private func renderStoppedLiveCheck(
+    _ sequencer: inout Sequencer, engine: UnsafeMutablePointer<M4AEngine>, timeline: PlaybackTimeline,
+    frames: Int, inserts: [FakeLiveInsert?], mute: UInt32 = 0
+) -> (left: [Float], right: [Float]) {
+    var left = [Float](repeating: 0, count: frames)
+    var right = left
+    let slots = inserts.map { (insert: FakeLiveInsert?) -> UnsafeMutablePointer<LiveInsertSlot>? in insert?.slot }
+    slots.withUnsafeBufferPointer { (slots: UnsafeBufferPointer<UnsafeMutablePointer<LiveInsertSlot>?>) in
+        left.withUnsafeMutableBufferPointer { (left: inout UnsafeMutableBufferPointer<Float>) in
+            right.withUnsafeMutableBufferPointer { (right: inout UnsafeMutableBufferPointer<Float>) in
+                sequencer.renderStoppedLive(
+                    engine: engine, timeline: timeline, left: left, right: right, looping: false, muteMask: mute,
+                    liveMask: 1, liveSlots: slots)
+            }
+        }
+    }
+    return (left, right)
+}
+
+/// Engine-only reference for one callback: track-0 notes applied between native renders at block-local offsets.
+private func nativeLiveReference(
+    _ engine: UnsafeMutablePointer<M4AEngine>, frames: Int, notes: [(offset: Int, key: UInt8, velocity: UInt8)]
+) -> (left: [Float], right: [Float]) {
+    var left = [Float](repeating: 0, count: frames)
+    var right = left
+    left.withUnsafeMutableBufferPointer { (left: inout UnsafeMutableBufferPointer<Float>) in
+        right.withUnsafeMutableBufferPointer { (right: inout UnsafeMutableBufferPointer<Float>) in
+            guard let leftBase = left.baseAddress, let rightBase = right.baseAddress else { return }
+            var done = 0
+            func process(to end: Int) {
+                if end > done { m4a_engine_process(engine, leftBase + done, rightBase + done, Int32(end - done)) }
+                done = end
+            }
+            for note in notes {
+                process(to: note.offset)
+                if note.velocity > 0 {
+                    m4a_engine_note_on(engine, 0, note.key, note.velocity)
+                } else {
+                    m4a_engine_note_off(engine, 0, note.key)
+                }
+            }
+            process(to: frames)
+        }
+    }
+    return (left, right)
+}
+
 private func checkLiveWindowsAndDispatch(_ report: CheckReport) {
     guard let engine = PlaybackCheckEngine() else {
         report.fail(liveInsertID, "fake insert engine allocation failed")
@@ -339,10 +386,78 @@ private func checkMutedAndOfflineLive(_ report: CheckReport) {
         cppID: liveInsertID, message: "offline/WAV scheduler keeps song-only output when no inserts are passed")
 }
 
+private func checkStoppedLiveAudition(_ report: CheckReport) {
+    guard let engine = PlaybackCheckEngine(), let reference = PlaybackCheckEngine() else {
+        report.fail(liveInsertID, "stopped audition engine allocation failed")
+        return
+    }
+    let timeline = liveTimeline()
+    for target in [engine.pointer, reference.pointer] {
+        Sequencer.chase(engine: target, timeline: timeline, position: 0)
+        Sequencer.primeVoices(engine: target, timeline: timeline, position: 0)
+    }
+    let fake = FakeLiveInsert()
+    fake.script = [
+        [LiveOutputEvent(sampleOffset: 3000, key: 67, velocity: 100, noteId: 1)],
+        [
+            LiveOutputEvent(sampleOffset: 2000, key: 67, noteId: 1),
+            LiveOutputEvent(sampleOffset: 5000, key: 67, velocity: 100, noteId: 2),
+        ],
+        [LiveOutputEvent(sampleOffset: 1000, key: 67, velocity: 100, noteId: 3)],
+        [LiveOutputEvent(key: 67, noteId: 2)],
+        [LiveOutputEvent(key: 69, velocity: 100, noteId: 4)],
+        [LiveOutputEvent(key: 71, velocity: 100, noteId: 5)],
+    ]
+    fake.missedCalls = [5]
+    // Replacement releases the old owner at the new onset; the final stale off changes nothing.
+    let expected: [[(offset: Int, key: UInt8, velocity: UInt8)]] = [
+        [(3000, 67, 100)], [(2000, 67, 0), (5000, 67, 100)], [(1000, 67, 0), (1000, 67, 100)], [],
+    ]
+    var sequencer = Sequencer(liveInserts: true)
+    var exact = true
+    var audible = false
+    for notes in expected {
+        let stopped = renderStoppedLiveCheck(
+            &sequencer, engine: engine.pointer, timeline: timeline, frames: 8192, inserts: [fake])
+        let native = nativeLiveReference(reference.pointer, frames: 8192, notes: notes)
+        exact = exact && stopped.left == native.left && stopped.right == native.right
+        audible =
+            audible || audioControllerCheckPeak(stopped.left[...]) > 0
+            || audioControllerCheckPeak(stopped.right[...]) > 0
+    }
+    report.expect(
+        exact && audible, cppID: liveInsertID,
+        message: "stopped insert output sounds at exact block-local offsets across callbacks")
+    report.expectEqual(
+        expected: [UInt8(67)], actual: playbackCheckCgbKeys(engine.pointer), cppID: liveInsertID,
+        what: "stopped offs and replacements follow current ownership; a stale owner's off is swallowed")
+    report.expect(
+        sequencer.position == 0
+            && fake.calls.allSatisfy { (call: LiveCallObservation) -> Bool in
+                !call.playing && call.position == 0 && call.tick == 0 && call.input.isEmpty
+            }, cppID: liveInsertID, message: "stopped inserts see fixed song time and receive no song notes")
+    _ = renderStoppedLiveCheck(
+        &sequencer, engine: engine.pointer, timeline: timeline, frames: 256, inserts: [fake], mute: 1)
+    report.expectEqual(
+        expected: [UInt8(67)], actual: playbackCheckCgbKeys(engine.pointer), cppID: liveInsertID,
+        what: "muted stopped output does not reach synthesis")
+    _ = renderStoppedLiveCheck(&sequencer, engine: engine.pointer, timeline: timeline, frames: 256, inserts: [fake])
+    report.expect(
+        playbackCheckCgbKeys(engine.pointer).isEmpty
+            && !fake.take.contains { (event: LiveTakeEvent) -> Bool in event.kind == .note },
+        cppID: liveInsertID, message: "missed stopped reply releases held output; stopped notes never enter the take")
+}
+
 private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     let rig = try AudioControllerCheckFixture(silent: true)
     let fake = FakeLiveInsert()
-    fake.script = [[LiveOutputEvent(key: 67, velocity: 100, noteId: 1)]]
+    func queue(_ events: [LiveOutputEvent]) {
+        fake.script = Array(repeating: [], count: fake.calls.count) + [events]
+    }
+    func captured(_ key: UInt8) -> Bool {
+        fake.take.contains { (event: LiveTakeEvent) -> Bool in event.kind == .note && event.note.key == key }
+    }
+    fake.script = [[LiveOutputEvent(sampleOffset: 5, key: 66, velocity: 100, noteId: 1)]]
     rig.renderer.attachLiveInsert(track: -1, slot: fake.slot)
     rig.renderer.attachLiveInsert(track: 16, slot: fake.slot)
     report.expectEqual(
@@ -352,8 +467,19 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     _ = rig.render(32)
     report.expect(
         fake.calls.count == 1 && !fake.calls[0].playing && fake.calls[0].flags.contains(.arm)
-            && fake.calls[0].position == 0 && fake.calls[0].input.isEmpty && !rig.sustaining(67),
-        cppID: liveInsertID, message: "attached insert processes stopped transport without preroll")
+            && fake.calls[0].position == 0 && fake.calls[0].input.isEmpty && rig.sustaining(66)
+            && rig.renderer.playheadSamples == 0 && !captured(66),
+        cppID: liveInsertID, message: "stopped insert output sounds without preroll, song time or capture")
+    rig.renderer.setMix(muted: [], soloed: [1])
+    queue([LiveOutputEvent(key: 68, velocity: 100, noteId: 2)])
+    _ = rig.render(32)
+    report.expect(
+        !rig.sustaining(66) && !rig.sustaining(68), cppID: liveInsertID,
+        message: "solo releases stopped insert output and keeps muted output silent")
+    rig.renderer.setMix(muted: [], soloed: [])
+    queue([LiveOutputEvent(key: 69, velocity: 100, noteId: 3)])
+    _ = rig.render(32)
+    report.expect(rig.sustaining(69), cppID: liveInsertID, message: "pattern fixture holds stopped insert output")
     let pattern = PlaybackTimeline.pattern(
         source: rig.timeline(silent: true),
         notes: [NewNote(track: 0, tick: 24, pitch: 72, duration: 24, velocity: 100)],
@@ -375,11 +501,12 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     rig.renderer.stopPatternAudition()
     _ = rig.render(32)
     report.expect(
-        fake.calls.last?.flags.contains(.patternReturn) == true, cppID: liveInsertID,
-        message: "pattern return signals discontinuity")
+        fake.calls.last?.flags.contains(.patternReturn) == true && !rig.sustaining(69)
+            && !captured(66) && !captured(68) && !captured(69),
+        cppID: liveInsertID, message: "pattern return signals discontinuity after releasing uncaptured stopped output")
     rig.renderer.play()
     _ = rig.render(rig.settle + rig.ramp * 3)
-    fake.script = Array(repeating: [], count: fake.calls.count) + [[LiveOutputEvent(key: 67, velocity: 100, noteId: 9)]]
+    queue([LiveOutputEvent(key: 67, velocity: 100, noteId: 9)])
     _ = rig.render(256)
     report.expect(rig.sustaining(67), cppID: liveInsertID, message: "attached fake insert drives song engine")
     rig.renderer.detachLiveInsert(track: 0)
@@ -388,18 +515,18 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
         cppID: liveInsertID, message: "detach releases track and clears mask before slot reclamation")
     let count = fake.calls.count
     rig.renderer.attachLiveInsert(track: 0, slot: fake.slot)
-    fake.script += [[LiveOutputEvent(key: 67, noteId: 9)]]
+    queue([LiveOutputEvent(key: 67, noteId: 9)])
     let recorded = fake.take.count
     _ = rig.render(32)
     report.expect(
         fake.calls.count == count + 1 && fake.calls.last?.flags.contains(.arm) == true
             && !fake.take.dropFirst(recorded).contains { (event: LiveTakeEvent) -> Bool in event.kind == .note },
         cppID: liveInsertID, message: "reattach starts clean and swallows old owner's off")
-    fake.script += [[LiveOutputEvent(key: 70, velocity: 100, noteId: 10)]]
+    queue([LiveOutputEvent(key: 70, velocity: 100, noteId: 10)])
     _ = rig.render(256)
     report.expect(rig.sustaining(70), cppID: liveInsertID, message: "mute fixture holds live output")
     rig.renderer.setMix(muted: [0], soloed: [])
-    fake.script += [[LiveOutputEvent(key: 71, velocity: 100, noteId: 11)]]
+    queue([LiveOutputEvent(key: 71, velocity: 100, noteId: 11)])
     let beforeMute = fake.take.count
     _ = rig.render(32)
     report.expect(
@@ -408,7 +535,27 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
                 event.kind != .note || event.note.velocity == 0
             }, cppID: liveInsertID, message: "mute releases held live output and records no muted ons")
     rig.renderer.setMix(muted: [], soloed: [])
-    fake.script += [[LiveOutputEvent(key: 73, velocity: 100, noteId: 12)]]
+    queue([LiveOutputEvent(key: 72, velocity: 100, noteId: 20)])
+    _ = rig.render(256)
+    let beforePause = fake.take.count
+    rig.renderer.pause()
+    _ = rig.render(rig.settle + rig.ramp * 3)
+    let pausedAt = rig.renderer.playheadSamples
+    queue([LiveOutputEvent(sampleOffset: 7, key: 74, velocity: 100, noteId: 21)])
+    _ = rig.render(32)
+    report.expect(
+        rig.sustaining(74) && !rig.sustaining(72) && fake.calls.last?.playing == false
+            && rig.renderer.playheadSamples == pausedAt && !captured(74)
+            && fake.take.dropFirst(beforePause).contains { (event: LiveTakeEvent) -> Bool in
+                event.kind == .note && event.note.key == 72 && event.note.velocity == 0
+            },
+        cppID: liveInsertID, message: "paused insert output sounds at a fixed playhead; only the played off is taken")
+    rig.renderer.play()
+    _ = rig.render(rig.settle + rig.ramp * 3)
+    report.expect(
+        !rig.sustaining(74) && fake.calls.last?.playing == true && !captured(74),
+        cppID: liveInsertID, message: "resume releases paused insert output without capturing it")
+    queue([LiveOutputEvent(key: 73, velocity: 100, noteId: 12)])
     _ = rig.render(256)
     report.expect(rig.sustaining(73), cppID: liveInsertID, message: "stop fixture holds live output")
     rig.renderer.stop()
@@ -416,6 +563,24 @@ private func checkLiveEngineLifetime(_ report: CheckReport) throws {
     report.expect(
         fake.calls.last?.playing == false && !rig.sustaining(73),
         cppID: liveInsertID, message: "stop releases live notes and continues processing with playing clear")
+    queue([LiveOutputEvent(sampleOffset: 5, key: 75, velocity: 100, noteId: 13)])
+    _ = rig.render(32)
+    report.expect(
+        rig.sustaining(75) && rig.renderer.playheadSamples == 0, cppID: liveInsertID,
+        message: "stopped insert output sounds at the rewound playhead")
+    rig.renderer.seek(2400)
+    _ = rig.render(32)
+    report.expect(
+        !rig.sustaining(75) && rig.renderer.playheadSamples == 2400
+            && fake.calls.last?.flags.contains(.seek) == true,
+        cppID: liveInsertID, message: "stopped seek releases insert output and moves only to the requested playhead")
+    queue([LiveOutputEvent(key: 76, velocity: 100, noteId: 14)])
+    _ = rig.render(32)
+    let sounding = rig.sustaining(76)
+    rig.renderer.detachLiveInsert(track: 0)
+    report.expect(
+        sounding && !rig.sustaining(76) && !captured(75) && !captured(76), cppID: liveInsertID,
+        message: "detach releases stopped insert output that never entered the take")
 }
 
 private func checkLiveInputPairingAndCapacity(_ report: CheckReport) {
@@ -470,6 +635,7 @@ public func runLiveInsertChecks(_ report: CheckReport) {
     checkLiveWindowsAndDispatch(report)
     checkLiveDiscontinuities(report)
     checkMutedAndOfflineLive(report)
+    checkStoppedLiveAudition(report)
     checkLiveInputPairingAndCapacity(report)
     do {
         try checkLiveEngineLifetime(report)

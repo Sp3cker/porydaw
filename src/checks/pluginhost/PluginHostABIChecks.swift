@@ -186,6 +186,10 @@ private func checkABIScanner(_ report: CheckReport, directory: URL, fixture: URL
         child.executableURL = directory.appendingPathComponent("porydaw-vst3-host")
     #endif
     child.arguments = ["scan", fixture.path]
+    // The fixture aborts on controller APIs here, proving discovery stays component-only.
+    child.environment = ProcessInfo.processInfo.environment.merging(["PORYDAW_TESTGEN_COMPONENT_ONLY": "1"]) {
+        (_: String, probe: String) -> String in probe
+    }
     let output = Pipe()
     let errors = Pipe()
     child.standardOutput = output
@@ -196,7 +200,7 @@ private func checkABIScanner(_ report: CheckReport, directory: URL, fixture: URL
         child.waitUntilExit()
         report.expectEqual(
             expected: Int32(0), actual: child.terminationStatus, cppID: "pluginhost/scan",
-            what: "fixture scanner exits successfully")
+            what: "fixture scanner exits successfully without controller construction or state sync")
         let json = try JSONDecoder().decode(ABIScanDocument.self, from: data)
         report.expectEqual(
             expected: 1, actual: json.version, cppID: "pluginhost/scan", what: "scanner schema is version 1")

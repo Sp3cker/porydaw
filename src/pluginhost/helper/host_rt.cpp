@@ -2,7 +2,6 @@
 #include "pluginhost_internal.h"
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cmath>
 #include <cstddef>
 #ifdef __APPLE__
@@ -58,39 +57,37 @@ void processRequests(Host& host) {
     std::array<pdph_midi_event, PDPB_MAX_EVENTS> input{};
     double configuredRate = 0;
     uint32_t configuredPeriod = 0;
+    uint32_t wake = 0;
+    bool failed = false;
     auto* shared = pdpb_channel_shared(host.channel);
     while (!host.stopping.load(std::memory_order_acquire)) {
         pdpb_tick_heartbeat(host.channel);
-        const auto wait = pdpb_wait_request(host.channel, 100);
-        if (wait == PDPB_ERROR) {
-            host.exitStatus.store(1, std::memory_order_relaxed);
-            host.stopping.store(true, std::memory_order_release);
-            break;
-        }
+        const auto wait = pdpb_wait_request(host.channel, 100, &wake);
+        if (wait == PDPB_ERROR) { failed = true; break; }
         if (host.stopping.load(std::memory_order_acquire)) break;
         if (host.parameterFlushRequested.load(std::memory_order_acquire)) {
             uint32_t owner = 0;
-            if (host.processingOwner.compare_exchange_strong(owner, 1, std::memory_order_acquire)) {
+            if (host.processingOwner.compare_exchange_strong(owner, 1, std::memory_order_seq_cst)) {
                 pdph_process_context context = {};
                 int32_t written = 0, total = 0;
                 host.parameterFlushResult = pdph_plugin_process(host.plugin, 0, &context, nullptr, 0, nullptr, 0, &written, &total);
-                host.processingOwner.store(2, std::memory_order_release);
                 host.parameterFlushRequested.store(false, std::memory_order_release);
+                host.processingOwner.store(0, std::memory_order_seq_cst);
+                pdpb_post_signal(host.channel);
             }
         }
         if (wait != PDPB_OK) continue;
-        if (host.controlPending.load(std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            continue;
-        }
+        // A pending or held lease excludes processing; its release signals instead of a timed spin.
+        const uint32_t seen = pdpb_signal_count(host.channel);
         uint32_t expected = 0;
-        if (!host.processingOwner.compare_exchange_strong(expected, 1, std::memory_order_acquire)) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        if (host.controlPending.load(std::memory_order_seq_cst) ||
+            !host.processingOwner.compare_exchange_strong(expected, 1, std::memory_order_seq_cst)) {
+            if (pdpb_wait_signal(host.channel, seen, 100) == PDPB_ERROR) { failed = true; break; }
             continue;
         }
         const uint32_t sequence = pdpb_request_sequence(host.channel);
         if (sequence == pdpb_reply_sequence(host.channel)) {
-            host.processingOwner.store(0, std::memory_order_release);
+            host.releaseProcessing();
             continue;
         }
         if (configuredRate != host.sampleRate || configuredPeriod != host.periodFrames) {
@@ -117,12 +114,15 @@ void processRequests(Host& host) {
                     input[count] = event; input[count++].sample_offset -= offset;
                 }
                 auto context = shared->ctx;
-                context.project_samples += offset;
-                const double advance = offset / host.sampleRate * context.tempo / 60.;
-                if (context.state_flags & PDPH_CTX_PROJECT_TIME_MUSIC_VALID) context.ppq_position += advance;
-                if ((context.state_flags & PDPH_CTX_BAR_POSITION_VALID) && context.time_sig_num > 0 && context.time_sig_den > 0) {
-                    const double barLength = context.time_sig_num * 4. / context.time_sig_den;
-                    context.bar_start_ppq += std::floor((context.ppq_position - context.bar_start_ppq) / barLength) * barLength;
+                // A stopped transport holds its position; only playing subblocks advance samples, PPQ and bar.
+                if (context.state_flags & PDPH_CTX_PLAYING) {
+                    context.project_samples += offset;
+                    const double advance = offset / host.sampleRate * context.tempo / 60.;
+                    if (context.state_flags & PDPH_CTX_PROJECT_TIME_MUSIC_VALID) context.ppq_position += advance;
+                    if ((context.state_flags & PDPH_CTX_BAR_POSITION_VALID) && context.time_sig_num > 0 && context.time_sig_den > 0) {
+                        const double barLength = context.time_sig_num * 4. / context.time_sig_den;
+                        context.bar_start_ppq += std::floor((context.ppq_position - context.bar_start_ppq) / barLength) * barLength;
+                    }
                 }
                 int32_t written = 0, total = 0;
                 const int32_t start = shared->out_written;
@@ -143,8 +143,10 @@ void processRequests(Host& host) {
         }
         if (shared->status != PDPH_OK) { shared->out_written = 0; shared->out_total = 0; }
         pdpb_post_reply(host.channel, sequence);
-        host.processingOwner.store(0, std::memory_order_release);
+        host.releaseProcessing();
     }
+    // Stopping posts to the main thread, so it runs only once this thread leaves processing.
+    if (failed) host.stop(1);
 #ifdef _WIN32
     if (priorityTask) AvRevertMmThreadCharacteristics(priorityTask);
 #endif

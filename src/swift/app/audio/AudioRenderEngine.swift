@@ -561,11 +561,15 @@ public final class AudioRenderEngine {
                 }
             } else {
                 if let timeline = handoff.active, insertMask != 0 {
-                    player.processStoppedLive(
-                        engine: main, timeline: timeline.pointee.timeline, frames: count, looping: loopEnabled,
-                        liveMask: insertMask, liveSlots: inserts)
+                    player.renderStoppedLive(
+                        engine: main, timeline: timeline.pointee.timeline,
+                        left: UnsafeMutableBufferPointer(start: left, count: count),
+                        right: UnsafeMutableBufferPointer(start: right, count: count),
+                        looping: loopEnabled, muteMask: appliedMute, liveMask: insertMask, liveSlots: inserts,
+                        audition: audition)
+                } else {
+                    audition.render(main: main, left: left, right: right, frames: count)
                 }
-                audition.render(main: main, left: left, right: right, frames: count)
                 metronome.mixTail(left: left, right: right, frames: count)
             }
             m4a_engine_process(preview, previewLeft, previewRight, Int32(count))

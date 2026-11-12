@@ -57,7 +57,7 @@ public func runTrackHeadersChecks(
             width: contentWidth,
             metrics: HeaderTextMetrics(
                 title: base, bold: base,
-                subtitle: base))
+                subtitle: base, effectsWidth: Double(base * 3), liveWidth: Double(base * 2)))
         report.expect(
             mute.x + mute.width <= contentWidth - Double(geometry.spaceOne)
                 && solo.x + solo.width <= contentWidth - Double(geometry.spaceOne)
@@ -65,6 +65,24 @@ public func runTrackHeadersChecks(
                 && text.0.x + text.0.width <= mute.x && text.1.x + text.1.width <= solo.x,
             cppID: geometryID,
             message: "at base \(base), both toggle borders and text fit within the header content column")
+        let metrics = HeaderTextMetrics(
+            title: base, bold: base, subtitle: base,
+            effectsWidth: Double(base * 3), liveWidth: Double(base * 2))
+        let controls = geometry.effectRects(in: text.2, metrics: metrics, hasEffect: true)
+        report.expect(
+            controls.button.width == metrics.effectsWidth + Double(2 * geometry.spaceOne)
+                && controls.button.width < text.2.width
+                && controls.button.y >= text.1.y + text.1.height
+                && controls.button.x + controls.button.width < controls.name.x
+                && controls.name.x + controls.name.width < controls.live.x
+                && controls.live.x + controls.live.width <= text.2.x + text.2.width,
+            cppID: geometryID,
+            message: "at base \(base), compact Effects, unboxed identity and Live have independent Swift rectangles")
+        let empty = geometry.effectRects(in: text.2, metrics: metrics, hasEffect: false)
+        report.expect(
+            empty.button == controls.button && empty.live.width == 0 && empty.name.width == 0,
+            cppID: geometryID,
+            message: "empty tracks retain the same compact Effects access without a Live hit target")
     }
     trackHeaderBudgetStyling(report, suite: session, service: service)
     unattachedModelPublishesSafeZeroGeometry(report, suite: session, service: service)

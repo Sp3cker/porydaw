@@ -101,7 +101,7 @@ private final class BridgeCheckFixture {
 
     func start(_ check: CheckReport.Scoped, fault: Int32 = 0) async throws {
         try await helper.start()
-        check.expect(helper.readyVersion == UInt32(PDPB_VERSION), message: "Ready negotiates bridge version 1")
+        check.expect(helper.readyVersion == UInt32(PDPB_VERSION), message: "Ready negotiates the bridge version")
         let buses = try await helper.createPlugin(modulePath: module.path, classUID: uid)
         check.expectEqual(
             expected: HelperBuses(eventIn: 1, eventOut: 1, audioIn: 0, audioOut: 1), actual: buses,
@@ -216,11 +216,15 @@ private func checkBridgeRoundTrips(_ fixture: BridgeCheckFixture, _ check: Check
         live.0.outcome == .replied && live.0.status == 0, message: "Live completes within its chunk-derived deadline")
     let initialDigest = try await fixture.helper.stateDigest()
     let controller = try await fixture.helper.getState(which: 1)
-    try await fixture.helper.setState(which: 1, bytes: controller)
+    try await fixture.helper.setState(which: 1, bytes: controller.bytes)
     let restored = bridgeState(offset: 5, latency: 384)
     try await fixture.helper.setState(which: 0, bytes: restored)
     let state = try await fixture.helper.getState(which: 0)
-    check.expectEqual(expected: restored, actual: state, what: "component state round trips through framed controls")
+    check.expectEqual(
+        expected: restored, actual: state.bytes, what: "component state round trips through framed controls")
+    check.expect(
+        state.digest == bridgeDigest(state.bytes) && controller.digest == bridgeDigest(controller.bytes),
+        message: "each GetState digest describes exactly the bytes it returns")
     async let digestRequest = fixture.helper.stateDigest()
     async let latencyRequest = fixture.helper.latency()
     let (digest, latency) = try await (digestRequest, latencyRequest)
@@ -244,6 +248,30 @@ private func checkBridgeRoundTrips(_ fixture: BridgeCheckFixture, _ check: Check
     check.expect(
         fixture.helper.failure == nil && fixture.helper.exitStatus == 0,
         message: "Quit is clean and shutdown is idempotent")
+    let idle = fixture.channel.snapshot
+    var wake: UInt32 = 0
+    _ = pdpb_wait_request(fixture.peer, 0, &wake)
+    check.expectEqual(
+        expected: Int32(PDPB_TIMEOUT), actual: pdpb_wait_request(fixture.peer, 0, &wake),
+        what: "an adopted request word without work times out")
+    pdpb_wake_request(fixture.peer)
+    check.expectEqual(
+        expected: Int32(PDPB_WOKEN), actual: pdpb_wait_request(fixture.peer, 1000, &wake),
+        what: "a work wake published before the wait is not lost")
+    check.expectEqual(
+        expected: Int32(PDPB_TIMEOUT), actual: pdpb_wait_request(fixture.peer, 0, &wake),
+        what: "a consumed work wake is not replayed")
+    check.expect(
+        fixture.channel.snapshot.request == idle.request && idle.request == idle.reply,
+        message: "a work wake never fabricates a bridge request")
+    let signal = pdpb_signal_count(fixture.peer)
+    pdpb_post_signal(fixture.peer)
+    check.expectEqual(
+        expected: Int32(PDPB_OK), actual: pdpb_wait_signal(fixture.peer, signal, 1000),
+        what: "a helper signal posted before the wait is not lost")
+    check.expectEqual(
+        expected: Int32(PDPB_TIMEOUT), actual: pdpb_wait_signal(fixture.peer, pdpb_signal_count(fixture.peer), 0),
+        what: "an observed helper signal does not satisfy a later wait")
 }
 
 @MainActor
@@ -394,6 +422,31 @@ private func checkBridgeStartupShutdown(_ fixture: BridgeCheckFixture, _ check: 
         message: "shutdown during startup resolves Ready and reaps the helper without reporting a crash")
 }
 
+@MainActor
+private final class BridgeReadDone {
+    var finished = false
+}
+
+@MainActor
+private func checkBridgeConcurrentState(_ fixture: BridgeCheckFixture, _ check: CheckReport.Scoped) async throws {
+    // Fault 11 holds each component read for at most two seconds, waiting for a processed live block.
+    try await fixture.start(check, fault: 11)
+    let done = BridgeReadDone()
+    let read = Task { @MainActor in
+        defer { done.finished = true }
+        return try await fixture.helper.getState(which: 0)
+    }
+    let deadline = pdpb_monotonic_ns() + 5_000_000_000
+    while !done.finished, pdpb_monotonic_ns() < deadline {
+        _ = fixture.process(frames: 256)
+        await Task.yield()
+    }
+    let state = try await read.value
+    check.expectEqual(
+        expected: [UInt8(1), 0, 0, 0], actual: Array(state.bytes.dropFirst(8).prefix(4)),
+        what: "live processing reaches the plugin while its slow component state read is in flight")
+}
+
 /// Exercises the real packaged helper without loading any plugin in the check process.
 @MainActor
 public func runPluginBridgeChecks(_ report: CheckReport) {
@@ -401,7 +454,7 @@ public func runPluginBridgeChecks(_ report: CheckReport) {
         let (module, uid) = try bridgeFixtureIdentity()
         let cases: [@MainActor (BridgeCheckFixture, CheckReport.Scoped) async throws -> Void] = [
             checkBridgeRoundTrips, checkBridgeCrash, checkBridgeHang, checkBridgeRenderTimeout, checkBridgeInputEOF,
-            checkBridgeStartupShutdown, checkBridgeCallbackLoss,
+            checkBridgeStartupShutdown, checkBridgeCallbackLoss, checkBridgeConcurrentState,
         ]
         for operation in cases {
             try runBlocking {

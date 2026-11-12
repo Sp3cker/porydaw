@@ -54,6 +54,7 @@ public final class TrackEffectsController {
     private var renderRequests: [EffectID: UInt64] = [:]
     private var cleanups: [EffectID: (id: UUID, task: Task<Void, Never>)] = [:]
     private var timer: Task<Void, Never>?
+    private var liveCommands: [EffectID: Task<Void, Never>] = [:]
     private var generation: UInt64 = 0
     private var active = false
     private var stopped = false
@@ -135,6 +136,7 @@ public final class TrackEffectsController {
                 entry.instance.onEdit = nil
                 entry.instance.onFailure = nil
                 entry.instance.onEditorClosed = nil
+                entry.instance.onEditorExposure = nil
                 await entry.instance.shutdown()
             }
         }
@@ -143,6 +145,7 @@ public final class TrackEffectsController {
     }
 
     private func retire(_ entry: Entry) {
+        liveCommands[entry.effect.id]?.cancel()
         detach(entry)
         entry.live = false
         entry.retired = true
@@ -250,6 +253,10 @@ public final class TrackEffectsController {
             entry.recorder.refreshObservation()
             self.onChanged?(id)
         }
+        instance.onEditorExposure = { [weak self, weak entry] in
+            guard let self, let entry, self.current(entry) else { return }
+            entry.recorder.refreshObservation()
+        }
         publish(id, .loading)
         let load = Task { @MainActor [weak self, weak entry] in
             guard let self, let entry else { throw CancellationError() }
@@ -304,6 +311,49 @@ public final class TrackEffectsController {
 
     public func load(_ id: EffectID) async throws { _ = try await loaded(id) }
 
+    func canToggleLive(_ id: EffectID) -> Bool {
+        guard active, !stopped, !session.isClosed, effect(id) != nil,
+            liveCommands[id] == nil, entries[id]?.renderOwner == nil
+        else {
+            return false
+        }
+        switch status(id) {
+        case .crashed, .unavailable, .rendering: return false
+        case .idle, .loading, .ready, .nothingHeard, .failed: return true
+        }
+    }
+
+    func toggleLive(_ id: EffectID) {
+        guard canToggleLive(id) else { return }
+        let token = generation
+        let document = session.document
+        let revision = document.revision
+        let live = !isLive(id)
+        liveCommands[id] = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer {
+                self.liveCommands[id] = nil
+                if !self.stopped { self.onChanged?(id) }
+            }
+            guard !Task.isCancelled, self.generation == token, self.active,
+                !self.session.isClosed, self.session.document === document,
+                document.revision == revision, self.effect(id) != nil,
+                self.entries[id]?.renderOwner == nil
+            else { return }
+            do { try await self.setLive(id, live) } catch is CancellationError {
+                // A document or controller lifecycle change superseded the command.
+            } catch {
+                guard !self.stopped, self.effect(id) != nil else { return }
+                switch self.status(id) {
+                case .crashed, .unavailable, .failed: return
+                case .idle, .loading, .ready, .rendering, .nothingHeard: break
+                }
+                self.publish(id, .failed(String(describing: error)))
+            }
+        }
+        onChanged?(id)
+    }
+
     public func activate() {
         guard !stopped else { return }
         generation &+= 1
@@ -314,6 +364,7 @@ public final class TrackEffectsController {
 
     public func suspend() {
         guard !stopped else { return }
+        for command in liveCommands.values { command.cancel() }
         let drainingPump = timer
         drainingPump?.cancel()
         for entry in entries.values {
@@ -421,15 +472,18 @@ public final class TrackEffectsController {
         await entry.cleanup?.value
         await entry.control?.value
         await entry.instance.capture.idle()
+        while let pending = liveCommands[id] { await pending.value }
         guard current(entry), active, revision == entry.renderRevision, token == generation else {
             throw CancellationError()
         }
         entry.renderOwner = revision
+        onChanged?(id)
         defer {
             if entry.renderOwner == revision {
                 entry.render = nil
                 entry.renderOwner = nil
                 entry.recorder.refreshObservation()
+                if !stopped { onChanged?(id) }
             }
         }
         entry.recorder.pause()
@@ -511,7 +565,8 @@ public final class TrackEffectsController {
     public func closeEditor(_ id: EffectID) async {
         guard let entry = entries[id] else { return }
         await entry.instance.closeEditor()
-        await entry.recorder.stopObservation()
+        entry.recorder.refreshObservation()
+        await entry.recorder.idle()
         if !stopped { onChanged?(id) }
     }
 
@@ -595,6 +650,7 @@ public final class TrackEffectsController {
             await timer?.value
             return
         }
+        for command in liveCommands.values { command.cancel() }
         while let first = entries.first {
             retire(first.value)
             entries[first.key] = nil

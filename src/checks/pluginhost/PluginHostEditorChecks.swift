@@ -6,11 +6,13 @@ import PorydawPlayback
 
 #if os(macOS)
     import AppKit
+    import ApplicationServices
     import CoreGraphics
 #endif
 
 private enum EditorCheckError: Error {
     case fixture, deadline, eventPermission, window, keyboardEvent
+    case stage(String)
 }
 
 private struct EditorFixtureScan: Decodable {
@@ -287,13 +289,23 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
         _ editors: [EditorCheckWindow], owner: NSWindow, input: NSTextView,
         check: CheckReport.Scoped, message: String
     ) async throws {
-        _ = NSRunningApplication.current.activate(options: [])
+        let activationAccepted = NSRunningApplication.current.activate(options: [])
         owner.makeKeyAndOrderFront(nil)
         guard owner.makeFirstResponder(input) else { throw EditorCheckError.window }
-        try await editorWait {
-            NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
-                && owner.isKeyWindow && NSApplication.shared.keyWindow === owner
-                && owner.firstResponder === input && editorWindowsAreAbove(editors, owner: owner)
+        do {
+            try await editorWait {
+                NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
+                    && owner.isKeyWindow && NSApplication.shared.keyWindow === owner
+                    && owner.firstResponder === input && editorWindowsAreAbove(editors, owner: owner)
+            }
+        } catch {
+            // Cooperative activation can be declined while another app holds user focus.
+            let application = NSApplication.shared
+            let above = editorWindowsAreAbove(editors, owner: owner)
+            throw EditorCheckError.stage(
+                "\(error); activationAccepted=\(activationAccepted) active=\(application.isActive) "
+                    + "policy=\(application.activationPolicy().rawValue) key=\(owner.isKeyWindow) "
+                    + "firstResponder=\(owner.firstResponder === input) editorsAbove=\(above)")
         }
         check.expect(
             NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
@@ -302,6 +314,44 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
         check.expect(
             editorWindowsAreAbove(editors, owner: owner),
             message: "\(message): CoreGraphics front-to-back order keeps every editor above the ordinary owner window")
+    }
+
+    /// Child-helper windows from both process and LaunchServices identity, for a failed ordering stage.
+    @MainActor
+    private func editorDiagnostics() -> String {
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        var lines = ["frontmost=\(frontmost?.processIdentifier ?? -1) \(frontmost?.bundleIdentifier ?? "?")"]
+        lines.append("expected=\(HelperProcess.executableURL.resolvingSymlinksInPath().path)")
+        guard
+            let windows = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], 0)
+                as? [[String: Any]]
+        else { return lines.joined(separator: " | ") + " | window list unavailable" }
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        for window in windows {
+            guard let pid = window[kCGWindowOwnerPID as String] as? Int32 else { continue }
+            var info = proc_bsdinfo()
+            guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size, info.pbi_ppid == UInt32(getpid())
+            else { continue }
+            var path = [UInt8](repeating: 0, count: 4096)
+            let length = Int(proc_pidpath(pid, &path, UInt32(path.count)))
+            let process = length > 0 ? String(decoding: path.prefix(length), as: UTF8.self) : "?"
+            let launch = NSRunningApplication(processIdentifier: pid)?.executableURL?.path ?? "nil"
+            let id = window[kCGWindowNumber as String] as? UInt32 ?? 0
+            let layer = window[kCGWindowLayer as String] as? Int ?? -1
+            let visible = window[kCGWindowIsOnscreen as String] as? Bool ?? false
+            let bounds = window[kCGWindowBounds as String] as? [String: Double] ?? [:]
+            lines.append(
+                "pid=\(pid) id=\(id) layer=\(layer) onscreen=\(visible) bounds=\(bounds) proc=\(process) ls=\(launch)")
+        }
+        return lines.joined(separator: " | ")
+    }
+
+    /// Names the ordering stage that failed and attaches the helper window evidence.
+    @MainActor
+    private func editorStage<T>(_ stage: String, _ body: @MainActor () async throws -> T) async throws -> T {
+        do { return try await body() } catch {
+            throw EditorCheckError.stage("\(stage): \(error); \(editorDiagnostics())")
+        }
     }
 
     @MainActor
@@ -319,48 +369,68 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
         try await editorInstance(entries, "TestGen") { (first: PluginInstance) in
             let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
             try await first.openEditor(title: "Porydaw editor ordering one")
-            let firstWindow = try await editorNewWindow(excluding: existing)
-            try await checkEditorOwnerFocus(
-                [firstWindow], owner: owner, input: input, check: check, message: "owner focus with one editor")
+            let firstWindow = try await editorStage("first editor window") {
+                try await editorNewWindow(excluding: existing)
+            }
+            try await editorStage("owner focus with one editor") {
+                try await checkEditorOwnerFocus(
+                    [firstWindow], owner: owner, input: input, check: check, message: "owner focus with one editor")
+            }
             try await editorInstance(entries, "TestGen") { (second: PluginInstance) in
                 let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
                 try await second.openEditor(title: "Porydaw editor ordering two")
-                let secondWindow = try await editorNewWindow(excluding: existing)
+                let secondWindow = try await editorStage("second editor window") {
+                    try await editorNewWindow(excluding: existing)
+                }
                 check.expect(
                     firstWindow.pid != secondWindow.pid,
                     message: "ordering exercises two real sibling helper processes")
                 try await first.openEditor(title: "Porydaw editor ordering one raised")
-                try await editorWait {
-                    NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                try await editorStage("raised sibling becomes frontmost") {
+                    try await editorWait {
+                        NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                    }
                 }
                 owner.orderFrontRegardless()
-                try await editorWait {
-                    NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
-                        && editorWindowsAreAbove([firstWindow, secondWindow], owner: owner)
+                try await editorStage("sibling editors above the owner") {
+                    try await editorWait {
+                        NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
+                            && editorWindowsAreAbove([firstWindow, secondWindow], owner: owner)
+                    }
                 }
                 check.expect(
                     NSWorkspace.shared.frontmostApplication?.processIdentifier == firstWindow.pid
                         && editorWindowsAreAbove([firstWindow, secondWindow], owner: owner),
                     message: "raising one sibling keeps both helpers' editors above the ordinary owner window")
-                try await checkEditorOwnerFocus(
-                    [firstWindow, secondWindow], owner: owner, input: input, check: check,
-                    message: "owner focus after sibling activation")
+                try await editorStage("owner focus after sibling activation") {
+                    try await checkEditorOwnerFocus(
+                        [firstWindow, secondWindow], owner: owner, input: input, check: check,
+                        message: "owner focus after sibling activation")
+                }
                 await second.closeEditor()
-                try await editorWait {
-                    !editorWindows().contains { (window: EditorCheckWindow) -> Bool in window.id == secondWindow.id }
+                try await editorStage("closed sibling window leaves the screen") {
+                    try await editorWait {
+                        !editorWindows().contains { (window: EditorCheckWindow) -> Bool in
+                            window.id == secondWindow.id
+                        }
+                    }
                 }
                 check.expect(
                     !second.isEditorOpen && first.isEditorOpen,
                     message: "closing one sibling leaves the other editor attached")
                 let beforeReopen = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
                 try await second.openEditor(title: "Porydaw editor ordering two reopened")
-                let reopenedWindow = try await editorNewWindow(excluding: beforeReopen)
+                let reopenedWindow = try await editorStage("reopened sibling window") {
+                    try await editorNewWindow(excluding: beforeReopen)
+                }
                 check.expect(
                     reopenedWindow.pid == secondWindow.pid && second.isEditorOpen,
                     message: "reopening reuses the real second helper with a newly attached editor")
-                try await checkEditorOwnerFocus(
-                    [firstWindow, reopenedWindow], owner: owner, input: input, check: check,
-                    message: "owner focus after sibling close/reopen")
+                try await editorStage("owner focus after sibling close/reopen") {
+                    try await checkEditorOwnerFocus(
+                        [firstWindow, reopenedWindow], owner: owner, input: input, check: check,
+                        message: "owner focus after sibling close/reopen")
+                }
             }
         }
     }
@@ -392,6 +462,27 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
         else { throw EditorCheckError.keyboardEvent }
         down.postToPid(window.pid)
         up.postToPid(window.pid)
+    }
+
+    /// Minimizes the titled helper window through Accessibility rather than guessed title-bar coordinates.
+    private func editorMinimize(pid: Int32, title: String) throws {
+        guard AXIsProcessTrusted() else { throw EditorCheckError.eventPermission }
+        var windows: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(
+                AXUIElementCreateApplication(pid), kAXWindowsAttribute as CFString, &windows) == .success,
+            let elements = windows as? [AXUIElement]
+        else { throw EditorCheckError.window }
+        for element in elements {
+            var name: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &name) == .success,
+                name as? String == title
+            else { continue }
+            let minimized = AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+            guard minimized == .success else { throw EditorCheckError.window }
+            return
+        }
+        throw EditorCheckError.window
     }
 
     @MainActor
@@ -426,6 +517,35 @@ private func checkEditorLifecycle(_ entries: [PluginCatalogEntry], _ check: Chec
             try await instance.restore(editorFaultState(0))
             try await instance.openEditor(title: "Porydaw editor after throwing user close")
             check.expect(instance.isEditorOpen, message: "user-closed throwing view does not prevent reopening")
+        }
+    }
+
+    @MainActor
+    private func checkEditorExposure(_ entries: [PluginCatalogEntry], _ check: CheckReport.Scoped) async throws {
+        try await editorInstance(entries, "TestGen") { (instance: PluginInstance) in
+            var exposures = 0
+            instance.onEditorExposure = { exposures += 1 }
+            let existing = Set(editorWindows().map { (window: EditorCheckWindow) -> UInt32 in window.id })
+            try await instance.openEditor(title: "Porydaw editor exposure check")
+            try await editorStage("shown editor reports exposure") { try await editorWait { instance.isEditorExposed } }
+            check.expect(exposures > 0, message: "the shown native editor publishes its exposure")
+            let window = try await editorStage("exposure editor window") {
+                try await editorNewWindow(excluding: existing)
+            }
+            try await editorStage("minimize editor through Accessibility") {
+                try editorMinimize(pid: window.pid, title: "Porydaw editor exposure check")
+            }
+            try await editorStage("minimized editor loses exposure") {
+                try await editorWait { instance.isEditorOpen && !instance.isEditorExposed }
+            }
+            check.pass(row: "minimizing keeps the editor open while reporting it unexposed")
+            try await instance.openEditor(title: "Porydaw editor exposure resumed")
+            try await editorStage("raised editor regains exposure") {
+                try await editorWait { instance.isEditorExposed }
+            }
+            check.pass(row: "explicit raise restores the minimized editor and its exposure")
+            await instance.closeEditor()
+            check.expect(!instance.isEditorExposed, message: "closing clears editor exposure")
         }
     }
 
@@ -537,6 +657,7 @@ public func runPluginHostEditorChecks(_ report: CheckReport) {
         try runBlocking { try await checkEditorLifecycle(entries, check) }
         try runBlocking { try await checkEditorExceptions(entries, check) }
         #if os(macOS)
+            try runBlocking { try await checkEditorExposure(entries, check) }
             try runBlocking { try await checkEditorOrdering(entries, check) }
             try runBlocking { try await checkEditorKeys(entries, check) }
             try runBlocking { try await checkEditorThrowingUserClose(entries, check) }

@@ -62,7 +62,9 @@ private final class MidiEffectsPresenterFixture {
                 gridCommandAvailabilityChanged: {}, sessionStateChanged: {}, publicationFailed: { (_: String) in },
                 timeSignaturePromptInvalidated: { (_: DocumentSession, _: UInt64) in }))
         workspace.trackHeaders.configureViewport(width: 228, height: 240, fontPx: 13, dpr: 1)
-        workspace.trackHeaders.configureTextMetrics(titleLineSpacing: 18, boldLineSpacing: 18, subtitleLineSpacing: 14)
+        workspace.trackHeaders.configureTextMetrics(
+            titleLineSpacing: 18, boldLineSpacing: 18, subtitleLineSpacing: 14,
+            effectsTextWidth: 40, liveTextWidth: 40)
         workspace.activate()
     }
 
@@ -83,7 +85,7 @@ private final class MidiEffectsPresenterFixture {
 
     func row(_ name: String, modulePath: String? = nil) throws -> Int {
         let entries = catalog.entries.filter { (entry: PluginCatalogEntry) -> Bool in
-            entry.isMidiProducer || entry.blockedReason != nil
+            entry.isMidiProducer && entry.blockedReason == nil
         }
         guard
             let index = entries.firstIndex(where: { (entry: PluginCatalogEntry) -> Bool in
@@ -94,7 +96,9 @@ private final class MidiEffectsPresenterFixture {
     }
 
     func select(_ name: String, modulePath: String? = nil) async throws -> EffectID {
-        presenter.selectPlugin(index: try row(name, modulePath: modulePath))
+        presenter.showPluginChooser()
+        presenter.choosePlugin(index: try row(name, modulePath: modulePath))
+        presenter.applyPlugin()
         try await settle()
         guard let effect = session.document.effect(onTrack: 0), controller.instance(for: effect.id) != nil else {
             throw MidiEffectsPresenterCheckError.fixture
@@ -136,11 +140,23 @@ private func midiEffectsSelectionAndSettings(
     check.expect(
         names.contains("TestGen") && names.contains("TestGenAudio") && names.contains("TestGenRealtimeOnly")
             && !names.contains("TestAudioOnly"),
-        message: "only MIDI producers and blocked modules appear in the setup list")
+        message: "only available MIDI producers appear in the setup list")
     let before = document.history.undoCount
-    presenter.selectPlugin(index: -1)
-    presenter.selectPlugin(index: presenter.plugins.count)
+    presenter.choosePlugin(index: -1)
+    presenter.choosePlugin(index: presenter.plugins.count)
+    presenter.applyPlugin()
     check.expect(document.history.undoCount == before, message: "invalid list indices never change the song")
+    presenter.choosePlugin(index: try fixture.row("TestGenAudio"))
+    check.expect(
+        !presenter.hasEffect && document.history.undoCount == before,
+        message: "browsing a candidate neither creates an effect nor changes history")
+    presenter.close()
+    presenter.open(track: 0)
+    try await fixture.settle()
+    presenter.applyPlugin()
+    check.expect(
+        !presenter.hasEffect && document.history.undoCount == before,
+        message: "closing discards the pending candidate instead of applying it on reopen")
     let first = try await fixture.select("TestGen")
     guard let initial = document.effect(onTrack: 0) else { throw MidiEffectsPresenterCheckError.fixture }
     let selectedRow = try fixture.row("TestGen")
@@ -149,12 +165,11 @@ private func midiEffectsSelectionAndSettings(
             && presenter.selectedPlugin == selectedRow,
         message: "select adds one effect in one undo step and publishes the selected class")
     check.expect(
-        initial.config.plugin.input == .none && initial.config.plugin.pacing == .offline
-            && initial.config.plugin.prerollBars == 0 && !presenter.canReload && presenter.canOpenEditor,
-        message: "a loaded selection starts with default setup settings and offers its editor, not Reload")
+        initial.config.plugin.input == .trackNotes && presenter.isLive,
+        message: "adding a MIDI effect routes track notes and arms Live for immediate use")
     let header = headers.rows[0]
     check.expect(
-        header.effectName == "TestGen" && !header.liveArmed && !header.effectStopped
+        header.effectName == "TestGen" && header.liveArmed && !header.effectStopped
             && !header.subtitle.isEmpty && headers.rowHeight == rowHeight
             && header.effectRect.y >= header.subtitleRect.y + header.subtitleRect.height
             && header.effectRect.y + header.effectRect.height <= Double(rowHeight - headers.separatorWidth),
@@ -179,7 +194,7 @@ private func midiEffectsSelectionAndSettings(
         message: "out-of-contract setup values leave the selected configuration unchanged")
     _ = try await fixture.session.undo()
     check.expect(
-        document.effect(onTrack: 0)?.config == initial.config && presenter.inputMode == 0 && presenter.pacing == 0
+        document.effect(onTrack: 0)?.config == initial.config && presenter.inputMode == 1 && presenter.pacing == 0
             && presenter.prerollBars == 0,
         message: "one Undo reverts every setup setting, not the effect selection")
     _ = try await fixture.session.redo()
@@ -195,7 +210,7 @@ private func midiEffectsSelectionAndSettings(
     let replacement = try await fixture.select("TestGenRealtimeOnly")
     check.expect(
         replacement != first && document.effects.count == 1 && document.effect(onTrack: 0)?.pluginState == nil
-            && presenter.inputMode == 0 && presenter.pacing == 0 && presenter.prerollBars == 0,
+            && presenter.inputMode == 1 && presenter.pacing == 0 && presenter.prerollBars == 0,
         message: "replacement changes identity and resets settings without adding a second track effect")
     _ = try await fixture.session.undo()
     check.expect(
@@ -284,7 +299,7 @@ private func midiEffectsCrashAndReload(
     guard let instance = fixture.controller.instance(for: id) else { throw MidiEffectsPresenterCheckError.fixture }
     let state = fixture.session.document.state
     let armed = fault == 1
-    if armed { try await fixture.controller.setLive(id, true) }
+    try await fixture.controller.setLive(id, armed)
     // A stopped attached callback can fault between the two restore RPCs.
     // Rendering is needed only if injection has not already committed a failure.
     let injection = Task { @MainActor in try await instance.restore(midiEffectsFaultState(fault)) }
@@ -367,21 +382,18 @@ private func midiEffectsCatalogAndFolders(
     presenter.open(track: 0)
     try await fixture.settle()
     check.expect(launches().count == initialLaunches, message: "opening uses the unforced catalog cache")
-    let blocked = (0..<presenter.plugins.count).first { (index: Int) -> Bool in presenter.plugins[index].blocked }
-    guard let blocked else { throw MidiEffectsPresenterCheckError.fixture }
-    let blockedName = presenter.plugins[blocked].name
-    let before = fixture.session.document.state
-    presenter.selectPlugin(index: blocked)
-    check.expect(fixture.session.document.state == before, message: "a blocked row can never become a track effect")
-    check.expect(!presenter.plugins[blocked].detail.isEmpty, message: "blocked rows expose their scanner diagnosis")
-    presenter.retryBlocked(index: blocked)
-    try await fixture.settle()
+    let skipped = fixture.catalog.entries.filter { (entry: PluginCatalogEntry) -> Bool in
+        entry.blockedReason != nil
+    }
+    let visibleNames = (0..<presenter.plugins.count).map { (index: Int) -> String in
+        presenter.plugins[index].name
+    }
     check.expect(
-        launches().count == initialLaunches + 1
-            && (0..<presenter.plugins.count).contains { (index: Int) -> Bool in
-                presenter.plugins[index].name == blockedName && presenter.plugins[index].blocked
+        !skipped.isEmpty
+            && skipped.allSatisfy { (entry: PluginCatalogEntry) -> Bool in
+                !visibleNames.contains(entry.name)
             },
-        message: "Retry re-probes only the blocked module and republishes its real failure")
+        message: "real scanner failures remain in the catalog but never appear in the plug-in chooser")
     let beforeRescan = launches().count
     presenter.rescan()
     check.expect(presenter.isScanning, message: "Rescan immediately publishes scanning state")

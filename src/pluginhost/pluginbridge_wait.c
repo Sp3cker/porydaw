@@ -1,5 +1,6 @@
 #include "pluginbridge.h"
 #include <errno.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <synchapi.h>
 #include <wchar.h>
 #else
 #include <fcntl.h>
@@ -34,6 +36,7 @@ struct pdpb_channel {
     pdpb_shared* shared;
     int owner;
     char name[192];
+    _Atomic(uint32_t) signal_count;
 #ifdef _WIN32
     HANDLE mapping, request, reply;
 #else
@@ -91,6 +94,7 @@ static int32_t channel_map(const char* name, pdpb_channel** out, int create) {
     pdpb_channel* channel = calloc(1, sizeof(*channel));
     if (!channel) return PDPB_ERROR;
     strcpy(channel->name, name);
+    atomic_init(&channel->signal_count, 0);
 #ifndef _WIN32
     channel->fd = -1;
 #endif
@@ -152,30 +156,46 @@ void pdpb_set_request(pdpb_channel* c, int32_t frames, int32_t count) { c->share
 int32_t pdpb_reply_status(const pdpb_channel* c) { return c->shared->status; }
 int32_t pdpb_reply_written(const pdpb_channel* c) { return c->shared->out_written; }
 int32_t pdpb_reply_total(const pdpb_channel* c) { return c->shared->out_total; }
-static void wake_word(pdpb_channel* c, int reply) {
-    _Atomic(uint32_t)* word = reply ? &c->shared->reply_word : &c->shared->request_word;
+enum { WORD_REQUEST, WORD_REPLY, WORD_SIGNAL };
+static _Atomic(uint32_t)* channel_word(pdpb_channel* c, int which) {
+    if (which == WORD_SIGNAL) return &c->signal_count;
+    return which == WORD_REPLY ? &c->shared->reply_word : &c->shared->request_word;
+}
+static void wake_word(pdpb_channel* c, int which) {
+    _Atomic(uint32_t)* word = channel_word(c, which);
     atomic_fetch_add_explicit(word, 1, memory_order_release);
 #ifdef _WIN32
-    ReleaseSemaphore(reply ? c->reply : c->request, 1, NULL);
+    if (which == WORD_SIGNAL) WakeByAddressAll((PVOID)word);
+    else ReleaseSemaphore(which == WORD_REPLY ? c->reply : c->request, 1, NULL);
 #elif defined(__APPLE__)
-    os_sync_wake_by_address_any(word, sizeof(*word), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
+    if (which == WORD_SIGNAL) os_sync_wake_by_address_all(word, sizeof(*word), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+    else os_sync_wake_by_address_any(word, sizeof(*word), OS_SYNC_WAKE_BY_ADDRESS_SHARED);
 #else
-    syscall(SYS_futex, word, FUTEX_WAKE, 1, NULL, NULL, 0);
+    if (which == WORD_SIGNAL) syscall(SYS_futex, word, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+    else syscall(SYS_futex, word, FUTEX_WAKE, 1, NULL, NULL, 0);
 #endif
 }
-static int wait_word(pdpb_channel* c, int reply, uint32_t expected, uint64_t ns) {
+static int wait_word(pdpb_channel* c, int which, uint32_t expected, uint64_t ns) {
 #ifdef _WIN32
     DWORD ms = (DWORD)((ns + 999999) / 1000000);
-    DWORD result = WaitForSingleObject(reply ? c->reply : c->request, ms);
+    if (which == WORD_SIGNAL) {
+        // Compares the private count with `expected` and sleeps atomically against WakeByAddressAll.
+        uint32_t compare = expected;
+        if (WaitOnAddress((volatile VOID*)channel_word(c, which), &compare, sizeof(compare), ms)) return PDPB_OK;
+        return GetLastError() == ERROR_TIMEOUT ? PDPB_TIMEOUT : PDPB_ERROR;
+    }
+    DWORD result = WaitForSingleObject(which == WORD_REPLY ? c->reply : c->request, ms);
     return result == WAIT_OBJECT_0 ? PDPB_OK : (result == WAIT_TIMEOUT ? PDPB_TIMEOUT : PDPB_ERROR);
 #else
-    _Atomic(uint32_t)* word = reply ? &c->shared->reply_word : &c->shared->request_word;
+    _Atomic(uint32_t)* word = channel_word(c, which);
 #ifdef __APPLE__
     int result = os_sync_wait_on_address_with_timeout(word, expected, sizeof(*word),
-        OS_SYNC_WAIT_ON_ADDRESS_SHARED, OS_CLOCK_MACH_ABSOLUTE_TIME, ns);
+        which == WORD_SIGNAL ? OS_SYNC_WAIT_ON_ADDRESS_NONE : OS_SYNC_WAIT_ON_ADDRESS_SHARED,
+        OS_CLOCK_MACH_ABSOLUTE_TIME, ns);
 #else
     struct timespec duration = {(time_t)(ns / 1000000000), (long)(ns % 1000000000)};
-    int result = (int)syscall(SYS_futex, word, FUTEX_WAIT, expected, &duration, NULL, 0);
+    int result = (int)syscall(SYS_futex, word, which == WORD_SIGNAL ? FUTEX_WAIT_PRIVATE : FUTEX_WAIT,
+        expected, &duration, NULL, 0);
 #endif
     if (result >= 0 || errno == EAGAIN || errno == EINTR) return PDPB_OK;
     return errno == ETIMEDOUT ? PDPB_TIMEOUT : PDPB_ERROR;
@@ -188,7 +208,7 @@ int32_t pdpb_post_request(pdpb_channel* c, uint32_t* sequence) {
         c->shared->in_count < 0 || c->shared->in_count > PDPB_MAX_EVENTS || !sequence) return PDPB_ERROR;
     *sequence = current + 1;
     atomic_store_explicit(&c->shared->request_seq, *sequence, memory_order_release);
-    wake_word(c, 0);
+    wake_word(c, WORD_REQUEST);
     return PDPB_OK;
 }
 int32_t pdpb_wait_reply(pdpb_channel* c, uint32_t sequence, uint32_t timeout_us) {
@@ -198,22 +218,37 @@ int32_t pdpb_wait_reply(pdpb_channel* c, uint32_t sequence, uint32_t timeout_us)
         if (pdpb_reply_sequence(c) == sequence) return PDPB_OK;
         uint64_t now = pdpb_monotonic_ns();
         if (now >= deadline) return PDPB_TIMEOUT;
-        int result = wait_word(c, 1, word, deadline - now);
+        int result = wait_word(c, WORD_REPLY, word, deadline - now);
         if (result == PDPB_ERROR) return result;
     }
 }
-int32_t pdpb_wait_request(pdpb_channel* c, uint32_t timeout_ms) {
+int32_t pdpb_wait_request(pdpb_channel* c, uint32_t timeout_ms, uint32_t* wake) {
+    if (!wake) return PDPB_ERROR;
     uint64_t deadline = pdpb_monotonic_ns() + (uint64_t)timeout_ms * 1000000;
     for (;;) {
         uint32_t word = atomic_load_explicit(&c->shared->request_word, memory_order_acquire);
-        if (pdpb_request_sequence(c) != pdpb_reply_sequence(c)) return PDPB_OK;
+        if (pdpb_request_sequence(c) != pdpb_reply_sequence(c)) { *wake = word; return PDPB_OK; }
+        if (word != *wake) { *wake = word; return PDPB_WOKEN; }
         uint64_t now = pdpb_monotonic_ns();
         if (now >= deadline) return PDPB_TIMEOUT;
-        int result = wait_word(c, 0, word, deadline - now);
+        int result = wait_word(c, WORD_REQUEST, word, deadline - now);
         if (result == PDPB_ERROR) return result;
     }
 }
+void pdpb_wake_request(pdpb_channel* c) { wake_word(c, WORD_REQUEST); }
 void pdpb_post_reply(pdpb_channel* c, uint32_t sequence) {
     atomic_store_explicit(&c->shared->reply_seq, sequence, memory_order_release);
-    wake_word(c, 1);
+    wake_word(c, WORD_REPLY);
+}
+uint32_t pdpb_signal_count(const pdpb_channel* c) { return atomic_load_explicit(&c->signal_count, memory_order_acquire); }
+void pdpb_post_signal(pdpb_channel* c) { wake_word(c, WORD_SIGNAL); }
+int32_t pdpb_wait_signal(pdpb_channel* c, uint32_t seen, uint32_t timeout_ms) {
+    uint64_t deadline = pdpb_monotonic_ns() + (uint64_t)timeout_ms * 1000000;
+    for (;;) {
+        if (pdpb_signal_count(c) != seen) return PDPB_OK;
+        uint64_t now = pdpb_monotonic_ns();
+        if (now >= deadline) return PDPB_TIMEOUT;
+        int result = wait_word(c, WORD_SIGNAL, seen, deadline - now);
+        if (result == PDPB_ERROR) return result;
+    }
 }

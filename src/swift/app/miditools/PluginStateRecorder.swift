@@ -11,6 +11,11 @@ final class PluginStateRecorder {
         case restorePending
     }
 
+    private struct EditorPresence: Equatable {
+        var open = false
+        var exposed = false
+    }
+
     var isPermitted: (() -> Bool)?
     var onRecord: ((PluginStateBlob) throws -> Void)?
     var onError: ((any Error) -> Void)?
@@ -25,6 +30,7 @@ final class PluginStateRecorder {
     private var tasks: [UUID: Task<Void, Never>] = [:]
     private var gesture: UUID?
     private var observation: UUID?
+    private var editorPresence = EditorPresence()
 
     init(instance: PluginInstance) {
         self.instance = instance
@@ -35,24 +41,32 @@ final class PluginStateRecorder {
         return !Task.isCancelled && generation == token && enabled && isPermitted?() == true
     }
 
-    private func record(_ token: UInt64) async {
-        guard permitted(token), let digest = await instance.stateDigest(), permitted(token),
-            case let .synchronized(baseline) = synchronization
-        else { return }
-        guard digest != baseline else {
+    /// Records when the component moved from the baseline; `observed` is a digest read before this call.
+    private func record(_ token: UInt64, observed: UInt64? = nil) async {
+        guard permitted(token) else { return }
+        let expected: UInt64
+        if let observed {
+            expected = observed
+        } else {
+            guard let digest = await instance.stateDigest() else { return }
+            expected = digest
+        }
+        guard permitted(token), case let .synchronized(baseline) = synchronization else { return }
+        guard expected != baseline else {
             pendingEdit = false
             return
         }
         do {
-            let state = try await instance.state()
-            guard permitted(token), await instance.stateDigest() == digest, permitted(token),
-                case let .synchronized(baseline) = synchronization, digest != baseline
+            // The snapshot reads the controller first, so a matching component digest brackets both reads.
+            let snapshot = try await instance.snapshot()
+            guard permitted(token), snapshot.componentDigest == expected,
+                case let .synchronized(baseline) = synchronization, expected != baseline
             else {
                 return
             }
-            try onRecord?(state)
+            try onRecord?(snapshot.state)
             guard permitted(token) else { return }
-            synchronization = .synchronized(baseline: digest)
+            synchronization = .synchronized(baseline: expected)
             candidate = nil
             pendingEdit = false
         } catch {
@@ -61,13 +75,13 @@ final class PluginStateRecorder {
     }
 
     private func poll(_ token: UInt64) async {
-        guard permitted(token), instance.isEditorOpen, let digest = await instance.stateDigest(),
-            permitted(token), instance.isEditorOpen, case let .synchronized(baseline) = synchronization
+        guard permitted(token), instance.isEditorExposed, let digest = await instance.stateDigest(),
+            permitted(token), instance.isEditorExposed, case let .synchronized(baseline) = synchronization
         else { return }
         if digest == baseline {
             candidate = nil
         } else if digest == candidate {
-            await record(token)
+            await record(token, observed: digest)
         } else {
             candidate = digest
         }
@@ -79,14 +93,16 @@ final class PluginStateRecorder {
         candidate = nil
         for task in tasks.values { task.cancel() }
         gesture = nil
+        // An exposed editor may have changed silently; settle once recording is permitted again.
+        if observation != nil { pendingEdit = true }
         observation = nil
     }
 
     func suppress() {
-        pendingEdit = false
         restoreRevision &+= 1
         synchronization = .restorePending
         pause()
+        pendingEdit = false
     }
 
     func idle() async {
@@ -94,20 +110,11 @@ final class PluginStateRecorder {
         for task in pending { await task.value }
     }
 
-    func stopObservation() async {
-        let pending: Task<Void, Never>?
-        if let observation { pending = tasks[observation] } else { pending = nil }
-        pending?.cancel()
-        observation = nil
-        candidate = nil
-        await pending?.value
-    }
-
     func initialize() async throws {
-        initialState = try await instance.state()
-        let digest = await instance.stateDigest()
-        guard case .initializing = synchronization, let digest else { return }
-        synchronization = .synchronized(baseline: digest)
+        let snapshot = try await instance.snapshot()
+        initialState = snapshot.state
+        guard case .initializing = synchronization else { return }
+        synchronization = .synchronized(baseline: snapshot.componentDigest)
         refreshObservation()
     }
 
@@ -126,6 +133,11 @@ final class PluginStateRecorder {
     func edited() {
         guard case .synchronized = synchronization else { return }
         pendingEdit = true
+        scheduleRecord(after: .milliseconds(300))
+    }
+
+    /// One gesture-slot record: debounced for finished edits, immediate when settling a hidden editor.
+    private func scheduleRecord(after delay: Duration?) {
         let token = generation
         guard permitted(token) else { return }
         if let gesture { tasks[gesture]?.cancel() }
@@ -136,21 +148,44 @@ final class PluginStateRecorder {
                 self?.tasks[id] = nil
                 if self?.gesture == id { self?.gesture = nil }
             }
-            do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
+            if let delay {
+                do { try await Task.sleep(for: delay) } catch { return }
+            }
             guard let self else { return }
             await self.record(token)
         }
     }
 
+    /// Ends polling; anything the stopped poll could have missed stays pending.
+    @discardableResult
+    private func endObservation() -> Bool {
+        candidate = nil
+        guard let observation else { return false }
+        tasks[observation]?.cancel()
+        self.observation = nil
+        pendingEdit = true
+        return true
+    }
+
     func refreshObservation() {
         enabled = isPermitted?() == true
-        if enabled, case .synchronized = synchronization, pendingEdit, gesture == nil { edited() }
-        guard case .synchronized = synchronization, enabled, instance.isEditorOpen else {
-            if let observation { tasks[observation]?.cancel() }
-            candidate = nil
-            return
+        var synchronized = false
+        if case .synchronized = synchronization { synchronized = true }
+        let presence = EditorPresence(open: instance.isEditorOpen, exposed: instance.isEditorExposed)
+        // Opening, hiding, returning or closing reconciles silent changes no exposed poll observed.
+        var settle = synchronized && presence != editorPresence && (presence.open || editorPresence.open)
+        if settle { pendingEdit = true }
+        editorPresence = presence
+        let observing = synchronized && enabled && presence.exposed
+        if !observing, endObservation() { settle = true }
+        if enabled, synchronized, pendingEdit {
+            if settle {
+                scheduleRecord(after: nil)
+            } else if gesture == nil {
+                edited()
+            }
         }
-        guard observation == nil else { return }
+        guard observing, observation == nil else { return }
         let id = UUID()
         let token = generation
         observation = id
@@ -158,13 +193,13 @@ final class PluginStateRecorder {
             defer {
                 self?.tasks[id] = nil
                 if self?.observation == id {
-                    self?.observation = nil
+                    self?.endObservation()
                     self?.refreshObservation()
                 }
             }
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .milliseconds(500)) } catch { return }
-                guard let self, self.permitted(token), self.instance.isEditorOpen else { return }
+                guard let self, self.permitted(token), self.instance.isEditorExposed else { return }
                 await self.poll(token)
             }
         }

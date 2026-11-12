@@ -49,11 +49,8 @@ int scan(int argc, char** argv) {
     for (int32_t index = 0; index < count; ++index) {
         pdph_class_info info{};
         if (pdph_module_class_info(raw, index, &info) != PDPH_OK) return failure("Could not read module class");
-        pdph_plugin instance = nullptr;
-        if (pdph_plugin_create(raw, info.uid, {}, &instance, &error) != PDPH_OK) return failure(error.message);
-        std::unique_ptr<pdph_plugin_impl, decltype(&pdph_plugin_destroy)> plugin(instance, pdph_plugin_destroy);
         pdph_bus_counts buses{};
-        if (pdph_plugin_buses(instance, &buses) != PDPH_OK) return failure("Could not read plugin buses");
+        if (pdph_module_class_buses(raw, index, &buses, &error) != PDPH_OK) return failure(error.message);
         if (index) json += ',';
         json += "{\"uid\":\"";
         for (auto byte : info.uid) { json += hexDigits[byte >> 4]; json += hexDigits[byte & 15]; }
