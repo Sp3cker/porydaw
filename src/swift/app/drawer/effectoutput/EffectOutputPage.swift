@@ -64,7 +64,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     private var effectID: EffectID?
     private var output: EffectOutput?
     private var selected: Set<Int> = []
-    private var rectangles: [CGRect] = []
     private var maximumDuration: Tick = 0
     private var visibleRange: Range<Int> = 0..<0
     private var noteGeometry: NoteGeometry?
@@ -184,7 +183,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         noteGeometry = nil
         rangeBand = nil
         selected.removeAll(keepingCapacity: true)
-        rectangles.removeAll(keepingCapacity: true)
         fills.removeAll(keepingCapacity: true)
         message = ""
         outputMessage = ""
@@ -372,8 +370,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
 
     private func rebuildGeometry() {
         let count = output?.notes.count ?? 0
-        if rectangles.count > count { rectangles.removeLast(rectangles.count - count) }
-        while rectangles.count < count { rectangles.append(.zero) }
         fills.removeAll(keepingCapacity: true)
         fills.reserveCapacity(count)
         if let output {
@@ -416,10 +412,9 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         let padding = min(baseFontPx / 2, plotHeight / 4)
         let rowHeight = max(0, plotHeight - 2 * padding) / Double(max(1, maximumPitch - minimumPitch + 1))
         let gap = min(1 / dpr, rowHeight / 4)
-        let geometry = NoteGeometry(
+        noteGeometry = NoteGeometry(
             dpr: dpr, tickScale: tickScale, origin: origin, padding: padding,
             rowHeight: rowHeight, gap: gap, maximumPitch: maximumPitch)
-        noteGeometry = geometry
         // Include edge rounding and the one-device-pixel minimum note width.
         // Producers preserve tick order through normalization; absolute indices stay stable.
         let windowStart = (origin - 1.5 / dpr) / camera.pixelsPerTick
@@ -427,9 +422,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         let first = lowerBound(tick: windowStart - Double(maximumDuration), notes: output.notes)
         let endIndex = lowerBound(tick: windowEnd, notes: output.notes)
         visibleRange = first..<endIndex
-        for index in visibleRange {
-            rectangles[index] = geometry.rectangle(for: output.notes[index])
-        }
         publishScene()
     }
 
@@ -454,7 +446,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
             emit(CGRect(x: rangeBand.maxX - pixel, y: 0, width: pixel, height: plotHeight), argb: edge)
             let normalBorder = PaletteMath.argb(colors.noteBorder)
             for index in visibleRange {
-                let rect = rectangles[index]
+                let rect = rectangle(at: index)
                 guard rect.maxX > 0, rect.minX < plotWidth else { continue }
                 emit(rect, argb: selected.contains(index) ? edge : normalBorder, id: UInt64(index))
                 let inset = min(pixel, min(rect.width, rect.height) / 4)
@@ -487,8 +479,10 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         publishScene()
     }
 
+    private var allNoteIndices: Range<Int> { 0..<(output?.notes.count ?? 0) }
+
     private func rectangle(at index: Int) -> CGRect {
-        guard !visibleRange.contains(index), let noteGeometry, let output else { return rectangles[index] }
+        guard let noteGeometry, let output, output.notes.indices.contains(index) else { return .zero }
         return noteGeometry.rectangle(for: output.notes[index])
     }
 
@@ -496,7 +490,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         guard active, noteCount > 0, x.isFinite, y.isFinite else { return false }
         cancelSectionInteraction()
         let point = CGPoint(x: x, y: y)
-        let candidates = x >= 0 && x <= plotWidth ? visibleRange : rectangles.indices
+        let candidates = x >= 0 && x <= plotWidth ? visibleRange : allNoteIndices
         let hit = candidates.reversed().first { (index: Int) -> Bool in rectangle(at: index).contains(point) }
         let additive = modifiers & 0x0200_0000 != 0
         gesture = Gesture(start: point, selection: selected, additive: additive, current: point)
@@ -526,7 +520,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
             selected.removeAll(keepingCapacity: true)
             if gesture.additive { selected.formUnion(gesture.selection) }
             let candidates =
-                box.minX >= 0 && box.maxX <= plotWidth ? visibleRange : rectangles.indices
+                box.minX >= 0 && box.maxX <= plotWidth ? visibleRange : allNoteIndices
             for index in candidates where rectangle(at: index).intersects(box) { selected.insert(index) }
         }
         self.gesture = gesture
@@ -558,7 +552,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     public func selectAll() {
         guard active, !interactionActive else { return }
         selected.removeAll(keepingCapacity: true)
-        for index in rectangles.indices { selected.insert(index) }
+        for index in allNoteIndices { selected.insert(index) }
         publishSelection()
     }
 
