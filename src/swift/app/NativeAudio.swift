@@ -81,6 +81,7 @@ public final class NativeAudio {
     private var shutdownOperation: AudioOperation<Void>?
     private var requestedBinding = false
     private var patternEpoch: UInt64 = 0
+    private var nextPatternID: UInt64 = 0
     private var transportEpoch: UInt64 = 0
     private var pendingTransport: AudioTransportState?
     private var pendingHotTransport: UInt64?
@@ -89,8 +90,10 @@ public final class NativeAudio {
     private var renderingStarted = false
     private var nextSampleLeaseID: UInt64 = 0
     private var sampleLease: SampleAuditionLease?
+    private var pendingPosition: (sample: UInt64, sequence: UInt64?, transport: AudioTransportState?)?
     public private(set) var requestedSettings = AudioSettings()
     public private(set) var requestedTimelineIdentity: UInt64 = 0
+    public private(set) var requestedPatternIdentity: UInt64 = 0
     public private(set) var patternState: AudioPatternState = .idle
     public private(set) var lastDeviceError: String?
     public let status: AudioStatus
@@ -212,9 +215,15 @@ public final class NativeAudio {
             command.apply(to: info.endpoint)
             return nil
         }
+        let changesClock: Bool
+        switch command {
+        case .play, .pause, .stop, .seek, .loop: changesClock = true
+        default: changesClock = false
+        }
+        if changesClock { status.beginPlaybackClockChange() }
         submittedHot &+= 1
         mainOwnsHotProducer = false
-        control.submit(.hot(command, submittedHot))
+        control.submit(.hot(command, submittedHot, clockStatus: changesClock ? status : nil))
         return submittedHot
     }
 
@@ -293,6 +302,21 @@ public final class NativeAudio {
     public var songLoaded: Bool { status.songLoaded }
     public var requestedSongLoaded: Bool { requestedBinding }
     public var playheadSamples: UInt64 { status.playheadSamples }
+    /// The command target until the callback acknowledges a seek or stop.
+    var presentationPlayheadSamples: UInt64 {
+        guard let pendingPosition else { return status.playheadSamples }
+        if let sequence = pendingPosition.sequence,
+            control.hotCompleted.load(ordering: .acquiring) &- sequence >= UInt64.max / 2
+        {
+            return pendingPosition.sample
+        }
+        guard let clock = playbackClock, !clock.pattern, clock.timelineIdentity == requestedTimelineIdentity,
+            pendingPosition.transport == nil || clock.transport == pendingPosition.transport
+        else { return pendingPosition.sample }
+        self.pendingPosition = nil
+        return status.playheadSamples
+    }
+    public var playbackClock: AudioPlaybackClockSnapshot? { status.playbackClock }
     public var patternAuditionPositionSamples: UInt64 { status.patternAuditionPositionSamples }
     public var activePcmChannels: Int32 { Int32(status.activePcmChannels) }
     public var activeCgbChannels: Int32 { Int32(status.activeCgbChannels) }
@@ -332,6 +356,7 @@ public final class NativeAudio {
     public func bind(
         timeline: PlaybackTimeline, bank: ProjectBankLease, settings: AudioSettings
     ) -> AudioOperation<Void> {
+        pendingPosition = nil
         mainPreviewsCut()
         invalidatePattern()
         invalidateTelemetry()
@@ -356,6 +381,7 @@ public final class NativeAudio {
 
     @discardableResult
     public func unload() -> AudioOperation<Void> {
+        pendingPosition = nil
         mainPreviewsCut()
         invalidatePattern()
         invalidateTelemetry()
@@ -400,6 +426,8 @@ public final class NativeAudio {
     }
 
     public func play() {
+        guard shutdownOperation == nil else { return }
+        if pendingPosition?.transport == .stopped { pendingPosition = nil }
         stopPatternIfNeeded()
         mainPreviewsCut()
         if requestedTransport == AudioTransportState.stopped.rawValue { invalidateTelemetry() }
@@ -425,15 +453,25 @@ public final class NativeAudio {
         }
     }
     public func stop() {
+        guard shutdownOperation == nil else { return }
+        let rewind = currentRequestedTransport != .stopped
+        pendingPosition = nil
         stopPatternIfNeeded()
         mainPreviewsCut()
         let sequence = submitHot(.stop)
+        if rewind { pendingPosition = (0, sequence, .stopped) }
         if let sequence {
             _ = markTransport(.stopped)
             pendingHotTransport = sequence
         }
     }
-    public func seek(sample: UInt64) { stopPatternIfNeeded(); mainPreviewsCut(); submitHot(.seek(sample)) }
+    public func seek(sample: UInt64) {
+        guard shutdownOperation == nil, requestedBinding else { return }
+        stopPatternIfNeeded()
+        mainPreviewsCut()
+        let sequence = submitHot(.seek(sample))
+        pendingPosition = (sample, sequence, nil)
+    }
 
     public var onMainPreviewsCut: (() -> Void)?
     private func mainPreviewsCut() { onMainPreviewsCut?() }
@@ -478,8 +516,15 @@ public final class NativeAudio {
         return previewPolyGeneration == status.telemetryGeneration ? previewPoly : .empty
     }
 
+    private func nextPattern() -> UInt64 {
+        nextPatternID &+= 1
+        if nextPatternID == 0 { nextPatternID = 1 }
+        return nextPatternID
+    }
+
     private func invalidatePattern() {
         patternEpoch &+= 1
+        requestedPatternIdentity = 0
         patternState = .idle
     }
     private func stopPatternIfNeeded() {
@@ -501,17 +546,22 @@ public final class NativeAudio {
             receipt.resolve(success)
         }
         patternState = .starting(receipt)
-        control.submit(.startPattern(timeline, id))
+        requestedPatternIdentity = nextPattern()
+        status.beginPlaybackClockChange()
+        control.submit(.startPattern(timeline, id, requestedPatternIdentity, clockStatus: status))
         return receipt
     }
     public func replacePatternAudition(_ timeline: PlaybackTimeline) {
-        control.submit(.replacePattern(timeline))
+        requestedPatternIdentity = nextPattern()
+        status.beginPlaybackClockChange()
+        control.submit(.replacePattern(timeline, requestedPatternIdentity, clockStatus: status))
     }
     @discardableResult
     public func stopPatternAudition() -> AudioOperation<Void> {
         invalidatePattern()
+        status.beginPlaybackClockChange()
         let (id, receipt) = voidOperation()
-        control.submit(.stopPattern(id))
+        control.submit(.stopPattern(id, clockStatus: status))
         return receipt
     }
 

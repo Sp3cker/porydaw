@@ -7,6 +7,13 @@ where playback starts (edit cursor). -->
 
 ## The playhead and the edit cursor
 
+The playhead line, glow, and ruler marker follow fractional screen positions
+without snapping to pixel centers. The line remains one physical pixel wide.
+During playback, its position updates with display frames using the audio
+engine's timestamped sample position. Pause, stop, and seeking reset that
+position; if the audio callback stalls, visual prediction stops after a bounded
+interval rather than continuing independently of the song.
+
 <!-- TODO: Two cursors, why: playhead = where audio is, edit cursor = where
 you're working / where paste lands / where playback starts. Clicking the
 timeline vs. clicking the roll. -->

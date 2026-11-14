@@ -54,11 +54,15 @@ Item {
     readonly property real devicePixelRatio: Screen.devicePixelRatio > 0
         ? Screen.devicePixelRatio : 1
     readonly property real hairline: 1 / devicePixelRatio
-    // Keep the core centered on one physical pixel as the camera moves through
-    // fractional positions; otherwise its apparent width pulses on Windows.
-    readonly property real alignedContentX:
-        (Math.round((plotOrigin + contentX) * devicePixelRatio - 0.5)
-         + 0.5) / devicePixelRatio - plotOrigin
+
+    FrameAnimation {
+        running: root.visible && root.Window.window !== null && root.Window.window.visible
+                 && root.Window.visibility !== Window.Minimized
+                 && root.presenter !== null && root.presenter.timelineAttached
+                 && root.presenter.frameUpdatesEnabled && root.presenter.frameClockAvailable
+                 && root.presenter.playing
+        onTriggered: root.presenter.displayFrame()
+    }
 
     component PreviewSegment: Item {
         id: preview
@@ -119,7 +123,7 @@ Item {
             // changes alter only its fixed geometry, never the segment layout.
             Item {
                 id: playheadVisual
-                x: root.alignedContentX - root.glowLeft
+                x: root.contentX - root.glowLeft
                 y: 0
                 width: root.glowLeft + root.hairline + root.glowRight
                 height: segment.height
@@ -225,6 +229,7 @@ Item {
                     width: root.hairline
                     height: segment.height
                     color: root.playheadColor
+                    antialiasing: true
                 }
             }
         }
@@ -241,7 +246,7 @@ Item {
 
             Shape {
                 id: rulerTriangle
-                x: root.alignedContentX
+                x: root.contentX
                 y: 0
                 width: 2 * root.triangleHalfWidthPx
                 height: root.triangleHeightPx

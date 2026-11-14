@@ -133,8 +133,10 @@ enum RollQmlLane {
                 CommandLine.arguments.first ?? "roll_qml_tests",
                 "-input", inputFile,
             ] + payload
-        var argv: [UnsafeMutablePointer<Int8>?] = laneArguments.map { strdup($0) }
-        defer { argv.forEach { free($0) } }
+        let argumentStorage: [UnsafeMutablePointer<Int8>?] = laneArguments.map { strdup($0) }
+        defer { argumentStorage.forEach { free($0) } }
+        var argv = argumentStorage
+        argv.append(nil)
         return app.runQtQuickTests(Int32(laneArguments.count), &argv)
     }
 

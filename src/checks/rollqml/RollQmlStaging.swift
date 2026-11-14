@@ -365,6 +365,116 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         return presenter.observe(sample: sample, transport: Int32(transport))
     }
 
+    /// Delivers an observation through the production semantic polling path.
+    public func pollPlayheadTick(tick: Double, transport: Int) -> Bool {
+        guard let document, tick.isFinite, tick >= 0,
+            let presenter = session?.playheadPresenter()
+        else { return false }
+        let sample = document.timeline.sample(for: TimeDefaults.tick(from: tick))
+        return presenter.observePolled(
+            SharedPlayheadObservation(sample: sample, transport: Int32(transport)),
+            token: presenter.lifecycleToken)
+    }
+
+    /// Projects a synthetic callback anchor through the production frame path.
+    public func projectPlayheadFrame(
+        anchorTick: Double, elapsedMilliseconds: Int, horizonMilliseconds: Int,
+        loopStartTick: Double, loopEndTick: Double, clockTransport: Int,
+        requestedTransport: Int, identityMatches: Bool
+    ) -> Bool {
+        guard let document, let presenter = session?.playheadPresenter(),
+            anchorTick.isFinite, anchorTick >= 0, loopStartTick.isFinite, loopStartTick >= 0,
+            loopEndTick.isFinite, loopEndTick >= 0, elapsedMilliseconds >= 0,
+            horizonMilliseconds >= 0, let transport = AudioTransportState(rawValue: Int32(clockTransport))
+        else { return false }
+        let timeline = document.timeline
+        let sampleRate = timeline.sampleRate
+        let clock = AudioPlaybackClockSnapshot(
+            sample: timeline.sample(for: TimeDefaults.tick(from: anchorTick)),
+            uptimeNanoseconds: 1_000_000_000, transport: transport, pattern: false,
+            timelineIdentity: identityMatches ? 1 : 2,
+            loopStartSample: timeline.sample(for: TimeDefaults.tick(from: loopStartTick)),
+            loopEndSample: timeline.sample(for: TimeDefaults.tick(from: loopEndTick)),
+            looping: loopEndTick > loopStartTick,
+            predictionFrames: UInt64(sampleRate * Double(horizonMilliseconds) / 1000))
+        presenter.presentFrame(
+            clock: clock, uptimeNanoseconds: 1_000_000_000 + UInt64(elapsedMilliseconds) * 1_000_000,
+            sampleRate: sampleRate, timelineIdentity: 1, patternIdentity: 0,
+            requestedTransport: Int32(requestedTransport), patternActive: false, deviceRunning: true)
+        return true
+    }
+
+    /// Delivers a transiently unavailable clock through the production frame path.
+    public func projectUnavailablePlayheadFrame() -> Bool {
+        guard let document, let presenter = session?.playheadPresenter() else { return false }
+        presenter.presentFrame(
+            clock: nil, uptimeNanoseconds: 1_000_000_000, sampleRate: document.timeline.sampleRate,
+            timelineIdentity: 1, patternIdentity: 0,
+            requestedTransport: AudioTransportState.playing.rawValue, patternActive: false, deviceRunning: true)
+        return true
+    }
+
+    /// Presents an audition observation with an absolute document range.
+    public func presentPlayheadPreview(start: Int, end: Int, tick: Int) -> Bool {
+        guard start >= 0, end > start, tick >= start, tick < end,
+            let presenter = session?.playheadPresenter()
+        else { return false }
+        let preview = SharedPlayheadPreview(start: Tick(start), end: Tick(end), tick: Double(tick))
+        return presenter.observe(
+            SharedPlayheadObservation(sample: 0, transport: AudioTransportState.paused.rawValue, preview: preview),
+            token: presenter.lifecycleToken)
+    }
+
+    /// Projects an audition callback using the same document tempo map as its draft.
+    public func projectPatternFrame(
+        anchorTick: Int, elapsedMilliseconds: Int, start: Int, end: Int, identityMatches: Bool
+    ) -> Bool {
+        guard let document, let presenter = session?.playheadPresenter(),
+            start >= 0, end > start, anchorTick >= start, anchorTick < end,
+            elapsedMilliseconds >= 0
+        else { return false }
+        let timeline = document.timeline
+        let clock = AudioPlaybackClockSnapshot(
+            sample: timeline.sample(for: Tick(anchorTick)),
+            uptimeNanoseconds: 1_000_000_000, transport: .paused, pattern: true,
+            timelineIdentity: 1, patternIdentity: identityMatches ? 1 : 2,
+            loopStartSample: timeline.sample(for: Tick(start)), loopEndSample: timeline.sample(for: Tick(end)),
+            looping: true, predictionFrames: UInt64(timeline.sampleRate))
+        presenter.presentFrame(
+            clock: clock, uptimeNanoseconds: 1_000_000_000 + UInt64(elapsedMilliseconds) * 1_000_000,
+            sampleRate: timeline.sampleRate, timelineIdentity: 1, patternIdentity: 1,
+            requestedTransport: AudioTransportState.paused.rawValue, patternActive: true, deviceRunning: true)
+        return true
+    }
+
+    /// Expected camera projection for a sample offset from a document tick.
+    public func cameraContentXAtSampleOffset(tick: Double, milliseconds: Int) -> Double {
+        guard let document, let viewport, tick.isFinite, tick >= 0, milliseconds >= 0 else { return 0 }
+        let timeline = document.timeline
+        let sample =
+            timeline.sample(for: TimeDefaults.tick(from: tick))
+            + UInt64(timeline.sampleRate * Double(milliseconds) / 1000)
+        return viewport.camera.contentX(tick: timeline.tick(for: sample))
+    }
+
+    /// Expected projection after wrapping a sample offset through a document range.
+    public func cameraContentXAfterLoop(
+        tick: Double, milliseconds: Int, start: Double, end: Double
+    ) -> Double {
+        guard let document, let viewport, tick.isFinite, tick >= 0, milliseconds >= 0,
+            start.isFinite, start >= 0, end.isFinite, end > start
+        else { return 0 }
+        let timeline = document.timeline
+        let first = timeline.sample(for: TimeDefaults.tick(from: start))
+        let last = timeline.sample(for: TimeDefaults.tick(from: end))
+        guard last > first else { return 0 }
+        let sample =
+            timeline.sample(for: TimeDefaults.tick(from: tick))
+            + UInt64(timeline.sampleRate * Double(milliseconds) / 1000)
+        let wrapped = sample < last ? sample : first + (sample - first) % (last - first)
+        return viewport.camera.contentX(tick: timeline.tick(for: wrapped))
+    }
+
     /// Enables or disables playhead follow — the check-side `setFollowPlayhead`.
     public func setFollowPlayhead(enabled: Bool) -> Bool {
         guard let presenter = session?.playheadPresenter() else { return false }

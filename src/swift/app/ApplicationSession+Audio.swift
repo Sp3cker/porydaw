@@ -241,8 +241,8 @@ extension ApplicationSession {
 
     func stopImpl() {
         audio?.stop()
-        // Stop's rewind comes from the audio service; this presents whatever
-        // sample and transport the service reports now. No tick is synthesized.
+        // The accepted stop request presents its rewind target immediately;
+        // the audio callback remains authoritative once it adopts the stop.
         refreshTransportPresentation()
     }
 

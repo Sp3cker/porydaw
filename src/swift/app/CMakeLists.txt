@@ -241,6 +241,7 @@ add_library(PorydawAppAudio STATIC
     audio/AudioDevice.swift
     audio/AudioRenderEngine.swift
     audio/AudioStatus.swift
+    audio/AudioPlaybackClock.swift
     audio/SampleAuditionLease.swift
     audio/AudioTransport.swift
     audio/AudioTimelineHandoff.swift

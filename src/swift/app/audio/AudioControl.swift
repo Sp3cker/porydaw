@@ -60,20 +60,30 @@ enum AudioCommand: Sendable {
     case voicegroup(ProjectBankLease, UInt64)
     case attachLiveInsert(Int, LiveInsert, UInt64)
     case detachLiveInsert(Int, LiveInsert, UInt64)
-    case hot(AudioHotCommand, UInt64)
+    case hot(AudioHotCommand, UInt64, clockStatus: AudioStatus?)
     case suppression(Bool)
     case metronome(Bool)
     case polyInvert(Bool)
     case resetPoly, resetCpu
     case cpuTrackBudget(Int)
     case telemetry(UInt64, Bool)
-    case startPattern(PlaybackTimeline, UInt64)
-    case replacePattern(PlaybackTimeline)
-    case stopPattern(UInt64)
+    case startPattern(PlaybackTimeline, UInt64, UInt64, clockStatus: AudioStatus)
+    case replacePattern(PlaybackTimeline, UInt64, clockStatus: AudioStatus)
+    case stopPattern(UInt64, clockStatus: AudioStatus)
     case sample(SampleAuditionCommand)
     case sampleFeedback
     case startRendering
     case shutdown(UInt64?)
+
+    var clockStatus: AudioStatus? {
+        switch self {
+        case .hot(_, _, let status): return status
+        case .startPattern(_, _, _, let status): return status
+        case .replacePattern(_, _, let status): return status
+        case .stopPattern(_, let status): return status
+        default: return nil
+        }
+    }
 }
 
 private final class AudioControlExecutor: SerialExecutor {
@@ -240,6 +250,7 @@ actor AudioControl {
     }
 
     private func apply(_ command: AudioCommand) {
+        defer { command.clockStatus?.endPlaybackClockChange() }
         if case .initialize(let reply) = command {
             do {
                 let device = try AudioDevice(sampleFeedback: sampleFeedback)
@@ -332,7 +343,7 @@ actor AudioControl {
                 }
             }
             continuation.yield(.completed(operation, true))
-        case .hot(let hot, let sequence):
+        case .hot(let hot, let sequence, _):
             hot.apply(to: renderer.endpoint)
             hotCompleted.store(sequence, ordering: .releasing)
         case .suppression(let enabled): renderer.setResonanceSuppression(enabled)
@@ -346,13 +357,14 @@ actor AudioControl {
                 .telemetry(
                     epoch, renderer.consumeCpuFrames(), renderer.consumeTrackActivityLevels(), renderer.polySnapshot(),
                     includePreview ? renderer.previewPolySnapshot() : nil))
-        case .startPattern(let timeline, let operation):
-            let prepared = device.withRenderingExcluded { renderer.startPatternAudition(timeline) }
+        case .startPattern(let timeline, let operation, let identity, _):
+            let prepared = device.withRenderingExcluded { renderer.startPatternAudition(timeline, identity: identity) }
             processSampleFeedback(renderer)
             let started = prepared && startDevice(device)
             continuation.yield(.completed(operation, started))
-        case .replacePattern(let timeline): renderer.replacePatternAudition(timeline)
-        case .stopPattern(let operation):
+        case .replacePattern(let timeline, let identity, _):
+            renderer.replacePatternAudition(timeline, identity: identity)
+        case .stopPattern(let operation, _):
             device.withRenderingExcluded { renderer.stopPatternAudition() }
             processSampleFeedback(renderer)
             continuation.yield(.completed(operation, true))

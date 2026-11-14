@@ -1,3 +1,4 @@
+import Dispatch
 import Synchronization
 import PorydawCore
 import PorydawPlayback
@@ -25,7 +26,10 @@ public final class AudioRenderEndpoint: Sendable {
         self.audition = audition
     }
 
-    public func setLoopEnabled(_ enabled: Bool) { loop.store(enabled, ordering: .relaxed) }
+    public func setLoopEnabled(_ enabled: Bool) {
+        loop.store(enabled, ordering: .relaxed)
+        transport.status.clock.invalidateRequest()
+    }
     public func setMix(muted: Set<Int>, soloed: Set<Int>) {
         mute.store(Self.trackMask(muted), ordering: .relaxed)
         solo.store(Self.trackMask(soloed), ordering: .relaxed)
@@ -116,6 +120,7 @@ public final class AudioRenderEngine {
         publishAppliedSettings()
     }
     deinit {
+        status.clock.invalidate()
         m4a_engine_free(main)
         m4a_engine_free(preview)
         audition.reset()
@@ -144,6 +149,7 @@ public final class AudioRenderEngine {
     /// Cold only. The caller owns the slot until a matching detach returns.
     public func attachLiveInsert(track: Int, slot: UnsafeMutablePointer<LiveInsertSlot>) {
         guard (0..<TrackLimits.hardwareCapacity).contains(track) else { return }
+        status.clock.invalidate()
         detachLiveInsert(track: track)
         liveSlots[track].store(UnsafeMutableRawPointer(slot), ordering: .releasing)
         live.store(liveMask | (1 << UInt32(track)), ordering: .releasing)
@@ -153,6 +159,7 @@ public final class AudioRenderEngine {
     /// Cold only. Releases the track before the caller may reclaim its slot.
     public func detachLiveInsert(track: Int) {
         guard (0..<TrackLimits.hardwareCapacity).contains(track) else { return }
+        status.clock.invalidate()
         m4a_engine_all_notes_off(main, Int32(track))
         player.clearLiveTrack(track, tick: handoff.active?.pointee.timeline.tick(for: player.position))
         live.store(liveMask & ~(1 << UInt32(track)), ordering: .releasing)
@@ -190,9 +197,10 @@ public final class AudioRenderEngine {
     /// Cold only: pause the song at its current playhead and replace the isolated loop.
     /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
     @discardableResult
-    public func startPatternAudition(_ timeline: PlaybackTimeline) -> Bool {
+    public func startPatternAudition(_ timeline: PlaybackTimeline, identity: UInt64 = 0) -> Bool {
         guard let song = handoff.active, voicegroup != nil, timeline.hasLoop else { return false }
         precondition(timeline.sampleRate == sampleRate, "Pattern timeline must use the device sample rate")
+        status.clock.invalidate()
         resetPreview()
         suspendCpuCost()
         // All-sound-off queues a FIFO reset but leaves the hardware frontend's old
@@ -207,7 +215,7 @@ public final class AudioRenderEngine {
         transportState.pauseImmediately()
         suppression.reset()
         metronome.silence()
-        patternHandoff.reset(timeline)
+        patternHandoff.reset(timeline, identity: identity)
         patternPlayer.seek(timeline.loopStartSample, timeline: timeline)
         Sequencer.chase(engine: preview, timeline: timeline, position: timeline.loopStartSample)
         Sequencer.primeVoices(engine: preview, timeline: timeline, position: timeline.loopStartSample)
@@ -219,14 +227,16 @@ public final class AudioRenderEngine {
     /// Publish a replacement loop while auditioning, without stopping rendering. The next
     /// callback adopts the newest replacement and restarts it at its loop start.
     /// - Parameter timeline: Immutable loop timeline at this renderer's sample rate.
-    public func replacePatternAudition(_ timeline: PlaybackTimeline) {
+    public func replacePatternAudition(_ timeline: PlaybackTimeline, identity: UInt64 = 0) {
         guard isPatternAuditioning, timeline.hasLoop else { return }
         precondition(timeline.sampleRate == sampleRate, "Pattern timeline must use the device sample rate")
-        patternHandoff.publish(timeline)
+        patternHandoff.publish(timeline, identity: identity)
+        status.clock.invalidateRequest()
     }
 
     /// Cold only: release the isolated pattern, retaining the paused song and its playhead.
     public func stopPatternAudition() {
+        status.clock.invalidate()
         if isPatternAuditioning { resetPreview() }
     }
 
@@ -235,6 +245,7 @@ public final class AudioRenderEngine {
         timeline: PlaybackTimeline,
         voicegroup: UnsafeMutablePointer<ToneData>?, settings: AudioSettings, identity: UInt64 = 0
     ) {
+        status.clock.invalidate()
         suspendCpuCost()
         clearLiveTracks()
         transportState.reset()
@@ -264,8 +275,10 @@ public final class AudioRenderEngine {
     public func publish(_ timeline: PlaybackTimeline, identity: UInt64 = 0) {
         guard songLoaded else { return }
         handoff.publish(timeline, identity: identity)
+        status.clock.invalidateRequest()
     }
     public func unload() {
+        status.clock.invalidate()
         suspendCpuCost()
         transportState.reset()
         suppression.reset()
@@ -285,6 +298,7 @@ public final class AudioRenderEngine {
         status.loaded.store(false, ordering: .releasing)
     }
     public func updateSettings(_ settings: AudioSettings) {
+        status.clock.invalidate()
         transportState.resetCut()
         let changedRate = self.settings.pcmMixRate != settings.pcmMixRate
         self.settings = settings
@@ -295,6 +309,7 @@ public final class AudioRenderEngine {
         publishAppliedSettings()
     }
     public func updateVoicegroup(_ voicegroup: UnsafeMutablePointer<ToneData>?) {
+        status.clock.invalidate()
         transportState.resetCut()
         let resumeCpu = transportState.applied == .playing
         suspendCpuCost()
@@ -507,9 +522,20 @@ public final class AudioRenderEngine {
     }
 
     public func render(_ output: UnsafeMutablePointer<Float>, frames: UInt32) {
+        let clockRequest = status.clock.requestGeneration
         if let timeline = patternHandoff.acquirePending() { restartPattern(timeline.pointee.timeline) }
         if let timeline = patternHandoff.active {
             renderPattern(timeline.pointee.timeline, output: output, frames: frames)
+            status.clock.publish(
+                AudioPlaybackClockSnapshot(
+                    sample: status.patternAuditionPositionSamples,
+                    uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                    transport: transportState.applied, pattern: true,
+                    timelineIdentity: handoff.active?.pointee.identity ?? 0, patternIdentity: timeline.pointee.identity,
+                    loopStartSample: timeline.pointee.timeline.loopStartSample,
+                    loopEndSample: timeline.pointee.timeline.loopEndSample,
+                    looping: true, predictionFrames: UInt64(frames) * 2),
+                requestGeneration: clockRequest)
             return
         }
         transition()
@@ -529,11 +555,13 @@ public final class AudioRenderEngine {
         }
         let inserts = UnsafeBufferPointer(start: callbackSlots, count: TrackLimits.hardwareCapacity)
         var done = 0
+        var renderedLooping = loopEnabled
         while done < Int(frames) {
             let count = min(Int(frames) - done, capacity)
             if transportState.applied == .playing, let timeline = handoff.active {
                 if !cpuRunning { startCpuCost(timeline.pointee.timeline, continuing: cpuContinueOnStart) }
                 let looping = loopEnabled
+                renderedLooping = looping
                 let start = player.position
                 let cpuDriver = main.pointee.driver
                 let cpuStartCycle = cpuDriver.map { m4a_driver_current_cycle($0) } ?? 0
@@ -608,5 +636,18 @@ public final class AudioRenderEngine {
         telemetry.publishPoly(main)
         telemetry.publishPreview(preview)
         publishAppliedSettings()
+        if let timeline = handoff.active {
+            status.clock.publish(
+                AudioPlaybackClockSnapshot(
+                    sample: player.position, uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds,
+                    transport: transportState.applied, pattern: false, timelineIdentity: timeline.pointee.identity,
+                    loopStartSample: timeline.pointee.timeline.loopStartSample,
+                    loopEndSample: timeline.pointee.timeline.loopEndSample,
+                    looping: renderedLooping && timeline.pointee.timeline.hasLoop,
+                    predictionFrames: transportState.requested == transportState.applied ? UInt64(frames) * 2 : 0),
+                requestGeneration: clockRequest)
+        } else {
+            status.clock.invalidate()
+        }
     }
 }

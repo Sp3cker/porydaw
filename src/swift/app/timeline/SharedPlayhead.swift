@@ -1,6 +1,7 @@
 import Foundation
 import PorydawCore
 import PorydawAppPresentation
+import PorydawAppAudio
 import PorydawDocument
 import QtBridge
 
@@ -8,12 +9,9 @@ import QtBridge
 // surface. `ApplicationSession` retains exactly one presenter; the roll plot and
 // every visible drawer body render a clipped segment from that one publication.
 //
-// Authority: the native audio service's sample and transport, mapped exclusively
-// by `PlaybackTimeline.tick(for:)` and projected by the current
-// `DocumentSession` camera. No elapsed wall time, interpolation, QML animation
-// or page timer infers position. The presenter owns no document, timeline,
-// camera, history or audio service; it reads the ones `ApplicationSession`
-// installs, and it owns exactly one cancellable polling task.
+// Audio callback snapshots anchor display-frame projection through the canonical
+// playback timeline and current camera. Polling drives semantic pages and
+// telemetry, plus discrete non-playing position and transport changes.
 
 // MARK: - Authoritative observation
 
@@ -213,6 +211,10 @@ public final class SharedPlayheadPresenter {
     public var visible: Bool = false
     /// Whether the displayed playback source is running, including audition.
     public var playing: Bool = false
+    /// False when the owning polling lifecycle is stopped, including test fixtures.
+    public var frameUpdatesEnabled: Bool = false
+    /// A recent callback can advance a display frame; polling rechecks after a stall.
+    public var frameClockAvailable: Bool = false
     public var previewVisible: Bool = false
     public var previewStartX: Double = 0
     public var previewEndX: Double = 0
@@ -262,8 +264,8 @@ public final class SharedPlayheadPresenter {
     public private(set) var lifecycleToken: UInt64 = 0
     @QtIgnored public var isPolling: Bool { pollTask != nil }
 
-    /// One display cadence for every transport state. Cancellation does not wait
-    /// out the sleep: `Task.sleep` throws as soon as the task is cancelled.
+    /// Semantic/telemetry cadence only; playback visuals follow display frames.
+    /// Cancellation interrupts the sleep immediately.
     private static let pollInterval: Duration = .milliseconds(16)
 
     private weak var viewport: DocumentViewport?
@@ -274,6 +276,7 @@ public final class SharedPlayheadPresenter {
     private var pollTask: Task<Void, Never>?
     private var retained: SharedPlayheadObservation?
     private var published: SharedPlayheadPresentation?
+    private var visualTick: Double?
 
     public init() {}
 
@@ -296,6 +299,7 @@ public final class SharedPlayheadPresenter {
         self.drawer = drawer
         readPreview = preview
         retained = nil
+        visualTick = nil
         observeCurrent(token: lifecycleToken)
     }
 
@@ -315,6 +319,7 @@ public final class SharedPlayheadPresenter {
         drawer = nil
         readPreview = nil
         retained = nil
+        visualTick = nil
         apply(SharedPlayheadPresentation())
     }
 
@@ -324,6 +329,7 @@ public final class SharedPlayheadPresenter {
     public func startPolling() {
         guard pollTask == nil, viewport != nil else { return }
         let token = lifecycleToken
+        frameUpdatesEnabled = true
         pollTask = Task { [weak self] in
             var previous = ContinuousClock.now
             while !Task.isCancelled {
@@ -333,7 +339,7 @@ public final class SharedPlayheadPresenter {
                     return
                 }
                 guard let self, self.lifecycleToken == token else { return }
-                let presentationChanged = self.observeCurrent(token: token)
+                let presentationChanged = self.observeCurrent(token: token, updatePosition: false)
                 let now = ContinuousClock.now
                 let elapsed = previous.duration(to: now).components
                 previous = now
@@ -349,6 +355,8 @@ public final class SharedPlayheadPresenter {
     public func stopPolling() {
         pollTask?.cancel()
         pollTask = nil
+        frameUpdatesEnabled = false
+        frameClockAvailable = false
     }
 
     // MARK: Presentation
@@ -368,10 +376,98 @@ public final class SharedPlayheadPresenter {
     public func refreshProjection() {
         guard let viewport, let retained else { return }
         let tick = retained.displayTick(in: viewport.session.timeline)
+        let displayedTick = visualTick ?? tick
         apply(
             SharedPlayheadPolicy.presentation(
                 tick: tick, transport: retained.displayTransport, timelineAttached: true,
-                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: retained.preview))
+                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: retained.preview),
+            updatePosition: false)
+        projectVisual(tick: displayedTick, viewport: viewport)
+    }
+
+    /// Projects the most recent coherent callback anchor on a display frame.
+    /// The frame publishes only visual position and visibility, never page clocks.
+    public func displayFrame() {
+        guard frameUpdatesEnabled, let audio else { return }
+        let patternActive: Bool
+        if case .active = audio.patternState { patternActive = true } else { patternActive = false }
+        presentFrame(
+            clock: audio.playbackClock, uptimeNanoseconds: DispatchTime.now().uptimeNanoseconds,
+            sampleRate: audio.sampleRate, timelineIdentity: audio.requestedTimelineIdentity,
+            patternIdentity: audio.requestedPatternIdentity, requestedTransport: audio.requestedTransport,
+            patternActive: patternActive,
+            deviceRunning: audio.isDeviceRunning)
+    }
+
+    /// Selects and projects the callback clock, holding the last visual across
+    /// transient read failures and stopping animation after its prediction bound.
+    @QtIgnored
+    public func presentFrame(
+        clock: AudioPlaybackClockSnapshot?, uptimeNanoseconds: UInt64,
+        sampleRate: Double, timelineIdentity: UInt64, patternIdentity: UInt64,
+        requestedTransport: Int32, patternActive: Bool, deviceRunning: Bool
+    ) {
+        let sourceMatches: Bool
+        if let clock, let retained {
+            sourceMatches =
+                clock.pattern
+                ? retained.preview?.tick != nil
+                : retained.preview?.tick == nil && retained.playing
+        } else {
+            sourceMatches = false
+        }
+        let matches =
+            sourceMatches
+            && clockMatches(
+                clock, timelineIdentity: timelineIdentity, patternIdentity: patternIdentity,
+                requestedTransport: requestedTransport, patternActive: patternActive, deviceRunning: deviceRunning)
+        let available = matches && clockIsFresh(clock, sampleRate: sampleRate, now: uptimeNanoseconds)
+        if frameClockAvailable != available { frameClockAvailable = available }
+        if matches {
+            projectFrame(
+                clock: clock, uptimeNanoseconds: uptimeNanoseconds, sampleRate: sampleRate,
+                timelineIdentity: timelineIdentity, patternIdentity: patternIdentity,
+                requestedTransport: requestedTransport)
+        } else if let retained,
+            !SharedPlayheadPolicy.isPlaying(transport: retained.displayTransport)
+                || (retained.preview?.tick == nil && requestedTransport != SharedPlayheadPolicy.playingTransport)
+        {
+            projectFrame(
+                clock: nil, uptimeNanoseconds: uptimeNanoseconds, sampleRate: sampleRate,
+                timelineIdentity: timelineIdentity, patternIdentity: patternIdentity,
+                requestedTransport: requestedTransport)
+        }
+    }
+
+    /// The shared projection entry also accepts explicit clocks for deterministic checks.
+    @QtIgnored
+    public func projectFrame(
+        clock: AudioPlaybackClockSnapshot?, uptimeNanoseconds: UInt64,
+        sampleRate: Double, timelineIdentity: UInt64, patternIdentity: UInt64,
+        requestedTransport: Int32
+    ) {
+        guard let viewport, let retained else { return }
+        var displayTick = retained.displayTick(in: viewport.session.timeline)
+        if let clock, clock.timelineIdentity == timelineIdentity {
+            if clock.pattern, clock.patternIdentity == patternIdentity, patternIdentity != 0,
+                retained.preview?.tick != nil
+            {
+                let candidate = viewport.session.timeline.tick(
+                    for: clock.sample(at: uptimeNanoseconds, sampleRate: sampleRate))
+                if let preview = retained.preview,
+                    candidate >= Double(preview.start), candidate < Double(preview.end)
+                {
+                    displayTick = candidate
+                }
+            } else if !clock.pattern, retained.preview?.tick == nil, retained.playing,
+                requestedTransport == SharedPlayheadPolicy.playingTransport,
+                clock.transport.rawValue == SharedPlayheadPolicy.playingTransport
+            {
+                displayTick = viewport.session.timeline.tick(
+                    for: clock.sample(at: uptimeNanoseconds, sampleRate: sampleRate))
+            }
+        }
+        projectVisual(tick: displayTick, viewport: viewport)
     }
 
     /// Presents one injected observation for the current generation. This is the
@@ -392,6 +488,29 @@ public final class SharedPlayheadPresenter {
     @discardableResult
     @QtIgnored
     public func observe(_ observation: SharedPlayheadObservation, token: UInt64) -> Bool {
+        observe(observation, token: token, updatePosition: true)
+    }
+
+    /// Publishes a semantic poll without driving a playing source's visual x.
+    /// Non-playing changes are discrete transport/position observations.
+    @discardableResult
+    @QtIgnored
+    public func observePolled(_ observation: SharedPlayheadObservation, token: UInt64) -> Bool {
+        guard token == lifecycleToken, let viewport else { return false }
+        let rewind =
+            retained?.playing == true && observation.transport == AudioTransportState.stopped.rawValue
+            && observation.preview?.tick == nil
+        let nonPlayingChange =
+            !SharedPlayheadPolicy.isPlaying(transport: observation.displayTransport)
+            && observation != retained
+        let changed = observe(observation, token: token, updatePosition: nonPlayingChange && !rewind)
+        if rewind { projectVisual(tick: 0, viewport: viewport) }
+        return changed
+    }
+
+    private func observe(
+        _ observation: SharedPlayheadObservation, token: UInt64, updatePosition: Bool
+    ) -> Bool {
         guard token == lifecycleToken, let viewport else { return false }
         retained = observation
         let tick = observation.displayTick(in: viewport.session.timeline)
@@ -407,7 +526,8 @@ public final class SharedPlayheadPresenter {
         return apply(
             SharedPlayheadPolicy.presentation(
                 tick: tick, transport: observation.displayTransport, timelineAttached: true,
-                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: observation.preview))
+                camera: viewport.camera, baseFontPx: currentBaseFontPx, preview: observation.preview),
+            updatePosition: updatePosition)
     }
 
     /// Enables or disables follow. Default enabled; no QML command exists.
@@ -434,27 +554,79 @@ public final class SharedPlayheadPresenter {
         grid?.baseFontPx ?? GridCameraPolicy.seedBaseFontPx
     }
 
+    private func clockMatches(
+        _ clock: AudioPlaybackClockSnapshot?, timelineIdentity: UInt64, patternIdentity: UInt64,
+        requestedTransport: Int32, patternActive: Bool, deviceRunning: Bool
+    ) -> Bool {
+        guard deviceRunning, let clock, clock.timelineIdentity == timelineIdentity else { return false }
+        if clock.pattern {
+            return patternActive && patternIdentity != 0 && clock.patternIdentity == patternIdentity
+        }
+        return requestedTransport == SharedPlayheadPolicy.playingTransport
+            && clock.transport.rawValue == SharedPlayheadPolicy.playingTransport
+    }
+
+    private func clockIsFresh(
+        _ clock: AudioPlaybackClockSnapshot?, sampleRate: Double, now: UInt64
+    ) -> Bool {
+        guard let clock, clock.predictionFrames > 0, sampleRate > 0 else { return false }
+        guard now > clock.uptimeNanoseconds else { return true }
+        let elapsedFrames = Double(now - clock.uptimeNanoseconds) * sampleRate / 1_000_000_000
+        return elapsedFrames < Double(clock.predictionFrames)
+    }
+
     @discardableResult
-    private func observeCurrent(token: UInt64) -> Bool {
+    private func observeCurrent(token: UInt64, updatePosition: Bool = true) -> Bool {
+        if frameUpdatesEnabled, let audio {
+            let clock = audio.playbackClock
+            let patternActive: Bool
+            if case .active = audio.patternState { patternActive = true } else { patternActive = false }
+            let matches = clockMatches(
+                clock, timelineIdentity: audio.requestedTimelineIdentity,
+                patternIdentity: audio.requestedPatternIdentity, requestedTransport: audio.requestedTransport,
+                patternActive: patternActive, deviceRunning: audio.isDeviceRunning)
+            let available =
+                matches
+                && clockIsFresh(
+                    clock, sampleRate: audio.sampleRate, now: DispatchTime.now().uptimeNanoseconds)
+            // Let an already-running frame project the clamped endpoint before
+            // it turns itself off when a coherent anchor ages out.
+            if frameClockAvailable != available && (available || !matches) {
+                frameClockAvailable = available
+            }
+        }
         let observation = SharedPlayheadObservation(
-            sample: audio?.playheadSamples ?? 0,
+            sample: audio?.presentationPlayheadSamples ?? 0,
             transport: audio?.requestedTransport ?? 0, preview: readPreview?())
-        return observe(observation, token: token)
+        if updatePosition { return observe(observation, token: token) }
+        return observePolled(observation, token: token)
+    }
+
+    private func projectVisual(tick: Double, viewport: DocumentViewport) {
+        visualTick = tick
+        let x = viewport.camera.contentX(tick: tick)
+        let isVisible = x >= 0 && x < viewport.camera.snapshot.viewportWidth
+        if contentX != x { contentX = x }
+        if visible != isVisible { visible = isVisible }
     }
 
     /// Publishes only a changed presentation, writing only the primitives that
     /// changed so an unchanged field emits no property signal.
     @discardableResult
-    private func apply(_ presentation: SharedPlayheadPresentation) -> Bool {
-        guard presentation != published else { return false }
+    private func apply(_ presentation: SharedPlayheadPresentation, updatePosition: Bool = true) -> Bool {
+        let changed = presentation != published
+        if updatePosition {
+            visualTick = presentation.timelineAttached ? presentation.tick : nil
+            if contentX != presentation.contentX { contentX = presentation.contentX }
+            if visible != presentation.visible { visible = presentation.visible }
+        }
+        guard changed else { return false }
         published = presentation
         presentationCount &+= 1
         if tick != presentation.tick { tick = presentation.tick }
-        if contentX != presentation.contentX { contentX = presentation.contentX }
         if timelineAttached != presentation.timelineAttached {
             timelineAttached = presentation.timelineAttached
         }
-        if visible != presentation.visible { visible = presentation.visible }
         if playing != presentation.playing { playing = presentation.playing }
         if previewVisible != presentation.previewVisible { previewVisible = presentation.previewVisible }
         if previewStartX != presentation.previewStartX { previewStartX = presentation.previewStartX }

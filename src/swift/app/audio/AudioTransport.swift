@@ -13,21 +13,27 @@ public final class AudioTransportEndpoint: Sendable {
         guard status.songLoaded else { return }
         if status.requestedTransport == .stopped { status.invalidateTelemetry() }
         status.requested.store(AudioTransportState.playing.rawValue, ordering: .relaxed)
+        status.clock.invalidateRequest()
     }
 
     public func pause() {
         if status.requestedTransport == .playing {
             status.requested.store(AudioTransportState.paused.rawValue, ordering: .relaxed)
+            status.clock.invalidateRequest()
         }
     }
 
     public func stop() {
         pendingSeek.store(UInt64.max, ordering: .releasing)
         status.requested.store(AudioTransportState.stopped.rawValue, ordering: .relaxed)
+        status.clock.invalidateRequest()
     }
 
     public func seek(_ sample: UInt64) {
-        if status.songLoaded { pendingSeek.store(sample, ordering: .releasing) }
+        if status.songLoaded {
+            pendingSeek.store(sample, ordering: .releasing)
+            status.clock.invalidateRequest()
+        }
     }
 
     public func setOutputVolume(_ percent: Int) {
