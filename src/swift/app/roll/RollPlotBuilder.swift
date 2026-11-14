@@ -51,7 +51,7 @@ struct RollPlotBuilder {
         _ input: GridSceneInput,
         records: [RollNote],
         palette: [UInt32],
-        maxDuration: Int,
+        blockEnds: [Int],
         width: Double,
         height: Double
     ) -> (data: Data, count: Int) {
@@ -261,7 +261,7 @@ struct RollPlotBuilder {
             }
         }
 
-        // Note fills with cull: lower-bound at lo-maxDuration, order-sort paint.
+        // Note fills with cull: skip expired blocks, order-sort paint.
         painted.removeAll(keepingCapacity: true)
         paintedRecords.removeAll(keepingCapacity: true)
         visible.removeAll(keepingCapacity: true)
@@ -269,24 +269,19 @@ struct RollPlotBuilder {
             let slack = 2 * pixel
             let lo = (soX - metrics.noteMinWidth - slack) / ppt
             let hi = (soX + width + slack) / ppt
-            let from = lo - Double(maxDuration)
-            var loIdx = 0
-            var hiIdx = records.count
-            while loIdx < hiIdx {
-                let mid = (loIdx + hiIdx) / 2
-                if Double(records[mid].tick) < from {
-                    loIdx = mid + 1
-                } else {
-                    hiIdx = mid
+            for block in blockEnds.indices {
+                let start = block * RollDrawingContent.noteRecordBlockSize
+                if Double(records[start].tick) >= hi { break }
+                if Double(blockEnds[block]) < lo { continue }
+                let end = min(start + RollDrawingContent.noteRecordBlockSize, records.count)
+                var i = start
+                while i < end && Double(records[i].tick) < hi {
+                    let duration = records[i].end - records[i].tick
+                    if Double(records[i].tick) + Double(duration) >= lo {
+                        visible.append(i)
+                    }
+                    i += 1
                 }
-            }
-            var i = loIdx
-            while i < records.count && Double(records[i].tick) < hi {
-                let duration = records[i].end - records[i].tick
-                if Double(records[i].tick) + Double(duration) >= lo {
-                    visible.append(i)
-                }
-                i += 1
             }
             visible.sort { records[$0].order < records[$1].order }
         } else {

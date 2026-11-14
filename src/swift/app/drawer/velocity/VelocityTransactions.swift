@@ -58,7 +58,7 @@ public struct VelocityGestureState: Sendable {
     public var revision: UInt64
     public var track: Int
     public private(set) var notes: [VelocityFrozenNote]
-    private var noteIndices: [NoteID: Int]
+    private(set) var noteIndices: [NoteID: Int]
 
     public func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
         noteIndices[id].map { notes[$0] }

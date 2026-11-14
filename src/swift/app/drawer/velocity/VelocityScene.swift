@@ -23,7 +23,7 @@ struct VelocityInteractionSnapshot: Sendable {
     init(
         frozenNotes: [VelocityFrozenNote] = [], preview: [NoteID: UInt8] = [:],
         detentUnlock: Bool = false, relativeActivated: Bool = false, hovered: NoteID? = nil,
-        detentsEnabled: Bool = true
+        detentsEnabled: Bool = true, frozenIndices: [NoteID: Int]? = nil
     ) {
         self.frozenNotes = frozenNotes
         self.preview = preview
@@ -31,7 +31,9 @@ struct VelocityInteractionSnapshot: Sendable {
         self.relativeActivated = relativeActivated
         self.hovered = hovered
         self.detentsEnabled = detentsEnabled
-        frozenIndices = Dictionary(
+        self.frozenIndices =
+            frozenIndices
+            ?? Dictionary(
             uniqueKeysWithValues:
                 frozenNotes.enumerated().map { ($0.element.noteID, $0.offset) })
     }
