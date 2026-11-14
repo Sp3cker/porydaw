@@ -169,7 +169,7 @@ extension MidiChunk {
     /// at the position the pin order gives it. Out-of-range and repeated indices are ignored.
     /// `events` must be tick-sorted.
     ///
-    /// Slide survivors over removals, then replay tick-ordered insertions in local runs and emit once.
+    /// Slide survivors over removals, then replay tick-ordered insertions in the output's tail runs.
     /// Only those runs shift per insertion; unrelated survivors are copied once into the final array.
     @discardableResult
     internal mutating func apply(
@@ -205,8 +205,8 @@ extension MidiChunk {
         guard !insertions.isEmpty else {
             return ApplyResult(removals: removed, insertions: [])
         }
-        // Replay each tick group locally so pin placements never shift unrelated survivors.
-        // Record evolving-array offsets during replay for ordered history redo and reverse undo.
+        // Replay each tick group in the merged tail so pin placements never shift unrelated
+        // survivors; the tail offset at insert time is the evolving-array offset history needs.
         var order = Array(insertions.indices)
         order.sort { (lhs: Int, rhs: Int) -> Bool in
             (insertions[lhs].tick, lhs) < (insertions[rhs].tick, rhs)
@@ -226,15 +226,14 @@ extension MidiChunk {
             merged.append(contentsOf: events[survivorIndex..<runStart])
             var runEnd = runStart
             while runEnd < events.count, events[runEnd].tick == tick { runEnd += 1 }
-            var run: [MidiEvent] = []
-            run.reserveCapacity(runEnd - runStart + groupEnd - groupStart)
-            run.append(contentsOf: events[runStart..<runEnd])
+            let tailStart = merged.count
+            merged.append(contentsOf: events[runStart..<runEnd])
             var lastNotNoteClass = -1
             var lastNotNoteOn = -1
-            var index = run.count
+            var index = merged.count - tailStart
             while index > 0 {
                 index -= 1
-                let candidate = run[index]
+                let candidate = merged[tailStart + index]
                 if lastNotNoteClass < 0, !(candidate.isChannel && candidate.typeNibble <= 0x9) {
                     lastNotNoteClass = index
                 }
@@ -249,12 +248,10 @@ extension MidiChunk {
                 } else if event.isNoteEnd {
                     target = lastNotNoteOn >= 0 ? lastNotNoteOn + 1 : 0
                 } else {
-                    target = run.count
+                    target = merged.count - tailStart
                 }
-                run.insert(event, at: target)
-                // runStart + groupStart counts preceding survivors plus earlier tick-group insertions:
-                // insertion-time coordinates for history replay, not final-array offsets.
-                inserted.append((offset: runStart + groupStart + target, event: event))
+                merged.insert(event, at: tailStart + target)
+                inserted.append((offset: tailStart + target, event: event))
                 if lastNotNoteClass >= target { lastNotNoteClass += 1 }
                 if lastNotNoteOn >= target { lastNotNoteOn += 1 }
                 if !(event.isChannel && event.typeNibble <= 0x9), target > lastNotNoteClass {
@@ -262,7 +259,6 @@ extension MidiChunk {
                 }
                 if !event.isNoteOn, target > lastNotNoteOn { lastNotNoteOn = target }
             }
-            merged.append(contentsOf: run)
             survivorIndex = runEnd
             groupStart = groupEnd
         }
