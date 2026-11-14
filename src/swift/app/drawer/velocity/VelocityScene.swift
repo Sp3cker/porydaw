@@ -11,36 +11,29 @@ import QtBridge
 /// gesture captured, its previewed values, its detent-unlock and activation
 /// flags, the hovered note and the detent preference. Sendable values only.
 struct VelocityInteractionSnapshot: Sendable {
-    var frozenNotes: [VelocityFrozenNote] = []
+    var frozen = VelocityFrozenNotes()
     var preview: [NoteID: UInt8] = [:]
     var detentUnlock: Bool = false
     var relativeActivated: Bool = false
     var hovered: NoteID?
     var detentsEnabled: Bool = true
-    /// The frozen notes by identity, exactly the gesture's own lookup.
-    private var frozenIndices: [NoteID: Int] = [:]
 
     init(
-        frozenNotes: [VelocityFrozenNote] = [], preview: [NoteID: UInt8] = [:],
+        frozen: VelocityFrozenNotes = VelocityFrozenNotes(), preview: [NoteID: UInt8] = [:],
         detentUnlock: Bool = false, relativeActivated: Bool = false, hovered: NoteID? = nil,
-        detentsEnabled: Bool = true, frozenIndices: [NoteID: Int]? = nil
+        detentsEnabled: Bool = true
     ) {
-        self.frozenNotes = frozenNotes
+        self.frozen = frozen
         self.preview = preview
         self.detentUnlock = detentUnlock
         self.relativeActivated = relativeActivated
         self.hovered = hovered
         self.detentsEnabled = detentsEnabled
-        self.frozenIndices =
-            frozenIndices
-            ?? Dictionary(
-            uniqueKeysWithValues:
-                frozenNotes.enumerated().map { ($0.element.noteID, $0.offset) })
     }
 
     /// One frozen note by identity.
     func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
-        frozenIndices[id].map { frozenNotes[$0] }
+        frozen.frozenNote(id)
     }
 }
 

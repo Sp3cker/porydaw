@@ -41,6 +41,38 @@ public struct VelocityFrozenNote: Sendable {
     }
 }
 
+/// Frozen notes with their identity lookup; validation and append keep the pair in sync.
+struct VelocityFrozenNotes: Sendable {
+    private(set) var notes: [VelocityFrozenNote] = []
+    private var indices: [NoteID: Int] = [:]
+
+    init() {}
+
+    init?(validating notes: [VelocityFrozenNote]) {
+        var indices: [NoteID: Int] = [:]
+        indices.reserveCapacity(notes.count)
+        for (index, note) in notes.enumerated() {
+            guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
+                indices.updateValue(index, forKey: note.noteID) == nil
+            else { return nil }
+        }
+        self.notes = notes
+        self.indices = indices
+    }
+
+    func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
+        indices[id].map { notes[$0] }
+    }
+
+    mutating func append(_ note: VelocityFrozenNote) {
+        guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
+            indices[note.noteID] == nil
+        else { return }
+        indices[note.noteID] = notes.count
+        notes.append(note)
+    }
+}
+
 public enum VelocityGestureKind: Int, Sendable {
     case relative = 0
     case paint = 1
@@ -57,25 +89,21 @@ public struct VelocityGestureState: Sendable {
     public var kind: VelocityGestureKind
     public var revision: UInt64
     public var track: Int
-    public private(set) var notes: [VelocityFrozenNote]
-    private(set) var noteIndices: [NoteID: Int]
+    private(set) var frozen: VelocityFrozenNotes
+    public var notes: [VelocityFrozenNote] { frozen.notes }
 
     public func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
-        noteIndices[id].map { notes[$0] }
+        frozen.frozenNote(id)
     }
 
     public mutating func append(_ note: VelocityFrozenNote) {
-        guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
-            noteIndices[note.noteID] == nil
-        else { return }
-        noteIndices[note.noteID] = notes.count
-        notes.append(note)
+        frozen.append(note)
     }
 
     /// The original is visible immediately; only changed targets enter the draft.
     public func previewVelocity(_ id: NoteID) -> UInt8? {
-        guard let index = noteIndices[id] else { return nil }
-        return preview[id] ?? notes[index].velocity
+        guard let note = frozen.frozenNote(id) else { return nil }
+        return preview[id] ?? note.velocity
     }
 
     @discardableResult
@@ -83,13 +111,13 @@ public struct VelocityGestureState: Sendable {
         guard !updates.isEmpty else { return false }
         if updates.count == 1 {
             let update = updates[0]
-            guard noteIndices[update.noteID] != nil else { return false }
+            guard frozen.frozenNote(update.noteID) != nil else { return false }
             preview[update.noteID] = UInt8(min(max(update.velocity, 1), 127))
             return true
         }
         var seen: Set<NoteID> = []
         for update in updates {
-            guard noteIndices[update.noteID] != nil,
+            guard frozen.frozenNote(update.noteID) != nil,
                 seen.insert(update.noteID).inserted
             else { return false }
         }
@@ -119,18 +147,11 @@ public struct VelocityGestureState: Sendable {
         controlPress: Bool = false
     ) {
         if (kind == .relative || kind == .ramp) && notes.isEmpty { return nil }
-        var indices: [NoteID: Int] = [:]
-        indices.reserveCapacity(notes.count)
-        for (index, note) in notes.enumerated() {
-            guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
-                indices.updateValue(index, forKey: note.noteID) == nil
-            else { return nil }
-        }
+        guard let frozen = VelocityFrozenNotes(validating: notes) else { return nil }
         self.kind = kind
         self.revision = revision
         self.track = track
-        self.notes = notes
-        noteIndices = indices
+        self.frozen = frozen
         self.axis = axis
         self.detentUnlock = detentUnlock
         self.activationDistance = activationDistance

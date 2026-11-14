@@ -157,15 +157,13 @@ extension VelocityPage {
 
     /// The page's live gesture and hover facts, frozen for one build.
     private func interactionSnapshot() -> VelocityInteractionSnapshot {
-        // The gesture's private-set notes and append-maintained index stay paired.
         VelocityInteractionSnapshot(
-            frozenNotes: gesture?.notes ?? [],
+            frozen: gesture?.frozen ?? VelocityFrozenNotes(),
             preview: gesture?.preview ?? rollPreview,
             detentUnlock: gesture?.detentUnlock ?? false,
             relativeActivated: gesture?.relativeActivated ?? false,
             hovered: hovered,
-            detentsEnabled: detentsEnabled,
-            frozenIndices: gesture?.noteIndices ?? [:])
+            detentsEnabled: detentsEnabled)
     }
 
     /// The palette colours a scene build draws with, as values.
