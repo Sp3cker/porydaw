@@ -3,9 +3,7 @@ import Foundation
 @MainActor
 extension SongDocument {
     func makeTimePlan(scope: TimeScope, file: MidiFile) -> TimePlan {
-        var sealed = file
-        sealed.sealNoteTables()
-        let map = sealed.engineTracks()
+        let (sealed, map) = sealedFileAndMap(file)
         var trackByChunk: [Int: Int] = [:]
         for track in 0..<map.usedTrackCount {
             if let chunk = map.tracks[track].midiChunk { trackByChunk[chunk] = track }

@@ -390,9 +390,7 @@ extension SongDocument {
         _ ids: [NoteID], in songState: SongState,
         tracks: Set<Int>? = nil
     ) -> [Note]? {
-        var file = songState.file
-        file.sealNoteTables()
-        let map = file.engineTracks()
+        let (file, map) = sealedFileAndMap(songState.file)
         var seen: Set<NoteID> = []
         var result: [Note] = []
         result.reserveCapacity(ids.count)
@@ -410,9 +408,7 @@ extension SongDocument {
     private func collectRemovals(
         _ notes: [Note], source: SongState, into edits: inout [Int: NoteChunkEdits]
     ) {
-        var file = source.file
-        file.sealNoteTables()
-        let map = file.engineTracks()
+        let (file, map) = sealedFileAndMap(source.file)
         for note in notes {
             guard let location = file.location(of: note.id, map: map) else { continue }
             edits[location.chunk, default: NoteChunkEdits()].removals.append(location.onIndex)
@@ -441,9 +437,7 @@ extension SongDocument {
         for span in spans where affectedTracks.last != span.track {
             affectedTracks.append(span.track)
         }
-        var file = source.file
-        file.sealNoteTables()
-        let map = file.engineTracks()
+        let (file, map) = sealedFileAndMap(source.file)
         for track in affectedTracks {
             guard track >= 0, track < map.usedTrackCount,
                 let chunk = map.tracks[track].midiChunk
@@ -485,9 +479,7 @@ extension SongDocument {
     private func retainSharedEnds(
         source: SongState, replacedEnds: Set<NoteID>, edits: inout [Int: NoteChunkEdits]
     ) {
-        var file = source.file
-        file.sealNoteTables()
-        let map = file.engineTracks()
+        let (file, map) = sealedFileAndMap(source.file)
         for track in 0..<map.usedTrackCount {
             guard let chunk = map.tracks[track].midiChunk,
                 edits[chunk]?.removals.isEmpty == false

@@ -85,7 +85,7 @@ extension SongState {
     }
 }
 
-/// Track-edit operations in Task 3 are the producer for this Task 2 interface value.
+/// Track edits produce these index mappings for document-change and history consumers.
 public struct TrackRemap: Equatable, Sendable {
     public var chunkMap: [Int?]
     public var engineTrackMap: [Int?]
@@ -677,22 +677,26 @@ public final class SongDocument {
         state.file.location(of: id, map: trackMap)
     }
 
+    /// Published and gesture-origin states are already sealed; this also covers ad-hoc files.
+    internal func sealedFileAndMap(_ file: MidiFile) -> (file: MidiFile, map: EngineTrackMap) {
+        var sealed = file
+        sealed.sealNoteTables()
+        return (sealed, sealed.engineTracks())
+    }
+
     internal func location(of id: NoteID, in songState: SongState) -> NoteLocation? {
-        var file = songState.file
-        file.sealNoteTables()
-        return file.location(of: id, map: file.engineTracks())
+        let (file, map) = sealedFileAndMap(songState.file)
+        return file.location(of: id, map: map)
     }
 
     internal func notes(in track: Int, of songState: SongState) -> [Note] {
-        var file = songState.file
-        file.sealNoteTables()
-        return file.notes(in: track, map: file.engineTracks())
+        let (file, map) = sealedFileAndMap(songState.file)
+        return file.notes(in: track, map: map)
     }
 
     internal func notes(of songState: SongState) -> [[Note]] {
-        var file = songState.file
-        file.sealNoteTables()
-        return file.notes(map: file.engineTracks())
+        let (file, map) = sealedFileAndMap(songState.file)
+        return file.notes(map: map)
     }
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {

@@ -12,9 +12,7 @@ extension SongDocument {
         }
         guard ordered.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
         guard spansAreCompatible(spans: ordered, allowExactDuplicates: false) else { return false }
-        var file = reference.file
-        file.sealNoteTables()
-        let map = file.engineTracks()
+        let (file, map) = sealedFileAndMap(reference.file)
         var firstSpan = 0
         while firstSpan < ordered.count {
             let track = ordered[firstSpan].track

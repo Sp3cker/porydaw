@@ -29,9 +29,7 @@ internal struct NoteTable: Sendable {
     private var onIndices: [Int32] = []
     private var endIndices: [Int32] = []
     private var rowOfSlot: [Int32] = []
-    private var boundSlots: [UInt64] = []
     private var channel: UInt8?
-    private var maxDuration: Tick = 0
     private(set) var isSealed = false
 
     mutating func invalidate() {
@@ -51,7 +49,7 @@ internal struct NoteTable: Sendable {
         onIndices.removeAll(keepingCapacity: true)
         endIndices.removeAll(keepingCapacity: true)
         rowOfSlot.removeAll(keepingCapacity: true)
-        boundSlots.removeAll(keepingCapacity: true)
+        var boundSlots: [UInt64] = []
         for event in events where event.isNoteOn {
             guard let id = event.noteID, id.isAssigned else { continue }
             precondition(id.chunkKey == chunkKey, "Note ID belongs to another chunk.")
@@ -67,7 +65,6 @@ internal struct NoteTable: Sendable {
                 rowOfSlot.append(contentsOf: repeatElement(-1, count: slot + 1 - rowOfSlot.count))
             }
         }
-        maxDuration = 0
         if let channel {
             let capacity = events.count / 2
             ticks.reserveCapacity(capacity)
@@ -102,7 +99,6 @@ internal struct NoteTable: Sendable {
                             ids.append(event.noteID ?? NoteID())
                             onIndices.append(Int32(index))
                             endIndices.append(pending)
-                            maxDuration = max(maxDuration, duration)
                         }
                     }
                 }
@@ -206,6 +202,7 @@ extension MidiFile {
             guard let chunk = map.tracks[track].midiChunk,
                 chunks[chunk].chunkKey == id.chunkKey
             else { continue }
+            // Chunk keys are unique per document, so at most one mapped chunk matches.
             return chunks[chunk].noteTable.note(id, track: track)
         }
         return nil
