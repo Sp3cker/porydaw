@@ -80,7 +80,7 @@ extension SongDocument {
                 throw NoteEditError.invalidTrack(note.track)
             }
             let duration = max(note.duration, 1)
-            let id = mutation.mintNoteID()
+            let id = mutation.mintNoteID(chunk: mapping.chunk)
             insertedIDs.append(id)
             edits[mapping.chunk, default: NoteChunkEdits()].insertions.append(
                 .channel(

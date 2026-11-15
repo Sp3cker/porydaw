@@ -248,11 +248,143 @@ private enum NoteOracleChecks {
             message: "original surviving NoteIDs remain identical after the complete undo-redo cycle")
     }
 
+    private static func slotResurrection(_ report: CheckReport) throws {
+        let document = SongDocument(
+            file: baseFile(events: [
+                .channel(tick: 4, status: 0x90, data0: 60, data1: 70),
+                .channel(tick: 12, status: 0x80, data0: 60),
+                .channel(tick: 24, status: 0x90, data0: 62, data1: 80),
+                .channel(tick: 32, status: 0x80, data0: 62),
+            ]))
+        let notes = document.notes(in: 0)
+        guard notes.count == 2 else {
+            report.fail(checkID, "slot resurrection fixture requires two notes in one track")
+            return
+        }
+        let deletedID = notes[0].id
+        let survivingID = notes[1].id
+        let initial = try snapshot(document)
+        report.expect(
+            notes[0].chunk == notes[1].chunk
+                && document.note(deletedID)?.id == deletedID
+                && document.note(survivingID)?.id == survivingID,
+            cppID: checkID, message: "slot resurrection: both original handles resolve in the same chunk")
+        expectEquivalent(document, report, "slot resurrection initial")
+
+        document.deleteNotes([deletedID])
+        report.expect(
+            document.note(deletedID) == nil && document.note(survivingID)?.id == survivingID,
+            cppID: checkID, message: "slot resurrection delete: only the deleted handle stops resolving")
+        let afterDelete = try snapshot(document)
+        expectEquivalent(document, report, "slot resurrection after delete")
+
+        let insertedIDs = try document.addNotes([
+            NewNote(track: 0, tick: 48, pitch: 64, duration: 8, velocity: 90)
+        ])
+        guard insertedIDs.count == 1, let insertedID = insertedIDs.first else {
+            report.fail(checkID, "slot resurrection add requires one inserted note")
+            return
+        }
+        report.expect(
+            insertedID != deletedID && insertedID != survivingID
+                && document.note(insertedID)?.chunk == notes[0].chunk
+                && document.note(insertedID)?.tick == 48 && document.note(insertedID)?.pitch == 64
+                && document.note(survivingID)?.id == survivingID && document.note(deletedID) == nil,
+            cppID: checkID,
+            message: "slot resurrection add: a distinct new handle and the survivor resolve without aliasing")
+        let afterAdd = try snapshot(document)
+        expectEquivalent(document, report, "slot resurrection after add")
+
+        report.expect(document.history.undoDocument(), cppID: checkID, message: "slot resurrection: undo add succeeds")
+        report.expect(
+            document.note(insertedID) == nil && document.note(deletedID) == nil,
+            cppID: checkID, message: "slot resurrection undo add: neither removed handle resolves")
+        try expectSnapshot(document, afterDelete, report, "slot resurrection undo add")
+
+        report.expect(
+            document.history.undoDocument(), cppID: checkID, message: "slot resurrection: undo delete succeeds")
+        report.expect(
+            document.note(deletedID)?.id == deletedID && document.note(insertedID) == nil,
+            cppID: checkID,
+            message: "slot resurrection undo delete: the original exact handle returns without the new note")
+        try expectSnapshot(document, initial, report, "slot resurrection undo delete")
+
+        report.expect(
+            document.history.redoDocument(), cppID: checkID, message: "slot resurrection: redo delete succeeds")
+        report.expect(
+            document.note(deletedID) == nil && document.note(insertedID) == nil,
+            cppID: checkID, message: "slot resurrection redo delete: neither removed handle resolves")
+        try expectSnapshot(document, afterDelete, report, "slot resurrection redo delete")
+
+        report.expect(document.history.redoDocument(), cppID: checkID, message: "slot resurrection: redo add succeeds")
+        report.expect(
+            document.note(insertedID)?.id == insertedID && document.note(deletedID) == nil,
+            cppID: checkID,
+            message: "slot resurrection redo add: the new exact handle returns and the original stays absent")
+        try expectSnapshot(document, afterAdd, report, "slot resurrection redo add")
+    }
+
+    private static func duplicateTrackKeyIsolation(_ report: CheckReport) throws {
+        let document = SongDocument(
+            file: baseFile(events: [
+                .channel(tick: 4, status: 0x90, data0: 60, data1: 70),
+                .channel(tick: 12, status: 0x80, data0: 60),
+                .channel(tick: 24, status: 0x90, data0: 62, data1: 80),
+                .channel(tick: 32, status: 0x80, data0: 62),
+            ]))
+        let originalNotes = document.notes(in: 0)
+        guard originalNotes.count == 2 else {
+            report.fail(checkID, "duplicate-track key isolation fixture requires two original notes")
+            return
+        }
+        let originalIDs = Set(originalNotes.map(\.id))
+        let initial = try snapshot(document)
+        expectEquivalent(document, report, "duplicate-track key isolation initial")
+        guard let duplicatedTrack = document.duplicateTrack(0) else {
+            report.fail(checkID, "duplicate-track key isolation requires successful track duplication")
+            return
+        }
+        let duplicatedNotes = document.notes(in: duplicatedTrack)
+        let duplicatedIDs = Set(duplicatedNotes.map(\.id))
+        report.expect(
+            duplicatedNotes.count == originalNotes.count && originalIDs.isDisjoint(with: duplicatedIDs),
+            cppID: checkID,
+            message: "duplicate-track key isolation: every copied note has an identity distinct from the originals")
+        report.expect(
+            originalNotes.allSatisfy { document.note($0.id) == $0 }
+                && duplicatedNotes.allSatisfy { document.note($0.id) == $0 },
+            cppID: checkID,
+            message: "duplicate-track key isolation: both original and duplicate handles resolve to their own notes")
+        let afterDuplicate = try snapshot(document)
+        expectEquivalent(document, report, "duplicate-track key isolation after duplicate")
+
+        report.expect(
+            document.history.undoDocument(), cppID: checkID, message: "duplicate-track key isolation: undo succeeds")
+        report.expect(
+            duplicatedIDs.allSatisfy { document.note($0) == nil }
+                && originalNotes.allSatisfy { document.note($0.id) == $0 },
+            cppID: checkID,
+            message: "duplicate-track key isolation undo: copied handles disappear while originals still resolve")
+        try expectSnapshot(document, initial, report, "duplicate-track key isolation undo")
+
+        report.expect(
+            document.history.redoDocument(), cppID: checkID, message: "duplicate-track key isolation: redo succeeds")
+        report.expect(
+            document.notes(in: duplicatedTrack).map(\.id) == duplicatedNotes.map(\.id)
+                && duplicatedNotes.allSatisfy { document.note($0.id) == $0 }
+                && originalNotes.allSatisfy { document.note($0.id) == $0 },
+            cppID: checkID,
+            message: "duplicate-track key isolation redo: copied handles return unchanged and both sets resolve")
+        try expectSnapshot(document, afterDuplicate, report, "duplicate-track key isolation redo")
+    }
+
     static func run(_ report: CheckReport) {
         handcrafted(report)
         do {
             try corpus(report)
             try seededHistory(report)
+            try slotResurrection(report)
+            try duplicateTrackKeyIsolation(report)
         } catch {
             report.fail(checkID, "oracle fixture, edit or encoding failed: \(error)")
         }

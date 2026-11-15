@@ -236,7 +236,7 @@ extension SongDocument {
                 .channel(
                     tick: note.tick, status: 0x90 | channel, data0: note.pitch,
                     data1: clampVelocity(Int(note.velocity)),
-                    noteID: mutation.mintNoteID()))
+                    noteID: mutation.mintNoteID(chunk: chunk)))
             noteInsertions[chunk].append(
                 .channel(
                     tick: note.tick + duration, status: 0x90 | channel, data0: note.pitch))

@@ -24,7 +24,8 @@ internal struct NoteTable: Sendable {
     private var ids: [NoteID] = []
     private var onIndices: [Int32] = []
     private var endIndices: [Int32] = []
-    private var rowByID: [NoteID: Int] = [:]
+    private var rowOfSlot: [Int32] = []
+    private var boundSlots: [UInt64] = []
     private var channel: UInt8?
     private var maxDuration: Tick = 0
     private(set) var isSealed = false
@@ -34,7 +35,7 @@ internal struct NoteTable: Sendable {
     }
 
     @discardableResult
-    mutating func seal(events: [MidiEvent]) -> Bool {
+    mutating func seal(events: [MidiEvent], chunkKey: UInt16) -> Bool {
         guard !isSealed else { return false }
         let previousChannel = channel
         channel = events.first(where: { $0.isChannel })?.channel
@@ -45,7 +46,23 @@ internal struct NoteTable: Sendable {
         ids.removeAll(keepingCapacity: true)
         onIndices.removeAll(keepingCapacity: true)
         endIndices.removeAll(keepingCapacity: true)
-        rowByID.removeAll(keepingCapacity: true)
+        rowOfSlot.removeAll(keepingCapacity: true)
+        boundSlots.removeAll(keepingCapacity: true)
+        for event in events where event.isNoteOn {
+            guard let id = event.noteID, id.isAssigned else { continue }
+            precondition(id.chunkKey == chunkKey, "Note ID belongs to another chunk.")
+            let slot = id.slot
+            let word = slot / 64
+            if word >= boundSlots.count {
+                boundSlots.append(contentsOf: repeatElement(0, count: word + 1 - boundSlots.count))
+            }
+            let mask = UInt64(1) << (slot % 64)
+            precondition(boundSlots[word] & mask == 0, "Duplicate note slot in chunk.")
+            boundSlots[word] |= mask
+            if slot >= rowOfSlot.count {
+                rowOfSlot.append(contentsOf: repeatElement(-1, count: slot + 1 - rowOfSlot.count))
+            }
+        }
         maxDuration = 0
         if let channel {
             let capacity = events.count / 2
@@ -72,11 +89,6 @@ internal struct NoteTable: Sendable {
                             nextEnd[Int(pitch)] = Int32(index)
                         } else if type == 0x9, velocity != 0 {
                             guard status & 0x0F == channel else { continue }
-                            if let id = event.noteID, id.isAssigned,
-                                rowByID.updateValue(-1, forKey: id) != nil
-                            {
-                                preconditionFailure("Duplicate note ID in chunk.")
-                            }
                             let pending = nextEnd[Int(pitch)]
                             let duration = pending >= 0 ? buffer[Int(pending)].tick - event.tick : 0
                             ticks.append(event.tick)
@@ -99,10 +111,8 @@ internal struct NoteTable: Sendable {
         ids.reverse()
         onIndices.reverse()
         endIndices.reverse()
-        rowByID.removeAll(keepingCapacity: true)
-        rowByID.reserveCapacity(ids.count)
         for row in ids.indices where ids[row].isAssigned {
-            rowByID[ids[row]] = row
+            rowOfSlot[ids[row].slot] = Int32(row)
         }
         isSealed = true
         return channel != previousChannel
@@ -129,7 +139,9 @@ internal struct NoteTable: Sendable {
 
     func note(_ id: NoteID, track: Int, chunk: Int) -> Note? {
         precondition(isSealed, "Reading an unsealed note table.")
-        guard id.isAssigned, let row = rowByID[id] else { return nil }
+        guard id.isAssigned, id.slot < rowOfSlot.count else { return nil }
+        let row = Int(rowOfSlot[id.slot])
+        guard row >= 0, ids[row] == id else { return nil }
         return note(at: row, track: track, chunk: chunk)
     }
 }
@@ -137,7 +149,7 @@ internal struct NoteTable: Sendable {
 extension MidiChunk {
     @discardableResult
     internal mutating func sealNoteTable() -> Bool {
-        noteTable.seal(events: events)
+        noteTable.seal(events: events, chunkKey: chunkKey)
     }
 }
 
@@ -167,11 +179,12 @@ extension MidiFile {
 
     internal func note(_ id: NoteID, tracks: Set<Int>? = nil, map: EngineTrackMap) -> Note? {
         guard id.isAssigned else { return nil }
-        var result: Note?
         for track in 0..<map.usedTrackCount where tracks?.contains(track) ?? true {
-            guard let chunk = map.tracks[track].midiChunk else { continue }
-            if let note = chunks[chunk].noteTable.note(id, track: track, chunk: chunk) { result = note }
+            guard let chunk = map.tracks[track].midiChunk,
+                chunks[chunk].chunkKey == id.chunkKey
+            else { continue }
+            return chunks[chunk].noteTable.note(id, track: track, chunk: chunk)
         }
-        return result
+        return nil
     }
 }

@@ -184,36 +184,101 @@ public struct TimeSignature: Equatable, Sendable {
 @MainActor
 internal struct DocumentMutation {
     var state: SongState
-    private(set) var nextNoteID: UInt64
+    private(set) var nextSerial: UInt64
+    private(set) var nextChunkKey: UInt64
+    private struct NoteSlots {
+        var words: [UInt64] = []
+        var firstFreeWord = 0
+
+        mutating func reserve(_ slot: Int) {
+            let word = slot / 64
+            if word >= words.count {
+                words.append(contentsOf: repeatElement(0, count: word + 1 - words.count))
+            }
+            words[word] |= UInt64(1) << (slot % 64)
+        }
+
+        mutating func allocate() -> Int {
+            while firstFreeWord < words.count && words[firstFreeWord] == UInt64.max {
+                firstFreeWord += 1
+            }
+            let bit = firstFreeWord < words.count ? (~words[firstFreeWord]).trailingZeroBitCount : 0
+            let slot = firstFreeWord * 64 + bit
+            precondition(slot < 1 << 20, "Note slots are exhausted.")
+            reserve(slot)
+            return slot
+        }
+    }
+    private var reservedSlots: [Int: NoteSlots] = [:]
     var changes = DocumentChangeSet()
     private(set) var noteChannelChanges: Set<Int> = []
 
-    init(_ state: SongState, nextNoteID: UInt64) {
+    init(_ state: SongState, nextSerial: UInt64, nextChunkKey: UInt64) {
         self.state = state
-        self.nextNoteID = nextNoteID
+        self.nextSerial = nextSerial
+        self.nextChunkKey = nextChunkKey
     }
 
-    mutating func mintNoteID() -> NoteID {
-        let result = NoteID(nextNoteID)
-        nextNoteID = nextNoteID == .max ? 1 : nextNoteID + 1
+    private mutating func reserveSlots(in chunk: Int) {
+        guard reservedSlots[chunk] == nil else { return }
+        var slots = NoteSlots()
+        for event in state.file.chunks[chunk].events where event.isNoteOn {
+            guard let id = event.noteID, id.isAssigned else { continue }
+            precondition(id.chunkKey == state.file.chunks[chunk].chunkKey, "Note ID belongs to another chunk.")
+            slots.reserve(id.slot)
+        }
+        reservedSlots[chunk] = slots
+    }
+
+    private mutating func remapReservedSlots(_ remap: (Int) -> Int?) {
+        guard !reservedSlots.isEmpty else { return }
+        var remapped: [Int: NoteSlots] = [:]
+        remapped.reserveCapacity(reservedSlots.count)
+        for (chunk, slots) in reservedSlots {
+            if let destination = remap(chunk) { remapped[destination] = slots }
+        }
+        reservedSlots = remapped
+    }
+
+    mutating func mintNoteID(chunk: Int) -> NoteID {
+        reserveSlots(in: chunk)
+        let slot = reservedSlots[chunk, default: NoteSlots()].allocate()
+        let result = NoteID(serial: nextSerial, key: UInt64(state.file.chunks[chunk].chunkKey), slot: slot)
+        nextSerial = nextSerial == (1 << 28) - 1 ? 1 : nextSerial + 1
         return result
+    }
+
+    private mutating func stamp(_ event: inout MidiEvent, chunk: Int) {
+        guard event.isNoteOn else { return }
+        guard let id = event.noteID else {
+            event.noteID = mintNoteID(chunk: chunk)
+            return
+        }
+        guard id.isAssigned else { return }
+        if id.chunkKey != state.file.chunks[chunk].chunkKey {
+            event.noteID = mintNoteID(chunk: chunk)
+        } else {
+            reserveSlots(in: chunk)
+            reservedSlots[chunk, default: NoteSlots()].reserve(id.slot)
+        }
     }
 
     mutating func note(_ id: NoteID) -> Note? {
         guard id.isAssigned else { return nil }
         let map = state.file.engineTracks()
-        var result: Note?
         for track in 0..<map.usedTrackCount {
-            guard let chunk = map.tracks[track].midiChunk else { continue }
+            guard let chunk = map.tracks[track].midiChunk,
+                state.file.chunks[chunk].chunkKey == id.chunkKey
+            else { continue }
             if state.file.chunks[chunk].sealNoteTable() { noteChannelChanges.insert(chunk) }
-            if let note = state.file.chunks[chunk].noteTable.note(id, track: track, chunk: chunk) { result = note }
+            return state.file.chunks[chunk].noteTable.note(id, track: track, chunk: chunk)
         }
-        return result
+        return nil
     }
 
     mutating func insert(_ event: MidiEvent, chunk: Int) {
         var event = event
-        if event.isNoteOn && event.noteID == nil { event.noteID = mintNoteID() }
+        stamp(&event, chunk: chunk)
         let oldEnd = state.file.chunks[chunk].endTick
         let offset = state.file.chunks[chunk].insert(event)
         changes.events.append(
@@ -230,8 +295,13 @@ internal struct DocumentMutation {
         chunk: Int
     ) {
         var insertions = insertions
-        for index in insertions.indices where insertions[index].isNoteOn && insertions[index].noteID == nil {
-            insertions[index].noteID = mintNoteID()
+        if removals.contains(where: {
+            state.file.chunks[chunk].events.indices.contains($0) && state.file.chunks[chunk].events[$0].isNoteOn
+        }) {
+            reserveSlots(in: chunk)
+        }
+        for index in insertions.indices {
+            stamp(&insertions[index], chunk: chunk)
         }
         let oldEnd = state.file.chunks[chunk].endTick
         let result = state.file.chunks[chunk].apply(
@@ -256,6 +326,7 @@ internal struct DocumentMutation {
 
     @discardableResult
     mutating func remove(chunk: Int, offset: Int) -> MidiEvent {
+        if state.file.chunks[chunk].events[offset].isNoteOn { reserveSlots(in: chunk) }
         let event = state.file.chunks[chunk].events.remove(at: offset)
         state.file.chunks[chunk].noteTable.invalidate()
         changes.events.append(
@@ -269,7 +340,7 @@ internal struct DocumentMutation {
         let removed = state.file.chunks[chunk].events[offset]
         var event = event
         if event.isNoteOn {
-            event.noteID = removed.isNoteOn ? (removed.noteID ?? mintNoteID()) : mintNoteID()
+            event.noteID = removed.isNoteOn ? (removed.noteID ?? mintNoteID(chunk: chunk)) : mintNoteID(chunk: chunk)
         } else {
             event.noteID = nil
         }
@@ -294,12 +365,23 @@ internal struct DocumentMutation {
                     chunk: chunk, offset: to, event: event)))
     }
 
-    mutating func appendChunk(_ chunk: MidiChunk) {
+    private mutating func forkChunk(_ chunk: MidiChunk) -> MidiChunk {
+        precondition(nextChunkKey <= 65535, "Chunk keys are exhausted.")
         var chunk = chunk
+        chunk.chunkKey = UInt16(nextChunkKey)
+        nextChunkKey += 1
+        var slot = 0
         for index in chunk.events.indices where chunk.events[index].isNoteOn {
-            chunk.events[index].noteID = mintNoteID()
+            chunk.events[index].noteID = NoteID(serial: nextSerial, key: UInt64(chunk.chunkKey), slot: slot)
+            nextSerial = nextSerial == (1 << 28) - 1 ? 1 : nextSerial + 1
+            slot += 1
         }
         chunk.noteTable.invalidate()
+        return chunk
+    }
+
+    mutating func appendChunk(_ chunk: MidiChunk) {
+        let chunk = forkChunk(chunk)
         let offset = state.file.chunks.count
         state.file.chunks.append(chunk)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
@@ -308,16 +390,14 @@ internal struct DocumentMutation {
     @discardableResult
     mutating func removeChunk(at offset: Int) -> MidiChunk {
         let chunk = state.file.chunks.remove(at: offset)
+        remapReservedSlots { $0 == offset ? nil : ($0 > offset ? $0 - 1 : $0) }
         changes.chunkRemovals.append(ChunkRemoval(offset: offset, chunk: chunk))
         return chunk
     }
 
     mutating func insertChunk(_ chunk: MidiChunk, at offset: Int) {
-        var chunk = chunk
-        for index in chunk.events.indices where chunk.events[index].isNoteOn {
-            chunk.events[index].noteID = mintNoteID()
-        }
-        chunk.noteTable.invalidate()
+        let chunk = forkChunk(chunk)
+        remapReservedSlots { $0 >= offset ? $0 + 1 : $0 }
         state.file.chunks.insert(chunk, at: offset)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
     }
@@ -325,6 +405,12 @@ internal struct DocumentMutation {
     mutating func moveChunk(from: Int, to: Int) {
         let chunk = state.file.chunks.remove(at: from)
         state.file.chunks.insert(chunk, at: to)
+        remapReservedSlots { index in
+            if index == from { return to }
+            if from < to && index > from && index <= to { return index - 1 }
+            if from > to && index >= to && index < from { return index + 1 }
+            return index
+        }
         changes.chunkMoves.append(ChunkMove(from: from, to: to))
     }
 
@@ -436,7 +522,8 @@ public final class SongDocument {
         let state: SongState
     }
     private var gestureOrigin: GestureOrigin?
-    private var nextNoteID: UInt64
+    private var nextSerial: UInt64
+    internal private(set) var nextChunkKey: UInt64
     private var nextEffectID: UInt64
     private var savedConfig: SongConfig
 
@@ -468,12 +555,13 @@ public final class SongDocument {
             }
             adopted.chunks[chunkIndex].noteTable.invalidate()
         }
-        let nextNoteID = Self.mintAllNoteIDs(in: &adopted)
+        let identities = Self.adoptNoteIdentities(in: &adopted)
         adopted.sealNoteTables()
         state = SongState(file: adopted, tempo: tempos, config: config, effects: effects)
         trackMap = adopted.engineTracks()
         revisions = DocumentRevisions(chunkCount: adopted.chunks.count)
-        self.nextNoteID = nextNoteID
+        nextSerial = identities.nextSerial
+        nextChunkKey = identities.nextChunkKey
         let maximumEffectID = effects.lazy.map { (effect: TrackEffect) in effect.id.raw }.max() ?? 0
         precondition(maximumEffectID < UInt64.max, "Effect identities are exhausted.")
         nextEffectID = maximumEffectID + 1
@@ -604,7 +692,7 @@ public final class SongDocument {
     }
 
     internal func beginMutation(from state: SongState) -> DocumentMutation {
-        DocumentMutation(state, nextNoteID: nextNoteID)
+        DocumentMutation(state, nextSerial: nextSerial, nextChunkKey: nextChunkKey)
     }
 
     internal func commit(
@@ -627,7 +715,8 @@ public final class SongDocument {
         }
         let startingState = cachedOrigin?.state ?? state
         state = mutation.state
-        nextNoteID = mutation.nextNoteID
+        nextSerial = mutation.nextSerial
+        nextChunkKey = mutation.nextChunkKey
         history.record(
             changes: mutation.changes, group: group, operation: operation,
             returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
@@ -676,19 +765,28 @@ public final class SongDocument {
         return result
     }
 
-    nonisolated private static func mintAllNoteIDs(in file: inout MidiFile) -> UInt64 {
-        var identifier: UInt64 = 1
+    nonisolated private static func adoptNoteIdentities(
+        in file: inout MidiFile
+    )
+        -> (nextSerial: UInt64, nextChunkKey: UInt64)
+    {
+        precondition(file.chunks.count <= 65535, "Chunk keys are exhausted.")
+        var serial: UInt64 = 1
         for chunkIndex in file.chunks.indices {
+            let key = UInt64(chunkIndex + 1)
+            file.chunks[chunkIndex].chunkKey = UInt16(key)
             file.chunks[chunkIndex].noteTable.invalidate()
+            var slot = 0
             for eventIndex in file.chunks[chunkIndex].events.indices {
                 file.chunks[chunkIndex].events[eventIndex].noteID = nil
                 if file.chunks[chunkIndex].events[eventIndex].isNoteOn {
-                    file.chunks[chunkIndex].events[eventIndex].noteID = NoteID(identifier)
-                    identifier = identifier == .max ? 1 : identifier + 1
+                    file.chunks[chunkIndex].events[eventIndex].noteID = NoteID(serial: serial, key: key, slot: slot)
+                    serial = serial == (1 << 28) - 1 ? 1 : serial + 1
+                    slot += 1
                 }
             }
         }
-        return identifier
+        return (serial, UInt64(file.chunks.count) + 1)
     }
 
     private func applyHistory(

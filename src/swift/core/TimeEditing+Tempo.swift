@@ -7,6 +7,8 @@ extension SongDocument {
         writes: [RangeEdit.LaneInsertion]
     ) -> Bool {
         var map = mutation.state.file.engineTracks()
+        let additionalTracks = max(0, count - map.usedTrackCount)
+        guard UInt64(additionalTracks) <= 65536 - mutation.nextChunkKey else { return false }
         var used = Array(repeating: false, count: 16)
         for track in map.tracks.prefix(map.usedTrackCount) { used[Int(track.channel)] = true }
         while map.usedTrackCount < count {

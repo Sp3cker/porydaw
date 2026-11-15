@@ -150,14 +150,17 @@ internal struct TrackNameScan {
 public struct MidiChunk: Equatable, Sendable {
     public var events: [MidiEvent]
     public var endTick: Tick
+    public var chunkKey: UInt16
     internal var noteTable = NoteTable()
 
-    public init(events: [MidiEvent] = [], endTick: Tick = 0) {
+    public init(events: [MidiEvent] = [], endTick: Tick = 0, chunkKey: UInt16 = 0) {
         self.events = events
         self.endTick = endTick
+        self.chunkKey = chunkKey
     }
 
     public static func == (lhs: MidiChunk, rhs: MidiChunk) -> Bool {
+        // Identity and derived metadata (chunkKey, noteTable) do not affect MIDI semantics.
         lhs.events == rhs.events && lhs.endTick == rhs.endTick
     }
 }

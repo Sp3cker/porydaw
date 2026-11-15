@@ -41,7 +41,7 @@ extension SongDocument {
 
     @discardableResult
     public func addTrack(voice: Int) -> Int? {
-        guard history.acceptsDocumentMutation else { return nil }
+        guard history.acceptsDocumentMutation, nextChunkKey <= 65535 else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
             let channel = freeChannel(in: map)
@@ -64,7 +64,7 @@ extension SongDocument {
 
     @discardableResult
     public func duplicateTrack(_ track: Int) -> Int? {
-        guard history.acceptsDocumentMutation else { return nil }
+        guard history.acceptsDocumentMutation, nextChunkKey <= 65535 else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
             track >= 0, track < map.usedTrackCount,
