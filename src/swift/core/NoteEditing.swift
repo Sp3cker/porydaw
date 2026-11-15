@@ -384,14 +384,16 @@ extension SongDocument {
         _ ids: [NoteID], in songState: SongState,
         tracks: Set<Int>? = nil
     ) -> [Note]? {
-        let notesByID =
-            tracks.map { NoteProjection.index(of: $0, in: songState.file) }
-            ?? projection(for: songState).index
+        var file = songState.file
+        file.sealNoteTables()
+        let map = file.engineTracks()
         var seen: Set<NoteID> = []
         var result: [Note] = []
         result.reserveCapacity(ids.count)
         for id in ids {
-            guard id.isAssigned, seen.insert(id).inserted, let found = notesByID[id] else {
+            guard id.isAssigned, seen.insert(id).inserted,
+                let found = file.note(id, tracks: tracks, map: map)
+            else {
                 return nil
             }
             result.append(found)
@@ -427,7 +429,7 @@ extension SongDocument {
         for span in spans where affectedTracks.last != span.track {
             affectedTracks.append(span.track)
         }
-        let sourceNotes = projection(for: source).tracks
+        let sourceNotes = notes(of: source)
         for track in affectedTracks {
             let stationaryNotes = sourceNotes.indices.contains(track) ? sourceNotes[track] : []
             for stationary in stationaryNotes {
@@ -467,7 +469,7 @@ extension SongDocument {
     private func retainSharedEnds(
         source: SongState, replacedEnds: Set<NoteID>, edits: inout [Int: NoteChunkEdits]
     ) {
-        for notes in projection(for: source).tracks {
+        for notes in notes(of: source) {
             guard let chunk = notes.first?.chunk, edits[chunk]?.removals.isEmpty == false else { continue }
             edits[chunk]?.removals.removeAll { index in
                 source.file.chunks[chunk].events[index].isNoteEnd

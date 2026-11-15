@@ -3,25 +3,27 @@ import Foundation
 @MainActor
 extension SongDocument {
     func makeTimePlan(scope: TimeScope, file: MidiFile) -> TimePlan {
-        let map = file.engineTracks()
+        var sealed = file
+        sealed.sealNoteTables()
+        let map = sealed.engineTracks()
         var trackByChunk: [Int: Int] = [:]
         for track in 0..<map.usedTrackCount {
             if let chunk = map.tracks[track].midiChunk { trackByChunk[chunk] = track }
         }
-        var selected = file.chunks.map { Array(repeating: false, count: $0.events.count) }
-        var affected = Array(repeating: false, count: file.chunks.count)
+        var selected = sealed.chunks.map { Array(repeating: false, count: $0.events.count) }
+        var affected = Array(repeating: false, count: sealed.chunks.count)
         var events: [TimeEventRef] = []
-        var xcmdLaneByChunk = Array(repeating: [Int: UInt8](), count: file.chunks.count)
-        for chunk in file.chunks.indices {
+        var xcmdLaneByChunk = Array(repeating: [Int: UInt8](), count: sealed.chunks.count)
+        for chunk in sealed.chunks.indices {
             let stream = streamIndex(for: chunk, map: map)
-            for point in Xcmd.project(Xcmd.traffic(in: file.chunks[chunk], stream: stream)).points {
+            for point in Xcmd.project(Xcmd.traffic(in: sealed.chunks[chunk], stream: stream)).points {
                 if point.index <= UInt64(Int.max) { xcmdLaneByChunk[chunk][Int(point.index)] = point.lane }
             }
         }
-        for chunk in file.chunks.indices {
+        for chunk in sealed.chunks.indices {
             let engineTrack = trackByChunk[chunk] ?? -1
-            for index in file.chunks[chunk].events.indices {
-                let event = file.chunks[chunk].events[index]
+            for index in sealed.chunks[chunk].events.indices {
+                let event = sealed.chunks[chunk].events[index]
                 let logicalLane = xcmdLaneByChunk[chunk][index].map { Lane.controller($0) }
                 let lane = logicalLane ?? lane(of: event)
                 let covered: Bool
@@ -73,11 +75,7 @@ extension SongDocument {
         var notes: [Note] = []
         for track in 0..<map.usedTrackCount where scope.coversTrack(track) {
             guard let chunk = map.tracks[track].midiChunk else { continue }
-            for note in NoteProjection.pair(
-                events: file.chunks[chunk].events,
-                channel: map.tracks[track].channel,
-                chunk: chunk, track: track)
-            {
+            for note in sealed.notes(in: track, map: map) {
                 guard selected[chunk][note.onIndex],
                     note.endIndex.map({ selected[chunk][$0] }) ?? true
                 else { continue }
@@ -85,7 +83,7 @@ extension SongDocument {
             }
         }
         if scope.wholeSong {
-            affected = Array(repeating: true, count: file.chunks.count)
+            affected = Array(repeating: true, count: sealed.chunks.count)
         }
         return TimePlan(events: events, notes: notes, selected: selected, affectedChunks: affected)
     }

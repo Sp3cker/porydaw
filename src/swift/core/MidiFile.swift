@@ -150,10 +150,15 @@ internal struct TrackNameScan {
 public struct MidiChunk: Equatable, Sendable {
     public var events: [MidiEvent]
     public var endTick: Tick
+    internal var noteTable = NoteTable()
 
     public init(events: [MidiEvent] = [], endTick: Tick = 0) {
         self.events = events
         self.endTick = endTick
+    }
+
+    public static func == (lhs: MidiChunk, rhs: MidiChunk) -> Bool {
+        lhs.events == rhs.events && lhs.endTick == rhs.endTick
     }
 }
 
@@ -183,6 +188,7 @@ extension MidiChunk {
         where events.indices.contains(index) && doomed.last != index {
             doomed.append(index)
         }
+        if !doomed.isEmpty || !insertions.isEmpty { noteTable.invalidate() }
         let removed = doomed.reversed().map { (offset: $0, event: events[$0]) }
         if !doomed.isEmpty {
             var view = events.mutableSpan

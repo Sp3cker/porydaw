@@ -193,7 +193,9 @@ internal struct DocumentChangeSet: Sendable {
                 state.file.chunks.remove(at: change.offset)
             }
             for change in chunkInsertions.sorted(by: { $0.offset < $1.offset }) {
-                state.file.chunks.insert(change.chunk, at: change.offset)
+                var chunk = change.chunk
+                chunk.noteTable.invalidate()
+                state.file.chunks.insert(chunk, at: change.offset)
             }
             for change in chunkMoves {
                 let chunk = state.file.chunks.remove(at: change.from)
@@ -208,7 +210,9 @@ internal struct DocumentChangeSet: Sendable {
                 state.file.chunks.remove(at: change.offset)
             }
             for change in chunkRemovals.sorted(by: { $0.offset < $1.offset }) {
-                state.file.chunks.insert(change.chunk, at: change.offset)
+                var chunk = change.chunk
+                chunk.noteTable.invalidate()
+                state.file.chunks.insert(chunk, at: change.offset)
             }
         }
     }
@@ -223,6 +227,7 @@ internal struct DocumentChangeSet: Sendable {
     }
 
     private func applyEvent(_ change: EventChange, to state: inout SongState) {
+        state.file.chunks[change.chunk].noteTable.invalidate()
         switch change {
         case .insert(let insertion):
             state.file.chunks[insertion.chunk].events.insert(
@@ -233,6 +238,7 @@ internal struct DocumentChangeSet: Sendable {
     }
 
     private func unapplyEvent(_ change: EventChange, to state: inout SongState) {
+        state.file.chunks[change.chunk].noteTable.invalidate()
         switch change {
         case .insert(let insertion):
             state.file.chunks[insertion.chunk].events.remove(at: insertion.offset)

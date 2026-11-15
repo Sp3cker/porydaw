@@ -57,6 +57,13 @@ public struct DocumentRevisions: Equatable, Sendable {
         if changes.config != nil { config = next() }
     }
 
+    internal mutating func advanceNotes(in chunks: Set<Int>) {
+        for chunk in chunks.sorted() {
+            self.chunks[chunk].notes = next()
+            all.notes = self.chunks[chunk].notes
+        }
+    }
+
     private mutating func stamp(_ change: EventChange) {
         let chunk = change.chunk
         switch change.event.payload {

@@ -55,6 +55,18 @@ public struct SongState: Equatable, Sendable {
     }
 }
 
+/// Shared event-buffer identity is only a fast path; uncertain cases compare values.
+struct ChunkPrint: Equatable {
+    var base: UnsafeRawPointer?
+    var count: Int
+
+    init(_ events: [MidiEvent]) {
+        (base, count) = events.withUnsafeBufferPointer {
+            ($0.baseAddress.map(UnsafeRawPointer.init), $0.count)
+        }
+    }
+}
+
 extension SongState {
     /// Uses shared chunk storage as a fast equality path. Any uncertain case
     /// falls back to full value comparison.
@@ -174,6 +186,7 @@ internal struct DocumentMutation {
     var state: SongState
     private(set) var nextNoteID: UInt64
     var changes = DocumentChangeSet()
+    private(set) var noteChannelChanges: Set<Int> = []
 
     init(_ state: SongState, nextNoteID: UInt64) {
         self.state = state
@@ -183,6 +196,18 @@ internal struct DocumentMutation {
     mutating func mintNoteID() -> NoteID {
         let result = NoteID(nextNoteID)
         nextNoteID = nextNoteID == .max ? 1 : nextNoteID + 1
+        return result
+    }
+
+    mutating func note(_ id: NoteID) -> Note? {
+        guard id.isAssigned else { return nil }
+        let map = state.file.engineTracks()
+        var result: Note?
+        for track in 0..<map.usedTrackCount {
+            guard let chunk = map.tracks[track].midiChunk else { continue }
+            if state.file.chunks[chunk].sealNoteTable() { noteChannelChanges.insert(chunk) }
+            if let note = state.file.chunks[chunk].noteTable.note(id, track: track, chunk: chunk) { result = note }
+        }
         return result
     }
 
@@ -232,6 +257,7 @@ internal struct DocumentMutation {
     @discardableResult
     mutating func remove(chunk: Int, offset: Int) -> MidiEvent {
         let event = state.file.chunks[chunk].events.remove(at: offset)
+        state.file.chunks[chunk].noteTable.invalidate()
         changes.events.append(
             .remove(
                 EventRemoval(
@@ -273,6 +299,7 @@ internal struct DocumentMutation {
         for index in chunk.events.indices where chunk.events[index].isNoteOn {
             chunk.events[index].noteID = mintNoteID()
         }
+        chunk.noteTable.invalidate()
         let offset = state.file.chunks.count
         state.file.chunks.append(chunk)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
@@ -290,6 +317,7 @@ internal struct DocumentMutation {
         for index in chunk.events.indices where chunk.events[index].isNoteOn {
             chunk.events[index].noteID = mintNoteID()
         }
+        chunk.noteTable.invalidate()
         state.file.chunks.insert(chunk, at: offset)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
     }
@@ -396,21 +424,16 @@ public final class SongDocument {
 
     public var isDirty: Bool { history.isDirty }
     public var ticksPerBeat: Int { Int(state.file.division) }
-    public var engineTracks: EngineTrackMap { projection.map }
+    public var engineTracks: EngineTrackMap { trackMap }
     public var timeSignatures: [TimeSignature] { projectTimeSignatures() }
     public var rawChunks: [MidiChunk] { state.file.chunks }
 
-    /// Always describes `state.file`; every state change repairs it before publication.
-    private var projection: NoteProjection
-    /// Non-gesture planning retains its source file alongside storage identities.
-    private var memo: (file: MidiFile, projection: NoteProjection)?
-    /// The immutable origin never aliases the mutable current projection's index.
+    private var trackMap: EngineTrackMap
     private struct GestureOrigin {
         let group: HistoryGroup
         let operation: HistoryOperation
         let identity: DocumentIdentity
         let state: SongState
-        var projection: NoteProjection?
     }
     private var gestureOrigin: GestureOrigin?
     private var nextNoteID: UInt64
@@ -443,10 +466,12 @@ public final class SongDocument {
                 if case let .meta(type, _) = event.payload { return type == 0x51 }
                 return false
             }
+            adopted.chunks[chunkIndex].noteTable.invalidate()
         }
         let nextNoteID = Self.mintAllNoteIDs(in: &adopted)
+        adopted.sealNoteTables()
         state = SongState(file: adopted, tempo: tempos, config: config, effects: effects)
-        projection = NoteProjection(file: adopted)
+        trackMap = adopted.engineTracks()
         revisions = DocumentRevisions(chunkCount: adopted.chunks.count)
         self.nextNoteID = nextNoteID
         let maximumEffectID = effects.lazy.map { (effect: TrackEffect) in effect.id.raw }.max() ?? 0
@@ -467,31 +492,23 @@ public final class SongDocument {
     }
 
     public func notes(in track: Int) -> [Note] {
-        guard projection.tracks.indices.contains(track) else { return [] }
-        return projection.tracks[track]
+        state.file.notes(in: track, map: trackMap)
     }
 
     public func note(_ id: NoteID) -> Note? {
-        guard id.isAssigned else { return nil }
-        return projection.index[id]
+        state.file.note(id, map: trackMap)
     }
 
-    internal func projection(for songState: SongState) -> NoteProjection {
-        if projection.describes(songState.file) { return projection }
-        if let origin = gestureOrigin, let cached = origin.projection,
-            cached.describes(songState.file)
-        {
-            return cached
-        }
-        if let origin = gestureOrigin, !origin.state.differs(from: songState) {
-            let built = NoteProjection(file: origin.state.file)
-            gestureOrigin?.projection = built
-            return built
-        }
-        if let memo, memo.projection.describes(songState.file) { return memo.projection }
-        let built = NoteProjection(file: songState.file)
-        memo = (songState.file, built)
-        return built
+    internal func notes(in track: Int, of songState: SongState) -> [Note] {
+        var file = songState.file
+        file.sealNoteTables()
+        return file.notes(in: track, map: file.engineTracks())
+    }
+
+    internal func notes(of songState: SongState) -> [[Note]] {
+        var file = songState.file
+        file.sealNoteTables()
+        return file.notes(map: file.engineTracks())
     }
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {
@@ -566,6 +583,7 @@ public final class SongDocument {
                 export.chunks[0].events.firstIndex { $0.tick >= point.tick }
                 ?? export.chunks[0].events.count
             export.chunks[0].events.insert(event, at: offset)
+            export.chunks[0].noteTable.invalidate()
             export.chunks[0].endTick = max(export.chunks[0].endTick, point.tick)
         }
         return SaveSnapshot(
@@ -616,11 +634,11 @@ public final class SongDocument {
         if let group, history.originChanges(for: group, operation: operation) != nil {
             gestureOrigin = GestureOrigin(
                 group: group, operation: operation, identity: history.currentIdentity,
-                state: startingState, projection: cachedOrigin?.projection)
+                state: startingState)
         } else {
             gestureOrigin = nil
         }
-        publish(mutation.changes, trackRemap: trackRemap)
+        publish(mutation.changes, trackRemap: trackRemap, noteChannelChanges: mutation.noteChannelChanges)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
@@ -636,14 +654,15 @@ public final class SongDocument {
         }
         var origin = state
         changes.apply(to: &origin, direction: .undo)
+        origin.file.sealNoteTables()
         gestureOrigin = GestureOrigin(
             group: group, operation: operation, identity: history.currentIdentity,
-            state: origin, projection: nil)
+            state: origin)
         return origin
     }
 
     internal func mapping(for track: Int, in file: MidiFile? = nil) -> (chunk: Int, channel: UInt8)? {
-        let map = file?.engineTracks() ?? projection.map
+        let map = file?.engineTracks() ?? trackMap
         guard track >= 0, track < map.usedTrackCount,
             let chunk = map.tracks[track].midiChunk
         else { return nil }
@@ -660,6 +679,7 @@ public final class SongDocument {
     nonisolated private static func mintAllNoteIDs(in file: inout MidiFile) -> UInt64 {
         var identifier: UInt64 = 1
         for chunkIndex in file.chunks.indices {
+            file.chunks[chunkIndex].noteTable.invalidate()
             for eventIndex in file.chunks[chunkIndex].events.indices {
                 file.chunks[chunkIndex].events[eventIndex].noteID = nil
                 if file.chunks[chunkIndex].events[eventIndex].isNoteOn {
@@ -677,17 +697,18 @@ public final class SongDocument {
     ) {
         gestureOrigin = nil
         changes.apply(to: &state, direction: direction)
-        if !changes.effectsOnly {
-            // Replay may mutate event buffers in place; identity alone cannot detect it.
-            projection.repair(to: state.file, forceRebuild: true)
-        }
         publish(changes, trackRemap: trackRemap)
     }
 
-    private func publish(_ changes: DocumentChangeSet, trackRemap: TrackRemap? = nil) {
+    private func publish(
+        _ changes: DocumentChangeSet, trackRemap: TrackRemap? = nil,
+        noteChannelChanges: Set<Int> = []
+    ) {
         revision = revision == .max ? 1 : revision + 1
         revisions.advance(for: changes, chunkCount: state.file.chunks.count)
-        if !changes.effectsOnly { projection.repair(to: state.file) }
+        let channelChanges = state.file.sealNoteTables().union(noteChannelChanges)
+        revisions.advanceNotes(in: channelChanges)
+        trackMap = state.file.engineTracks()
         onChange?(DocumentChange(revision: revision, trackRemap: trackRemap, effectsOnly: changes.effectsOnly))
     }
 

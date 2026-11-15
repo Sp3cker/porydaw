@@ -12,7 +12,7 @@ extension SongDocument {
         }
         guard ordered.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
         guard spansAreCompatible(spans: ordered, allowExactDuplicates: false) else { return false }
-        let referenceTracks = projection(for: reference).tracks
+        let referenceTracks = notes(of: reference)
         var firstSpan = 0
         while firstSpan < ordered.count {
             let track = ordered[firstSpan].track
@@ -59,13 +59,13 @@ extension SongDocument {
         }
         guard sorted.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
         guard spansAreCompatible(spans: sorted, allowExactDuplicates: false) else { return false }
-        let referenceTracks = projection(for: reference).tracks
+        let referenceTracks = notes(of: reference)
         for index in sorted.indices {
             let span = sorted[index]
             guard referenceTracks.indices.contains(span.track) else { continue }
             let notes = referenceTracks[span.track]
             for note in notes where note.pitch == span.pitch && !editedIDs.contains(note.id) {
-                guard let current = findNote(note.id, in: mutation.state),
+                guard let current = mutation.note(note.id),
                     let currentEnd = current.endTick, let endIndex = current.endIndex
                 else {
                     continue
@@ -86,9 +86,6 @@ extension SongDocument {
         return true
     }
 
-    func findNote(_ id: NoteID, in song: SongState) -> Note? {
-        projection(for: song).index[id]
-    }
 
     func removeNote(_ note: Note, from mutation: inout DocumentMutation) {
         for index in [note.onIndex, note.endIndex].compactMap({ $0 }).sorted(by: >) {

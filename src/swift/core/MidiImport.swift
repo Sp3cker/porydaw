@@ -285,6 +285,7 @@ public enum MidiImport {
             throw MidiImportError.tickOverflow(newDivision: newDivision)
         }
         for chunk in file.chunks.indices {
+            file.chunks[chunk].noteTable.invalidate()
             for event in file.chunks[chunk].events.indices {
                 file.chunks[chunk].events[event].tick = Tick(
                     UInt64(file.chunks[chunk].events[event].tick) * UInt64(newDivision) / old)
@@ -299,6 +300,7 @@ public enum MidiImport {
     public static func removeRedundantSetters(_ file: inout MidiFile) -> Int {
         var removed = 0
         for chunk in file.chunks.indices {
+            file.chunks[chunk].noteTable.invalidate()
             let events = file.chunks[chunk].events
             var drop = Array(repeating: false, count: events.count)
             var lastForSlot: [Int: Int] = [:]
