@@ -81,7 +81,10 @@ func drawerVelocityVelocityPageFixture(contextSlot: UInt8 = 0) -> MidiFile {
 
 @MainActor
 func drawerVelocityTimelineVelocity(_ session: DocumentSession, _ id: NoteID) -> Int {
-    session.timeline.events.first { $0.type == 0x9 && $0.noteID == id }.map { Int($0.data1) } ?? -1
+    guard let note = session.document.note(id) else { return -1 }
+    return session.timeline.events.first {
+        $0.type == 0x9 && Int($0.track) == note.track && $0.tick == note.tick && $0.data0 == note.pitch
+    }.map { Int($0.data1) } ?? -1
 }
 
 @MainActor

@@ -20,11 +20,11 @@ public struct PlaybackEvent: Equatable, Sendable {
     public let track: UInt8
     public let data0: UInt8
     public let data1: UInt8
-    public let noteID: NoteID
+    public let wireNoteID: UInt64
 
     public init(
         sample: UInt64, tick: Tick, type: UInt8, track: UInt8,
-        data0: UInt8, data1: UInt8, noteID: NoteID = NoteID()
+        data0: UInt8, data1: UInt8, wireNoteID: UInt64 = 0
     ) {
         self.sample = sample
         self.tick = tick
@@ -32,7 +32,7 @@ public struct PlaybackEvent: Equatable, Sendable {
         self.track = track
         self.data0 = data0
         self.data1 = data1
-        self.noteID = noteID
+        self.wireNoteID = wireNoteID
     }
 }
 
@@ -248,7 +248,6 @@ private struct RawPlaybackEvent {
     let type: UInt8
     let data0: UInt8
     let data1: UInt8
-    let noteID: NoteID
     var order: Int
 }
 
@@ -263,7 +262,7 @@ private struct RawOtherEvent {
 private typealias TrackTicks = InlineArray<16, Tick>
 
 private struct ScheduledPlaybackEvent {
-    let event: PlaybackEvent
+    var event: PlaybackEvent
     let order: Int
 }
 
@@ -289,6 +288,8 @@ public struct PlaybackTimelineBuilder {
     private var chunkToEngine: [Int] = []
     private var mutableTracks = Array(repeating: MutableTrack(), count: TrackLimits.hardwareCapacity)
     private var activeNoteTicks = [Tick?](repeating: nil, count: TrackLimits.hardwareCapacity * 128)
+    private var wireOns = [UInt64](repeating: 0, count: TrackLimits.hardwareCapacity * 128)
+    private var wireOffs = [UInt64](repeating: 0, count: TrackLimits.hardwareCapacity * 128)
     private var scheduledEvents: [ScheduledPlaybackEvent] = []
     private var tempoEvents: [PlaybackEvent] = []
     private var chunkStateTicks: [Tick] = []
@@ -385,14 +386,13 @@ public struct PlaybackTimelineBuilder {
                         rawEvents.append(
                             RawPlaybackEvent(
                                 tick: event.tick, midiChunk: chunkIndex, type: type,
-                                data0: data0, data1: data1, noteID: NoteID(), order: rawEvents.count))
+                                data0: data0, data1: data1, order: rawEvents.count))
                     case 0x9:
                         let playType: UInt8 = data1 == 0 ? 0x8 : 0x9
                         rawEvents.append(
                             RawPlaybackEvent(
                                 tick: event.tick, midiChunk: chunkIndex, type: playType,
                                 data0: data0, data1: data1,
-                                noteID: playType == 0x9 ? (event.noteID ?? NoteID()) : NoteID(),
                                 order: rawEvents.count))
                     case 0xA:
                         rawOthers.append(
@@ -601,8 +601,7 @@ public struct PlaybackTimelineBuilder {
             primaryChannelStateTicks[engineTrack] = 0
             rawEvents.append(
                 RawPlaybackEvent(
-                    tick: 0, midiChunk: engineTrack, type: 0xC, data0: 0, data1: 0,
-                    noteID: NoteID(), order: rawEvents.count))
+                    tick: 0, midiChunk: engineTrack, type: 0xC, data0: 0, data1: 0, order: rawEvents.count))
         }
         // The index is in sample order, so a later tick can precede an earlier one.
         for index in source.stateEventIndices {
@@ -611,18 +610,18 @@ public struct PlaybackTimelineBuilder {
             rawEvents.append(
                 RawPlaybackEvent(
                     tick: event.tick, midiChunk: Int(event.track), type: event.type,
-                    data0: event.data0, data1: event.data1, noteID: event.noteID, order: rawEvents.count))
+                    data0: event.data0, data1: event.data1, order: rawEvents.count))
         }
         for index in notes.indices {
             let note = notes[index]
             rawEvents.append(
                 RawPlaybackEvent(
                     tick: note.tick, midiChunk: track, type: note.velocity == 0 ? 0x8 : 0x9,
-                    data0: note.pitch, data1: note.velocity, noteID: NoteID(), order: rawEvents.count))
+                    data0: note.pitch, data1: note.velocity, order: rawEvents.count))
             rawEvents.append(
                 RawPlaybackEvent(
                     tick: note.tick + note.duration, midiChunk: track, type: 0x8,
-                    data0: note.pitch, data1: 0, noteID: NoteID(), order: rawEvents.count))
+                    data0: note.pitch, data1: 0, order: rawEvents.count))
         }
         // MIDI order within a tick is track-major (tracks follow chunk order), then position.
         rawEvents.sort { (lhs: RawPlaybackEvent, rhs: RawPlaybackEvent) -> Bool in
@@ -690,7 +689,7 @@ public struct PlaybackTimelineBuilder {
             }
             let event = PlaybackEvent(
                 sample: sample, tick: raw.tick, type: raw.type, track: UInt8(engineTrack),
-                data0: raw.data0, data1: raw.data1, noteID: raw.noteID)
+                data0: raw.data0, data1: raw.data1)
             scheduledEvents.append(ScheduledPlaybackEvent(event: event, order: raw.order))
             if event.type == 0x9 { mutableTracks[engineTrack].noteCount += 1 }
             if event.type == 0xC && mutableTracks[engineTrack].firstProgram < 0 {
@@ -702,6 +701,29 @@ public struct PlaybackTimelineBuilder {
             if lhs.event.type == 0x8 && rhs.event.type != 0x8 { return true }
             if rhs.event.type == 0x8 && lhs.event.type != 0x8 { return false }
             return lhs.order < rhs.order
+        }
+        for index in wireOns.indices {
+            wireOns[index] = 0
+            wireOffs[index] = 0
+        }
+        // Count the final sample order, after gate scheduling and off-before-on tie breaking.
+        for index in scheduledEvents.indices {
+            let event = scheduledEvents[index].event
+            let pitch = event.data0 & 0x7F
+            let key = Int(event.track) * 128 + Int(pitch)
+            let wireNoteID: UInt64
+            if event.type == 0x9 && event.data1 > 0 {
+                wireOns[key] += 1
+                wireNoteID = (wireOns[key] - 1) * 128 + UInt64(pitch) + 1
+            } else if (event.type == 0x8 || event.type == 0x9) && wireOffs[key] < wireOns[key] {
+                wireOffs[key] += 1
+                wireNoteID = (wireOffs[key] - 1) * 128 + UInt64(pitch) + 1
+            } else {
+                wireNoteID = 0
+            }
+            scheduledEvents[index].event = PlaybackEvent(
+                sample: event.sample, tick: event.tick, type: event.type, track: event.track,
+                data0: event.data0, data1: event.data1, wireNoteID: wireNoteID)
         }
 
         tempoEvents.removeAll(keepingCapacity: true)

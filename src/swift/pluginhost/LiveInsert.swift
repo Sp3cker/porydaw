@@ -230,27 +230,21 @@ public final class LiveInsert: @unchecked Sendable {
 
     private func chase(call: inout LiveInsertCall) {
         guard call.playing, inputMode == .trackNotes, let events = call.timelineEvents else { return }
-        var ons = InlineArray<128, Int64>(repeating: 0)
-        var offs = InlineArray<128, Int64>(repeating: 0)
         for index in 0..<call.timelineEventCount {
             let event = events[index]
             if event.sample >= call.position { break }
             guard Int32(event.track) == call.track, event.type == 8 || event.type == 9 else { continue }
             let key = Int(event.data0 & 127)
             if event.type == 9 && event.data1 > 0 {
-                ons[key] += 1
-                let id = (ons[key] - 1) * 128 + Int64(key) + 1
-                guard let wireID = Int32(exactly: id) else {
+                guard let wireID = Int32(exactly: event.wireNoteID) else {
                     call.inputOverflow &+= 1
                     continue
                 }
                 if !remember(HeldInput(id: wireID, pitch: UInt8(key), velocity: min(127, event.data1))) {
                     call.inputOverflow &+= 1
                 }
-            } else if offs[key] < ons[key] {
-                offs[key] += 1
-                let id = (offs[key] - 1) * 128 + Int64(key) + 1
-                if let wireID = Int32(exactly: id) { forget(id: wireID, pitch: UInt8(key)) }
+            } else if event.wireNoteID > 0 {
+                if let wireID = Int32(exactly: event.wireNoteID) { forget(id: wireID, pitch: UInt8(key)) }
             }
         }
         var nextIndex = 0

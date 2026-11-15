@@ -77,11 +77,15 @@ private func hostNoteDiscovery(
         }
         let note = (0..<session.document.engineTracks.usedTrackCount)
             .lazy.flatMap { session.document.notes(in: $0) }.first
+        let timelineHasNote =
+            note.map { note in
+                session.timeline.events.contains {
+                    $0.type == 0x9 && Int($0.track) == note.track && $0.tick == note.tick
+                        && $0.data0 == note.pitch && $0.data1 == note.velocity
+                }
+            } ?? false
         report.expect(
-            note != nil
-                && session.timeline.events.contains {
-                    $0.type == 0x9 && $0.noteID == note?.id
-                }, cppID: id,
+            timelineHasNote, cppID: id,
             message: "route101 fixture notes resolve from the loaded document with timeline note-on events")
         report.expect(
             session.document.source.label == "mus_route101", cppID: id,
