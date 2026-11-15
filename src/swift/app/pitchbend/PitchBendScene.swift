@@ -113,6 +113,7 @@ public final class PitchBendLane {
     public var focusColor: QmlColor = .clear
     @QtTracked public var laneTitle = ""
     @QtTracked public var bipolar = false
+    public var fineAdjustmentActive: Bool = false
     public var gridLines: QListModel<SceneRect> = QListModel()
     public var curveLines: QListModel<PitchBendLine> = QListModel()
     public var vertices: QListModel<PitchBendVertex> = QListModel()
@@ -145,7 +146,9 @@ public final class PitchBendLane {
     public func press(x: Double, y: Double, modifiers: Int) {
         guard kernel.geometry.contains(x, y) else { return }
         gestureStartingPoints = kernel.points
-        kernel.begin(x: x, y: y, line: modifiers & (0x0200_0000 | 0x0800_0000) != 0)
+        kernel.begin(
+            x: x, y: y, line: modifiers & (0x0200_0000 | 0x0800_0000) != 0,
+            fine: modifiers & 0x0800_0000 != 0)
         rebuild()
     }
 
@@ -200,6 +203,7 @@ public final class PitchBendLane {
         publish(\.canvasY, g.canvasY)
         publish(\.canvasWidth, g.canvasWidth)
         publish(\.canvasHeight, g.canvasHeight)
+        publish(\.fineAdjustmentActive, k.isFineAdjusting)
         publish(\.curveColor, identityColor)
         publish(\.plotBackground, palette.rollBackground)
         publish(\.focusColor, palette.focusOutline)

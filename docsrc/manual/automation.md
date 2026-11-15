@@ -36,6 +36,10 @@ note-off value. Graph and input edits support Undo and Redo.
 Clicking an existing node selects it without changing its tick or value.
 Dragging vertically changes its value without snapping its time to the grid.
 Dragging an interior node horizontally snaps its time; hold **Alt** for fine snapping.
+Hold **Alt** (**Option** on macOS) while dragging in any of the three graphs
+for quarter-speed vertical value adjustment. The live readout shows **FINE**
+while active. Pressing or releasing the modifier keeps the current value;
+pitch bend still uses the audio engine's playable 128-unit steps.
 If the destination tick already has a node, the dragged node keeps its original
 tick rather than overwriting that node or jumping to a distant empty tick.
 

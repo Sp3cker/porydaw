@@ -6,6 +6,104 @@ import Porydaw.Ui
 import "RollNoteFaces.js" as RollNoteFaces
 
 ShellPitchBendSupport {
+    Component {
+        id: returnCurveProbeComponent
+        Repeater {
+            delegate: Item {
+                required property real x0
+                required property real y0
+                required property real x1
+                required property real y1
+            }
+            function snapshot() {
+                const segments = []
+                for (let i = 0; i < count; ++i) {
+                    const segment = itemAt(i)
+                    if (!segment)
+                        return ""
+                    segments.push([segment.x0, segment.y0, segment.x1, segment.y1])
+                }
+                return JSON.stringify(segments)
+            }
+        }
+    }
+
+    function test_returnSettlesActiveDragOnce_data() {
+        return [
+            { tag: "pitch Return", graph: "pitchBendGraph", key: Qt.Key_Return },
+            { tag: "modulation Return", graph: "modWheelGraph", key: Qt.Key_Return },
+            { tag: "LFO Return", graph: "lfoSpeedGraph", key: Qt.Key_Return },
+            { tag: "pitch Enter", graph: "pitchBendGraph", key: Qt.Key_Enter },
+            { tag: "modulation Enter", graph: "modWheelGraph", key: Qt.Key_Enter },
+            { tag: "LFO Enter", graph: "lfoSpeedGraph", key: Qt.Key_Enter }
+        ]
+    }
+
+    function test_returnSettlesActiveDragOnce(data) {
+        const opened = openViaG()
+        const graph = findChild(opened.view, data.graph)
+        verify(graph !== null, "the active-drag target graph is mounted")
+        const probe = createTemporaryObject(returnCurveProbeComponent, opened.popup,
+                                            { model: graph.lane.curveLines })
+        verify(probe !== null, "the probe observes the production curve model")
+        tryVerify(function() { return graph.curveSegmentCount > 0 }, 5000,
+                  "the production curve model has mounted segments")
+        tryCompare(probe, "count", graph.curveSegmentCount)
+        const originalCurve = probe.snapshot()
+        verify(originalCurve.length > 0)
+        const baseline = Number(opened.grid.appliedRevisionText)
+        const canvas = graph.canvasRect
+        verify(canvas.width > 0 && canvas.height > 0, "the target lane has an editable canvas")
+        const from = Qt.point(canvas.x + canvas.width * 0.20, canvas.y + canvas.height * 0.75)
+        const to = Qt.point(canvas.x + canvas.width * 0.80, canvas.y + canvas.height * 0.25)
+        mousePress(graph, from.x, from.y, Qt.LeftButton)
+        mouseMove(graph, to.x, to.y, -1, Qt.LeftButton)
+        tryCompare(graph, "activeFocus", true)
+        verify(waitForNative(function() {
+            const preview = probe.snapshot()
+            return preview.length > 0 && preview !== originalCurve
+                && Number(opened.grid.appliedRevisionText) === baseline
+        }, 5000), "the held drag previews a changed curve without committing it")
+
+        keyClick(data.key)
+        verify(waitForNative(function() {
+            return Number(opened.grid.appliedRevisionText) === baseline + 1
+        }, 5000), "delivered Return or Enter commits the active gesture exactly once")
+        const committedCurve = probe.snapshot()
+        verify(committedCurve.length > 0 && committedCurve !== originalCurve,
+               "the committed gesture retains its changed curve")
+        compare(opened.editor.isOpen, true, "settling the drag leaves the popup open")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "settling the drag preserves the mounted popup")
+
+        mouseRelease(graph, to.x, to.y, Qt.LeftButton)
+        bootstrap.pumpMainRunLoop()
+        tryCompare(opened.grid, "appliedRevisionText", String(baseline + 1), 5000,
+                   "the later pointer release adds no second history entry")
+        compare(probe.snapshot(), committedCurve,
+                "the later pointer release leaves the settled curve unchanged")
+        keyClick(data.key)
+        compare(Number(opened.grid.appliedRevisionText), baseline + 1,
+                "another Return without a gesture adds no history")
+        tryCompare(findChild(shell, "shellAction_edit.undo"), "enabled", true, 3000)
+
+        keySequence(StandardKey.Undo)
+        verify(waitForNative(function() {
+            return Number(opened.grid.appliedRevisionText) === baseline + 2
+                && probe.snapshot() === originalCurve
+                && shell.shellPresenter.session.canRedo
+        }, 5000), "one Undo restores the exact pre-drag curve")
+        keySequence(StandardKey.Redo)
+        verify(waitForNative(function() {
+            return Number(opened.grid.appliedRevisionText) === baseline + 3
+                && probe.snapshot() === committedCurve
+                && !shell.shellPresenter.session.canRedo
+        }, 5000), "one Redo restores the exact Return-committed curve")
+        compare(opened.editor.isOpen, true, "Undo and Redo keep the popup open")
+        compare(findChild(opened.view, "pitchBendPopup"), opened.popup,
+                "Undo and Redo preserve the same popup")
+    }
+
     function test_windowUndoReachesOpenPopup() {
         const opened = openViaG()
         const graph = findChild(opened.view, "pitchBendGraph")

@@ -32,7 +32,7 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
     let keyboardBeforeStroke = curve.keyboardTick
     let liveBeforeStroke = curve.liveValue
     curve.begin(x: fromX, y: curve.y(at: 4096), line: true)
-    curve.update(x: toX, y: curve.y(at: -4096), fine: true)
+    curve.update(x: toX, y: curve.y(at: -4096), fine: false)
     report.expect(
         curve.hasGesture && curve.points[120] != nil
             && curve.points[144] != nil && curve.points[168] != nil
@@ -91,9 +91,9 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
         cppID: "swiftcore/PitchBendEditingTest::vertexAltDragMovesPoint",
         message: "dragging an interior vertex moves it but preserves the note-off endpoint")
     report.expect(
-        curve.points[180] == 8191,
+        curve.points[180] == 2048,
         cppID: "swiftcore/PitchBendEditingTest::vertexAltDragMovesPoint",
-        message: "a vertex drag previews the moved controller value at full bend")
+        message: "Alt moves the vertex vertically at quarter speed while retaining playable pitch steps")
     curve.cancelGesture()
     report.expect(
         curve.points == beforeMove,
@@ -130,6 +130,7 @@ public func runPitchBendChecks(_ report: CheckReport, viewport: DocumentViewport
     pitchBendSetterPredicates(report, viewport: viewport)
     pitchBendFineRampPredicates(report, viewport: viewport)
     pitchBendVertexPredicates(report, suite: session)
+    pitchBendFineVerticalPredicates(report, geometry: geometry)
 }
 
 @MainActor
@@ -181,4 +182,87 @@ private func pitchBendDenseVertexDragPredicates(_ report: CheckReport, geometry:
             cppID: id, message: "\(lane): returning to the grab position restores the exact original curve")
         curve.cancelGesture()
     }
+}
+
+@MainActor
+private func pitchBendFineVerticalPredicates(_ report: CheckReport, geometry: PitchBendGeometry) {
+    let id = "swiftcore/PitchBendKernel::altFineVerticalAdjustment"
+    for lane: PitchBendKernel.Lane in [.pitch, .modulation, .lfoSpeed] {
+        let initial = lane == .pitch ? 2048 : lane == .modulation ? 8 : 32
+        let original = [96: initial, 144: initial, 192: 0]
+        var curve = PitchBendKernel(
+            lane: lane, geometry: geometry, startTick: 96, endTick: 192,
+            fineTicks: 1, snap: pitchBendFixtureSnap, snapUp: pitchBendFixtureSnapUp,
+            points: original, endValue: 0)
+        let x = curve.x(at: 144)
+        let y = curve.y(at: initial)
+        curve.begin(x: x, y: y, line: false, fine: true)
+        curve.update(x: x, y: y - 10, fine: true)
+        let fineValue = curve.liveValue
+        curve.cancelGesture()
+        curve.begin(x: x, y: y, line: false)
+        curve.update(x: x, y: y - 10, fine: false)
+        let normalDelta = curve.liveValue - initial
+        let fineDelta = fineValue - initial
+        let step = lane == .pitch ? 128 : 1
+        report.expect(
+            fineDelta > 0 && fineDelta < normalDelta && abs(4 * fineDelta - normalDelta) <= step * 4,
+            cppID: id, message: "\(lane): Alt uses quarter-speed vertical movement at the same pointer distance")
+        curve.cancelGesture()
+
+        curve.begin(x: x, y: y, line: false)
+        curve.update(x: x, y: y - 10, fine: false)
+        let beforeAlt = curve.liveValue
+        curve.update(x: x, y: y - 10, fine: true)
+        report.expect(
+            curve.liveValue == beforeAlt && curve.isFineAdjusting,
+            cppID: id, message: "\(lane): pressing Alt without moving preserves the current value")
+        curve.update(x: x, y: y - 14, fine: true)
+        let beforeRelease = curve.liveValue
+        curve.update(x: x, y: y - 14, fine: false)
+        report.expect(
+            curve.liveValue == beforeRelease && !curve.isFineAdjusting,
+            cppID: id, message: "\(lane): releasing Alt does not jump back to absolute pointer mapping")
+        curve.cancelGesture()
+        report.expect(
+            curve.points == original && !curve.isFineAdjusting,
+            cppID: id, message: "\(lane): cancel restores the exact curve and clears precision feedback")
+
+        let strokeX = curve.x(at: 120)
+        curve.begin(x: strokeX, y: y, line: true, fine: true)
+        let initialStrokeValue = curve.liveValue
+        curve.update(x: curve.x(at: 168), y: y - 10, fine: true)
+        report.expect(
+            curve.liveValue > initialStrokeValue
+                && abs((curve.liveValue - initialStrokeValue) - fineDelta) <= step
+                && curve.points[192] == 0,
+            cppID: id, message: "\(lane): fine line strokes use the same vertical sensitivity and preserve note off")
+        curve.finish()
+        report.expect(!curve.isFineAdjusting, cppID: id, message: "\(lane): finishing clears precision feedback")
+    }
+
+    var pitch = PitchBendKernel(
+        lane: .pitch, geometry: geometry, startTick: 96, endTick: 192,
+        fineTicks: 1, snap: pitchBendFixtureSnap, snapUp: pitchBendFixtureSnapUp,
+        points: [96: 0, 144: 0, 192: 0], endValue: 0)
+    let x = pitch.x(at: 144)
+    let y = pitch.y(at: 0)
+    let distance = 128 * 4 * (geometry.canvasHeight - 1) / 16383
+    pitch.begin(x: x, y: y, line: false, fine: true)
+    for sample in 1...8 {
+        pitch.update(x: x, y: y - distance * Double(sample) / 8, fine: true)
+    }
+    report.expect(
+        pitch.liveValue == 128 && pitch.points[144] == 128,
+        cppID: id, message: "subpixel fine movement accumulates to the first playable bend near zero")
+    pitch.update(x: x, y: y - 10000, fine: true)
+    report.expect(pitch.liveValue == 8191, cppID: id, message: "fine movement reaches the exact positive limit")
+    pitch.update(x: x, y: y + 10000, fine: true)
+    report.expect(pitch.liveValue == -8192, cppID: id, message: "fine movement clamps at the exact negative limit")
+    pitch.cancelGesture()
+    pitch.begin(x: pitch.x(at: 192), y: y, line: false, fine: true)
+    pitch.update(x: pitch.x(at: 192), y: y - 20, fine: true)
+    report.expect(
+        pitch.points[192] == 0 && !pitch.isFineAdjusting,
+        cppID: id, message: "the immutable note-off point neither changes nor advertises an active fine adjustment")
 }

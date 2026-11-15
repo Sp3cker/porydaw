@@ -139,7 +139,10 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             color: root.secondaryTextColor
             font: root.monospaceFont
-            text: labels.graph ? labels.graph.liveValueText : ""
+            text: labels.graph && labels.graph.lane
+                ? (labels.graph.lane.fineAdjustmentActive
+                   ? qsTr("FINE · %1").arg(labels.graph.liveValueText) : labels.graph.liveValueText)
+                : ""
             textFormat: Text.PlainText
             renderType: Text.NativeRendering
             elide: Text.ElideRight
@@ -499,7 +502,7 @@ Rectangle {
 
         x: root.outerInset
         y: 0
-        width: root.width - root.outerInset * 2
+        width: Math.max(0, fineAdjustmentHint.x - x - root.controlGap)
         height: root.titleHeight
         verticalAlignment: Text.AlignVCenter
         color: root.primaryTextColor
@@ -508,6 +511,22 @@ Rectangle {
         textFormat: Text.PlainText
         renderType: Text.NativeRendering
         elide: Text.ElideRight
+    }
+
+    Text {
+        id: fineAdjustmentHint
+        objectName: "pitchBendFineAdjustmentHint"
+
+        x: root.width - root.outerInset - width
+        y: 0
+        width: implicitWidth
+        height: root.titleHeight
+        verticalAlignment: Text.AlignVCenter
+        color: root.secondaryTextColor
+        font: root.captionFont
+        text: Qt.platform.os === "osx" ? qsTr("Option drag: ¼× value") : qsTr("Alt drag: ¼× value")
+        textFormat: Text.PlainText
+        renderType: Text.NativeRendering
     }
 
     Text {

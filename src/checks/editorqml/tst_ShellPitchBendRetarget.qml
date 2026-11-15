@@ -147,14 +147,15 @@ ShellPitchBendSupport {
             }, 5000), "an Alt pointer drag moves the interior vertex")
             compare(graph.lane.hitVertex(vertexX, vertexY), -1,
                     "the dragged vertex vacates its original hit position")
-            const movedTick = graph.lane.hitVertex(targetX, targetY)
-            verify(movedTick > 0, "the Alt drag leaves a vertex at the destination")
-            mouseClick(graph, targetX, targetY, Qt.LeftButton)
+            const adjustedY = vertexY + (targetY - vertexY) / 4
+            const movedTick = graph.lane.hitVertex(targetX, adjustedY)
+            verify(movedTick > 0, "the Alt drag moves time normally and value at quarter speed")
+            mouseClick(graph, targetX, adjustedY, Qt.LeftButton)
             const beforeDelete = Number(opened.grid.appliedRevisionText)
             keyClick(graph === graphs[0] ? Qt.Key_Delete : Qt.Key_Backspace)
             compare(Number(opened.grid.appliedRevisionText), beforeDelete + 1,
                     "Delete and Backspace remove the selected interior vertex")
-            compare(graph.lane.hitVertex(targetX, targetY), -1,
+            compare(graph.lane.hitVertex(targetX, adjustedY), -1,
                     "the selected interior vertex is gone")
             for (const endpointX of [rect.x, rect.x + rect.width - 1]) {
                 const endpointY = graph === graphs[0]
@@ -184,7 +185,7 @@ ShellPitchBendSupport {
         const frame = capturePitchFrame(opened, "shift")
         const scale = frame.width / shell.contentItem.width
         const mapped = opened.popup.mapToItem(shell.contentItem, 0, 0)
-        const margin = opened.grid.baseFontPx
+        const margin = opened.popup.outerInset / 2
         const background = opened.popup.windowBackgroundColor
         for (const position of [[margin, margin],
                                 [opened.popup.width - margin, margin],
@@ -213,8 +214,9 @@ ShellPitchBendSupport {
             return opened.grid.appliedRevisionText !== beforeRamp
         }, 5000), "the Alt ramp commits through the reopened graph")
         const rampFrame = capturePitchFrame({ popup: reopened }, "alt-reopen")
-        verify(coloredHits(rampFrame, rampGraph, rampFrom, rampTo) >= 4,
-               "the Alt ramp repaints after Escape and reopen")
+        const fineRampTo = Qt.point(rampTo.x, rampFrom.y + (rampTo.y - rampFrom.y) / 4)
+        verify(coloredHits(rampFrame, rampGraph, rampFrom, fineRampTo) >= 4,
+               "the Alt ramp repaints its quarter-speed value change after Escape and reopen")
     }
 
     function test_noteEdgeCursorAcrossDismissal() {

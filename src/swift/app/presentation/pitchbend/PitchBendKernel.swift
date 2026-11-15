@@ -18,13 +18,24 @@ public struct PitchBendKernel {
         public var value: Int
     }
 
+    private enum VerticalMode { case absolute, relative, fine }
+    private enum DrawingTool { case freehand, line }
+    private enum StrokeSampling { case singlePoint, sweep }
+    private struct VerticalAdjustment {
+        // Sensitivity changes apply only to movement since the last pointer sample.
+        var previousY: Double
+        var value: Double
+        var displayedValue: Int
+        var mode: VerticalMode
+    }
     private struct Stroke {
         var original: [Int: Int]
         var initialKeyboardTick: Int
         var anchor: Point
         var previous: Point
-        var line: Bool
-        var sampled = false
+        var tool: DrawingTool
+        var sampling = StrokeSampling.singlePoint
+        var vertical: VerticalAdjustment
     }
     private struct VertexDrag {
         var original: [Int: Int]
@@ -32,6 +43,7 @@ public struct PitchBendKernel {
         var originalValue: Int
         var pressX: Double
         var pressY: Double
+        var vertical: VerticalAdjustment
     }
     private enum Gesture { case stroke(Stroke), vertex(VertexDrag) }
 
@@ -78,7 +90,14 @@ public struct PitchBendKernel {
     public var hasGesture: Bool { gesture != nil }
     public var isSampledStroke: Bool {
         guard case .stroke(let stroke) = gesture else { return false }
-        return stroke.sampled
+        return stroke.sampling == .sweep
+    }
+    public var isFineAdjusting: Bool {
+        switch gesture {
+        case .stroke(let stroke): stroke.vertical.mode == .fine
+        case .vertex(let drag): drag.originalTick != endTick && drag.vertical.mode == .fine
+        case nil: false
+        }
     }
     public var minimumValue: Int { lane == .pitch ? -8192 : 0 }
     public var maximumValue: Int { lane.maximumValue }
@@ -163,21 +182,29 @@ public struct PitchBendKernel {
         return center + (Double(-value) * (bottom - center) / 8192).rounded()
     }
 
-    public func value(atY y: Double) -> Int {
+    private func rawValue(atY y: Double) -> Double {
         let bottom = geometry.canvasY + geometry.canvasHeight - 1
-        let clamped = min(bottom, max(geometry.canvasY, y.rounded()))
+        let clamped = min(bottom, max(geometry.canvasY, y))
         if lane != .pitch {
-            let span = geometry.canvasHeight - 1
-            return min(maximumValue, max(0, Int(((bottom - clamped) * Double(maximumValue) / max(1, span)).rounded())))
+            return (bottom - clamped) * Double(maximumValue) / max(1, geometry.canvasHeight - 1)
         }
         let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
-        if abs(clamped - center) <= geometry.zeroDetent { return 0 }
-        let raw =
-            clamped <= center
-            ? Int(((center - clamped) * 8191 / max(1, center - geometry.canvasY)).rounded())
-            : -Int(((clamped - center) * 8192 / max(1, bottom - center)).rounded())
-        if raw == -8192 || raw == 8191 { return raw }
-        return min(8191, max(-8192, Int((Double(raw) / 128).rounded()) * 128))
+        return clamped <= center
+            ? (center - clamped) * 8191 / max(1, center - geometry.canvasY)
+            : -(clamped - center) * 8192 / max(1, bottom - center)
+    }
+
+    private func quantizedValue(_ value: Double) -> Int {
+        let bounded = min(Double(maximumValue), max(Double(minimumValue), value))
+        if lane != .pitch || bounded == -8192 || bounded == 8191 { return Int(bounded.rounded()) }
+        return min(8191, max(-8192, Int((bounded / 128).rounded()) * 128))
+    }
+
+    public func value(atY y: Double) -> Int {
+        let clamped = min(geometry.canvasY + geometry.canvasHeight - 1, max(geometry.canvasY, y.rounded()))
+        let center = geometry.canvasY + ((geometry.canvasHeight - 1) / 2).rounded(.down)
+        if lane == .pitch, abs(clamped - center) <= geometry.zeroDetent { return 0 }
+        return quantizedValue(rawValue(atY: clamped).rounded())
     }
 
     public func value(at tick: Int) -> Int {
@@ -235,24 +262,59 @@ public struct PitchBendKernel {
         liveValue = value(at: keyboardTick)
     }
 
-    public mutating func begin(x: Double, y: Double, line: Bool) {
+    private func adjustedValue(
+        _ adjustment: inout VerticalAdjustment, y: Double, normalValue: Int, fine: Bool
+    ) -> Int {
+        if fine {
+            adjustment.mode = .fine
+        } else if adjustment.mode == .fine {
+            adjustment.mode = .relative
+        }
+        defer { adjustment.previousY = y }
+        guard adjustment.mode != .absolute else {
+            adjustment.value = Double(normalValue)
+            adjustment.displayedValue = normalValue
+            return normalValue
+        }
+        let unitsPerPixel = Double(maximumValue - minimumValue) / max(1, geometry.canvasHeight - 1)
+        let delta = (adjustment.previousY - y) * unitsPerPixel * (fine ? 0.25 : 1)
+        guard delta != 0 else { return adjustment.displayedValue }
+        adjustment.value = min(Double(maximumValue), max(Double(minimumValue), adjustment.value + delta))
+        let halfStep = lane == .pitch ? 64.0 : 0.5
+        if abs(adjustment.value - Double(adjustment.displayedValue)) >= halfStep
+            || adjustment.value == Double(minimumValue) || adjustment.value == Double(maximumValue)
+        {
+            adjustment.displayedValue = quantizedValue(adjustment.value)
+        }
+        return adjustment.displayedValue
+    }
+
+    public mutating func begin(x: Double, y: Double, line: Bool, fine: Bool = false) {
         if let hit = hitTest(x: x, y: y) {
             selectedTick = hit.tick
             gesture = .vertex(
                 VertexDrag(
                     original: points, originalTick: hit.tick, originalValue: hit.value,
-                    pressX: x, pressY: y))
+                    pressX: x, pressY: y,
+                    vertical: VerticalAdjustment(
+                        previousY: y, value: Double(hit.value), displayedValue: hit.value,
+                        mode: fine ? .fine : .absolute)))
             keyboardTick = hit.tick
             liveValue = hit.value
             return
         }
         selectedTick = nil
-        let point = Point(tick: tick(atX: x, fine: line), value: value(atY: y))
+        let point = Point(
+            tick: tick(atX: x, fine: line || fine),
+            value: fine ? quantizedValue(rawValue(atY: y)) : value(atY: y))
         gesture = .stroke(
             Stroke(
                 original: points, initialKeyboardTick: keyboardTick,
-                anchor: point, previous: point, line: line))
-        replace(from: point, to: point, fine: line)
+                anchor: point, previous: point, tool: line ? .line : .freehand,
+                vertical: VerticalAdjustment(
+                    previousY: y, value: Double(point.value), displayedValue: point.value,
+                    mode: fine ? .fine : .absolute)))
+        replace(from: point, to: point, fine: line || fine)
         keyboardTick = point.tick
         liveValue = point.value
     }
@@ -262,15 +324,18 @@ public struct PitchBendKernel {
         guard let gesture else { return false }
         switch gesture {
         case .stroke(var stroke):
-            let point = Point(tick: tick(atX: x, fine: stroke.line), value: value(atY: y))
-            if point.tick != stroke.previous.tick { stroke.sampled = true }
-            if stroke.line { points = stroke.original }
-            replace(from: stroke.line ? stroke.anchor : stroke.previous, to: point, fine: stroke.line)
+            let fineTime = stroke.tool == .line || fine
+            let point = Point(
+                tick: tick(atX: x, fine: fineTime),
+                value: adjustedValue(&stroke.vertical, y: y, normalValue: value(atY: y), fine: fine))
+            if point.tick != stroke.previous.tick { stroke.sampling = .sweep }
+            if stroke.tool == .line { points = stroke.original }
+            replace(from: stroke.tool == .line ? stroke.anchor : stroke.previous, to: point, fine: fineTime)
             stroke.previous = point
             self.gesture = .stroke(stroke)
             keyboardTick = point.tick
             liveValue = point.value
-        case .vertex(let drag):
+        case .vertex(var drag):
             points = drag.original
             let dx = x - drag.pressX
             let dy = y - drag.pressY
@@ -288,12 +353,16 @@ public struct PitchBendKernel {
                 tick = drag.originalTick
             }
             if tick != drag.originalTick { points.removeValue(forKey: drag.originalTick) }
-            let value =
+            let normalValue =
                 drag.originalTick == endTick
                 ? endValue
                 : abs(dy) <= geometry.scrubThreshold
                     ? originalValue
                     : value(atY: self.y(at: originalValue) + dy)
+            let value =
+                drag.originalTick == endTick
+                ? endValue : adjustedValue(&drag.vertical, y: y, normalValue: normalValue, fine: fine)
+            self.gesture = .vertex(drag)
             points[tick] = value
             points[endTick] = endValue
             selectedTick = tick
@@ -321,7 +390,7 @@ public struct PitchBendKernel {
     }
 
     public var linePreview: (Point, Point)? {
-        guard case .stroke(let stroke) = gesture, stroke.line else { return nil }
+        guard case .stroke(let stroke) = gesture, stroke.tool == .line else { return nil }
         return (stroke.anchor, stroke.previous)
     }
 

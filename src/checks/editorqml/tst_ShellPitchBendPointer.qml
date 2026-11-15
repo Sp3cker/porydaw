@@ -6,6 +6,44 @@ import Porydaw.Ui
 import "RollNoteFaces.js" as RollNoteFaces
 
 ShellPitchBendSupport {
+    function test_altFineValueFeedbackAndLiveTransitions() {
+        const opened = openPitchEditor()
+        const graph = opened.graph
+        const lane = graph.lane
+        const live = findChild(opened.popup, "pitchBendLiveValue")
+        const hint = findChild(opened.popup, "pitchBendFineAdjustmentHint")
+        verify(live !== null && hint !== null && hint.visible,
+               "the editor presents the precision hint and live value")
+        const rect = graph.canvasRect
+        const x = rect.x + rect.width * 0.35
+        const y = rect.y + rect.height * 0.25
+        mousePress(graph, x, y, Qt.LeftButton)
+        mouseMove(graph, x, y - 6, -1, Qt.LeftButton, Qt.AltModifier)
+        tryCompare(lane, "fineAdjustmentActive", true)
+        tryVerify(function() { return live.text.indexOf("FINE · ") === 0 },
+                  5000, "the dragged value visibly advertises precision adjustment")
+        const fineValue = lane.liveValueText
+        mouseMove(graph, x, y - 6, -1, Qt.LeftButton, Qt.NoModifier)
+        tryCompare(lane, "fineAdjustmentActive", false)
+        compare(lane.liveValueText, fineValue,
+                "releasing Alt at the same pointer position does not jump the value")
+        tryCompare(live, "text", fineValue)
+        mouseRelease(graph, x, y - 6, Qt.LeftButton)
+        compare(lane.fineAdjustmentActive, false)
+
+        mousePress(graph, x, y - 6, Qt.LeftButton, Qt.AltModifier)
+        tryCompare(lane, "fineAdjustmentActive", true)
+        mouseRelease(graph, x, y - 7, Qt.LeftButton, Qt.AltModifier)
+        tryCompare(lane, "fineAdjustmentActive", false,
+                   5000, "releasing the pointer clears precision feedback")
+        mousePress(graph, x, y - 7, Qt.LeftButton, Qt.AltModifier)
+        tryCompare(lane, "fineAdjustmentActive", true)
+        keyClick(Qt.Key_Return, Qt.AltModifier)
+        tryCompare(lane, "fineAdjustmentActive", false,
+                   5000, "ending the gesture with Return also clears precision feedback")
+        mouseRelease(graph, x, y - 7, Qt.LeftButton, Qt.AltModifier)
+    }
+
     function test_navigationKeysLeaveCurveUntouched() {
         const opened = openPitchEditor()
         const grid = opened.grid

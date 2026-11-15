@@ -341,9 +341,9 @@ public final class PitchBendPresenter {
             return true
         }
         if key == 0x01000004 || key == 0x01000005 {
-            currentPitch?.kernel.finish()
-            currentMod?.kernel.finish()
-            currentLfo?.kernel.finish()
+            currentPitch?.settleGesture()
+            currentMod?.settleGesture()
+            currentLfo?.settleGesture()
             return true
         }
         if !autoRepeat && keybindings.matches(key, modifiers, "transport.play_pause") {
@@ -462,7 +462,7 @@ public final class PitchBendPresenter {
         description =
             "BENDR is \(bendRange) semitones and LFO speed is \(lfoSpeed) for this note. "
             + "Edit pitch bend, modulation, and LFO speed; scroll inside the pitch bend graph to change "
-            + "BENDR, and hold Shift while drawing for angled lines. All three lanes affect every "
-            + "sounding note on this MIDI channel."
+            + "BENDR. Hold Option/Alt while dragging for fine time and quarter-speed value adjustment; "
+            + "hold Shift while drawing for angled lines. All three lanes affect every sounding note on this MIDI channel."
     }
 }
