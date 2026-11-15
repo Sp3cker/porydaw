@@ -17,9 +17,9 @@ The format remembers your last selection, even if you cancel the export or
 restart Porydaw.
 
 Export renders the current unsaved song and the currently applied voice bank
-as heard, without saving or changing the song. Rendering blocks input to the
-whole app until it finishes. The progress window's **Cancel** button (or
-Escape) stops rendering and removes the incomplete file.
+as heard, without saving or changing the song. Audio renders on a background
+worker; the progress window blocks editing until it finishes. Its **Cancel**
+button (or Escape) stops rendering and removes the incomplete file.
 
 ## What export is for
 
