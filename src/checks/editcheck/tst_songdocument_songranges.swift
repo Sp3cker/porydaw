@@ -98,20 +98,21 @@ internal func coreRangeNotePairsConsistent(_ document: SongDocument, track: Int)
     var ends = starts
     var lastEnd = Array(repeating: UInt64(0), count: 128)
     for note in document.notes(in: track) {
-        guard let endIndex = note.endIndex, note.duration > 0,
-            events.indices.contains(note.onIndex), events.indices.contains(endIndex),
+        guard let location = document.location(of: note.id),
+            let endIndex = location.endIndex, note.duration > 0,
+            events.indices.contains(location.onIndex), events.indices.contains(endIndex),
             note.pitch < 128, UInt64(note.tick) >= lastEnd[Int(note.pitch)]
         else { return false }
-        let on = events[note.onIndex]
+        let on = events[location.onIndex]
         let end = events[endIndex]
         guard case let .channel(_, onKey, _) = on.payload,
             case let .channel(_, endKey, _) = end.payload,
             on.isNoteOn, end.isNoteEnd, onKey == endKey, on.channel == end.channel,
             end.tick > on.tick, UInt64(on.tick) + UInt64(note.duration) == UInt64(end.tick)
         else { return false }
-        starts[note.onIndex] += 1
+        starts[location.onIndex] += 1
         ends[endIndex] += 1
-        guard starts[note.onIndex] == 1, ends[endIndex] == 1 else { return false }
+        guard starts[location.onIndex] == 1, ends[endIndex] == 1 else { return false }
         lastEnd[Int(note.pitch)] = UInt64(end.tick)
     }
     for (index, event) in events.enumerated()
@@ -142,7 +143,7 @@ private func coreRangeCollisionChecks(_ report: CheckReport) throws {
         }
         let edit = RangeEdit(
             minimumEngineTrackCount: 2,
-            removeNotes: empty ? [] : document.notes(in: 0),
+            removeNotes: empty ? [] : document.notes(in: 0).map(\.id),
             addNotes: [
                 NewNote(track: 1, tick: 10, pitch: 60, duration: 20, velocity: 80),
                 NewNote(track: 1, tick: 20, pitch: 60, duration: 20, velocity: 90),
@@ -218,7 +219,7 @@ private func coreRangeEditRow(
         points: [LaneWrite(tick: tick(30), value: 80)])
     document.editTempo(TempoEdit(add: [coreRangeTempo(tick(31), 140)]))
     let edit = RangeEdit(
-        removeNotes: document.notes(in: track).filter { $0.tick == tick(30) || $0.tick == tick(32) },
+        removeNotes: document.notes(in: track).filter { $0.tick == tick(30) || $0.tick == tick(32) }.map(\.id),
         removePoints: document.lanePoints(track: track, lane: .controller(7)).filter { $0.tick == tick(30) },
         addNotes: [NewNote(track: track, tick: tick(40), pitch: 65, duration: step * 2, velocity: 90)],
         addPoints: [

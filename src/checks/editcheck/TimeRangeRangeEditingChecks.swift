@@ -24,7 +24,7 @@ func rangeEditing(_ report: CheckReport) {
     let before = coreTimeBytes(document)
     let edit = RangeEdit(
         minimumEngineTrackCount: 3,
-        removeNotes: originalIDs.compactMap { document.note($0) },
+        removeNotes: originalIDs,
         removePoints: document.lanePoints(track: 0, lane: .controller(7)),
         addNotes: [NewNote(track: 2, tick: 60, pitch: 65, duration: 8, velocity: 99)],
         addPoints: [

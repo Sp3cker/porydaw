@@ -33,7 +33,7 @@ public final class PlaybackPublication {
                     to: PdPlaybackEvent(
                         sample: event.sample, tick: event.tick, type: event.type,
                         track: event.track, data0: event.data0, data1: event.data1,
-                        noteID: event.noteID.rawValue))
+                        noteID: event.wireNoteID))
             }
             events = storage
         }

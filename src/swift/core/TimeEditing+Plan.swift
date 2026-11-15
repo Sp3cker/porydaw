@@ -3,25 +3,25 @@ import Foundation
 @MainActor
 extension SongDocument {
     func makeTimePlan(scope: TimeScope, file: MidiFile) -> TimePlan {
-        let map = file.engineTracks()
+        let (sealed, map) = sealedFileAndMap(file)
         var trackByChunk: [Int: Int] = [:]
         for track in 0..<map.usedTrackCount {
             if let chunk = map.tracks[track].midiChunk { trackByChunk[chunk] = track }
         }
-        var selected = file.chunks.map { Array(repeating: false, count: $0.events.count) }
-        var affected = Array(repeating: false, count: file.chunks.count)
+        var selected = sealed.chunks.map { Array(repeating: false, count: $0.events.count) }
+        var affected = Array(repeating: false, count: sealed.chunks.count)
         var events: [TimeEventRef] = []
-        var xcmdLaneByChunk = Array(repeating: [Int: UInt8](), count: file.chunks.count)
-        for chunk in file.chunks.indices {
+        var xcmdLaneByChunk = Array(repeating: [Int: UInt8](), count: sealed.chunks.count)
+        for chunk in sealed.chunks.indices {
             let stream = streamIndex(for: chunk, map: map)
-            for point in Xcmd.project(Xcmd.traffic(in: file.chunks[chunk], stream: stream)).points {
+            for point in Xcmd.project(Xcmd.traffic(in: sealed.chunks[chunk], stream: stream)).points {
                 if point.index <= UInt64(Int.max) { xcmdLaneByChunk[chunk][Int(point.index)] = point.lane }
             }
         }
-        for chunk in file.chunks.indices {
+        for chunk in sealed.chunks.indices {
             let engineTrack = trackByChunk[chunk] ?? -1
-            for index in file.chunks[chunk].events.indices {
-                let event = file.chunks[chunk].events[index]
+            for index in sealed.chunks[chunk].events.indices {
+                let event = sealed.chunks[chunk].events[index]
                 let logicalLane = xcmdLaneByChunk[chunk][index].map { Lane.controller($0) }
                 let lane = logicalLane ?? lane(of: event)
                 let covered: Bool
@@ -73,19 +73,15 @@ extension SongDocument {
         var notes: [Note] = []
         for track in 0..<map.usedTrackCount where scope.coversTrack(track) {
             guard let chunk = map.tracks[track].midiChunk else { continue }
-            for note in NoteProjection.pair(
-                events: file.chunks[chunk].events,
-                channel: map.tracks[track].channel,
-                chunk: chunk, track: track)
-            {
-                guard selected[chunk][note.onIndex],
-                    note.endIndex.map({ selected[chunk][$0] }) ?? true
-                else { continue }
+            sealed.chunks[chunk].noteTable.forEachNote(track: track, chunk: chunk) { note, location in
+                guard selected[chunk][location.onIndex],
+                    location.endIndex.map({ selected[chunk][$0] }) ?? true
+                else { return }
                 notes.append(note)
             }
         }
         if scope.wholeSong {
-            affected = Array(repeating: true, count: file.chunks.count)
+            affected = Array(repeating: true, count: sealed.chunks.count)
         }
         return TimePlan(events: events, notes: notes, selected: selected, affectedChunks: affected)
     }
@@ -120,28 +116,30 @@ extension SongDocument {
     ) {
         let s = range.startTick, e = range.endTick, span = range.span
         var taken = plan.selected.map { Array(repeating: false, count: $0.count) }
+        let map = state.file.engineTracks()
         for note in plan.notes {
+            guard let location = state.file.location(of: note.id, map: map) else { continue }
             if note.tick >= e {
                 actions.move(
-                    chunk: note.chunk, index: note.onIndex, to: note.tick - span,
+                    chunk: location.chunk, index: location.onIndex, to: note.tick - span,
                     preserveIdentity: true)
-                taken[note.chunk][note.onIndex] = true
-                if let endIndex = note.endIndex {
-                    let end = state.file.chunks[note.chunk].events[endIndex].tick
+                taken[location.chunk][location.onIndex] = true
+                if let endIndex = location.endIndex {
+                    let end = state.file.chunks[location.chunk].events[endIndex].tick
                     actions.move(
-                        chunk: note.chunk, index: endIndex, to: end - span,
+                        chunk: location.chunk, index: endIndex, to: end - span,
                         preserveIdentity: false)
-                    taken[note.chunk][endIndex] = true
+                    taken[location.chunk][endIndex] = true
                 }
             } else if note.tick >= s {
-                actions.remove(chunk: note.chunk, index: note.onIndex)
-                taken[note.chunk][note.onIndex] = true
-                if let end = note.endIndex {
-                    actions.remove(chunk: note.chunk, index: end); taken[note.chunk][end] = true
+                actions.remove(chunk: location.chunk, index: location.onIndex)
+                taken[location.chunk][location.onIndex] = true
+                if let end = location.endIndex {
+                    actions.remove(chunk: location.chunk, index: end); taken[location.chunk][end] = true
                 }
             } else {
-                taken[note.chunk][note.onIndex] = true
-                if let end = note.endIndex { taken[note.chunk][end] = true }
+                taken[location.chunk][location.onIndex] = true
+                if let end = location.endIndex { taken[location.chunk][end] = true }
             }
         }
         for ref in plan.events where ref.kind == .note && !taken[ref.chunk][ref.index] {
@@ -180,38 +178,40 @@ extension SongDocument {
     ) {
         let s = range.startTick, e = range.endTick, span = range.span
         var taken = plan.selected.map { Array(repeating: false, count: $0.count) }
+        let map = state.file.engineTracks()
         for note in plan.notes {
-            let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick }
+            guard let location = state.file.location(of: note.id, map: map) else { continue }
+            let end = location.endIndex.map { state.file.chunks[location.chunk].events[$0].tick }
             if note.tick >= s {
                 actions.move(
-                    chunk: note.chunk, index: note.onIndex, to: note.tick + span,
+                    chunk: location.chunk, index: location.onIndex, to: note.tick + span,
                     preserveIdentity: true)
-                taken[note.chunk][note.onIndex] = true
-                if let endIndex = note.endIndex, let end {
+                taken[location.chunk][location.onIndex] = true
+                if let endIndex = location.endIndex, let end {
                     actions.move(
-                        chunk: note.chunk, index: endIndex, to: end + span,
+                        chunk: location.chunk, index: endIndex, to: end + span,
                         preserveIdentity: false)
-                    taken[note.chunk][endIndex] = true
+                    taken[location.chunk][endIndex] = true
                 }
             } else if let end, end == s {
-                if let index = note.endIndex { taken[note.chunk][index] = true }
-                taken[note.chunk][note.onIndex] = true
-            } else if let end, end > s, let endIndex = note.endIndex {
-                taken[note.chunk][note.onIndex] = true; taken[note.chunk][endIndex] = true
-                actions.remove(chunk: note.chunk, index: endIndex)
-                var firstEnd = state.file.chunks[note.chunk].events[endIndex]; firstEnd.tick = s
-                var secondOn = state.file.chunks[note.chunk].events[note.onIndex]; secondOn.tick = e;
+                if let index = location.endIndex { taken[location.chunk][index] = true }
+                taken[location.chunk][location.onIndex] = true
+            } else if let end, end > s, let endIndex = location.endIndex {
+                taken[location.chunk][location.onIndex] = true; taken[location.chunk][endIndex] = true
+                actions.remove(chunk: location.chunk, index: endIndex)
+                var firstEnd = state.file.chunks[location.chunk].events[endIndex]; firstEnd.tick = s
+                var secondOn = state.file.chunks[location.chunk].events[location.onIndex]; secondOn.tick = e;
                 secondOn.noteID = nil
-                var secondEnd = state.file.chunks[note.chunk].events[endIndex]; secondEnd.tick = end + span
-                extra[note.chunk].append(contentsOf: [firstEnd, secondOn, secondEnd])
+                var secondEnd = state.file.chunks[location.chunk].events[endIndex]; secondEnd.tick = end + span
+                extra[location.chunk].append(contentsOf: [firstEnd, secondOn, secondEnd])
             } else if note.isUnterminated {
-                taken[note.chunk][note.onIndex] = true
-                extra[note.chunk].append(
+                taken[location.chunk][location.onIndex] = true
+                extra[location.chunk].append(
                     .channel(
                         tick: s, status: 0x80 | note.channel,
                         data0: note.pitch))
-                var second = state.file.chunks[note.chunk].events[note.onIndex]
-                second.tick = e; second.noteID = nil; extra[note.chunk].append(second)
+                var second = state.file.chunks[location.chunk].events[location.onIndex]
+                second.tick = e; second.noteID = nil; extra[location.chunk].append(second)
             }
         }
         for ref in plan.events where !taken[ref.chunk][ref.index] && ref.tick >= s {
@@ -237,32 +237,34 @@ extension SongDocument {
         let s = range.startTick, e = range.endTick, span = range.span
         var paired = plan.selected.map { Array(repeating: false, count: $0.count) }
         var taken = paired
+        let map = state.file.engineTracks()
         for note in plan.notes {
-            paired[note.chunk][note.onIndex] = true
-            if let endIndex = note.endIndex { paired[note.chunk][endIndex] = true }
-            let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick }
+            guard let location = state.file.location(of: note.id, map: map) else { continue }
+            paired[location.chunk][location.onIndex] = true
+            if let endIndex = location.endIndex { paired[location.chunk][endIndex] = true }
+            let end = location.endIndex.map { state.file.chunks[location.chunk].events[$0].tick }
             if note.tick >= e {
                 actions.move(
-                    chunk: note.chunk, index: note.onIndex, to: note.tick + span,
+                    chunk: location.chunk, index: location.onIndex, to: note.tick + span,
                     preserveIdentity: true);
-                taken[note.chunk][note.onIndex] = true
-                if let endIndex = note.endIndex, let end {
+                taken[location.chunk][location.onIndex] = true
+                if let endIndex = location.endIndex, let end {
                     actions.move(
-                        chunk: note.chunk, index: endIndex, to: end + span,
+                        chunk: location.chunk, index: endIndex, to: end + span,
                         preserveIdentity: false);
-                    taken[note.chunk][endIndex] = true
+                    taken[location.chunk][endIndex] = true
                 }
-            } else if let end, let endIndex = note.endIndex {
+            } else if let end, let endIndex = location.endIndex {
                 if end == e {
-                    taken[note.chunk][endIndex] = true
+                    taken[location.chunk][endIndex] = true
                 } else if end > e {
-                    actions.remove(chunk: note.chunk, index: endIndex)
-                    taken[note.chunk][endIndex] = true
-                    var firstEnd = state.file.chunks[note.chunk].events[endIndex]; firstEnd.tick = e
-                    var tailOn = state.file.chunks[note.chunk].events[note.onIndex]
+                    actions.remove(chunk: location.chunk, index: endIndex)
+                    taken[location.chunk][endIndex] = true
+                    var firstEnd = state.file.chunks[location.chunk].events[endIndex]; firstEnd.tick = e
+                    var tailOn = state.file.chunks[location.chunk].events[location.onIndex]
                     tailOn.tick = e + span; tailOn.noteID = nil
-                    var tailEnd = state.file.chunks[note.chunk].events[endIndex]; tailEnd.tick = end + span
-                    extra[note.chunk].append(contentsOf: [firstEnd, tailOn, tailEnd])
+                    var tailEnd = state.file.chunks[location.chunk].events[endIndex]; tailEnd.tick = end + span
+                    extra[location.chunk].append(contentsOf: [firstEnd, tailOn, tailEnd])
                 }
             }
         }
@@ -272,18 +274,20 @@ extension SongDocument {
                 preserveIdentity: state.file.chunks[ref.chunk].events[ref.index].isNoteOn)
         }
         for note in plan.notes where note.tick < e {
-            let end = note.endIndex.map { state.file.chunks[note.chunk].events[$0].tick } ?? e
+            guard let location = state.file.location(of: note.id, map: map) else { continue }
+            let end = location.endIndex.map { state.file.chunks[location.chunk].events[$0].tick } ?? e
             let sourceStart = max(note.tick, s), sourceEnd = min(end, e)
             guard sourceEnd > sourceStart else { continue }
-            var on = state.file.chunks[note.chunk].events[note.onIndex]
+            var on = state.file.chunks[location.chunk].events[location.onIndex]
             on.tick = sourceStart + span; on.noteID = nil
             let off: MidiEvent
-            if let endIndex = note.endIndex {
-                var value = state.file.chunks[note.chunk].events[endIndex]; value.tick = sourceEnd + span; off = value
+            if let endIndex = location.endIndex {
+                var value = state.file.chunks[location.chunk].events[endIndex]; value.tick = sourceEnd + span;
+                off = value
             } else {
                 off = .channel(tick: sourceEnd + span, status: 0x80 | note.channel, data0: note.pitch)
             }
-            extra[note.chunk].append(contentsOf: [on, off])
+            extra[location.chunk].append(contentsOf: [on, off])
         }
         seedAndCopyValueStreams(
             range: range, plan: plan, state: state,

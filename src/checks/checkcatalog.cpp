@@ -150,6 +150,7 @@ const std::vector<CheckDefinition> &catalog()
         swiftSuite("swiftcore-playback-suppression-start-stop", "suppressionStartStop");
         swiftSuite("swiftcore-playback-suppression-replacement", "suppressionReplacement");
         swiftSuite("swiftcore-noteedits", "noteEdits");
+        swiftSuite("swiftcore-noteoracle", "noteOracle");
         swiftSuite("swiftcore-documenthistory", "documentHistory");
         swiftSuite("swiftcore-eventedits", "eventEdits");
         swiftSuite("swiftcore-xcmdedits", "xcmdEdits");

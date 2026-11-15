@@ -41,14 +41,17 @@ private func checkDuplicateNoteIdentity(_ report: CheckReport, session: Document
     let firstID = duplicates[0]
     let secondID = duplicates[1]
     guard let firstBefore = session.document.note(firstID),
-        let secondBefore = session.document.note(secondID)
+        let secondBefore = session.document.note(secondID),
+        let firstLocation = session.document.location(of: firstID),
+        let secondLocation = session.document.location(of: secondID)
     else {
         report.fail(id, "duplicate notes were not projected by ID")
         return
     }
-    func sameIdentityAndValue(_ lhs: Note?, _ rhs: Note) -> Bool {
+    func sameIdentityAndValue(_ lhs: Note?, _ rhs: Note, location: NoteLocation) -> Bool {
         guard let lhs else { return false }
-        return lhs.id == rhs.id && lhs.track == rhs.track && lhs.chunk == rhs.chunk
+        return lhs.id == rhs.id && lhs.track == rhs.track
+            && session.document.location(of: lhs.id)?.chunk == location.chunk
             && lhs.tick == rhs.tick && lhs.duration == rhs.duration
             && lhs.pitch == rhs.pitch && lhs.velocity == rhs.velocity
             && lhs.channel == rhs.channel
@@ -74,14 +77,14 @@ private func checkDuplicateNoteIdentity(_ report: CheckReport, session: Document
             $0.id == firstID && $0.tick == firstBefore.tick
                 && $0.pitch == firstBefore.pitch + 1 && $0.duration == firstBefore.duration
                 && $0.velocity == firstBefore.velocity
-        } == true && sameIdentityAndValue(session.document.note(secondID), secondBefore)
+        } == true && sameIdentityAndValue(session.document.note(secondID), secondBefore, location: secondLocation)
             && session.selectedNoteOrder == [firstID], cppID: id,
         message: "one-ID pitch edit leaves the other duplicate untouched and selected ID stable")
 
     _ = session.document.history.undoDocument()
     report.expect(
-        sameIdentityAndValue(session.document.note(firstID), firstBefore)
-            && sameIdentityAndValue(session.document.note(secondID), secondBefore)
+        sameIdentityAndValue(session.document.note(firstID), firstBefore, location: firstLocation)
+            && sameIdentityAndValue(session.document.note(secondID), secondBefore, location: secondLocation)
             && session.selectedNoteOrder == [firstID], cppID: id,
         message: "undo restores both duplicate values without replacing their identities")
 

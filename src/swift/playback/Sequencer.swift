@@ -1,18 +1,12 @@
 import PorydawCore
 import PorydawPlaybackNative
 
-// Heap-owned ID planes keep the scheduler value small on bounded worker stacks.
+// Heap-owned owner plane keeps the scheduler value small on bounded worker stacks.
 private final class LiveNoteIDs {
     private var owners = InlineArray<2048, Int64>(repeating: 0)
-    private var inputOns = InlineArray<2048, Int64>(repeating: 0)
-    private var inputOffs = InlineArray<2048, Int64>(repeating: 0)
 
     func withOwners(_ body: (inout InlineArray<2048, Int64>) -> Void) {
         body(&owners)
-    }
-
-    func withInputs(_ body: (inout InlineArray<2048, Int64>, inout InlineArray<2048, Int64>) -> Void) {
-        body(&inputOns, &inputOffs)
     }
 }
 
@@ -598,9 +592,37 @@ extension Sequencer {
             preconditionFailure("Live rendering requires Sequencer(liveInserts: true)")
         }
         liveChunkStart = position
+        var hasActiveTrack = false
         for track in 0..<TrackLimits.hardwareCapacity {
             liveIndices[track] = 0
             liveCalls[track].outputCount = 0
+            guard track < slots.count, slots[track] != nil, liveMask & (1 << UInt32(track)) != 0 else { continue }
+            hasActiveTrack = true
+        }
+        guard hasActiveTrack else { return }
+        var timing = LiveInsertCall()
+        timing.tick = source.tick(for: position)
+        var tempoIndex = 0
+        while tempoIndex + 1 < source.tempos.count && source.tempos[tempoIndex + 1].sampleOrigin <= Double(position) {
+            tempoIndex += 1
+        }
+        timing.tempoBPM = 60_000_000 / Double(source.tempos[tempoIndex].microsecondsPerQuarterNote)
+        for index in 0..<source.meterCount {
+            let meter = source.meter(at: index)
+            if Double(meter.tick) > timing.tick { break }
+            timing.numerator = meter.numerator
+            timing.denominatorPowerOfTwo = meter.denominatorPowerOfTwo
+            let barTicks =
+                Double(source.ticksPerBeat) * 4 * Double(meter.numerator)
+                / Double(UInt64(1) << min(31, Int(meter.denominatorPowerOfTwo)))
+            if barTicks > 0 {
+                timing.barStartTick =
+                    Double(meter.tick) + ((timing.tick - Double(meter.tick)) / barTicks).rounded(.down) * barTicks
+            }
+        }
+        let windowStart = playing ? lowerBound(in: source, sample: position) : 0
+        for track in 0..<TrackLimits.hardwareCapacity {
+            // Restore is consumed here, after earlier tracks' callbacks, as before.
             guard track < slots.count, let slot = slots[track], liveMask & (1 << UInt32(track)) != 0 else { continue }
             if liveWasPlaying[track] != playing {
                 liveFlags[track].insert(playing ? .transport : .stop)
@@ -623,7 +645,7 @@ extension Sequencer {
             call.discontinuity = flags
             call.sampleRate = source.sampleRate
             call.ticksPerBeat = source.ticksPerBeat
-            call.tick = source.tick(for: position)
+            call.tick = timing.tick
             call.loopStartSample = source.loopStartSample
             call.loopEndSample = source.loopEndSample
             call.loopStartTick = source.loopStartTick
@@ -634,70 +656,30 @@ extension Sequencer {
             call.tempoCount = source.tempos.count
             call.timeSignatures = source.signatures.baseAddress
             call.timeSignatureCount = source.signatures.count
-            var tempoIndex = 0
-            while tempoIndex + 1 < source.tempos.count && source.tempos[tempoIndex + 1].sampleOrigin <= Double(position)
-            {
-                tempoIndex += 1
-            }
-            call.tempoBPM = 60_000_000 / Double(source.tempos[tempoIndex].microsecondsPerQuarterNote)
-            for index in 0..<source.meterCount {
-                let meter = source.meter(at: index)
-                if Double(meter.tick) > call.tick { break }
-                call.numerator = meter.numerator
-                call.denominatorPowerOfTwo = meter.denominatorPowerOfTwo
-                let barTicks =
-                    Double(source.ticksPerBeat) * 4 * Double(meter.numerator)
-                    / Double(UInt64(1) << min(31, Int(meter.denominatorPowerOfTwo)))
-                if barTicks > 0 {
-                    call.barStartTick =
-                        Double(meter.tick) + ((call.tick - Double(meter.tick)) / barTicks).rounded(.down) * barTicks
-                }
-            }
+            call.tempoBPM = timing.tempoBPM
+            call.numerator = timing.numerator
+            call.denominatorPowerOfTwo = timing.denominatorPowerOfTwo
+            call.barStartTick = timing.barStartTick
             call.input = UnsafePointer(liveInput)
             call.output = liveOutput + track * LiveInsertCall.eventCapacity
             call.takeSink = slot.pointee.takeSink
             call.takeContext = slot.pointee.takeContext
             if playing {
-                liveIDs.withInputs {
-                    (inputOns: inout InlineArray<2048, Int64>, inputOffs: inout InlineArray<2048, Int64>) in
-                if !flags.isEmpty {
-                    // FIFO IDs are one-based per-pitch onset ordinals, interleaved across 128 keys.
-                    for key in 0..<128 {
-                        inputOns[track * 128 + key] = 0
-                        inputOffs[track * 128 + key] = 0
-                    }
-                }
-                let first = flags.isEmpty ? lowerBound(in: source, sample: position) : 0
-                for index in first..<source.count {
+                for index in windowStart..<source.count {
                     let event = source[index]
                     if event.sample >= position + UInt64(frames) { break }
                     guard Int(event.track) == track && (event.type == 0x8 || event.type == 0x9) else { continue }
                     let key = event.data0 & 0x7F
-                    let stateIndex = track * 128 + Int(key)
                     let on = event.type == 0x9 && event.data1 > 0
-                    let ordinal: Int64
-                    if on {
-                        inputOns[stateIndex] += 1
-                        ordinal = inputOns[stateIndex]
-                    } else {
-                        if inputOffs[stateIndex] < inputOns[stateIndex] {
-                            inputOffs[stateIndex] += 1
-                            ordinal = inputOffs[stateIndex]
-                        } else {
-                            ordinal = 0
-                        }
-                    }
-                    guard event.sample >= position else { continue }
                     if call.inputCount < LiveInsertCall.eventCapacity {
                         liveInput[call.inputCount] = LiveInputEvent(
                             sampleOffset: Int32(event.sample - position), key: key,
                             velocity: on ? min(127, event.data1) : 0,
-                            noteId: ordinal > 0 ? (ordinal - 1) * 128 + Int64(key) + 1 : 0)
+                            noteId: Int64(source.events[index].wireNoteID))
                         call.inputCount += 1
                     } else {
                         call.inputOverflow += 1
                     }
-                }
                 }
             }
             withUnsafeMutablePointer(to: &call) { (pointer: UnsafeMutablePointer<LiveInsertCall>) in

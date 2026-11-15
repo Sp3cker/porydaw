@@ -189,7 +189,11 @@ private func abuttingNoteRow(
     report.expectEqual(expected: step * 2, actual: left.duration, cppID: id, what: "A108 left note ends at the seam")
     report.expectEqual(
         expected: step * 2, actual: right.duration, cppID: id, what: "A109 right note retains its full duration")
-    report.expect(left.endIndex != right.endIndex, cppID: id, message: "A110 abutting notes have distinct ends")
+    let leftLocation = document.location(of: left.id)
+    let rightLocation = document.location(of: right.id)
+    report.expect(
+        leftLocation != nil && rightLocation != nil && leftLocation?.endIndex != rightLocation?.endIndex,
+        cppID: id, message: "A110 abutting notes have distinct ends")
     document.deleteNotes([left.id, right.id])
     guard let chunk = document.engineTracks.tracks[track].midiChunk else {
         report.fail(id, "A111 edited track lost its MIDI chunk"); return

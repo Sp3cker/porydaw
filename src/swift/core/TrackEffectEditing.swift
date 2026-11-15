@@ -23,7 +23,7 @@ extension SongDocument {
         if let existing, existing.id != replacing { throw TrackEffectError.trackHasEffect(config.track) }
         if let replacing, existing?.id != replacing { throw TrackEffectError.unknownEffect }
         let id = mintEffectID()
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         if let existing { mutation.removeEffect(existing.id) }
         mutation.insertEffect(TrackEffect(id: id, config: config))
         commit(mutation, group: nil, operation: .addEffect)
@@ -36,7 +36,7 @@ extension SongDocument {
         guard state.effects.contains(where: { (effect: TrackEffect) in effect.id == id }) else {
             throw TrackEffectError.unknownEffect
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.removeEffect(id)
         commit(mutation, group: nil, operation: .removeEffect)
     }
@@ -57,7 +57,7 @@ extension SongDocument {
         guard let original = base.effects.first(where: { (effect: TrackEffect) in effect.id == id }) else {
             throw TrackEffectError.unknownEffect
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.setEffectConfig(id, config: config, origin: original.config)
         commit(mutation, group: group, operation: operation, returnsToOrigin: config == original.config)
     }
@@ -68,7 +68,7 @@ extension SongDocument {
         guard effects.contains(where: { (effect: TrackEffect) in effect.id == id }) else {
             throw TrackEffectError.unknownEffect
         }
-        var mutation = DocumentMutation(self.state)
+        var mutation = beginMutation(from: self.state)
         mutation.setPluginState(id, state: state)
         commit(mutation, group: nil, operation: .editPluginState(id))
     }

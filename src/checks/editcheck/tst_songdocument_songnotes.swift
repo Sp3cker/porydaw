@@ -527,7 +527,9 @@ private func coreUnterminatedResizeChecks(_ report: CheckReport) {
             let id = "swiftcore/unterminatedResize[\(keyboard ? "keyboard" : "direct"),\(delta)]"
             do {
                 let document = SongDocument(file: try MidiFile.decode(fixture.encoded()))
-                guard let original = document.notes(in: 0).first, original.isUnterminated else {
+                guard let original = document.notes(in: 0).first, original.isUnterminated,
+                    let originalLocation = document.location(of: original.id)
+                else {
                     report.fail(id, "fixture must contain an unterminated note"); continue
                 }
                 let before = document.state
@@ -560,7 +562,7 @@ private func coreUnterminatedResizeChecks(_ report: CheckReport) {
                     document.note(original.id)?.endTick == UInt64(end), cppID: id,
                     message: "resized note has an actual endpoint")
                 var expected = before.file
-                expected.chunks[original.chunk].events.append(
+                expected.chunks[originalLocation.chunk].events.append(
                     .channel(tick: end, status: 0x92, data0: 60, data1: 0))
                 report.expectEqual(
                     expected: try expected.encoded(), actual: try document.state.file.encoded(),

@@ -55,12 +55,14 @@ public final class LiveInsert: @unchecked Sendable {
     public let slot: UnsafeMutablePointer<LiveInsertSlot>
     private var inputMode: EffectInput = .none
     private var held = InlineArray<4096, HeldInput>(repeating: HeldInput())
+    private var heldOccupied = InlineArray<64, UInt64>(repeating: 0)
     private var wireInput = InlineArray<4096, pdph_midi_event>(repeating: pdph_midi_event())
     private var wireOutput = InlineArray<4096, pdph_midi_event>(repeating: pdph_midi_event())
     private var inputCount = 0
     private var needsChase = true
     private var nextOutputID: Int64 = 1
     private var outputHeld = InlineArray<4096, HeldOutput>(repeating: HeldOutput())
+    private var outputOccupied = InlineArray<64, UInt64>(repeating: 0)
     private var outputOrder: UInt64 = 0
 
     init(channel: sending BridgeChannel) {
@@ -142,18 +144,60 @@ public final class LiveInsert: @unchecked Sendable {
         return true
     }
 
-    private func remember(_ note: HeldInput) -> Bool {
-        for index in 0..<4096 where held[index].id == 0 {
-            held[index] = note
-            return true
+    private static func firstClearSlot(in occupied: borrowing InlineArray<64, UInt64>) -> Int? {
+        for wordIndex in 0..<64 {
+            let free = ~occupied[wordIndex]
+            if free != 0 { return wordIndex * 64 + free.trailingZeroBitCount }
         }
-        return false
+        return nil
+    }
+
+    private static func setOccupied(_ index: Int, in occupied: inout InlineArray<64, UInt64>) {
+        occupied[index / 64] |= UInt64(1) << (index % 64)
+    }
+
+    private static func clearOccupied(_ index: Int, in occupied: inout InlineArray<64, UInt64>) {
+        occupied[index / 64] &= ~(UInt64(1) << (index % 64))
+    }
+
+    private static func nextOccupiedSlot(in occupied: borrowing InlineArray<64, UInt64>, from start: Int) -> Int? {
+        var wordIndex = start / 64
+        guard wordIndex < 64 else { return nil }
+        var word = occupied[wordIndex] & (UInt64.max << (start % 64))
+        while true {
+            if word != 0 { return wordIndex * 64 + word.trailingZeroBitCount }
+            wordIndex += 1
+            guard wordIndex < 64 else { return nil }
+            word = occupied[wordIndex]
+        }
+    }
+
+    private func clearHeld(at index: Int) {
+        held[index] = HeldInput()
+        Self.clearOccupied(index, in: &heldOccupied)
+    }
+
+    private func clearOutputHeld(at index: Int) {
+        outputHeld[index] = HeldOutput()
+        Self.clearOccupied(index, in: &outputOccupied)
+    }
+
+    private func remember(_ note: HeldInput) -> Bool {
+        guard let index = Self.firstClearSlot(in: heldOccupied) else { return false }
+        held[index] = note
+        // Zero-id notes alias empty HeldInput() slots; leave them unoccupied so forget/flush/chase skip them, as the old id scans did.
+        if note.id != 0 { Self.setOccupied(index, in: &heldOccupied) }
+        return true
     }
 
     private func forget(id: Int32, pitch: UInt8) {
-        for index in 0..<4096 where held[index].id == id && held[index].pitch == pitch {
-            held[index] = HeldInput()
-            return
+        var nextIndex = 0
+        while let index = Self.nextOccupiedSlot(in: heldOccupied, from: nextIndex) {
+            if held[index].id == id && held[index].pitch == pitch {
+                clearHeld(at: index)
+                return
+            }
+            nextIndex = index + 1
         }
     }
 
@@ -171,40 +215,42 @@ public final class LiveInsert: @unchecked Sendable {
     }
 
     private func flush(call: inout LiveInsertCall) {
-        for index in 0..<4096 where held[index].id != 0 {
+        var nextIndex = 0
+        while let index = Self.nextOccupiedSlot(in: heldOccupied, from: nextIndex) {
             _ = emit(held[index], offset: 0, on: false, call: &call)
-            held[index] = HeldInput()
+            clearHeld(at: index)
+            nextIndex = index + 1
         }
-        for index in 0..<4096 { outputHeld[index] = HeldOutput() }
+        nextIndex = 0
+        while let index = Self.nextOccupiedSlot(in: outputOccupied, from: nextIndex) {
+            clearOutputHeld(at: index)
+            nextIndex = index + 1
+        }
     }
 
     private func chase(call: inout LiveInsertCall) {
         guard call.playing, inputMode == .trackNotes, let events = call.timelineEvents else { return }
-        var ons = InlineArray<128, Int64>(repeating: 0)
-        var offs = InlineArray<128, Int64>(repeating: 0)
         for index in 0..<call.timelineEventCount {
             let event = events[index]
             if event.sample >= call.position { break }
             guard Int32(event.track) == call.track, event.type == 8 || event.type == 9 else { continue }
             let key = Int(event.data0 & 127)
             if event.type == 9 && event.data1 > 0 {
-                ons[key] += 1
-                let id = (ons[key] - 1) * 128 + Int64(key) + 1
-                guard let wireID = Int32(exactly: id) else {
+                guard let wireID = Int32(exactly: event.wireNoteID) else {
                     call.inputOverflow &+= 1
                     continue
                 }
                 if !remember(HeldInput(id: wireID, pitch: UInt8(key), velocity: min(127, event.data1))) {
                     call.inputOverflow &+= 1
                 }
-            } else if offs[key] < ons[key] {
-                offs[key] += 1
-                let id = (offs[key] - 1) * 128 + Int64(key) + 1
-                if let wireID = Int32(exactly: id) { forget(id: wireID, pitch: UInt8(key)) }
+            } else if event.wireNoteID > 0 {
+                if let wireID = Int32(exactly: event.wireNoteID) { forget(id: wireID, pitch: UInt8(key)) }
             }
         }
-        for index in 0..<4096 where held[index].id != 0 {
-            if !emit(held[index], offset: 0, on: true, call: &call) { held[index] = HeldInput() }
+        var nextIndex = 0
+        while let index = Self.nextOccupiedSlot(in: heldOccupied, from: nextIndex) {
+            if !emit(held[index], offset: 0, on: true, call: &call) { clearHeld(at: index) }
+            nextIndex = index + 1
         }
     }
 
@@ -243,16 +289,16 @@ public final class LiveInsert: @unchecked Sendable {
             let id = event.note_id > 0 ? Int64(event.note_id) : -nextOutputID
             if event.note_id <= 0 { nextOutputID += 1 }
             outputOrder &+= 1
-            for index in 0..<4096 where outputHeld[index].note.velocity == 0 {
-                outputHeld[index] = HeldOutput(
-                    note: LiveOutputEvent(key: pitch, velocity: 1, noteId: id), order: outputOrder)
-                return id
-            }
-            return nil
+            guard let index = Self.firstClearSlot(in: outputOccupied) else { return nil }
+            outputHeld[index] = HeldOutput(
+                note: LiveOutputEvent(key: pitch, velocity: 1, noteId: id), order: outputOrder)
+            Self.setOccupied(index, in: &outputOccupied)
+            return id
         }
         var oldest: Int?
         var oldestOrder = UInt64.max
-        for index in 0..<4096 where outputHeld[index].note.velocity > 0 {
+        var nextIndex = 0
+        while let index = Self.nextOccupiedSlot(in: outputOccupied, from: nextIndex) {
             let note = outputHeld[index].note
             if (event.note_id > 0 && note.noteId == Int64(event.note_id)) || (event.note_id <= 0 && note.key == pitch) {
                 if outputHeld[index].order < oldestOrder {
@@ -260,11 +306,12 @@ public final class LiveInsert: @unchecked Sendable {
                     oldestOrder = outputHeld[index].order
                 }
             }
+            nextIndex = index + 1
         }
         guard let oldest else { return Int64(event.note_id) }
         let id = outputHeld[oldest].note.noteId
         pitch = outputHeld[oldest].note.key
-        outputHeld[oldest] = HeldOutput()
+        clearOutputHeld(at: oldest)
         return id
     }
 

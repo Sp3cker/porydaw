@@ -49,7 +49,10 @@ public struct DocumentRevisions: Equatable, Sendable {
             chunks = (0..<chunkCount).map { _ in ChunkRevisions(next()) }
             all = ChunkRevisions(next())
         } else {
-            for change in changes.events { stamp(change) }
+            for splice in changes.splices {
+                for event in splice.removed { stamp(event, chunk: splice.chunk) }
+                for event in splice.inserted { stamp(event, chunk: splice.chunk) }
+            }
         }
         if changes.tempo != nil || !changes.chunkEnds.isEmpty || changes.fileMetadata != nil {
             time = next()
@@ -57,9 +60,15 @@ public struct DocumentRevisions: Equatable, Sendable {
         if changes.config != nil { config = next() }
     }
 
-    private mutating func stamp(_ change: EventChange) {
-        let chunk = change.chunk
-        switch change.event.payload {
+    internal mutating func advanceNotes(in chunks: Set<Int>) {
+        for chunk in chunks.sorted() {
+            self.chunks[chunk].notes = next()
+            all.notes = self.chunks[chunk].notes
+        }
+    }
+
+    private mutating func stamp(_ event: MidiEvent, chunk: Int) {
+        switch event.payload {
         case let .channel(status, _, _):
             switch status >> 4 {
             case 0x8, 0x9:

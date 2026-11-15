@@ -158,7 +158,7 @@ extension VelocityPage {
     /// The page's live gesture and hover facts, frozen for one build.
     private func interactionSnapshot() -> VelocityInteractionSnapshot {
         VelocityInteractionSnapshot(
-            frozenNotes: gesture?.notes ?? [],
+            frozen: gesture?.frozen ?? VelocityFrozenNotes(),
             preview: gesture?.preview ?? rollPreview,
             detentUnlock: gesture?.detentUnlock ?? false,
             relativeActivated: gesture?.relativeActivated ?? false,

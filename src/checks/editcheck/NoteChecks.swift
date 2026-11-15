@@ -114,10 +114,10 @@ private func lifecycleFixturePairing(_ report: CheckReport) {
         let notes = document.notes(in: track)
         report.expectEqual(expected: 4, actual: notes.count, cppID: cppID, what: "fixture pairing count")
         report.expectEqual(
-            expected: [2, 4, 6, 8], actual: notes.map(\.onIndex), cppID: cppID,
+            expected: [2, 4, 6, 8], actual: notes.map { document.location(of: $0.id)?.onIndex }, cppID: cppID,
             what: "fixture note-on event indices")
         report.expectEqual(
-            expected: [3, 5, 7, 9], actual: notes.map(\.endIndex), cppID: cppID,
+            expected: [3, 5, 7, 9], actual: notes.map { document.location(of: $0.id)?.endIndex }, cppID: cppID,
             what: "fixture note-end event indices")
         report.expectEqual(
             expected: [Tick(24), 24, 0, 24], actual: notes.map(\.duration), cppID: cppID,
@@ -168,10 +168,10 @@ private func interleavedFixturePairing(_ report: CheckReport) {
         let notes = document.notes(in: track)
         report.expectEqual(expected: 5, actual: notes.count, cppID: cppID, what: "interleaved pairing count")
         report.expectEqual(
-            expected: [0, 1, 5, 7, 8], actual: notes.map(\.onIndex), cppID: cppID,
+            expected: [0, 1, 5, 7, 8], actual: notes.map { document.location(of: $0.id)?.onIndex }, cppID: cppID,
             what: "interleaved note-on indices")
         report.expectEqual(
-            expected: [6, 3, 6, nil, 10], actual: notes.map(\.endIndex), cppID: cppID,
+            expected: [6, 3, 6, nil, 10], actual: notes.map { document.location(of: $0.id)?.endIndex }, cppID: cppID,
             what: "interleaved note-end indices")
         report.expectEqual(
             expected: [Tick(20), 5, 10, 0, 8], actual: notes.map(\.duration), cppID: cppID,
@@ -218,10 +218,10 @@ private func unterminatedPairingLargeFixture(_ report: CheckReport) {
             expected: noteCount, actual: notes.count, cppID: cppID,
             what: "unterminated note pairing count")
         report.expectEqual(
-            expected: 0, actual: notes.first?.onIndex, cppID: cppID,
+            expected: 0, actual: notes.first.flatMap { document.location(of: $0.id)?.onIndex }, cppID: cppID,
             what: "first unterminated note index")
         report.expectEqual(
-            expected: noteCount - 1, actual: notes.last?.onIndex, cppID: cppID,
+            expected: noteCount - 1, actual: notes.last.flatMap { document.location(of: $0.id)?.onIndex }, cppID: cppID,
             what: "last unterminated note index")
         report.expectEqual(
             expected: true, actual: notes.first?.isUnterminated, cppID: cppID,
@@ -534,8 +534,8 @@ private func compatibilityRegressions(_ report: CheckReport) {
 
 @MainActor
 private func noteEndPayload(_ document: SongDocument, id: NoteID) -> MidiEventPayload? {
-    guard let note = document.note(id), let index = note.endIndex else { return nil }
-    return document.rawChunks[note.chunk].events[index].payload
+    guard let location = document.location(of: id), let index = location.endIndex else { return nil }
+    return document.rawChunks[location.chunk].events[index].payload
 }
 
 private func shiftedEndPayload(_ payload: MidiEventPayload, pitch: UInt8) -> MidiEventPayload {

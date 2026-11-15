@@ -175,7 +175,7 @@ public final class GridScene {
     // Content-tier note records, tick-sorted; the frame tier culls/projects
     // these per frame — O(visible), never O(notes). Replaces packed bytes.
     @QtIgnored var noteRecords: [RollNote] = []
-    @QtIgnored var noteRecordsMaxDuration = 0
+    @QtIgnored var noteRecordBlockEnds: [Int] = []
     @QtIgnored var noteRecordsKey: RollNotesSectionKey?
     @QtIgnored var plotPalette: [UInt32] = []
     /// Projection the cached records were resolved against. Camera seams

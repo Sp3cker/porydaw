@@ -1,32 +1,11 @@
-internal enum EventChange: Sendable {
-    case insert(EventInsertion)
-    case remove(EventRemoval)
-
-    var chunk: Int {
-        switch self {
-        case let .insert(insertion): insertion.chunk
-        case let .remove(removal): removal.chunk
-        }
-    }
-
-    var event: MidiEvent {
-        switch self {
-        case let .insert(insertion): insertion.event
-        case let .remove(removal): removal.event
-        }
-    }
-}
-
-internal struct EventInsertion: Sendable {
+/// One chunk's canonical event delta: before-coordinate removals and after-coordinate insertions.
+/// The chunk index belongs to the after-frame, after structural changes have replayed.
+internal struct ChunkSplice: Sendable {
     let chunk: Int
-    let offset: Int
-    let event: MidiEvent
-}
-
-internal struct EventRemoval: Sendable {
-    let chunk: Int
-    let offset: Int
-    let event: MidiEvent
+    let removedAt: [Int]
+    let removed: [MidiEvent]
+    let insertedAt: [Int]
+    let inserted: [MidiEvent]
 }
 
 internal struct ChunkInsertion: Sendable {
@@ -110,7 +89,7 @@ internal enum EffectChange: Sendable {
 /// A compact reversible record assembled by an accepted document mutation.
 /// Retains exact inserted and removed values, not unrelated song state.
 internal struct DocumentChangeSet: Sendable {
-    var events: [EventChange] = []
+    var splices: [ChunkSplice] = []
     var chunkInsertions: [ChunkInsertion] = []
     var chunkRemovals: [ChunkRemoval] = []
     var chunkMoves: [ChunkMove] = []
@@ -121,7 +100,7 @@ internal struct DocumentChangeSet: Sendable {
     var effects: [EffectChange] = []
 
     private var hasOnlyEffectDeltas: Bool {
-        events.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty && chunkMoves.isEmpty && chunkEnds.isEmpty
+        splices.isEmpty && chunkInsertions.isEmpty && chunkRemovals.isEmpty && chunkMoves.isEmpty && chunkEnds.isEmpty
             && fileMetadata == nil && tempo == nil && config == nil
     }
 
@@ -131,7 +110,7 @@ internal struct DocumentChangeSet: Sendable {
     func apply(to state: inout SongState, direction: HistoryDirection) {
         if direction == .undo { applyChunkEnds(to: &state, direction: direction) }
         if direction == .redo { applyChunks(to: &state, direction: direction) }
-        applyEvents(to: &state, direction: direction)
+        applySplices(to: &state, direction: direction)
         if direction == .undo { applyChunks(to: &state, direction: direction) }
         if direction == .redo { applyChunkEnds(to: &state, direction: direction) }
         if let change = fileMetadata {
@@ -193,7 +172,9 @@ internal struct DocumentChangeSet: Sendable {
                 state.file.chunks.remove(at: change.offset)
             }
             for change in chunkInsertions.sorted(by: { $0.offset < $1.offset }) {
-                state.file.chunks.insert(change.chunk, at: change.offset)
+                var chunk = change.chunk
+                chunk.noteTable.invalidate()
+                state.file.chunks.insert(chunk, at: change.offset)
             }
             for change in chunkMoves {
                 let chunk = state.file.chunks.remove(at: change.from)
@@ -208,37 +189,52 @@ internal struct DocumentChangeSet: Sendable {
                 state.file.chunks.remove(at: change.offset)
             }
             for change in chunkRemovals.sorted(by: { $0.offset < $1.offset }) {
-                state.file.chunks.insert(change.chunk, at: change.offset)
+                var chunk = change.chunk
+                chunk.noteTable.invalidate()
+                state.file.chunks.insert(chunk, at: change.offset)
             }
         }
     }
 
-    private func applyEvents(to state: inout SongState, direction: HistoryDirection) {
-        switch direction {
-        case .redo:
-            for change in events { applyEvent(change, to: &state) }
-        case .undo:
-            for change in events.reversed() { unapplyEvent(change, to: &state) }
-        }
-    }
-
-    private func applyEvent(_ change: EventChange, to state: inout SongState) {
-        switch change {
-        case .insert(let insertion):
-            state.file.chunks[insertion.chunk].events.insert(
-                insertion.event, at: insertion.offset)
-        case .remove(let removal):
-            state.file.chunks[removal.chunk].events.remove(at: removal.offset)
-        }
-    }
-
-    private func unapplyEvent(_ change: EventChange, to state: inout SongState) {
-        switch change {
-        case .insert(let insertion):
-            state.file.chunks[insertion.chunk].events.remove(at: insertion.offset)
-        case .remove(let removal):
-            state.file.chunks[removal.chunk].events.insert(
-                removal.event, at: removal.offset)
+    private func applySplices(to state: inout SongState, direction: HistoryDirection) {
+        for splice in splices {
+            let removedAt = direction == .redo ? splice.removedAt : splice.insertedAt
+            let insertedAt = direction == .redo ? splice.insertedAt : splice.removedAt
+            let removed = direction == .redo ? splice.removed : splice.inserted
+            let inserted = direction == .redo ? splice.inserted : splice.removed
+            precondition(removedAt.count == removed.count && insertedAt.count == inserted.count)
+            let source = state.file.chunks[splice.chunk].events
+            precondition(removedAt.count <= source.count)
+            let count = source.count - removedAt.count + insertedAt.count
+            for index in removedAt.indices {
+                precondition(source.indices.contains(removedAt[index]))
+                precondition(index == 0 || removedAt[index - 1] < removedAt[index])
+            }
+            for index in insertedAt.indices {
+                precondition(insertedAt[index] >= 0 && insertedAt[index] < count)
+                precondition(index == 0 || insertedAt[index - 1] < insertedAt[index])
+            }
+            guard !removedAt.isEmpty || !insertedAt.isEmpty else { continue }
+            var events: [MidiEvent] = []
+            events.reserveCapacity(count)
+            var read = 0
+            var removal = 0
+            var insertion = 0
+            for position in 0..<count {
+                if insertion < insertedAt.count, position == insertedAt[insertion] {
+                    events.append(inserted[insertion])
+                    insertion += 1
+                } else {
+                    while removal < removedAt.count, read == removedAt[removal] {
+                        read += 1
+                        removal += 1
+                    }
+                    events.append(source[read])
+                    read += 1
+                }
+            }
+            state.file.chunks[splice.chunk].events = events
+            state.file.chunks[splice.chunk].noteTable.invalidate()
         }
     }
 }

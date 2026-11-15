@@ -213,8 +213,9 @@ private struct XcmdDomainFixture {
 
     func notes() -> [(Tick, UInt8, UInt8, UInt8)] {
         document.notes(in: 0).flatMap { note -> [(Tick, UInt8, UInt8, UInt8)] in
-            let events = document.rawChunks[note.chunk].events
-            return [note.onIndex, note.endIndex].compactMap { index in
+            guard let location = document.location(of: note.id) else { return [] }
+            let events = document.rawChunks[location.chunk].events
+            return [location.onIndex, location.endIndex].compactMap { index in
                 guard let index,
                     case let .channel(status, key, velocity) = events[index].payload
                 else { return nil }

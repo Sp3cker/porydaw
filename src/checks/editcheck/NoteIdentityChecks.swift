@@ -61,13 +61,13 @@ func noteIdentityContracts(_ report: CheckReport) {
         report.expectEqual(
             expected: 2, actual: rawOns.count, cppID: parsedIdentityID,
             what: "two raw note-ons reach playback")
+        report.expectEqual(
+            expected: [UInt64(61), 189], actual: rawOns.map(\.wireNoteID), cppID: timelineIdentityID,
+            what: "all unstamped note-ons receive FIFO wire IDs")
         report.expect(
-            rawOns.allSatisfy { !$0.noteID.isAssigned }, cppID: parsedIdentityID,
-            message: "raw playback does not mint note-on identities")
-        report.expect(
-            rawEnds.count == 1 && !rawEnds[0].noteID.isAssigned,
-            cppID: parsedIdentityID,
-            message: "raw playback note-end remains unassigned")
+            rawEnds.count == 1 && rawEnds[0].wireNoteID == 61,
+            cppID: timelineIdentityID,
+            message: "unstamped note-end carries the first FIFO wire ID")
     } catch {
         report.fail(parsedIdentityID, "MIDI encode/decode failed: \(error)")
     }
@@ -135,13 +135,13 @@ func noteIdentityContracts(_ report: CheckReport) {
         expected: 2, actual: stampedOns.count, cppID: timelineIdentityID,
         what: "both stamped note-ons reach playback")
     report.expect(
-        stampedOns.contains { $0.noteID == firstID }, cppID: timelineIdentityID,
-        message: "first stamped identity reaches playback")
+        stampedOns.contains { $0.wireNoteID == 61 }, cppID: timelineIdentityID,
+        message: "first note-on carries its FIFO wire ID regardless of its stamp")
     report.expect(
-        stampedOns.contains { $0.noteID == secondID }, cppID: timelineIdentityID,
-        message: "second stamped identity reaches playback")
+        stampedOns.contains { $0.wireNoteID == 189 }, cppID: timelineIdentityID,
+        message: "second note-on carries its FIFO wire ID regardless of its stamp")
     report.expect(
-        stampedEnds.count == 1 && !stampedEnds[0].noteID.isAssigned,
+        stampedEnds.count == 1 && stampedEnds[0].wireNoteID == 61,
         cppID: timelineIdentityID,
-        message: "playback note-end stays unassigned")
+        message: "stamped note-end carries the first FIFO wire ID")
 }

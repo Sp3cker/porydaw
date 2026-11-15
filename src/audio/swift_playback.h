@@ -18,6 +18,7 @@ typedef struct PdPlaybackEvent {
     uint8_t track;
     uint8_t data0;
     uint8_t data1;
+    // Precomputed FIFO wire note ID; 0 means none or an unmatched note-off.
     uint64_t noteID;
 } PdPlaybackEvent;
 
