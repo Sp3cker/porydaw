@@ -77,11 +77,15 @@ private func hostNoteDiscovery(
         }
         let note = (0..<session.document.engineTracks.usedTrackCount)
             .lazy.flatMap { session.document.notes(in: $0) }.first
+        let timelineHasNote =
+            note.map { note in
+                session.timeline.events.contains {
+                    $0.type == 0x9 && Int($0.track) == note.track && $0.tick == note.tick
+                        && $0.data0 == note.pitch && $0.data1 == note.velocity
+                }
+            } ?? false
         report.expect(
-            note != nil
-                && session.timeline.events.contains {
-                    $0.type == 0x9 && $0.noteID == note?.id
-                }, cppID: id,
+            timelineHasNote, cppID: id,
             message: "route101 fixture notes resolve from the loaded document with timeline note-on events")
         report.expect(
             session.document.source.label == "mus_route101", cppID: id,
@@ -176,8 +180,8 @@ private func hostVelocityMarker(_ report: CheckReport, route viewport: DocumentV
         route.selectedTrack == 0, cppID: id,
         message: "A015: the first note-bearing route101 engine track is track zero")
     report.expect(
-        route.selectedNotes == [NoteID(1)], cppID: id,
-        message: "A016: the front note on route101 track zero has note id one")
+        route.selectedNotes == [note.id] && note.id.isAssigned, cppID: id,
+        message: "A016: the front note is the selected fixture note with an assigned ID")
     let markers = page.axisModel.markers
     report.expect(
         markers.count == 1, cppID: id,

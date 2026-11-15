@@ -14,7 +14,7 @@ public struct RangeEdit: Equatable, Sendable {
     }
 
     public var minimumEngineTrackCount: Int
-    public var removeNotes: [Note]
+    public var removeNotes: [NoteID]
     public var removePoints: [LanePoint]
     public var addNotes: [NewNote]
     public var addPoints: [LaneInsertion]
@@ -22,7 +22,7 @@ public struct RangeEdit: Equatable, Sendable {
     public var addTempo: [TempoPoint]
 
     public init(
-        minimumEngineTrackCount: Int = 0, removeNotes: [Note] = [],
+        minimumEngineTrackCount: Int = 0, removeNotes: [NoteID] = [],
         removePoints: [LanePoint] = [], addNotes: [NewNote] = [],
         addPoints: [LaneInsertion] = [], removeTempo: [TempoPoint] = [],
         addTempo: [TempoPoint] = []
@@ -118,22 +118,26 @@ extension SongDocument {
         else { return false }
 
         let before = state
-        let originalTrackCount = before.file.engineTracks().usedTrackCount
-        var mutation = DocumentMutation(before)
+        let beforeMap = before.file.engineTracks()
+        var removedLocations: [NoteLocation] = []
+        removedLocations.reserveCapacity(edit.removeNotes.count)
+        for id in edit.removeNotes {
+            guard let location = before.file.location(of: id, map: beforeMap),
+                before.file.chunks[location.chunk].events.indices.contains(location.onIndex),
+                before.file.chunks[location.chunk].events[location.onIndex].noteID == id
+            else { return false }
+            removedLocations.append(location)
+        }
+        let originalTrackCount = beforeMap.usedTrackCount
+        var mutation = beginMutation(from: before)
         guard expandTracks(in: &mutation, to: requestedTracks, writes: edit.addPoints) else {
             return false
         }
         let expandedMap = mutation.state.file.engineTracks()
         var removals = Array(repeating: Set<Int>(), count: mutation.state.file.chunks.count)
-        for note in edit.removeNotes {
-            guard before.file.chunks.indices.contains(note.chunk),
-                before.file.chunks[note.chunk].events.indices.contains(note.onIndex),
-                before.file.chunks[note.chunk].events[note.onIndex].noteID == note.id
-            else {
-                return false
-            }
-            removals[note.chunk].insert(note.onIndex)
-            if let end = note.endIndex { removals[note.chunk].insert(end) }
+        for location in removedLocations {
+            removals[location.chunk].insert(location.onIndex)
+            if let end = location.endIndex { removals[location.chunk].insert(end) }
         }
         for point in edit.removePoints {
             guard before.file.chunks.indices.contains(point.chunk),
@@ -214,7 +218,7 @@ extension SongDocument {
                 chunk: chunk)
         }
 
-        let editedIDs = Set(edit.removeNotes.map(\.id))
+        let editedIDs = Set(edit.removeNotes)
         let spans = edit.addNotes.map {
             TimeNoteSpan(
                 track: $0.track, pitch: $0.pitch, tick: $0.tick,
@@ -236,7 +240,7 @@ extension SongDocument {
                 .channel(
                     tick: note.tick, status: 0x90 | channel, data0: note.pitch,
                     data1: clampVelocity(Int(note.velocity)),
-                    noteID: mintNoteID()))
+                    noteID: mutation.mintNoteID(chunk: chunk)))
             noteInsertions[chunk].append(
                 .channel(
                     tick: note.tick + duration, status: 0x90 | channel, data0: note.pitch))
@@ -274,17 +278,20 @@ extension SongDocument {
             tempo.allSatisfy({ tickFits($0.tick, delta: delta) })
         else { return false }
         let before = state
+        let beforeMap = before.file.engineTracks()
         var actions = TimeActions(file: before.file)
         var spans: [TimeNoteSpan] = []
         var editedIDs = Set<NoteID>()
         for note in notes {
-            guard validate(note: note, in: before.file) else { return false }
+            guard let location = before.file.location(of: note.id, map: beforeMap),
+                validate(note: note, location: location, in: before.file)
+            else { return false }
             let newTick = TimeDefaults.shiftTickClamped(note.tick, by: delta)
-            actions.move(chunk: note.chunk, index: note.onIndex, to: newTick, preserveIdentity: true)
+            actions.move(chunk: location.chunk, index: location.onIndex, to: newTick, preserveIdentity: true)
             editedIDs.insert(note.id)
-            if let endIndex = note.endIndex, let end = note.endTick {
+            if let endIndex = location.endIndex, let end = note.endTick {
                 let newEnd = TimeDefaults.shiftTickClamped(Tick(end), by: delta)
-                actions.move(chunk: note.chunk, index: endIndex, to: newEnd, preserveIdentity: false)
+                actions.move(chunk: location.chunk, index: endIndex, to: newEnd, preserveIdentity: false)
                 spans.append(
                     TimeNoteSpan(
                         track: note.track, pitch: note.pitch,
@@ -409,9 +416,10 @@ private extension SongDocument {
         return true
     }
 
-    func validate(note: Note, in file: MidiFile) -> Bool {
-        file.chunks.indices.contains(note.chunk) && file.chunks[note.chunk].events.indices.contains(note.onIndex)
-            && file.chunks[note.chunk].events[note.onIndex].noteID == note.id
-            && (note.endIndex.map { file.chunks[note.chunk].events.indices.contains($0) } ?? true)
+    func validate(note: Note, location: NoteLocation, in file: MidiFile) -> Bool {
+        file.chunks.indices.contains(location.chunk)
+            && file.chunks[location.chunk].events.indices.contains(location.onIndex)
+            && file.chunks[location.chunk].events[location.onIndex].noteID == note.id
+            && (location.endIndex.map { file.chunks[location.chunk].events.indices.contains($0) } ?? true)
     }
 }

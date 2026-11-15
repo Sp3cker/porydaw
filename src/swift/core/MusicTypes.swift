@@ -10,6 +10,17 @@ public struct NoteID: Hashable, Sendable {
     }
 
     public var isAssigned: Bool { rawValue != 0 }
+
+    internal var serialBits: UInt64 { rawValue >> 36 }
+    internal var chunkKey: UInt16 { UInt16((rawValue >> 20) & 0xFFFF) }
+    internal var slot: Int { Int(rawValue & 0xFFFFF) }
+
+    internal init(serial: UInt64, key: UInt64, slot: Int) {
+        precondition(serial > 0 && serial < 1 << 28, "Note serial is out of range.")
+        precondition(key <= 0xFFFF, "Chunk key is out of range.")
+        precondition(slot >= 0 && slot < 1 << 20, "Note slot is out of range.")
+        rawValue = serial << 36 | key << 20 | UInt64(slot)
+    }
 }
 
 public struct TempoPoint: Equatable, Sendable {

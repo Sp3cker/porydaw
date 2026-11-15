@@ -1,6 +1,15 @@
 import PorydawCore
 import PorydawPlaybackNative
 
+// Heap-owned owner plane keeps the scheduler value small on bounded worker stacks.
+private final class LiveNoteIDs {
+    private var owners = InlineArray<2048, Int64>(repeating: 0)
+
+    func withOwners(_ body: (inout InlineArray<2048, Int64>) -> Void) {
+        body(&owners)
+    }
+}
+
 /// Fixed-capacity realtime MIDI scheduler. All mutable storage is allocated by
 /// `init` and released by `deinit`; render never grows a collection.
 public struct Sequencer: ~Copyable {
@@ -225,14 +234,12 @@ public struct Sequencer: ~Copyable {
     private let keyedOnTick: UnsafeMutablePointer<UInt32>
     private let pendingReleases: UnsafeMutablePointer<PendingRelease>
     private var pendingReleaseCount = 0
-    private var liveOwners = InlineArray<2048, Int64>(repeating: 0)
+    private let liveIDs = LiveNoteIDs()
     private let liveInput: UnsafeMutablePointer<LiveInputEvent>?
     private let liveOutput: UnsafeMutablePointer<LiveOutputEvent>?
     private var liveCalls = InlineArray<16, LiveInsertCall>(repeating: LiveInsertCall())
     private var liveIndices = InlineArray<16, Int>(repeating: 0)
     private var liveFlags = InlineArray<16, LiveDiscontinuity>(repeating: .arm)
-    private var inputOns = InlineArray<2048, Int64>(repeating: 0)
-    private var inputOffs = InlineArray<2048, Int64>(repeating: 0)
     private var liveWasPlaying = InlineArray<16, Bool>(repeating: false)
     private var liveHeld = InlineArray<2048, Bool>(repeating: false)
     private var liveChunkStart: UInt64 = 0
@@ -525,17 +532,19 @@ extension Sequencer {
         engine: UnsafeMutablePointer<M4AEngine>, track: Int, source: Source, audition: AudioAudition?,
         flags: LiveDiscontinuity
     ) {
+        liveIDs.withOwners { (owners: inout InlineArray<2048, Int64>) in
         for key in 0..<128 {
             let index = track * 128 + key
             guard liveHeld[index] else { continue }
             Self.releaseSequencedNote(engine: engine, track: Int32(track), key: UInt8(key), audition: audition)
             reportLive(
                 track: track, sample: position, tick: source.tick(for: position),
-                note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: flags)
-            liveOwners[index] = 0
+                    note: LiveOutputEvent(key: UInt8(key), noteId: owners[index]), flags: flags)
+                owners[index] = 0
             liveHeld[index] = false
             keyedOn[index] = 0
             keyedOnTick[index] = 0
+        }
         }
     }
 
@@ -545,17 +554,19 @@ extension Sequencer {
     ) {
         precondition((0..<TrackLimits.hardwareCapacity).contains(track))
         let tick = tick ?? liveCalls[track].tick
+        liveIDs.withOwners { (owners: inout InlineArray<2048, Int64>) in
         for key in 0..<128 {
             let index = track * 128 + key
             if liveHeld[index] {
                 reportLive(
                     track: track, sample: position, tick: tick,
-                    note: LiveOutputEvent(key: UInt8(key), noteId: liveOwners[index]), flags: discontinuity)
+                        note: LiveOutputEvent(key: UInt8(key), noteId: owners[index]), flags: discontinuity)
             }
-            liveOwners[index] = 0
+                owners[index] = 0
             liveHeld[index] = false
             keyedOn[index] = 0
             keyedOnTick[index] = 0
+        }
         }
         var index = 0
         while index < pendingReleaseCount {
@@ -581,9 +592,37 @@ extension Sequencer {
             preconditionFailure("Live rendering requires Sequencer(liveInserts: true)")
         }
         liveChunkStart = position
+        var hasActiveTrack = false
         for track in 0..<TrackLimits.hardwareCapacity {
             liveIndices[track] = 0
             liveCalls[track].outputCount = 0
+            guard track < slots.count, slots[track] != nil, liveMask & (1 << UInt32(track)) != 0 else { continue }
+            hasActiveTrack = true
+        }
+        guard hasActiveTrack else { return }
+        var timing = LiveInsertCall()
+        timing.tick = source.tick(for: position)
+        var tempoIndex = 0
+        while tempoIndex + 1 < source.tempos.count && source.tempos[tempoIndex + 1].sampleOrigin <= Double(position) {
+            tempoIndex += 1
+        }
+        timing.tempoBPM = 60_000_000 / Double(source.tempos[tempoIndex].microsecondsPerQuarterNote)
+        for index in 0..<source.meterCount {
+            let meter = source.meter(at: index)
+            if Double(meter.tick) > timing.tick { break }
+            timing.numerator = meter.numerator
+            timing.denominatorPowerOfTwo = meter.denominatorPowerOfTwo
+            let barTicks =
+                Double(source.ticksPerBeat) * 4 * Double(meter.numerator)
+                / Double(UInt64(1) << min(31, Int(meter.denominatorPowerOfTwo)))
+            if barTicks > 0 {
+                timing.barStartTick =
+                    Double(meter.tick) + ((timing.tick - Double(meter.tick)) / barTicks).rounded(.down) * barTicks
+            }
+        }
+        let windowStart = playing ? lowerBound(in: source, sample: position) : 0
+        for track in 0..<TrackLimits.hardwareCapacity {
+            // Restore is consumed here, after earlier tracks' callbacks, as before.
             guard track < slots.count, let slot = slots[track], liveMask & (1 << UInt32(track)) != 0 else { continue }
             if liveWasPlaying[track] != playing {
                 liveFlags[track].insert(playing ? .transport : .stop)
@@ -606,7 +645,7 @@ extension Sequencer {
             call.discontinuity = flags
             call.sampleRate = source.sampleRate
             call.ticksPerBeat = source.ticksPerBeat
-            call.tick = source.tick(for: position)
+            call.tick = timing.tick
             call.loopStartSample = source.loopStartSample
             call.loopEndSample = source.loopEndSample
             call.loopStartTick = source.loopStartTick
@@ -617,63 +656,26 @@ extension Sequencer {
             call.tempoCount = source.tempos.count
             call.timeSignatures = source.signatures.baseAddress
             call.timeSignatureCount = source.signatures.count
-            var tempoIndex = 0
-            while tempoIndex + 1 < source.tempos.count && source.tempos[tempoIndex + 1].sampleOrigin <= Double(position)
-            {
-                tempoIndex += 1
-            }
-            call.tempoBPM = 60_000_000 / Double(source.tempos[tempoIndex].microsecondsPerQuarterNote)
-            for index in 0..<source.meterCount {
-                let meter = source.meter(at: index)
-                if Double(meter.tick) > call.tick { break }
-                call.numerator = meter.numerator
-                call.denominatorPowerOfTwo = meter.denominatorPowerOfTwo
-                let barTicks =
-                    Double(source.ticksPerBeat) * 4 * Double(meter.numerator)
-                    / Double(UInt64(1) << min(31, Int(meter.denominatorPowerOfTwo)))
-                if barTicks > 0 {
-                    call.barStartTick =
-                        Double(meter.tick) + ((call.tick - Double(meter.tick)) / barTicks).rounded(.down) * barTicks
-                }
-            }
+            call.tempoBPM = timing.tempoBPM
+            call.numerator = timing.numerator
+            call.denominatorPowerOfTwo = timing.denominatorPowerOfTwo
+            call.barStartTick = timing.barStartTick
             call.input = UnsafePointer(liveInput)
             call.output = liveOutput + track * LiveInsertCall.eventCapacity
             call.takeSink = slot.pointee.takeSink
             call.takeContext = slot.pointee.takeContext
             if playing {
-                if !flags.isEmpty {
-                    // FIFO IDs are one-based per-pitch onset ordinals, interleaved across 128 keys.
-                    for key in 0..<128 {
-                        inputOns[track * 128 + key] = 0
-                        inputOffs[track * 128 + key] = 0
-                    }
-                }
-                let first = flags.isEmpty ? lowerBound(in: source, sample: position) : 0
-                for index in first..<source.count {
+                for index in windowStart..<source.count {
                     let event = source[index]
                     if event.sample >= position + UInt64(frames) { break }
                     guard Int(event.track) == track && (event.type == 0x8 || event.type == 0x9) else { continue }
                     let key = event.data0 & 0x7F
-                    let stateIndex = track * 128 + Int(key)
                     let on = event.type == 0x9 && event.data1 > 0
-                    let ordinal: Int64
-                    if on {
-                        inputOns[stateIndex] += 1
-                        ordinal = inputOns[stateIndex]
-                    } else {
-                        if inputOffs[stateIndex] < inputOns[stateIndex] {
-                            inputOffs[stateIndex] += 1
-                            ordinal = inputOffs[stateIndex]
-                        } else {
-                            ordinal = 0
-                        }
-                    }
-                    guard event.sample >= position else { continue }
                     if call.inputCount < LiveInsertCall.eventCapacity {
                         liveInput[call.inputCount] = LiveInputEvent(
                             sampleOffset: Int32(event.sample - position), key: key,
                             velocity: on ? min(127, event.data1) : 0,
-                            noteId: ordinal > 0 ? (ordinal - 1) * 128 + Int64(key) + 1 : 0)
+                            noteId: Int64(source.events[index].wireNoteID))
                         call.inputCount += 1
                     } else {
                         call.inputOverflow += 1
@@ -712,6 +714,7 @@ extension Sequencer {
         guard liveMask != 0, let liveOutput else { return }
         let tick = source.tick(for: position)
         let clock = Tick(max(0, min(Double(Tick.max), tick.rounded())))
+        liveIDs.withOwners { (owners: inout InlineArray<2048, Int64>) in
         for track in 0..<TrackLimits.hardwareCapacity where liveMask & (1 << UInt32(track)) != 0 {
             while liveIndices[track] < liveCalls[track].outputCount {
                 let event = liveOutput[track * LiveInsertCall.eventCapacity + liveIndices[track]]
@@ -722,9 +725,9 @@ extension Sequencer {
                 else { continue }
                 let index = track * 128 + Int(event.key)
                 if event.velocity == 0 {
-                    guard liveHeld[index] && liveOwners[index] == event.noteId else { continue }
+                        guard liveHeld[index] && owners[index] == event.noteId else { continue }
                     Self.releaseSequencedNote(engine: engine, track: Int32(track), key: event.key, audition: audition)
-                    liveOwners[index] = 0
+                        owners[index] = 0
                     liveHeld[index] = false
                     keyedOn[index] = 0
                 } else {
@@ -734,7 +737,7 @@ extension Sequencer {
                         reportLive(
                             track: track, sample: position, tick: tick,
                             note: LiveOutputEvent(
-                                sampleOffset: event.sampleOffset, key: event.key, noteId: liveOwners[index]))
+                                    sampleOffset: event.sampleOffset, key: event.key, noteId: owners[index]))
                     }
                     Self.dispatch(
                         engine: engine,
@@ -742,13 +745,14 @@ extension Sequencer {
                             sample: position, tick: clock, type: 0x9, track: UInt8(track),
                             data0: event.key, data1: min(127, event.velocity)),
                         muteMask: muteMask, audition: audition)
-                    liveOwners[index] = event.noteId
+                        owners[index] = event.noteId
                     liveHeld[index] = true
                     keyedOn[index] = 1
                     keyedOnTick[index] = clock
                 }
                 reportLive(track: track, sample: position, tick: tick, note: event)
             }
+        }
         }
     }
 
@@ -818,11 +822,13 @@ extension Sequencer {
     }
 
     mutating func clearKeyState() {
+        liveIDs.withOwners { (owners: inout InlineArray<2048, Int64>) in
         for index in 0..<Self.keyStateCount {
             keyedOn[index] = 0
             keyedOnTick[index] = 0
-            liveOwners[index] = 0
+                owners[index] = 0
             liveHeld[index] = false
+        }
         }
         pendingReleaseCount = 0
     }

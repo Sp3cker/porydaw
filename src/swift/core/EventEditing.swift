@@ -41,13 +41,13 @@ extension SongDocument {
 
     @discardableResult
     public func addTrack(voice: Int) -> Int? {
-        guard history.acceptsDocumentMutation else { return nil }
+        guard history.acceptsDocumentMutation, nextChunkKey <= 65535 else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
             let channel = freeChannel(in: map)
         else { return nil }
         let before = state
-        var mutation = DocumentMutation(before)
+        var mutation = beginMutation(from: before)
         let chunk = before.file.chunks.count
         mutation.appendChunk(
             MidiChunk(events: [
@@ -64,7 +64,7 @@ extension SongDocument {
 
     @discardableResult
     public func duplicateTrack(_ track: Int) -> Int? {
-        guard history.acceptsDocumentMutation else { return nil }
+        guard history.acceptsDocumentMutation, nextChunkKey <= 65535 else { return nil }
         let map = engineTracks
         guard !state.file.chunks.isEmpty, map.usedTrackCount < trackBudget,
             track >= 0, track < map.usedTrackCount,
@@ -80,14 +80,13 @@ extension SongDocument {
             guard case let .channel(status, data0, data1) = event.payload,
                 status & 0x0F == source.channel
             else { continue }
-            var copy = MidiEvent.channel(
+            let copy = MidiEvent.channel(
                 tick: event.tick, status: status & 0xF0 | channel,
                 data0: data0, data1: data1)
-            if copy.isNoteOn { copy.noteID = mintNoteID() }
             events.append(copy)
         }
         guard !events.isEmpty else { return nil }
-        var mutation = DocumentMutation(before)
+        var mutation = beginMutation(from: before)
         let newChunkIndex = mutation.state.file.chunks.count
         mutation.appendChunk(MidiChunk(events: events, endTick: sourceChunk.endTick))
         let remap = makeTrackRemap(
@@ -104,7 +103,7 @@ extension SongDocument {
         guard history.acceptsDocumentMutation else { return }
         guard let mapping = mapping(for: track) else { return }
         let before = state
-        var mutation = DocumentMutation(before)
+        var mutation = beginMutation(from: before)
         var chunkMap = Array(before.file.chunks.indices).map(Optional.some)
         if mapping.chunk == 0 {
             for index in mutation.state.file.chunks[0].events.indices.reversed()
@@ -144,7 +143,7 @@ extension SongDocument {
             source.chunk == 0 || destination.chunk == 0
             ? classifyEvents(in: before.file).chunks[0].conductorGlobals : []
         let globals = globalIndices.map { before.file.chunks[0].events[$0] }
-        var mutation = DocumentMutation(before)
+        var mutation = beginMutation(from: before)
         mutation.moveChunk(from: source.chunk, to: destination.chunk)
         if !globalIndices.isEmpty {
             let movedGlobalChunk = source.chunk == 0 ? destination.chunk : 1
@@ -180,7 +179,7 @@ extension SongDocument {
             proposedName.map { (character: Character) -> Character in character.isNewline ? " " : character })
         let name = String(singleLine.trimmingCharacters(in: .whitespaces).prefix(64))
         guard !MidiFile.textIsMarker(name) else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let locations = classifyEvents(in: state.file).chunks[mapping.chunk].trackNames
         if name.isEmpty {
             for index in locations.reversed() {
@@ -213,14 +212,14 @@ extension SongDocument {
         guard state.file.chunks.indices.contains(chunk) else { return }
         var minimum: Tick = 0
         for event in state.file.chunks[chunk].events { minimum = max(minimum, event.tick) }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.setChunkEnd(max(tick, minimum), chunk: chunk)
         commit(mutation, group: nil, operation: .setChunkEnd)
     }
 
     public func setConfig(_ config: SongConfig) {
         guard history.acceptsDocumentMutation else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.setConfig(config)
         commit(mutation, group: nil, operation: .setConfig)
     }
@@ -231,8 +230,8 @@ extension SongDocument {
             return
         }
         var stored = event
-        if stored.isNoteOn { stored.noteID = mintNoteID() }
-        var mutation = DocumentMutation(state)
+        if stored.isNoteOn { stored.noteID = nil }
+        var mutation = beginMutation(from: state)
         mutation.insert(stored, chunk: chunk)
         commit(
             mutation, group: nil, operation: .insertRawEvent,
@@ -246,19 +245,8 @@ extension SongDocument {
             !MasterTuning.isMetadata(event), !MasterTuning.isMetadata(state.file.chunks[chunk].events[index]),
             state.file.chunks[chunk].events[index] != event
         else { return }
-        let old = state.file.chunks[chunk].events[index]
-        var replacement = event
-        if replacement.isNoteOn {
-            replacement.noteID = old.isNoteOn ? old.noteID : mintNoteID()
-        } else {
-            replacement.noteID = nil
-        }
-        var mutation = DocumentMutation(state)
-        if old.tick == replacement.tick {
-            mutation.replace(chunk: chunk, offset: index, with: replacement)
-        } else {
-            mutation.apply(removing: [index], inserting: [replacement], chunk: chunk)
-        }
+        var mutation = beginMutation(from: state)
+        mutation.replace(chunk: chunk, offset: index, with: event)
         commit(
             mutation, group: nil, operation: .modifyRawEvent,
             trackRemap: rawTrackRemap(before: state.file, after: mutation.state.file))
@@ -273,7 +261,7 @@ extension SongDocument {
                     && !MasterTuning.isMetadata(state.file.chunks[chunk].events[$0])
             })
         guard !valid.isEmpty else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.apply(removing: Array(valid), inserting: [], chunk: chunk)
         commit(
             mutation, group: nil, operation: .deleteRawEvents,
@@ -302,19 +290,14 @@ extension SongDocument {
         guard let bounds = rawMoveBounds(chunk: chunk, index: index) else { return }
         let target = min(max(destination, bounds.lowerBound), bounds.upperBound)
         guard target != index else { return }
-        var mutation = DocumentMutation(state)
-        let event = mutation.remove(chunk: chunk, offset: index)
-        mutation.state.file.chunks[chunk].events.insert(event, at: target)
-        mutation.changes.events.append(
-            .insert(
-                EventInsertion(
-                    chunk: chunk, offset: target, event: event)))
+        var mutation = beginMutation(from: state)
+        mutation.moveEvent(chunk: chunk, from: index, to: target)
         commit(mutation, group: nil, operation: .moveRawEvent)
     }
 
     public func editTempo(_ edit: TempoEdit) {
         guard history.acceptsDocumentMutation else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         mutation.setTempo(editedTempo(state.tempo, edit))
         commit(mutation, group: nil, operation: .editTempo)
     }
@@ -329,7 +312,7 @@ extension SongDocument {
         else {
             return
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let valid = Set(
             indices.filter {
                 mutation.state.file.chunks[chunk].events.indices.contains($0)
@@ -349,14 +332,14 @@ extension SongDocument {
         guard history.acceptsDocumentMutation else { return }
         let base = origin(for: group, operation: .setLoop)
         guard !base.file.chunks.isEmpty else { return }
-        var mutation = DocumentMutation(base)
+        var mutation = beginMutation(from: base)
         var marker: MidiEvent
         var chunk = 0
         let roles = classifyEvents(in: base.file)
         if let location = end ? roles.loopEnd : roles.loopStart {
             chunk = location.chunk
             if group != nil, let tick, base.file.chunks[chunk].events[location.index].tick == tick {
-                commit(DocumentMutation(base), group: group, operation: .setLoop, returnsToOrigin: true)
+                commit(beginMutation(from: base), group: group, operation: .setLoop, returnsToOrigin: true)
                 return
             }
             marker = mutation.remove(chunk: chunk, offset: location.index)
@@ -375,7 +358,7 @@ extension SongDocument {
     public func setTimeSignature(tick: Tick, numerator: Int, denominatorPower: Int) {
         guard history.acceptsDocumentMutation else { return }
         guard !state.file.chunks.isEmpty else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let matching = timeSignatures.filter { $0.tick == tick }
         let nn = UInt8(min(max(numerator, 1), 64))
         let dd = UInt8(min(max(denominatorPower, 0), 6))
@@ -399,7 +382,7 @@ extension SongDocument {
     public func moveTimeSignature(from: Tick, to: Tick) {
         guard history.acceptsDocumentMutation else { return }
         guard from != to else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         var movedAny = false
         for chunk in mutation.state.file.chunks.indices {
             var moved: [MidiEvent] = []
@@ -426,7 +409,7 @@ extension SongDocument {
 
     public func deleteTimeSignature(at tick: Tick) {
         guard history.acceptsDocumentMutation else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         for chunk in mutation.state.file.chunks.indices {
             for index in mutation.state.file.chunks[chunk].events.indices.reversed()
             where isTimeSignature(mutation.state.file.chunks[chunk].events[index])
@@ -450,7 +433,7 @@ extension SongDocument {
                 begin: begin, end: end, points: points)
             return
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         var removals: [Int] = []
         for index in mutation.state.file.chunks[mapping.chunk].events.indices {
             let event = mutation.state.file.chunks[mapping.chunk].events[index]
@@ -488,7 +471,7 @@ extension SongDocument {
             applyXcmdPatch(patch, chunk: mapping.chunk, operation: .moveLanePoints)
             return
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let insertions = plan.writes.map {
             makeLaneEvent(lane: lane, channel: mapping.channel, tick: $0.tick, value: $0.value)
         }
@@ -514,7 +497,7 @@ extension SongDocument {
             applyXcmdPatch(patch, chunk: mapping.chunk, operation: .deleteLanePoints)
             return
         }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let indices = Set(points.filter { $0.chunk == mapping.chunk }.map(\.eventIndex))
         mutation.apply(removing: Array(indices), inserting: [], chunk: mapping.chunk)
         commit(mutation, group: nil, operation: .deleteLanePoints)

@@ -399,11 +399,11 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
 
     func expectedEvent(
         tick: Tick, type: UInt8, data0: UInt8, data1: UInt8,
-        noteID: NoteID = NoteID()
+        wireNoteID: UInt64 = 0
     ) -> PlaybackEvent {
         PlaybackEvent(
             sample: originalTimeline.sample(for: tick), tick: tick,
-            type: type, track: 0, data0: data0, data1: data1, noteID: noteID)
+            type: type, track: 0, data0: data0, data1: data1, wireNoteID: wireNoteID)
     }
     func matchesCompleteSchedule(_ additions: [PlaybackEvent]) -> Bool {
         var remaining = originalEvents
@@ -449,9 +449,9 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
             && matchesCompleteSchedule([
                 expectedEvent(
                     tick: 0, type: 0x9, data0: 60,
-                    data1: 100, noteID: noteID),
+                    data1: 100, wireNoteID: 61),
                 expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
-                expectedEvent(tick: 24, type: 0x8, data0: 60, data1: 0),
+                expectedEvent(tick: 24, type: 0x8, data0: 60, data1: 0, wireNoteID: 61),
             ]),
         cppID: timelineID,
         message: "live edit publishes the independently scheduled C4 onset and release to playing audio")
@@ -471,8 +471,8 @@ internal func checkLiveTimelineTransport(_ report: CheckReport, fixtureRoot: Str
                 expectedEvent(tick: 0, type: 0xB, data0: 7, data1: 100),
                 expectedEvent(
                     tick: 24, type: 0x9, data0: 61,
-                    data1: 100, noteID: noteID),
-                expectedEvent(tick: 48, type: 0x8, data0: 61, data1: 0),
+                    data1: 100, wireNoteID: 62),
+                expectedEvent(tick: 48, type: 0x8, data0: 61, data1: 0, wireNoteID: 62),
             ]),
         cppID: timelineID,
         message: "live move publishes the independently scheduled C sharp onset and release")

@@ -449,12 +449,12 @@ private func checkKeyboardJoinMixedSpread(_ report: CheckReport, viewport: Docum
         let openPitch = (12..<128).first { key in
             fixture.note(at: openTick, pitch: UInt8(key)) == nil
         }
-        guard let openPitch else {
+        guard let openPitch, let sourceLocation = session.document.location(of: source.id) else {
             report.fail(id, "no free pitch for the unterminated join group")
             return
         }
         session.document.insertRawEvent(
-            chunk: source.chunk,
+            chunk: sourceLocation.chunk,
             event: .channel(
                 tick: openTick, status: 0x90 | source.channel,
                 data0: UInt8(openPitch), data1: 66))

@@ -12,8 +12,9 @@ extension GridScene {
         let colors = resolvePalette(input)
         let key = RollDrawingContent.key(input, palette: colors)
         if noteRecordsKey != key.notesSection {
-            noteRecordsMaxDuration = RollDrawingContent.resolveNotes(
-                input, notes: input.renderNotes(), into: &noteRecords)
+            RollDrawingContent.resolveNotes(
+                input, notes: input.renderNotes(), into: &noteRecords,
+                blockEnds: &noteRecordBlockEnds)
             noteRecordsKey = key.notesSection
             builtProjection = input.camera.projection
             contentGeneration += 1
@@ -65,7 +66,7 @@ extension GridScene {
         displayLists[2] = Data()
         let built = plotBuilder.build(
             input, records: noteRecords, palette: colors,
-            maxDuration: noteRecordsMaxDuration,
+            blockEnds: noteRecordBlockEnds,
             width: snapshot.viewportWidth, height: snapshot.rollHeight)
         displayLists[0] = built.data
         // The keyboard list fills the full-width band beside the headers and

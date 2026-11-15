@@ -164,6 +164,7 @@ struct RollDrawingContentKey: Equatable {
 
 @MainActor
 enum RollDrawingContent {
+    static let noteRecordBlockSize = 128
 
     struct FontDescriptors: Equatable {
         var values: [GridFontKind: GridFontSpec]
@@ -258,8 +259,8 @@ enum RollDrawingContent {
 
     static func resolveNotes(
         _ input: borrowing GridSceneInput, notes: borrowing Span<GridNote>,
-        into records: inout [RollNote]
-    ) -> Int {
+        into records: inout [RollNote], blockEnds: inout [Int]
+    ) {
         let projection = input.camera.projection
         let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
         let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
@@ -271,7 +272,6 @@ enum RollDrawingContent {
         let selected = input.selectedNotes
         records.removeAll(keepingCapacity: true)
         records.reserveCapacity(notes.count)
-        var maxDuration = 0
         // Ghost records precede plain notes in paint order, independently of tick order.
         for pass in 0..<2 {
             let ghostPass = pass == 0
@@ -308,10 +308,18 @@ enum RollDrawingContent {
                             fill: fill, light: light, dark: dark,
                             fallbackLight: fallbackLight, fallbackDark: fallbackDark),
                         order: records.count))
-                maxDuration = max(maxDuration, duration)
             }
         }
         records.sort { $0.tick == $1.tick ? $0.order < $1.order : $0.tick < $1.tick }
-        return maxDuration
+        blockEnds.removeAll(keepingCapacity: true)
+        blockEnds.reserveCapacity((records.count + noteRecordBlockSize - 1) / noteRecordBlockSize)
+        for start in stride(from: 0, to: records.count, by: noteRecordBlockSize) {
+            let end = min(start + noteRecordBlockSize, records.count)
+            var maxEnd = records[start].end
+            for i in (start + 1)..<end {
+                maxEnd = max(maxEnd, records[i].end)
+            }
+            blockEnds.append(maxEnd)
+        }
     }
 }

@@ -150,10 +150,18 @@ internal struct TrackNameScan {
 public struct MidiChunk: Equatable, Sendable {
     public var events: [MidiEvent]
     public var endTick: Tick
+    public var chunkKey: UInt16
+    internal var noteTable = NoteTable()
 
-    public init(events: [MidiEvent] = [], endTick: Tick = 0) {
+    public init(events: [MidiEvent] = [], endTick: Tick = 0, chunkKey: UInt16 = 0) {
         self.events = events
         self.endTick = endTick
+        self.chunkKey = chunkKey
+    }
+
+    public static func == (lhs: MidiChunk, rhs: MidiChunk) -> Bool {
+        // Identity and derived metadata (chunkKey, noteTable) do not affect MIDI semantics.
+        lhs.events == rhs.events && lhs.endTick == rhs.endTick
     }
 }
 
@@ -169,9 +177,8 @@ extension MidiChunk {
     /// at the position the pin order gives it. Out-of-range and repeated indices are ignored.
     /// `events` must be tick-sorted.
     ///
-    /// One algorithm, no strategy bound: slide the survivors down over the removals, then insert
-    /// each event in caller order through its tick run. The run scan is amortized over its group,
-    /// and each placement is one shift - what one `insert(_:)` per event costs.
+    /// Slide survivors over removals, then replay tick-ordered insertions in the output's tail runs.
+    /// Only those runs shift per insertion; unrelated survivors are copied once into the final array.
     @discardableResult
     internal mutating func apply(
         removing removalIndices: [Int], inserting insertions: [MidiEvent]
@@ -184,6 +191,7 @@ extension MidiChunk {
         where events.indices.contains(index) && doomed.last != index {
             doomed.append(index)
         }
+        if !doomed.isEmpty || !insertions.isEmpty { noteTable.invalidate() }
         let removed = doomed.reversed().map { (offset: $0, event: events[$0]) }
         if !doomed.isEmpty {
             var view = events.mutableSpan
@@ -206,57 +214,65 @@ extension MidiChunk {
         guard !insertions.isEmpty else {
             return ApplyResult(removals: removed, insertions: [])
         }
-        // Insertions land one at a time, in caller order, at the end of their tick run - or right
-        // after the last event they are not pinned before. The anchors of that rule are positions,
-        // so a whole batch costs one run scan plus a shift per insertion.
+        // Replay each tick group in the merged tail so pin placements never shift unrelated
+        // survivors; the tail offset at insert time is the evolving-array offset history needs.
         var order = Array(insertions.indices)
-        order.sort { (insertions[$0].tick, $0) < (insertions[$1].tick, $1) }
-        var tick: Tick?
-        var runStart = 0
-        var runEnd = 0
-        var lastNotNoteClass = -1
-        var lastNotNoteOn = -1
+        order.sort { (lhs: Int, rhs: Int) -> Bool in
+            (insertions[lhs].tick, lhs) < (insertions[rhs].tick, rhs)
+        }
+        var merged: [MidiEvent] = []
+        merged.reserveCapacity(events.count + insertions.count)
         var inserted: [(offset: Int, event: MidiEvent)] = []
         inserted.reserveCapacity(insertions.count)
-        for position in order {
-            let event = insertions[position]
-            if tick != event.tick {
-                tick = event.tick
-                runStart = min(runEnd, events.count)
-                while runStart < events.count, events[runStart].tick < event.tick { runStart += 1 }
-                runEnd = runStart
-                while runEnd < events.count, events[runEnd].tick == event.tick { runEnd += 1 }
-                lastNotNoteClass = -1
-                lastNotNoteOn = -1
-                var index = runEnd
-                while index > runStart {
-                    index -= 1
-                    let candidate = events[index]
-                    if lastNotNoteClass < 0, !(candidate.isChannel && candidate.typeNibble <= 0x9) {
-                        lastNotNoteClass = index
-                    }
-                    if lastNotNoteOn < 0, !candidate.isNoteOn { lastNotNoteOn = index }
-                    if lastNotNoteClass >= 0, lastNotNoteOn >= 0 { break }
+        var survivorIndex = 0
+        var groupStart = 0
+        while groupStart < order.count {
+            let tick = insertions[order[groupStart]].tick
+            var groupEnd = groupStart + 1
+            while groupEnd < order.count, insertions[order[groupEnd]].tick == tick { groupEnd += 1 }
+            var runStart = survivorIndex
+            while runStart < events.count, events[runStart].tick < tick { runStart += 1 }
+            merged.append(contentsOf: events[survivorIndex..<runStart])
+            var runEnd = runStart
+            while runEnd < events.count, events[runEnd].tick == tick { runEnd += 1 }
+            let tailStart = merged.count
+            merged.append(contentsOf: events[runStart..<runEnd])
+            var lastNotNoteClass = -1
+            var lastNotNoteOn = -1
+            var index = merged.count
+            while index > tailStart {
+                index -= 1
+                let candidate = merged[index]
+                if lastNotNoteClass < 0, !(candidate.isChannel && candidate.typeNibble <= 0x9) {
+                    lastNotNoteClass = index
                 }
+                if lastNotNoteOn < 0, !candidate.isNoteOn { lastNotNoteOn = index }
+                if lastNotNoteClass >= 0, lastNotNoteOn >= 0 { break }
             }
-            let target: Int
-            if event.isChannel, event.typeNibble >= 0xB {
-                target = lastNotNoteClass >= runStart ? lastNotNoteClass + 1 : runStart
-            } else if event.isNoteEnd {
-                target = lastNotNoteOn >= runStart ? lastNotNoteOn + 1 : runStart
-            } else {
-                target = runEnd
+            for position in order[groupStart..<groupEnd] {
+                let event = insertions[position]
+                let target: Int
+                if event.isChannel, event.typeNibble >= 0xB {
+                    target = lastNotNoteClass >= 0 ? lastNotNoteClass + 1 : tailStart
+                } else if event.isNoteEnd {
+                    target = lastNotNoteOn >= 0 ? lastNotNoteOn + 1 : tailStart
+                } else {
+                    target = merged.count
+                }
+                merged.insert(event, at: target)
+                inserted.append((offset: target, event: event))
+                if lastNotNoteClass >= target { lastNotNoteClass += 1 }
+                if lastNotNoteOn >= target { lastNotNoteOn += 1 }
+                if !(event.isChannel && event.typeNibble <= 0x9), target > lastNotNoteClass {
+                    lastNotNoteClass = target
+                }
+                if !event.isNoteOn, target > lastNotNoteOn { lastNotNoteOn = target }
             }
-            events.insert(event, at: target)
-            inserted.append((offset: target, event: event))
-            if lastNotNoteClass >= target { lastNotNoteClass += 1 }
-            if lastNotNoteOn >= target { lastNotNoteOn += 1 }
-            runEnd += 1
-            if !(event.isChannel && event.typeNibble <= 0x9), target > lastNotNoteClass {
-                lastNotNoteClass = target
-            }
-            if !event.isNoteOn, target > lastNotNoteOn { lastNotNoteOn = target }
+            survivorIndex = runEnd
+            groupStart = groupEnd
         }
+        merged.append(contentsOf: events[survivorIndex..<events.count])
+        events = merged
         for event in insertions { endTick = max(endTick, event.tick) }
         return ApplyResult(removals: removed, insertions: inserted)
     }

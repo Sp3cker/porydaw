@@ -40,8 +40,8 @@ TUNE values.
 
 **Warning: applying a master-tuning edit replaces all tracks' Fine tune / TUNE
 (MIDI CC24) automation with the chosen uniform starting tune. Undo restores
-the original automation.** Notes, pitch bends, programs, and timing are not
-changed.
+the original automation.** Notes retain their identities; pitch bends,
+programs, event order, and timing are preserved.
 
 The overwrite warning appears only after a master-tuning edit and only when
 any track already contains TUNE commands. It clears after Apply or Cancel.

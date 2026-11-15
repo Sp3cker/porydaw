@@ -2,7 +2,7 @@ add_library(PorydawCore STATIC
     MusicTypes.swift
     MidiFile.swift
     MidiFile+Codec.swift
-    NoteProjection.swift
+    NoteTable.swift
     MidiSemantics.swift
     Meter.swift
     PlaybackTimeline.swift

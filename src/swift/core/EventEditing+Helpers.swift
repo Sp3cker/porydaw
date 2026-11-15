@@ -133,7 +133,7 @@ extension SongDocument {
     }
 
     func applyXcmdPatch(_ patch: Xcmd.Patch, chunk: Int, operation: HistoryOperation) {
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         let originals = state.file.chunks[chunk].events
         let removals = patch.removeEvents.filter { $0 <= UInt64(Int.max) }.map(Int.init)
         guard removals.count == patch.removeEvents.count,

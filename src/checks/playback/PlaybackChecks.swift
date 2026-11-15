@@ -28,7 +28,7 @@ public func runPlaybackSuite(_ report: CheckReport) {
             path: projectionPath, cppID: mappingID, report: report)
     else { return }
     checkEngineTrackMapping(projectionTimeline, report: report)
-    checkNoteIdentities(report)
+    checkWireNoteIDs(report)
     checkMidiEngineBounds(report)
 
     guard runPairedLoopChecks(fixtureRoot: fixtureRoot, report: report) else { return }
@@ -167,7 +167,7 @@ private func checkEngineTrackMapping(_ timeline: PlaybackTimeline, report: Check
         cppID: mappingID, what: "note-on keys from retained chunks")
 }
 
-private func checkNoteIdentities(_ report: CheckReport) {
+private func checkWireNoteIDs(_ report: CheckReport) {
     let file = MidiFile(
         division: playbackCheckDivision,
         chunks: [
@@ -181,12 +181,12 @@ private func checkNoteIdentities(_ report: CheckReport) {
     let timeline = PlaybackTimeline.build(file: file, sampleRate: playbackCheckSampleRate)
     let noteOns = timeline.events.filter { $0.type == 0x9 && $0.tick == 24 }
     report.expectEqual(
-        expected: [UInt64(1), 2], actual: noteOns.map(\.noteID.rawValue),
-        cppID: identitiesID, what: "stamped note-on identities")
+        expected: [UInt64(61), 189], actual: noteOns.map(\.wireNoteID),
+        cppID: identitiesID, what: "FIFO wire note-on IDs independent of document stamps")
     let noteOff = timeline.events.first { $0.type == 0x8 && $0.tick == 48 }
     report.expectEqual(
-        expected: Optional(UInt64(0)), actual: noteOff?.noteID.rawValue, cppID: identitiesID,
-        what: "ordinary note-off identity")
+        expected: Optional(UInt64(61)), actual: noteOff?.wireNoteID, cppID: identitiesID,
+        what: "note-off carries the first FIFO wire ID")
 }
 
 private func compareControllerDefaults(

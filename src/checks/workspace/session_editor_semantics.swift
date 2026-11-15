@@ -334,16 +334,18 @@ internal func overlapRefusalChecks(
         document: document, service: service,
         lease: suite.bankLease, slots: suite.bankSlots,
         dirty: false, loadName: suite.bankLoadName, sampleRate: 48_000)
-    guard let note = document.notes(in: 0).first, let end = note.endTick, note.duration > 1 else {
+    guard let note = document.notes(in: 0).first, let end = note.endTick, note.duration > 1,
+        let location = document.location(of: note.id)
+    else {
         report.fail(id, "fixture needs a sounding note on track 0")
         return
     }
     // Raw insertion bypasses the editor's overlap guard, like an imported file.
     document.insertRawEvent(
-        chunk: note.chunk,
+        chunk: location.chunk,
         event: .channel(tick: note.tick + 1, status: 0x90 | note.channel, data0: note.pitch, data1: 100))
     document.insertRawEvent(
-        chunk: note.chunk,
+        chunk: location.chunk,
         event: .channel(tick: Tick(end) + 1, status: 0x90 | note.channel, data0: note.pitch, data1: 0))
     let pair = document.notes(in: 0).filter { $0.pitch == note.pitch && $0.tick <= note.tick + 1 }
     guard pair.count == 2 else {

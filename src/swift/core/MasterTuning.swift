@@ -145,23 +145,17 @@ extension SongDocument {
             throw MasterTuningError.outsideSafeRange(requested: units, minimum: -64, maximum: 63)
         }
         _ = try MasterTuning.appliedUnits(in: state.file)
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         for chunk in state.file.chunks.indices {
             let initial = MasterTuning.uniformEvents(in: state.file.chunks[chunk], units: units)
-            for index in state.file.chunks[chunk].events.indices.reversed() {
+            let removals = state.file.chunks[chunk].events.indices.filter { (index: Int) -> Bool in
                 let event = state.file.chunks[chunk].events[index]
-                if MasterTuning.isMetadata(event) {
-                    mutation.remove(chunk: chunk, offset: index)
-                } else if case .channel(let status, let controller, _) = event.payload,
-                    status >> 4 == 0xB, controller == TimeDefaults.ccFineTune
-                {
-                    mutation.remove(chunk: chunk, offset: index)
-                }
+                if MasterTuning.isMetadata(event) { return true }
+                guard case .channel(let status, let controller, _) = event.payload else { return false }
+                return status >> 4 == 0xB && controller == TimeDefaults.ccFineTune
             }
-            for event in initial.reversed() {
-                mutation.state.file.chunks[chunk].events.insert(event, at: 0)
-                mutation.changes.events.append(.insert(EventInsertion(chunk: chunk, offset: 0, event: event)))
-            }
+            if !removals.isEmpty { mutation.apply(removing: removals, inserting: [], chunk: chunk) }
+            mutation.prepend(initial, chunk: chunk)
         }
         if mutation.state.file.chunks.isEmpty { mutation.appendChunk(MidiChunk()) }
         mutation.insert(MasterTuning.metadata(units: units), chunk: 0)

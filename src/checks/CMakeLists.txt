@@ -171,6 +171,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editcheck/NoteIdentityChecks.swift
         editcheck/NoteMoveCorpusChecks.swift
         editcheck/NoteMoveTransactionChecks.swift
+        editcheck/NoteOracleChecks.swift
         editcheck/ScaleChecks.swift
         editcheck/SelectionTrackChecks.swift
         editcheck/TickBoundsChecks.swift

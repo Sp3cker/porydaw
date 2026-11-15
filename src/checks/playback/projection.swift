@@ -175,12 +175,12 @@ internal func runReusableTimelineBuilderChecks(_ report: CheckReport) {
     let originalEvents = [
         PlaybackEvent(sample: 0, tick: 0, type: playbackTempoEventType, track: 0, data0: 120, data1: 0),
         PlaybackEvent(sample: 0, tick: 0, type: 0xC, track: 0, data0: 7, data1: 0),
-        PlaybackEvent(sample: 1_000, tick: 2, type: 0x9, track: 0, data0: 60, data1: 100, noteID: NoteID(41)),
-        PlaybackEvent(sample: 5_000, tick: 10, type: 0x8, track: 0, data0: 60, data1: 0),
+        PlaybackEvent(sample: 1_000, tick: 2, type: 0x9, track: 0, data0: 60, data1: 100, wireNoteID: 61),
+        PlaybackEvent(sample: 5_000, tick: 10, type: 0x8, track: 0, data0: 60, data1: 0, wireNoteID: 61),
     ]
     report.expectEqual(
         expected: originalEvents, actual: original.events, cppID: id,
-        what: "retained original event samples, order and identity")
+        what: "retained original event samples, order and wire ID")
     report.expectEqual(
         expected: originalEvents, actual: restored.events, cppID: id,
         what: "restored input scheduling after larger and empty builds")
@@ -203,11 +203,11 @@ internal func runReusableTimelineBuilderChecks(_ report: CheckReport) {
     let replacementEvents = [
         PlaybackEvent(sample: 0, tick: 0, type: playbackTempoEventType, track: 0, data0: 60, data1: 0),
         PlaybackEvent(sample: 0, tick: 0, type: 0xC, track: 0, data0: 9, data1: 0),
-        PlaybackEvent(sample: 2_000, tick: 2, type: 0x9, track: 0, data0: 62, data1: 80, noteID: NoteID(83)),
+        PlaybackEvent(sample: 2_000, tick: 2, type: 0x9, track: 0, data0: 62, data1: 80, wireNoteID: 63),
         PlaybackEvent(sample: 4_000, tick: 4, type: playbackTempoEventType, track: 0, data0: 112, data1: 1),
         PlaybackEvent(sample: 4_000, tick: 4, type: playbackTempoEventType, track: 0, data0: 120, data1: 0),
-        PlaybackEvent(sample: 4_000, tick: 4, type: 0x9, track: 0, data0: 64, data1: 90, noteID: NoteID(84)),
-        PlaybackEvent(sample: 6_000, tick: 8, type: 0x8, track: 0, data0: 64, data1: 0),
+        PlaybackEvent(sample: 4_000, tick: 4, type: 0x9, track: 0, data0: 64, data1: 90, wireNoteID: 65),
+        PlaybackEvent(sample: 6_000, tick: 8, type: 0x8, track: 0, data0: 64, data1: 0, wireNoteID: 65),
     ]
     report.expectEqual(
         expected: replacementEvents, actual: replacement.events, cppID: id,

@@ -94,7 +94,7 @@ extension SongDocument {
         actions: TimeActions, from state: SongState,
         extra: [[MidiEvent]]? = nil, logicalLaneMoves: Bool = false
     ) -> DocumentMutation? {
-        var result = DocumentMutation(state)
+        var result = beginMutation(from: state)
         let file = state.file
         let map = file.engineTracks()
         for chunk in file.chunks.indices {
@@ -192,9 +192,6 @@ extension SongDocument {
                 }
             }
             if let extra { insertions.append(contentsOf: extra[chunk]) }
-            for index in insertions.indices where insertions[index].isNoteOn && insertions[index].noteID == nil {
-                insertions[index].noteID = mintNoteID()
-            }
             guard
                 removals.allSatisfy({
                     result.state.file.chunks[chunk].events.indices.contains($0)
