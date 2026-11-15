@@ -3,17 +3,21 @@ import Foundation
 public struct Note: Equatable, Sendable {
     public let id: NoteID
     public let track: Int
-    public let chunk: Int
-    public let onIndex: Int
-    public let endIndex: Int?
     public let tick: Tick
     public let duration: Tick
     public let pitch: UInt8
     public let velocity: UInt8
     public let channel: UInt8
 
-    public var isUnterminated: Bool { endIndex == nil }
+    public let isUnterminated: Bool
     public var endTick: UInt64? { isUnterminated ? nil : UInt64(tick) + UInt64(duration) }
+}
+
+/// Raw event positions for explicit event surgery in one document state.
+public struct NoteLocation: Equatable, Sendable {
+    public let chunk: Int
+    public let onIndex: Int
+    public let endIndex: Int?
 }
 
 internal struct NoteTable: Sendable {
@@ -118,31 +122,50 @@ internal struct NoteTable: Sendable {
         return channel != previousChannel
     }
 
-    private func note(at row: Int, track: Int, chunk: Int) -> Note {
+    private func note(at row: Int, track: Int) -> Note {
         precondition(isSealed, "Reading an unsealed note table.")
         guard let channel else { preconditionFailure("A note row requires a primary channel.") }
         return Note(
-            id: ids[row], track: track, chunk: chunk,
-            onIndex: Int(onIndices[row]),
-            endIndex: endIndices[row] < 0 ? nil : Int(endIndices[row]),
+            id: ids[row], track: track,
             tick: ticks[row], duration: durations[row], pitch: pitches[row],
-            velocity: velocities[row], channel: channel)
+            velocity: velocities[row], channel: channel, isUnterminated: endIndices[row] < 0)
     }
 
-    func notes(track: Int, chunk: Int) -> [Note] {
+    func notes(track: Int) -> [Note] {
         precondition(isSealed, "Reading an unsealed note table.")
         var result: [Note] = []
         result.reserveCapacity(ids.count)
-        for row in ids.indices { result.append(note(at: row, track: track, chunk: chunk)) }
+        for row in ids.indices { result.append(note(at: row, track: track)) }
         return result
     }
 
-    func note(_ id: NoteID, track: Int, chunk: Int) -> Note? {
+    func note(_ id: NoteID, track: Int) -> Note? {
         precondition(isSealed, "Reading an unsealed note table.")
         guard id.isAssigned, id.slot < rowOfSlot.count else { return nil }
         let row = Int(rowOfSlot[id.slot])
         guard row >= 0, ids[row] == id else { return nil }
-        return note(at: row, track: track, chunk: chunk)
+        return note(at: row, track: track)
+    }
+
+    private func location(at row: Int, chunk: Int) -> NoteLocation {
+        NoteLocation(
+            chunk: chunk, onIndex: Int(onIndices[row]),
+            endIndex: endIndices[row] < 0 ? nil : Int(endIndices[row]))
+    }
+
+    func location(of id: NoteID, chunk: Int) -> NoteLocation? {
+        precondition(isSealed, "Reading an unsealed note table.")
+        guard id.isAssigned, id.slot < rowOfSlot.count else { return nil }
+        let row = Int(rowOfSlot[id.slot])
+        guard row >= 0, ids[row] == id else { return nil }
+        return location(at: row, chunk: chunk)
+    }
+
+    func forEachNote(track: Int, chunk: Int, _ body: (Note, NoteLocation) -> Void) {
+        precondition(isSealed, "Reading an unsealed note table.")
+        for row in ids.indices {
+            body(note(at: row, track: track), location(at: row, chunk: chunk))
+        }
     }
 }
 
@@ -167,7 +190,7 @@ extension MidiFile {
         guard track >= 0, track < map.usedTrackCount,
             let chunk = map.tracks[track].midiChunk
         else { return [] }
-        return chunks[chunk].noteTable.notes(track: track, chunk: chunk)
+        return chunks[chunk].noteTable.notes(track: track)
     }
 
     internal func notes(map: EngineTrackMap) -> [[Note]] {
@@ -183,7 +206,18 @@ extension MidiFile {
             guard let chunk = map.tracks[track].midiChunk,
                 chunks[chunk].chunkKey == id.chunkKey
             else { continue }
-            return chunks[chunk].noteTable.note(id, track: track, chunk: chunk)
+            return chunks[chunk].noteTable.note(id, track: track)
+        }
+        return nil
+    }
+
+    internal func location(of id: NoteID, map: EngineTrackMap) -> NoteLocation? {
+        guard id.isAssigned else { return nil }
+        for track in 0..<map.usedTrackCount {
+            guard let chunk = map.tracks[track].midiChunk,
+                chunks[chunk].chunkKey == id.chunkKey
+            else { continue }
+            return chunks[chunk].noteTable.location(of: id, chunk: chunk)
         }
         return nil
     }

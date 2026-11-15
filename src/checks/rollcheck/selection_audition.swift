@@ -64,13 +64,13 @@ func checkSelectionBandAudition(_ report: CheckReport, viewport: DocumentViewpor
             !session.document.notes(in: grid.trackIndex).contains {
                 Int($0.pitch) == pitch && $0.tick == first.tick
             }
-        })
+        }), let firstLocation = session.document.location(of: first.id)
     else {
         report.fail(id, "no free visible pitch between the band-audition notes")
         return
     }
     session.document.insertRawEvent(
-        chunk: first.chunk,
+        chunk: firstLocation.chunk,
         event: .channel(
             tick: first.tick, status: 0x90 | first.channel,
             data0: UInt8(zeroPitch), data1: 77))

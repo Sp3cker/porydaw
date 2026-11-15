@@ -233,7 +233,7 @@ public final class NoteCommands {
         guard let track = selectedTrack else { return }
         let selected = selectedNotes()
         let selectedIDs = Set(selected.map(\.id))
-        var removals: [Note] = []
+        var removals: [NoteID] = []
         var additions: [NewNote] = []
         var selectedPositions = Set<FragmentPosition>()
 
@@ -241,7 +241,7 @@ public final class NoteCommands {
             let end = UInt64(note.tick) + UInt64(note.duration)
             var boundary = nextSubdivision(note.tick)
             guard boundary > note.tick, UInt64(boundary) < end else { continue }
-            removals.append(note)
+            removals.append(note.id)
             var partTick = note.tick
             while boundary > partTick, UInt64(boundary) < end {
                 additions.append(
@@ -262,7 +262,7 @@ public final class NoteCommands {
         where !note.isUnterminated && !selectedIDs.contains(note.id)
             && editCursor > note.tick && UInt64(editCursor) < UInt64(note.tick) + UInt64(note.duration)
         {
-            removals.append(note)
+            removals.append(note.id)
             additions.append(
                 NewNote(
                     track: track, tick: note.tick, pitch: note.pitch,
@@ -292,7 +292,7 @@ public final class NoteCommands {
     private func join() {
         guard let track = selectedTrack else { return }
         let groups = Dictionary(grouping: selectedNotes(), by: \.pitch)
-        var removals: [Note] = []
+        var removals: [NoteID] = []
         var additions: [NewNote] = []
         for (pitch, group) in groups where group.count > 1 && group.allSatisfy({ !$0.isUnterminated }) {
             let sorted = group.sorted { $0.tick < $1.tick }
@@ -302,7 +302,7 @@ public final class NoteCommands {
                 let noteEnd = UInt64(note.tick) + UInt64(note.duration)
                 if noteEnd > end { end = noteEnd }
             }
-            removals.append(contentsOf: sorted)
+            removals.append(contentsOf: sorted.map(\.id))
             additions.append(
                 NewNote(
                     track: track, tick: first.tick, pitch: pitch,

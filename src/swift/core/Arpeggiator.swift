@@ -270,14 +270,12 @@ public enum Arpeggiator {
         private var active: [[Int]] = Array(repeating: [], count: 128)
 
         init(notes: [Note], track: Int, start: Int64, end: Int64) {
+            // Stable sorting keeps materialization's storage order for equal ticks.
             self.notes = notes.filter { note in
                 note.track == track && note.pitch < 128 && note.velocity > 0 && Int64(note.tick) < end
                     && (note.endTick.map { $0 > UInt64(start) } ?? true)
             }.sorted { lhs, rhs in
-                if lhs.tick != rhs.tick { return lhs.tick < rhs.tick }
-                if lhs.onIndex != rhs.onIndex { return lhs.onIndex < rhs.onIndex }
-                if lhs.chunk != rhs.chunk { return lhs.chunk < rhs.chunk }
-                return lhs.id.rawValue < rhs.id.rawValue
+                lhs.tick < rhs.tick
             }
         }
 

@@ -260,20 +260,24 @@ extension SongDocument {
     }
 
     private func applyVelocities(_ notes: [Note], valuesByID: [NoteID: Int]) {
-        var mutation = beginMutation(from: state)
+        let before = state
+        let map = before.file.engineTracks()
+        var mutation = beginMutation(from: before)
         var changed = false
         for note in notes {
-            guard let velocity = valuesByID[note.id] else { continue }
+            guard let velocity = valuesByID[note.id],
+                let location = before.file.location(of: note.id, map: map)
+            else { continue }
             let target = clampVelocity(velocity)
             guard target != note.velocity,
                 case let .channel(status, pitch, _) =
-                    mutation.state.file.chunks[note.chunk].events[note.onIndex].payload
+                    mutation.state.file.chunks[location.chunk].events[location.onIndex].payload
             else {
                 continue
             }
-            var event = mutation.state.file.chunks[note.chunk].events[note.onIndex]
+            var event = mutation.state.file.chunks[location.chunk].events[location.onIndex]
             event.payload = .channel(status: status, data0: pitch, data1: target)
-            mutation.replace(chunk: note.chunk, offset: note.onIndex, with: event)
+            mutation.replace(chunk: location.chunk, offset: location.onIndex, with: event)
             changed = true
         }
         commit(mutation, group: nil, operation: .setVelocities, changed: changed)
@@ -317,25 +321,27 @@ extension SongDocument {
         collectEditedWins(
             spans: spans, editedIDs: ids, source: base,
             edits: &edits, replacedEnds: &replacedEnds)
+        let baseMap = base.file.engineTracks()
         for index in active {
             let relocation = relocations[index]
             let note = relocation.original
-            edits[note.chunk, default: NoteChunkEdits()].removals.append(note.onIndex)
-            if let endIndex = note.endIndex {
-                edits[note.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+            guard let location = base.file.location(of: note.id, map: baseMap) else { return false }
+            edits[location.chunk, default: NoteChunkEdits()].removals.append(location.onIndex)
+            if let endIndex = location.endIndex {
+                edits[location.chunk, default: NoteChunkEdits()].removals.append(endIndex)
             }
             replacedEnds.insert(note.id)
-            var on = base.file.chunks[note.chunk].events[note.onIndex]
+            var on = base.file.chunks[location.chunk].events[location.onIndex]
             on.tick = relocation.tick
             if case let .channel(status, _, velocity) = on.payload {
                 on.payload = .channel(status: status, data0: relocation.pitch, data1: velocity)
             }
             on.noteID = note.id
-            edits[note.chunk, default: NoteChunkEdits()].insertions.append(on)
+            edits[location.chunk, default: NoteChunkEdits()].insertions.append(on)
             if let endTick = relocation.endTick {
                 var end: MidiEvent
-                if let endIndex = note.endIndex {
-                    end = base.file.chunks[note.chunk].events[endIndex]
+                if let endIndex = location.endIndex {
+                    end = base.file.chunks[location.chunk].events[endIndex]
                     end.tick = Tick(endTick)
                     if case let .channel(status, _, velocity) = end.payload {
                         end.payload = .channel(
@@ -347,7 +353,7 @@ extension SongDocument {
                         tick: Tick(endTick), status: 0x90 | note.channel,
                         data0: relocation.pitch, data1: 0)
                 }
-                edits[note.chunk, default: NoteChunkEdits()].insertions.append(end)
+                edits[location.chunk, default: NoteChunkEdits()].insertions.append(end)
             }
         }
         retainSharedEnds(source: base, replacedEnds: replacedEnds, edits: &edits)
@@ -401,18 +407,24 @@ extension SongDocument {
         return result
     }
 
-    private func collectRemovals(_ notes: [Note], into edits: inout [Int: NoteChunkEdits]) {
+    private func collectRemovals(
+        _ notes: [Note], source: SongState, into edits: inout [Int: NoteChunkEdits]
+    ) {
+        var file = source.file
+        file.sealNoteTables()
+        let map = file.engineTracks()
         for note in notes {
-            edits[note.chunk, default: NoteChunkEdits()].removals.append(note.onIndex)
-            if let endIndex = note.endIndex {
-                edits[note.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+            guard let location = file.location(of: note.id, map: map) else { continue }
+            edits[location.chunk, default: NoteChunkEdits()].removals.append(location.onIndex)
+            if let endIndex = location.endIndex {
+                edits[location.chunk, default: NoteChunkEdits()].removals.append(endIndex)
             }
         }
     }
 
     private func remove(_ notes: [Note], from mutation: inout DocumentMutation) {
         var edits: [Int: NoteChunkEdits] = [:]
-        collectRemovals(notes, into: &edits)
+        collectRemovals(notes, source: mutation.state, into: &edits)
         for (chunk, edit) in edits.sorted(by: { $0.key < $1.key }) {
             mutation.apply(removing: edit.removals, inserting: [], chunk: chunk)
         }
@@ -429,35 +441,39 @@ extension SongDocument {
         for span in spans where affectedTracks.last != span.track {
             affectedTracks.append(span.track)
         }
-        let sourceNotes = notes(of: source)
+        var file = source.file
+        file.sealNoteTables()
+        let map = file.engineTracks()
         for track in affectedTracks {
-            let stationaryNotes = sourceNotes.indices.contains(track) ? sourceNotes[track] : []
-            for stationary in stationaryNotes {
+            guard track >= 0, track < map.usedTrackCount,
+                let chunk = map.tracks[track].midiChunk
+            else { continue }
+            file.chunks[chunk].noteTable.forEachNote(track: track, chunk: chunk) { stationary, location in
                 guard !containsNoteID(stationary.id, in: editedIDs),
                     let originalEnd = stationary.endTick
-                else { continue }
+                else { return }
                 switch resolveStationaryCollisions(
                     spans: spans[...], stationary: stationary)
                 {
                 case .covered:
                     replacedEnds.insert(stationary.id)
-                    edits[stationary.chunk, default: NoteChunkEdits()].removals.append(stationary.onIndex)
-                    if let endIndex = stationary.endIndex {
-                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+                    edits[location.chunk, default: NoteChunkEdits()].removals.append(location.onIndex)
+                    if let endIndex = location.endIndex {
+                        edits[location.chunk, default: NoteChunkEdits()].removals.append(endIndex)
                     }
                 case .trimmed(let start, let end):
                     if end != originalEnd { replacedEnds.insert(stationary.id) }
                     if start != stationary.tick {
-                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(stationary.onIndex)
-                        var event = source.file.chunks[stationary.chunk].events[stationary.onIndex]
+                        edits[location.chunk, default: NoteChunkEdits()].removals.append(location.onIndex)
+                        var event = source.file.chunks[location.chunk].events[location.onIndex]
                         event.tick = start
-                        edits[stationary.chunk, default: NoteChunkEdits()].insertions.append(event)
+                        edits[location.chunk, default: NoteChunkEdits()].insertions.append(event)
                     }
-                    if end != originalEnd, let endIndex = stationary.endIndex {
-                        edits[stationary.chunk, default: NoteChunkEdits()].removals.append(endIndex)
-                        var event = source.file.chunks[stationary.chunk].events[endIndex]
+                    if end != originalEnd, let endIndex = location.endIndex {
+                        edits[location.chunk, default: NoteChunkEdits()].removals.append(endIndex)
+                        var event = source.file.chunks[location.chunk].events[endIndex]
                         event.tick = Tick(end)
-                        edits[stationary.chunk, default: NoteChunkEdits()].insertions.append(event)
+                        edits[location.chunk, default: NoteChunkEdits()].insertions.append(event)
                     }
                 case .untouched:
                     break
@@ -469,11 +485,19 @@ extension SongDocument {
     private func retainSharedEnds(
         source: SongState, replacedEnds: Set<NoteID>, edits: inout [Int: NoteChunkEdits]
     ) {
-        for notes in notes(of: source) {
-            guard let chunk = notes.first?.chunk, edits[chunk]?.removals.isEmpty == false else { continue }
+        var file = source.file
+        file.sealNoteTables()
+        let map = file.engineTracks()
+        for track in 0..<map.usedTrackCount {
+            guard let chunk = map.tracks[track].midiChunk,
+                edits[chunk]?.removals.isEmpty == false
+            else { continue }
+            var retained: Set<Int> = []
+            file.chunks[chunk].noteTable.forEachNote(track: track, chunk: chunk) { note, location in
+                if !replacedEnds.contains(note.id), let end = location.endIndex { retained.insert(end) }
+            }
             edits[chunk]?.removals.removeAll { index in
-                source.file.chunks[chunk].events[index].isNoteEnd
-                    && notes.contains { $0.endIndex == index && !replacedEnds.contains($0.id) }
+                source.file.chunks[chunk].events[index].isNoteEnd && retained.contains(index)
             }
         }
     }

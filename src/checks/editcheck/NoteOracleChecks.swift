@@ -257,7 +257,10 @@ private enum NoteOracleChecks {
                 .channel(tick: 32, status: 0x80, data0: 62),
             ]))
         let notes = document.notes(in: 0)
-        guard notes.count == 2 else {
+        guard notes.count == 2,
+            let originalLocation = document.location(of: notes[0].id),
+            let survivingLocation = document.location(of: notes[1].id)
+        else {
             report.fail(checkID, "slot resurrection fixture requires two notes in one track")
             return
         }
@@ -265,7 +268,7 @@ private enum NoteOracleChecks {
         let survivingID = notes[1].id
         let initial = try snapshot(document)
         report.expect(
-            notes[0].chunk == notes[1].chunk
+            originalLocation.chunk == survivingLocation.chunk
                 && document.note(deletedID)?.id == deletedID
                 && document.note(survivingID)?.id == survivingID,
             cppID: checkID, message: "slot resurrection: both original handles resolve in the same chunk")
@@ -287,7 +290,7 @@ private enum NoteOracleChecks {
         }
         report.expect(
             insertedID != deletedID && insertedID != survivingID
-                && document.note(insertedID)?.chunk == notes[0].chunk
+                && document.location(of: insertedID)?.chunk == originalLocation.chunk
                 && document.note(insertedID)?.tick == 48 && document.note(insertedID)?.pitch == 64
                 && document.note(survivingID)?.id == survivingID && document.note(deletedID) == nil,
             cppID: checkID,

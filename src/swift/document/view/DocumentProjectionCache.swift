@@ -5,13 +5,18 @@ import PorydawCore
 /// Bank and presentation state are deliberately absent.
 @MainActor
 public final class DocumentProjectionCache {
-    /// Notes and lanes of one track carry raw event offsets, so they key on any
-    /// event edit in the chunk plus the facts that map the track to it.
+    /// Lanes carry raw event offsets, so any event edit invalidates them.
     private struct TrackKey: Equatable {
         let chunk: Int?
         let events: UInt64
         let structure: UInt64
         let meta: UInt64
+    }
+
+    private struct NotesKey: Equatable {
+        let chunk: Int?
+        let notes: UInt64
+        let structure: UInt64
     }
 
     private struct LaneKey: Hashable {
@@ -30,8 +35,7 @@ public final class DocumentProjectionCache {
     }
 
     private unowned let session: DocumentSession
-    private var trackNotes: [Int: (key: TrackKey, notes: [Note])] = [:]
-    private var noteIndices: [Int: [NoteID: Int]] = [:]
+    private var trackNotes: [Int: (key: NotesKey, notes: [Note])] = [:]
     private var lanes: [LaneKey: (key: TrackKey, points: [LanePoint])] = [:]
     private var cachedTimeAxis: (key: AxisKey, axis: TimeAxis)?
 
@@ -40,26 +44,23 @@ public final class DocumentProjectionCache {
     }
 
     public func notes(in track: Int) -> [Note] {
-        let key = trackKey(track: track)
+        let document = session.document
+        let stamps = document.revisions
+        let map = document.engineTracks
+        let chunk =
+            track >= 0 && track < map.usedTrackCount && map.tracks.indices.contains(track)
+            ? map.tracks[track].midiChunk : nil
+        let stamp = chunk.flatMap { stamps.chunks.indices.contains($0) ? stamps.chunks[$0].notes : nil } ?? 0
+        let key = NotesKey(chunk: chunk, notes: stamp, structure: stamps.structure)
         if let cached = trackNotes[track], cached.key == key { return cached.notes }
         let notes = session.document.notes(in: track)
         trackNotes[track] = (key, notes)
-        noteIndices.removeValue(forKey: track)
         return notes
     }
 
     public func note(_ id: NoteID, in track: Int) -> Note? {
-        let notes = notes(in: track)
-        if noteIndices[track] == nil {
-            var indices: [NoteID: Int] = [:]
-            indices.reserveCapacity(notes.count)
-            for (index, note) in notes.enumerated() where indices[note.id] == nil {
-                indices[note.id] = index
-            }
-            noteIndices[track] = indices
-        }
-        guard let index = noteIndices[track]?[id] else { return nil }
-        return notes[index]
+        guard let note = session.document.note(id), note.track == track else { return nil }
+        return note
     }
 
     public func lanePoints(track: Int, lane: Lane) -> [LanePoint] {

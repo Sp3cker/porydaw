@@ -271,7 +271,20 @@ internal struct DocumentMutation {
                 state.file.chunks[chunk].chunkKey == id.chunkKey
             else { continue }
             if state.file.chunks[chunk].sealNoteTable() { noteChannelChanges.insert(chunk) }
-            return state.file.chunks[chunk].noteTable.note(id, track: track, chunk: chunk)
+            return state.file.chunks[chunk].noteTable.note(id, track: track)
+        }
+        return nil
+    }
+
+    mutating func location(of id: NoteID) -> NoteLocation? {
+        guard id.isAssigned else { return nil }
+        let map = state.file.engineTracks()
+        for track in 0..<map.usedTrackCount {
+            guard let chunk = map.tracks[track].midiChunk,
+                state.file.chunks[chunk].chunkKey == id.chunkKey
+            else { continue }
+            if state.file.chunks[chunk].sealNoteTable() { noteChannelChanges.insert(chunk) }
+            return state.file.chunks[chunk].noteTable.location(of: id, chunk: chunk)
         }
         return nil
     }
@@ -585,6 +598,17 @@ public final class SongDocument {
 
     public func note(_ id: NoteID) -> Note? {
         state.file.note(id, map: trackMap)
+    }
+
+    /// Returns the note's raw event positions in the published document state.
+    public func location(of id: NoteID) -> NoteLocation? {
+        state.file.location(of: id, map: trackMap)
+    }
+
+    internal func location(of id: NoteID, in songState: SongState) -> NoteLocation? {
+        var file = songState.file
+        file.sealNoteTables()
+        return file.location(of: id, map: file.engineTracks())
     }
 
     internal func notes(in track: Int, of songState: SongState) -> [Note] {

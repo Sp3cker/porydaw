@@ -22,7 +22,7 @@ extension ClipboardSemantics {
         let contents = gather(range, scope: scope, from: document)
         return document.applyRangeEdit(
             RangeEdit(
-                removeNotes: contents.tracks.flatMap { $0.notes },
+                removeNotes: contents.tracks.flatMap { $0.notes.map(\.id) },
                 removePoints: contents.lanes.flatMap { $0.points },
                 removeTempo: contents.tempo))
     }

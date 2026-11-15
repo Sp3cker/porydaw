@@ -12,7 +12,9 @@ extension SongDocument {
         }
         guard ordered.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
         guard spansAreCompatible(spans: ordered, allowExactDuplicates: false) else { return false }
-        let referenceTracks = notes(of: reference)
+        var file = reference.file
+        file.sealNoteTables()
+        let map = file.engineTracks()
         var firstSpan = 0
         while firstSpan < ordered.count {
             let track = ordered[firstSpan].track
@@ -21,25 +23,28 @@ extension SongDocument {
                 afterTrack += 1
             }
             defer { firstSpan = afterTrack }
-            guard referenceTracks.indices.contains(track) else { continue }
-            let notes = referenceTracks[track]
-            for note in notes where !editedIDs.contains(note.id) {
-                guard let originalEnd = note.endTick, let endIndex = note.endIndex else { continue }
+            guard track >= 0, track < map.usedTrackCount,
+                let chunk = map.tracks[track].midiChunk
+            else { continue }
+            file.chunks[chunk].noteTable.forEachNote(track: track, chunk: chunk) { note, location in
+                guard !editedIDs.contains(note.id),
+                    let originalEnd = note.endTick, let endIndex = location.endIndex
+                else { return }
                 switch resolveStationaryCollisions(
                     spans: ordered[firstSpan..<afterTrack], stationary: note)
                 {
                 case .covered:
-                    actions.remove(chunk: note.chunk, index: note.onIndex)
-                    actions.remove(chunk: note.chunk, index: endIndex)
+                    actions.remove(chunk: location.chunk, index: location.onIndex)
+                    actions.remove(chunk: location.chunk, index: endIndex)
                 case .trimmed(let start, let end):
                     if start != note.tick {
                         actions.move(
-                            chunk: note.chunk, index: note.onIndex,
+                            chunk: location.chunk, index: location.onIndex,
                             to: start, preserveIdentity: true)
                     }
                     if end != originalEnd {
                         actions.move(
-                            chunk: note.chunk, index: endIndex,
+                            chunk: location.chunk, index: endIndex,
                             to: Tick(end), preserveIdentity: false)
                     }
                 case .untouched:
@@ -66,19 +71,20 @@ extension SongDocument {
             let notes = referenceTracks[span.track]
             for note in notes where note.pitch == span.pitch && !editedIDs.contains(note.id) {
                 guard let current = mutation.note(note.id),
-                    let currentEnd = current.endTick, let endIndex = current.endIndex
+                    let location = mutation.location(of: note.id),
+                    let currentEnd = current.endTick, let endIndex = location.endIndex
                 else {
                     continue
                 }
                 let decision = resolveInterval(
                     start: current.tick, end: currentEnd, against: sorted[index...index])
                 if case .untouched = decision { continue }
-                let onEvent = mutation.state.file.chunks[current.chunk].events[current.onIndex]
-                let endEvent = mutation.state.file.chunks[current.chunk].events[endIndex]
-                removeNote(current, from: &mutation)
+                let onEvent = mutation.state.file.chunks[location.chunk].events[location.onIndex]
+                let endEvent = mutation.state.file.chunks[location.chunk].events[endIndex]
+                removeNote(at: location, from: &mutation)
                 if case .trimmed(let start, let end) = decision {
                     insertNoteCopy(
-                        current, onEvent: onEvent, endEvent: endEvent,
+                        current, chunk: location.chunk, onEvent: onEvent, endEvent: endEvent,
                         tick: start, end: end, into: &mutation)
                 }
             }
@@ -87,23 +93,23 @@ extension SongDocument {
     }
 
 
-    func removeNote(_ note: Note, from mutation: inout DocumentMutation) {
-        for index in [note.onIndex, note.endIndex].compactMap({ $0 }).sorted(by: >) {
-            mutation.remove(chunk: note.chunk, offset: index)
+    func removeNote(at location: NoteLocation, from mutation: inout DocumentMutation) {
+        for index in [location.onIndex, location.endIndex].compactMap({ $0 }).sorted(by: >) {
+            mutation.remove(chunk: location.chunk, offset: index)
         }
     }
 
     func insertNoteCopy(
-        _ note: Note, onEvent: MidiEvent, endEvent: MidiEvent,
+        _ note: Note, chunk: Int, onEvent: MidiEvent, endEvent: MidiEvent,
         tick: Tick, end: UInt64, into mutation: inout DocumentMutation
     ) {
         var movedOn = onEvent
         movedOn.tick = tick
         movedOn.noteID = note.id
-        mutation.insert(movedOn, chunk: note.chunk)
+        mutation.insert(movedOn, chunk: chunk)
         var movedEnd = endEvent
         movedEnd.tick = Tick(end)
-        mutation.insert(movedEnd, chunk: note.chunk)
+        mutation.insert(movedEnd, chunk: chunk)
     }
 
     func normalizeMovedLaneDestinations(
