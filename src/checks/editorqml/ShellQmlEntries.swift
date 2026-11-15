@@ -422,6 +422,10 @@ enum ShellQmlRegistry {
                     "ShellSettings::test_themeModePreviewCommitAndRevert",
                     "ShellSettings::test_themeModeGeometryStableAcrossPreview",
                     "ShellSettings::test_songFlagsAndReferenceGeometry",
+                    "ShellSettings::test_masterTuningInputCancelAndQuantization",
+                    "ShellSettings::test_masterTuningApplyReopenUndoRedo",
+                    "ShellSettings::test_masterTuningRejectsInvalidDraftWithoutClosing",
+                    "ShellSettings::test_masterTuningExplicitReplacementIntent",
                 ]),
             Entry(
                 name: "shell-settings-window-focus", inputFileName: "tst_ShellSettings.qml",

@@ -13,6 +13,7 @@ add_library(PorydawCore STATIC
     TrackEffectEditing.swift
     EffectsSidecar.swift
     SongDocument.swift
+    MasterTuning.swift
     DocumentChangeSet.swift
     DocumentRevisions.swift
     SongHistory.swift

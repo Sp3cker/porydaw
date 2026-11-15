@@ -120,6 +120,7 @@ extension SongDocument {
             where location.chunk == mapping.chunk {
                 rescued.append(doomed.events[location.index])
             }
+            rescued.append(contentsOf: doomed.events.filter { MasterTuning.isMetadata($0) })
             mutation.removeChunk(at: mapping.chunk)
             chunkMap[mapping.chunk] = nil
             for old in chunkMap.indices where old > mapping.chunk { chunkMap[old] = old - 1 }
@@ -226,7 +227,9 @@ extension SongDocument {
 
     public func insertRawEvent(chunk: Int, event: MidiEvent) {
         guard history.acceptsDocumentMutation else { return }
-        guard state.file.chunks.indices.contains(chunk), !isTempo(event) else { return }
+        guard state.file.chunks.indices.contains(chunk), !isTempo(event), !MasterTuning.isMetadata(event) else {
+            return
+        }
         var stored = event
         if stored.isNoteOn { stored.noteID = mintNoteID() }
         var mutation = DocumentMutation(state)
@@ -240,6 +243,7 @@ extension SongDocument {
         guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk),
             state.file.chunks[chunk].events.indices.contains(index), !isTempo(event),
+            !MasterTuning.isMetadata(event), !MasterTuning.isMetadata(state.file.chunks[chunk].events[index]),
             state.file.chunks[chunk].events[index] != event
         else { return }
         let old = state.file.chunks[chunk].events[index]
@@ -263,7 +267,11 @@ extension SongDocument {
     public func deleteRawEvents(chunk: Int, indices: [Int]) {
         guard history.acceptsDocumentMutation else { return }
         guard state.file.chunks.indices.contains(chunk) else { return }
-        let valid = Set(indices.filter { state.file.chunks[chunk].events.indices.contains($0) })
+        let valid = Set(
+            indices.filter {
+                state.file.chunks[chunk].events.indices.contains($0)
+                    && !MasterTuning.isMetadata(state.file.chunks[chunk].events[$0])
+            })
         guard !valid.isEmpty else { return }
         var mutation = DocumentMutation(state)
         mutation.apply(removing: Array(valid), inserting: [], chunk: chunk)
@@ -316,13 +324,16 @@ extension SongDocument {
         inserting event: MidiEvent? = nil
     ) {
         guard history.acceptsDocumentMutation else { return }
-        guard state.file.chunks.indices.contains(chunk), event.map({ !isTempo($0) }) ?? true else {
+        guard state.file.chunks.indices.contains(chunk),
+            event.map({ !isTempo($0) && !MasterTuning.isMetadata($0) }) ?? true
+        else {
             return
         }
         var mutation = DocumentMutation(state)
         let valid = Set(
             indices.filter {
                 mutation.state.file.chunks[chunk].events.indices.contains($0)
+                    && !MasterTuning.isMetadata(mutation.state.file.chunks[chunk].events[$0])
             })
         mutation.apply(
             removing: Array(valid), inserting: event.map { [$0] } ?? [],
@@ -511,6 +522,7 @@ extension SongDocument {
 
     internal func canonicalizedForExport() -> MidiFile {
         var copy = state.file
+        let masterUnits = (try? MasterTuning.appliedUnits(in: state.file)) ?? 0
         let map = state.file.engineTracks()
         var streamByChunk: [Int: UInt8] = [:]
         for track in 0..<map.usedTrackCount {
@@ -532,6 +544,8 @@ extension SongDocument {
                     data0: $0.controller, data1: $0.value)
             }
             copy.chunks[chunk].apply(removing: removals, inserting: insertions)
+            let defaults = MasterTuning.initialEvents(in: copy.chunks[chunk], units: masterUnits)
+            copy.chunks[chunk].events.insert(contentsOf: defaults, at: 0)
         }
         return copy
     }

@@ -91,6 +91,8 @@ extension SongDocument {
                 if isTimeSignature(event) {
                     result.chunks[chunkIndex].timeSignatures.append(index)
                     result.chunks[chunkIndex].conductorGlobals.append(index)
+                } else if MasterTuning.isMetadata(event) {
+                    result.chunks[chunkIndex].conductorGlobals.append(index)
                 } else if MidiFile.metaIsMarker(event) {
                     result.chunks[chunkIndex].conductorGlobals.append(index)
                 }

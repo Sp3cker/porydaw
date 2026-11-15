@@ -16,7 +16,9 @@ DialogWindow {
     readonly property rect pageRect: Qt.rect(20 * unit, 31 * unit,
                                             width - 40 * unit, tabs.height - 20 * unit)
     property int selectedTab: 0
+    property bool closeAfterApply: false
     readonly property string songLabel: store.songLabel
+    readonly property SongSettingsPage songSettings: songPage.item as SongSettingsPage
     width: 560 * unit
     height: 580 * unit
     minimumWidth: width
@@ -27,6 +29,7 @@ DialogWindow {
     font: applicationSession.typographyFonts.body
 
     function showSettings(songFirst: bool): void {
+        dialog.closeAfterApply = false
         dialog.store.open()
         if (enginePage.item)
             (enginePage.item as EngineSettingsPage).reset()
@@ -35,13 +38,32 @@ DialogWindow {
         dialog.selectedTab = songFirst && dialog.store.songAvailable ? 1 : 0
         dialog.present()
     }
-    function commit(): void {
-        if (dialog.store.songAvailable)
-            (songPage.item as SongSettingsPage).finishVoicegroupEdit()
+    function commit(closeOnSuccess: bool): void {
+        if (dialog.store.songAvailable && songPage.status === Loader.Ready && dialog.songSettings) {
+            dialog.songSettings.finishVoicegroupEdit()
+            dialog.songSettings.finishTuningEdit()
+        }
+        dialog.closeAfterApply = closeOnSuccess
         dialog.store.apply()
-        dialog.presenter.commitAppearance()
     }
-    onClosing: presenter.discardAppearance()
+    Connections {
+        target: dialog.store
+        function onApplySucceeded(): void {
+            dialog.presenter.commitAppearance()
+            if (dialog.closeAfterApply)
+                dialog.close()
+        }
+    }
+    onClosing: (close) => {
+        if (dialog.store.isApplying)
+            close.accepted = false
+        else {
+            dialog.store.open()
+            if (dialog.songSettings)
+                dialog.songSettings.reset()
+            dialog.presenter.discardAppearance()
+        }
+    }
     Rectangle {
         id: body
         objectName: "settingsBody"
@@ -128,6 +150,7 @@ DialogWindow {
         x: dialog.pageRect.x; y: dialog.pageRect.y
         width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
+        enabled: !dialog.store.isApplying
         visible: dialog.selectedTab === 0
         onLoaded: (enginePage.item as EngineSettingsPage).reset()
         sourceComponent: EngineSettingsPage {
@@ -142,6 +165,7 @@ DialogWindow {
         x: dialog.pageRect.x; y: dialog.pageRect.y
         width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
+        enabled: !dialog.store.isApplying
         visible: dialog.selectedTab === 1
         onLoaded: (songPage.item as SongSettingsPage).reset()
         sourceComponent: SongSettingsPage {
@@ -156,12 +180,26 @@ DialogWindow {
         x: dialog.pageRect.x; y: dialog.pageRect.y
         width: dialog.pageRect.width; height: dialog.pageRect.height
         active: dialog.visible
+        enabled: !dialog.store.isApplying
         visible: dialog.selectedTab === 2
         sourceComponent: ThemeSettingsPage {
             objectName: "settingsThemePage"
             unit: dialog.unit; presenter: dialog.presenter; colors: dialog.colors
             typography: dialog.applicationSession.typographyFonts
         }
+    }
+    Text {
+        objectName: "settingsError"
+        parent: body
+        x: 20 * dialog.unit; y: dialog.height - 80 * dialog.unit
+        width: dialog.width - 40 * dialog.unit
+        height: 44 * dialog.unit
+        text: dialog.store.settingsError
+        visible: text.length > 0
+        wrapMode: Text.WordWrap
+        font: dialog.applicationSession.typographyFonts.body
+        color: dialog.colors.errorText
+        Accessible.name: text
     }
     Item {
         objectName: "button-box"
@@ -177,7 +215,7 @@ DialogWindow {
             height: parent.height; text: qsTr("Apply")
             font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
-            onClicked: dialog.commit()
+            onClicked: dialog.commit(false)
         }
         Button {
             id: cancelButton
@@ -185,6 +223,7 @@ DialogWindow {
             x: applyButton.width + dialog.unit
             width: applyButton.width; height: parent.height; text: qsTr("Cancel")
             font: dialog.applicationSession.typographyFonts.body
+            enabled: !dialog.store.isApplying
             onClicked: dialog.close()
         }
         Button {
@@ -194,10 +233,7 @@ DialogWindow {
             width: applyButton.width; height: parent.height; text: qsTr("OK")
             font: dialog.applicationSession.typographyFonts.body
             enabled: !dialog.store.isApplying
-            onClicked: {
-                dialog.commit()
-                dialog.close()
-            }
+            onClicked: dialog.commit(true)
         }
     }
 }

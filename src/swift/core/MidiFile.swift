@@ -367,6 +367,7 @@ public struct MidiFile: Equatable, Sendable {
 
             var result = MidiFile(division: division, chunks: chunks)
             if format == 0 { result.convertFormat0ToFormat1() }
+            _ = try MasterTuning.appliedUnits(in: result)
             return result
         }
     }

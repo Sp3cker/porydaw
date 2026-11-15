@@ -510,6 +510,7 @@ public final class SongDocument {
     }
 
     public func captureSave() throws -> SaveSnapshot {
+        _ = try MasterTuning.appliedUnits(in: state.file)
         var export = canonicalizedForExport()
         if export.chunks.isEmpty { export.chunks.append(MidiChunk()) }
         for point in state.tempo {

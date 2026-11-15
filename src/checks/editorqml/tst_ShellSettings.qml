@@ -13,6 +13,7 @@ ShellLaneSupport {
     visible: true
 
     ShellQmlBootstrap { id: bootstrap }
+    GridInputClipProbe { id: tuningClipProbe }
     Component { id: shellComponent; ShellWindow { typographyCaptureFont: Qt.font({ pixelSize: 12 }); width: 960; height: 640; visible: true } }
     readonly property var nativeSettings: bootstrap.preferences
 
@@ -425,6 +426,229 @@ ShellLaneSupport {
         dialog().close()
         tryCompare(presenter, "themeMode", "vanilla")
         nativeSettings.setString("theme.mode", "vanilla")
+    }
+    function openTuningSettings() {
+        const presenter = createShell()
+        const app = presenter.session
+        app.openProjectAndSong(bootstrap.projectRoot, "mus_route101")
+        verify(waitForNative(function() { return app.songOpen || app.lastSaveError.length > 0 }, 30000),
+               "master tuning fixture loads: " + app.lastSaveError)
+        verify(app.songOpen)
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        compare(dialog().selectedTab, 1)
+        return presenter
+    }
+    function enterTuningFrequency(text) {
+        const field = findChild(dialog(), "song.master-tuning-hz")
+        verify(field !== null, "production A4 entry is mounted")
+        mouseClick(field, field.width / 2, field.height / 2)
+        tryCompare(field, "activeFocus", true)
+        tryCompare(field, "text", shell.shellPresenter.settingsStore.masterTuningFrequencyText)
+        keySequence(StandardKey.SelectAll)
+        tryCompare(field, "selectedText", field.text)
+        for (let index = 0; index < text.length; ++index)
+            keyClick(text.charAt(index))
+        compare(field.text, text, "real A4 keystrokes replace the complete selected draft")
+        keyClick(Qt.Key_Tab)
+        tryCompare(field, "activeFocus", false)
+    }
+    function reopenTuning(presenter) {
+        dialog().close()
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+    }
+    function test_masterTuningInputCancelAndQuantization() {
+        const presenter = openTuningSettings()
+        const model = presenter.settingsStore
+        const original = model.masterTuningUnits
+        const dial = findChild(dialog(), "song.master-tuning")
+        verify(dial !== null, "Song settings exposes a real Dial")
+        compare(dial.stepSize, 1)
+        compare(dial.from, model.masterTuningMinimumUnits)
+        compare(dial.to, model.masterTuningMaximumUnits)
+        dial.forceActiveFocus()
+        keyClick(original < dial.to ? Qt.Key_Right : Qt.Key_Left)
+        tryCompare(model, "masterTuningUnits", original < dial.to ? original + 1 : original - 1)
+        compare(presenter.session.documentDirty, false, "dial changes only the draft")
+        enterTuningFrequency("450")
+        tryCompare(model, "masterTuningUnits", 25)
+        const nominal = 440 * Math.pow(2, 25 / 768)
+        verify(Math.abs(model.masterTuningFrequencyHz - nominal) < 0.000001)
+        compare(model.masterTuningCents, 39.0625)
+        tryVerify(function() {
+            return findChild(dialog(), "song.master-tuning-readback").text.indexOf(nominal.toFixed(3)) >= 0
+        }, 3000, "readback honestly shows the quantized nominal frequency")
+        findChild(dialog(), "settingsCancel").clicked()
+        tryCompare(dialog(), "visible", false)
+        compare(model.masterTuningEdited, false, "Cancel immediately clears tuning-edit intent")
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(model, "masterTuningUnits", original)
+        compare(presenter.session.documentDirty, false, "Cancel leaves MIDI untouched")
+        compare(model.masterTuningEdited, false, "Cancel and reopening clear tuning-edit intent")
+    }
+    function test_masterTuningApplyReopenUndoRedo() {
+        const presenter = openTuningSettings()
+        const model = presenter.settingsStore
+        const app = presenter.session
+        const original = model.masterTuningUnits
+        const requested = original < model.masterTuningMaximumUnits ? original + 1 : original - 1
+        verify(requested >= -64 && requested <= 63, "requested tuning is in the global range")
+        const notes = app.gridPresenter().fetchNoteSummary()
+        const dial = findChild(dialog(), "song.master-tuning")
+        // The circular pointer reaches the maximum at the lower-right of the dial.
+        mouseClick(dial, dial.width * 0.85, dial.height * 0.85)
+        verify(model.masterTuningUnits !== original, "pointer movement changes the production dial draft")
+        enterTuningFrequency(String(440 * Math.pow(2, requested / 768)))
+        tryCompare(model, "masterTuningUnits", requested)
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying && app.documentDirty }, 10000))
+        compare(model.settingsError, "")
+        compare(model.masterTuningEdited, false, "successful Apply consumes tuning-edit intent")
+        compare(dialog().visible, true, "Apply keeps Settings open")
+        compare(app.gridPresenter().fetchNoteSummary(), notes, "tuning preserves note content")
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying }, 10000))
+        reopenTuning(presenter)
+        tryCompare(model, "masterTuningUnits", requested, 3000, "reopen retains the chosen uniform tune")
+        dialog().close()
+        app.requestUndo()
+        verify(waitForNative(function() { return !app.documentDirty }, 10000),
+               "one undo reverses tuning despite repeated Apply")
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(model, "masterTuningUnits", original)
+        dialog().close()
+        app.requestRedo()
+        verify(waitForNative(function() { return app.documentDirty }, 10000))
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(model, "masterTuningUnits", requested)
+        findChild(dialog(), "settingsOK").clicked()
+        compare(dialog().closeAfterApply, true, "OK requests close on successful completion")
+        verify(waitForNative(function() { return !dialog().visible }, 10000),
+               "OK closes only after successful Apply")
+        compare(model.isApplying, false, "successful OK closes only after the applying guard clears")
+        compare(model.settingsError, "")
+    }
+    function test_masterTuningRejectsInvalidDraftWithoutClosing() {
+        const presenter = openTuningSettings()
+        const model = presenter.settingsStore
+        const original = model.masterTuningUnits
+        const volume = model.masterVolume
+        const voicegroup = model.voicegroup
+        model.changeMasterVolume(volume === 110 ? 109 : 110)
+        model.changeVoicegroup(voicegroup === "fixture_rich" ? "fixture_alt" : "fixture_rich")
+        enterTuningFrequency("not-a-frequency")
+        tryVerify(function() { return model.settingsError.length > 0 })
+        findChild(dialog(), "settingsOK").clicked()
+        compare(dialog().visible, true, "invalid OK retains the draft and error")
+        compare(presenter.session.documentDirty, false, "invalid tuning blocks other song settings")
+        const error = findChild(dialog(), "settingsError")
+        tryCompare(error, "visible", true)
+        verify(error.text.length > 0, "actionable error is rendered inside Settings")
+        compare(findChild(dialog(), "song.master-tuning-hz").text, "not-a-frequency")
+        for (const units of [64, -65]) {
+            model.changeMasterTuningUnits(units)
+            tryCompare(findChild(dialog(), "song.master-tuning-hz"), "text", model.masterTuningFrequencyText)
+            findChild(dialog(), "settingsApply").clicked()
+            verify(model.settingsError.length > 0, "out-of-global-range tuning is rejected")
+            compare(presenter.session.documentDirty, false)
+        }
+        findChild(dialog(), "song.master-tuning-reset").clicked()
+        compare(model.masterTuningUnits, 0, "reset requests neutral")
+        compare(model.settingsError, "")
+        findChild(dialog(), "settingsCancel").clicked()
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        tryCompare(model, "masterTuningUnits", original)
+        compare(model.masterVolume, volume, "rejected Apply never committed the other song draft")
+        compare(model.voicegroup, voicegroup, "rejected tuning never committed the voicegroup draft")
+    }
+    function tuningEvents(app) {
+        const events = app.eventListPresenter()
+        events.setVisible(false)
+        events.setVisible(true)
+        const points = []
+        for (let chunk = 0; chunk < events.chunkLabels.length; ++chunk) {
+            events.setChunk(chunk, false)
+            for (let row = 0; row < events.rowCount; ++row) {
+                // EventListEventType.cc = 3; columns 3/4 are controller/value.
+                if (events.rowType(row) === 3 && Number(events.cellEdit(row, 3)) === 24)
+                    points.push([chunk, events.rowTick(row), events.cellEdit(row, 2),
+                                 Number(events.cellEdit(row, 4))])
+            }
+        }
+        return points
+    }
+    function test_masterTuningExplicitReplacementIntent_data() {
+        return [{ tag: "reset", action: "reset" },
+                { tag: "current-reference", action: "frequency" }]
+    }
+    function test_masterTuningExplicitReplacementIntent(data) {
+        const presenter = openTuningSettings()
+        const app = presenter.session
+        const model = presenter.settingsStore
+        compare(model.masterTuningUnits, 0)
+        dialog().close()
+        waitForShellScene()
+        const grid = app.gridPresenter()
+        grid.setTrack(0)
+        grid.setEditCursorTick(0)
+        verify(tuningClipProbe.writeClipJson(JSON.stringify({
+            format: 1, ticksPerBeat: grid.ticksPerBeat, span: 96, wholeLane: false,
+            tracks: [{ track: 0, notes: [] }],
+            lanes: [{ track: 0, cc: 24, points: [[0, 64], [24, 0], [48, 127]] }],
+            tempo: []
+        })), "clipboard stages custom TUNE automation at both extrema")
+        compare(JSON.parse(tuningClipProbe.clipSummary())[5], 1, "production decoder accepts the staged TUNE lane")
+        verify(waitForNative(function() { return presenter.action("roll.paste").enabled }, 5000))
+        presenter.activate("roll.paste")
+        verify(waitForNative(function() {
+            return tuningEvents(app).some(function(point) { return point[1] === 48 && point[3] === 127 })
+        }, 5000), "normal Paste plants TUNE automation")
+        const automated = JSON.stringify(tuningEvents(app))
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        compare(model.masterTuningEdited, false, "opening Settings does not request replacement")
+        compare(model.masterTuningMinimumUnits, -64)
+        compare(model.masterTuningMaximumUnits, 63)
+        const warning = findChild(dialog(), "song.master-tuning-warning")
+        verify(warning && warning.visible && warning.text.indexOf("replaces") >= 0
+               && warning.text.indexOf("Undo") >= 0, "replacement and Undo warning is visible before Apply")
+        model.changeMasterVolume(model.masterVolume === 110 ? 109 : 110)
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying }, 10000))
+        compare(JSON.stringify(tuningEvents(app)), automated, "unrelated Apply preserves every TUNE point")
+        compare(model.masterTuningEdited, false)
+        if (data.action === "reset") {
+            const reset = findChild(dialog(), "song.master-tuning-reset")
+            mouseClick(reset, reset.width / 2, reset.height / 2)
+        } else {
+            enterTuningFrequency(model.masterTuningFrequencyText)
+        }
+        tryCompare(model, "masterTuningEdited", true, 3000, "same-value input explicitly requests replacement")
+        compare(model.masterTuningUnits, 0)
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying && !model.masterTuningEdited }, 10000))
+        const uniform = tuningEvents(app)
+        verify(uniform.length > 0 && uniform.every(function(point) {
+            return point[1] === 0 && point[3] === 64
+        }), "explicit neutral tuning replaces automation with uniform tick-zero CC24")
+        verify(JSON.stringify(uniform) !== automated)
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying }, 10000))
+        dialog().close()
+        app.requestUndo()
+        verify(waitForNative(function() {
+            return JSON.stringify(tuningEvents(app)) === automated
+        }, 10000), "one Undo restores every original TUNE despite repeated Apply")
+        app.requestRedo()
+        verify(waitForNative(function() {
+            return JSON.stringify(tuningEvents(app)) === JSON.stringify(uniform)
+        }, 10000), "Redo restores the chosen uniform tuning")
     }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()

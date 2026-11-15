@@ -296,6 +296,16 @@ public struct PlaybackTimelineBuilder {
     /// Creates an empty builder whose scratch grows to fit subsequent input.
     public init() {}
 
+    private mutating func appendTuningDefaults(_ defaults: [MidiEvent], chunk: Int) {
+        for event in defaults {
+            guard case let .channel(_, controller, value) = event.payload else { continue }
+            rawEvents.append(
+                RawPlaybackEvent(
+                    tick: 0, midiChunk: chunk, type: 0xB, data0: controller, data1: value,
+                    noteID: NoteID(), order: rawEvents.count))
+        }
+    }
+
     /// Projects authoritative document state into an independent immutable timeline.
     /// - Parameters:
     ///   - state: Canonical state whose tempo and decoded settings drive scheduling.
@@ -358,11 +368,15 @@ public struct PlaybackTimelineBuilder {
         chunkStateTicks.removeAll(keepingCapacity: true)
         var loopStartTick = TimeDefaults.noTick
         var loopEndTick = TimeDefaults.noTick
+        let masterUnits = (try? MasterTuning.appliedUnits(in: file)) ?? 0
 
         for (chunkIndex, chunk) in file.chunks.enumerated() {
             var channelPrefix: Int?
             var primaryChannel: UInt8?
             chunkStateTicks.append(TimeDefaults.noTick)
+            let defaults = MasterTuning.initialEvents(in: chunk, units: masterUnits)
+            if !defaults.isEmpty { chunkStateTicks[chunkIndex] = 0 }
+            appendTuningDefaults(defaults, chunk: chunkIndex)
             for event in chunk.events {
                 if event.isChannel {
                     channelPrefix = nil

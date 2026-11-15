@@ -19,7 +19,7 @@ internal enum HistoryStepLabel {
             notes = false
             payloadCount = nil
         case .addTrack, .duplicateTrack, .deleteTrack, .moveTrack, .renameTrack,
-            .setChunkEnd, .setConfig, .editTempo, .editRawAndTempo, .setLoop,
+            .setChunkEnd, .setConfig, .setMasterTuning, .editTempo, .editRawAndTempo, .setLoop,
             .setTimeSignature, .moveTimeSignature, .deleteTimeSignature,
             .applyRangeEdit, .moveRange, .removeTime, .insertBlankTime, .duplicateTime,
             .addEffect, .removeEffect, .updateEffect, .editPluginState:
@@ -80,6 +80,7 @@ internal enum HistoryStepLabel {
         case .renameTrack: "Rename track"
         case .setChunkEnd: "Set song end"
         case .setConfig: "Edit song config"
+        case .setMasterTuning: "Set master tuning"
         case .insertRawEvent: "Insert event"
         case .modifyRawEvent: "Modify event"
         case .deleteRawEvents: "Delete events"

@@ -62,14 +62,28 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     @QtTracked public var exactGate = false
     @QtTracked public var extendedClocks = false
     @QtTracked public var noCompression = false
+    public var masterTuningUnits: Int = 0
+    public var masterTuningFrequencyHz: Double = 440
+    public var masterTuningFrequencyText: String = "440.000"
+    public var masterTuningNominalFrequencyText: String = "440.000"
+    public var masterTuningCents: Double = 0
+    public var masterTuningCentsText: String = "0.0000"
+    public var masterTuningMinimumUnits: Int = -64
+    public var masterTuningMaximumUnits: Int = 63
+    public var masterTuningEdited: Bool = false
+    public var settingsError: String = ""
     @QtTracked public var isApplying = false
     @QtTracked public var revision = 0
 
     private weak var session: ApplicationSession?
     private var committed = EngineSettings()
     private var target: DocumentSession?
+    private var tuningInputValid = true
+    private var applyTask: Task<Void, Never>?
 
     public required init() {}
+
+    isolated deinit { applyTask?.cancel() }
     public func componentComplete() {}
 
     @QtIgnored
@@ -103,6 +117,10 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     }
 
     public func open() {
+        guard !isApplying else { return }
+        settingsError = ""
+        tuningInputValid = true
+        masterTuningEdited = false
         resetEngine()
         target = session?.selectedDocument
         songAvailable = target != nil
@@ -116,6 +134,9 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
         exactGate = config.exactGate
         extendedClocks = config.extendedClocks
         noCompression = config.noCompression
+        if let document = target?.document {
+            updateMasterTuningDraft(units: document.masterTuningUnits)
+        }
     }
 
     @QtIgnored
@@ -155,23 +176,83 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     public func changeExtendedClocks(value: Bool) { extendedClocks = value }
     public func changeNoCompression(value: Bool) { noCompression = value }
 
+    private func validateMasterTuning() -> Bool {
+        guard tuningInputValid else { return false }
+        guard (-64...63).contains(masterTuningUnits) else {
+            settingsError =
+                "Master tuning must be −64…+63 units (1/64 semitone per unit). Enter a supported A4 frequency or reset to 440 Hz."
+            return false
+        }
+        settingsError = ""
+        return true
+    }
+
+    private func updateMasterTuningDraft(units: Int) {
+        masterTuningUnits = units
+        masterTuningFrequencyHz = MasterTuning.frequencyHz(units: units)
+        masterTuningNominalFrequencyText = String(format: "%.3f", masterTuningFrequencyHz)
+        masterTuningFrequencyText = masterTuningNominalFrequencyText
+        masterTuningCents = Double(units) * 100 / 64
+        masterTuningCentsText = String(format: "%.4f", masterTuningCents)
+    }
+
+    /// Requests a uniform master tune, replacing all TUNE automation on Apply.
+    public func changeMasterTuningUnits(value: Int) {
+        guard !isApplying else { return }
+        masterTuningEdited = true
+        updateMasterTuningDraft(units: value)
+        tuningInputValid = true
+        _ = validateMasterTuning()
+    }
+
+    /// Quantizes a requested nominal A4 frequency to the nearest TUNE unit.
+    public func changeMasterTuningFrequency(text: String) {
+        guard !isApplying else { return }
+        masterTuningEdited = true
+        masterTuningFrequencyText = text
+        do {
+            guard let frequency = Double(text.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+                tuningInputValid = false
+                settingsError = "Enter a finite A4 frequency in Hz, for example 440 or 450."
+                return
+            }
+            let units = try MasterTuning.units(frequencyHz: frequency)
+            changeMasterTuningUnits(value: units)
+        } catch {
+            tuningInputValid = false
+            settingsError = error.localizedDescription
+        }
+    }
+
+    private func commitEngine(_ engine: EngineSettings) {
+        guard engine != committed else { return }
+        committed = engine
+        session?.setEngineSettings(engine)
+        revision &+= 1
+        let store = PreferencesStore()
+        store.setString(key: "engine.pcmMixer", value: engine.mixer)
+        store.setInt(key: "engine.maxPcmChannels", value: engine.maxPcmChannels)
+        store.setInt(key: "engine.pcmMixRate", value: engine.mixRate)
+        store.setBool(key: "engine.analogFilter", value: engine.analogFilter)
+        store.synchronize()
+    }
+
     public func apply() {
         guard !isApplying else { return }
         let engine = EngineSettings(
             mixer: mixer, maxPcmChannels: String(maxPcmChannels),
             mixRate: String(mixRate), analogFilter: String(analogFilter))
-        if engine != committed {
-            committed = engine
-            session?.setEngineSettings(engine)
-            revision &+= 1
-            let store = PreferencesStore()
-            store.setString(key: "engine.pcmMixer", value: mixer)
-            store.setInt(key: "engine.maxPcmChannels", value: maxPcmChannels)
-            store.setInt(key: "engine.pcmMixRate", value: mixRate)
-            store.setBool(key: "engine.analogFilter", value: analogFilter)
-            store.synchronize()
+        guard let target else {
+            commitEngine(engine)
+            settingsError = ""
+            applySucceeded()
+            return
         }
-        guard let target, session?.selectedDocument === target else { return }
+        guard session?.selectedDocument === target, !target.isClosed else {
+            settingsError = "The selected song changed. Close Settings and reopen it for the song you want to edit."
+            return
+        }
+        guard validateMasterTuning() else { return }
         let arg = VoiceListSemantics.voicegroupArg(
             fromDisplay: voicegroup.trimmingCharacters(in: .whitespacesAndNewlines),
             knownArgs: session?.settingsVoicegroupArgs() ?? [])
@@ -181,28 +262,54 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
         let gate = exactGate
         let clocks = extendedClocks
         let compression = noCompression
+        let tuning = masterTuningUnits
+        let replaceTuning = masterTuningEdited
         isApplying = true
-        Task { [weak self, weak target] in
-            guard let self, let target else { return }
+        applyTask = Task { [weak self, target] in
+            guard let self else { return }
+            var succeeded = false
+            defer {
+                self.isApplying = false
+                self.applyTask = nil
+                if succeeded { self.applySucceeded() }
+            }
             do {
+                guard !Task.isCancelled, self.session?.selectedDocument === target,
+                    self.target === target, !target.isClosed
+                else {
+                    self.settingsError =
+                        "The selected song changed before Settings could be applied. Reopen Settings for the intended song."
+                    return
+                }
+                guard self.validateMasterTuning() else { return }
+                if replaceTuning {
+                    try target.document.setMasterTuning(units: tuning)
+                    self.masterTuningEdited = false
+                }
+                let original = target.document.state.config
+                var config = original
+                config.masterVolume = volume
+                config.reverb = songReverb == -1 ? nil : songReverb
+                config.priority = songPriority
+                config.exactGate = gate
+                config.extendedClocks = clocks
+                config.noCompression = compression
+                if config != original { target.document.setConfig(config) }
                 if !arg.isEmpty && arg != target.document.state.config.voicegroupArgument {
                     try await target.selectVoicegroup(arg)
                 }
-                if self.session?.selectedDocument === target, !target.isClosed {
-                    let original = target.document.state.config
-                    var config = original
-                    config.masterVolume = volume
-                    config.reverb = songReverb == -1 ? nil : songReverb
-                    config.priority = songPriority
-                    config.exactGate = gate
-                    config.extendedClocks = clocks
-                    config.noCompression = compression
-                    if config != original { target.document.setConfig(config) }
+                guard !Task.isCancelled, self.session?.selectedDocument === target,
+                    self.target === target, !target.isClosed
+                else {
+                    self.settingsError =
+                        "The selected song changed while applying Settings. Reopen Settings for the intended song."
+                    return
                 }
+                self.commitEngine(engine)
+                succeeded = true
             } catch {
-                self.session?.reportSettingsFailure(String(describing: error))
+                self.settingsError = error.localizedDescription
             }
-            self.isApplying = false
         }
     }
 
@@ -212,4 +319,6 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
         mixRate = committed.mixRate
         analogFilter = committed.analogFilter
     }
+
+    @QtSignal public func applySucceeded()
 }
