@@ -230,10 +230,10 @@ extension MidiChunk {
             merged.append(contentsOf: events[runStart..<runEnd])
             var lastNotNoteClass = -1
             var lastNotNoteOn = -1
-            var index = merged.count - tailStart
-            while index > 0 {
+            var index = merged.count
+            while index > tailStart {
                 index -= 1
-                let candidate = merged[tailStart + index]
+                let candidate = merged[index]
                 if lastNotNoteClass < 0, !(candidate.isChannel && candidate.typeNibble <= 0x9) {
                     lastNotNoteClass = index
                 }
@@ -244,14 +244,14 @@ extension MidiChunk {
                 let event = insertions[position]
                 let target: Int
                 if event.isChannel, event.typeNibble >= 0xB {
-                    target = lastNotNoteClass >= 0 ? lastNotNoteClass + 1 : 0
+                    target = lastNotNoteClass >= 0 ? lastNotNoteClass + 1 : tailStart
                 } else if event.isNoteEnd {
-                    target = lastNotNoteOn >= 0 ? lastNotNoteOn + 1 : 0
+                    target = lastNotNoteOn >= 0 ? lastNotNoteOn + 1 : tailStart
                 } else {
-                    target = merged.count - tailStart
+                    target = merged.count
                 }
-                merged.insert(event, at: tailStart + target)
-                inserted.append((offset: tailStart + target, event: event))
+                merged.insert(event, at: target)
+                inserted.append((offset: target, event: event))
                 if lastNotNoteClass >= target { lastNotNoteClass += 1 }
                 if lastNotNoteOn >= target { lastNotNoteOn += 1 }
                 if !(event.isChannel && event.typeNibble <= 0x9), target > lastNotNoteClass {
