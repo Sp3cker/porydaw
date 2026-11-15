@@ -44,7 +44,7 @@ extension SongDocument {
     public func addNotes(_ notes: [NewNote]) throws -> [NoteID] {
         guard history.acceptsDocumentMutation else { return [] }
         guard !notes.isEmpty else { return [] }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         var spans: [TimeNoteSpan] = []
         spans.reserveCapacity(notes.count)
         for note in notes {
@@ -80,7 +80,7 @@ extension SongDocument {
                 throw NoteEditError.invalidTrack(note.track)
             }
             let duration = max(note.duration, 1)
-            let id = mintNoteID()
+            let id = mutation.mintNoteID()
             insertedIDs.append(id)
             edits[mapping.chunk, default: NoteChunkEdits()].insertions.append(
                 .channel(
@@ -103,7 +103,7 @@ extension SongDocument {
     public func deleteNotes(_ ids: [NoteID]) {
         guard history.acceptsDocumentMutation else { return }
         guard !ids.isEmpty, let resolved = resolve(ids, in: state) else { return }
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         remove(resolved, from: &mutation)
         commit(mutation, group: nil, operation: .deleteNotes)
     }
@@ -260,7 +260,7 @@ extension SongDocument {
     }
 
     private func applyVelocities(_ notes: [Note], valuesByID: [NoteID: Int]) {
-        var mutation = DocumentMutation(state)
+        var mutation = beginMutation(from: state)
         var changed = false
         for note in notes {
             guard let velocity = valuesByID[note.id] else { continue }
@@ -311,7 +311,7 @@ extension SongDocument {
             collisionOrder(($0.track, $0.pitch, $0.tick), ($1.track, $1.pitch, $1.tick))
         }
         guard spansAreCompatible(spans: spans, allowExactDuplicates: false) else { return false }
-        var mutation = DocumentMutation(base)
+        var mutation = beginMutation(from: base)
         var edits: [Int: NoteChunkEdits] = [:]
         var replacedEnds: Set<NoteID> = []
         collectEditedWins(

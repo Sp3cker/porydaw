@@ -172,13 +172,23 @@ public struct TimeSignature: Equatable, Sendable {
 @MainActor
 internal struct DocumentMutation {
     var state: SongState
+    private(set) var nextNoteID: UInt64
     var changes = DocumentChangeSet()
 
-    init(_ state: SongState) {
+    init(_ state: SongState, nextNoteID: UInt64) {
         self.state = state
+        self.nextNoteID = nextNoteID
+    }
+
+    mutating func mintNoteID() -> NoteID {
+        let result = NoteID(nextNoteID)
+        nextNoteID = nextNoteID == .max ? 1 : nextNoteID + 1
+        return result
     }
 
     mutating func insert(_ event: MidiEvent, chunk: Int) {
+        var event = event
+        if event.isNoteOn && event.noteID == nil { event.noteID = mintNoteID() }
         let oldEnd = state.file.chunks[chunk].endTick
         let offset = state.file.chunks[chunk].insert(event)
         changes.events.append(
@@ -194,6 +204,10 @@ internal struct DocumentMutation {
         removing removals: [Int], inserting insertions: [MidiEvent],
         chunk: Int
     ) {
+        var insertions = insertions
+        for index in insertions.indices where insertions[index].isNoteOn && insertions[index].noteID == nil {
+            insertions[index].noteID = mintNoteID()
+        }
         let oldEnd = state.file.chunks[chunk].endTick
         let result = state.file.chunks[chunk].apply(
             removing: removals,
@@ -226,6 +240,17 @@ internal struct DocumentMutation {
     }
 
     mutating func replace(chunk: Int, offset: Int, with event: MidiEvent) {
+        let removed = state.file.chunks[chunk].events[offset]
+        var event = event
+        if event.isNoteOn {
+            event.noteID = removed.isNoteOn ? (removed.noteID ?? mintNoteID()) : mintNoteID()
+        } else {
+            event.noteID = nil
+        }
+        if removed.tick != event.tick {
+            apply(removing: [offset], inserting: [event], chunk: chunk)
+            return
+        }
         _ = remove(chunk: chunk, offset: offset)
         state.file.chunks[chunk].events.insert(event, at: offset)
         changes.events.append(
@@ -234,7 +259,20 @@ internal struct DocumentMutation {
                     chunk: chunk, offset: offset, event: event)))
     }
 
+    mutating func moveEvent(chunk: Int, from: Int, to: Int) {
+        let event = remove(chunk: chunk, offset: from)
+        state.file.chunks[chunk].events.insert(event, at: to)
+        changes.events.append(
+            .insert(
+                EventInsertion(
+                    chunk: chunk, offset: to, event: event)))
+    }
+
     mutating func appendChunk(_ chunk: MidiChunk) {
+        var chunk = chunk
+        for index in chunk.events.indices where chunk.events[index].isNoteOn {
+            chunk.events[index].noteID = mintNoteID()
+        }
         let offset = state.file.chunks.count
         state.file.chunks.append(chunk)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
@@ -248,6 +286,10 @@ internal struct DocumentMutation {
     }
 
     mutating func insertChunk(_ chunk: MidiChunk, at offset: Int) {
+        var chunk = chunk
+        for index in chunk.events.indices where chunk.events[index].isNoteOn {
+            chunk.events[index].noteID = mintNoteID()
+        }
         state.file.chunks.insert(chunk, at: offset)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
     }
@@ -543,6 +585,10 @@ public final class SongDocument {
         gestureOrigin = nil
     }
 
+    internal func beginMutation(from state: SongState) -> DocumentMutation {
+        DocumentMutation(state, nextNoteID: nextNoteID)
+    }
+
     internal func commit(
         _ mutation: DocumentMutation, group: HistoryGroup?,
         operation: HistoryOperation, changed: Bool = true,
@@ -563,6 +609,7 @@ public final class SongDocument {
         }
         let startingState = cachedOrigin?.state ?? state
         state = mutation.state
+        nextNoteID = mutation.nextNoteID
         history.record(
             changes: mutation.changes, group: group, operation: operation,
             returnsToOrigin: returnsToOrigin, trackRemap: trackRemap)
@@ -607,12 +654,6 @@ public final class SongDocument {
         precondition(nextEffectID < UInt64.max, "Effect identities are exhausted.")
         let result = EffectID(raw: nextEffectID)
         nextEffectID += 1
-        return result
-    }
-
-    internal func mintNoteID() -> NoteID {
-        let result = NoteID(nextNoteID)
-        nextNoteID = nextNoteID == .max ? 1 : nextNoteID + 1
         return result
     }
 

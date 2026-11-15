@@ -119,7 +119,7 @@ extension SongDocument {
 
         let before = state
         let originalTrackCount = before.file.engineTracks().usedTrackCount
-        var mutation = DocumentMutation(before)
+        var mutation = beginMutation(from: before)
         guard expandTracks(in: &mutation, to: requestedTracks, writes: edit.addPoints) else {
             return false
         }
@@ -236,7 +236,7 @@ extension SongDocument {
                 .channel(
                     tick: note.tick, status: 0x90 | channel, data0: note.pitch,
                     data1: clampVelocity(Int(note.velocity)),
-                    noteID: mintNoteID()))
+                    noteID: mutation.mintNoteID()))
             noteInsertions[chunk].append(
                 .channel(
                     tick: note.tick + duration, status: 0x90 | channel, data0: note.pitch))
