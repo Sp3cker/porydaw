@@ -64,6 +64,8 @@ struct VelocityFrozenNotes: Sendable {
         indices[id].map { notes[$0] }
     }
 
+    func contains(_ id: NoteID) -> Bool { indices[id] != nil }
+
     mutating func append(_ note: VelocityFrozenNote) {
         guard note.noteID.isAssigned, (1...127).contains(Int(note.velocity)),
             indices[note.noteID] == nil
@@ -111,13 +113,13 @@ public struct VelocityGestureState: Sendable {
         guard !updates.isEmpty else { return false }
         if updates.count == 1 {
             let update = updates[0]
-            guard frozen.frozenNote(update.noteID) != nil else { return false }
+            guard frozen.contains(update.noteID) else { return false }
             preview[update.noteID] = UInt8(min(max(update.velocity, 1), 127))
             return true
         }
         var seen: Set<NoteID> = []
         for update in updates {
-            guard frozen.frozenNote(update.noteID) != nil,
+            guard frozen.contains(update.noteID),
                 seen.insert(update.noteID).inserted
             else { return false }
         }

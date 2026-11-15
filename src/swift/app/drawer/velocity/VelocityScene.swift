@@ -15,21 +15,8 @@ struct VelocityInteractionSnapshot: Sendable {
     var preview: [NoteID: UInt8] = [:]
     var detentUnlock: Bool = false
     var relativeActivated: Bool = false
-    var hovered: NoteID?
+    var hovered: NoteID? = nil
     var detentsEnabled: Bool = true
-
-    init(
-        frozen: VelocityFrozenNotes = VelocityFrozenNotes(), preview: [NoteID: UInt8] = [:],
-        detentUnlock: Bool = false, relativeActivated: Bool = false, hovered: NoteID? = nil,
-        detentsEnabled: Bool = true
-    ) {
-        self.frozen = frozen
-        self.preview = preview
-        self.detentUnlock = detentUnlock
-        self.relativeActivated = relativeActivated
-        self.hovered = hovered
-        self.detentsEnabled = detentsEnabled
-    }
 
     /// One frozen note by identity.
     func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
