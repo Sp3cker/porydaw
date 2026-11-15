@@ -27,36 +27,28 @@ internal enum HistoryStepLabel {
         }
 
         var noteIDs: Set<NoteID> = []
-        var eventCounts: [Int: (insertions: Int, removals: Int)] = [:]
         var tracks: Set<Int> = []
         let map = document.engineTracks
-        for change in changes.events {
-            let event = change.event
-            guard !notes || event.isNoteOn else { continue }
-            if notes {
-                if payloadCount == nil, let id = event.noteID { noteIDs.insert(id) }
-            } else {
-                var counts = eventCounts[change.chunk] ?? (0, 0)
-                switch change {
-                case .insert: counts.insertions += 1
-                case .remove: counts.removals += 1
-                }
-                eventCounts[change.chunk] = counts
-            }
-            for track in 0..<map.usedTrackCount {
-                let mapping = map.tracks[track]
-                guard mapping.midiChunk == change.chunk else { continue }
-                if case .channel(let status, _, _) = event.payload,
-                    status & 0x0F != mapping.channel
-                {
-                    continue
-                }
-                tracks.insert(track)
-            }
-        }
         var changedEvents = 0
-        for counts in eventCounts.values {
-            changedEvents += max(counts.insertions, counts.removals)
+        for splice in changes.splices {
+            changedEvents += max(splice.inserted.count, splice.removed.count)
+            for side in 0..<2 {
+                let events = side == 0 ? splice.removed : splice.inserted
+                for event in events {
+                    guard !notes || event.isNoteOn else { continue }
+                    if notes, payloadCount == nil, let id = event.noteID { noteIDs.insert(id) }
+                    for track in 0..<map.usedTrackCount {
+                        let mapping = map.tracks[track]
+                        guard mapping.midiChunk == splice.chunk else { continue }
+                        if case .channel(let status, _, _) = event.payload,
+                            status & 0x0F != mapping.channel
+                        {
+                            continue
+                        }
+                        tracks.insert(track)
+                    }
+                }
+            }
         }
         let count = payloadCount ?? (notes ? noteIDs.count : changedEvents)
         let noun = notes ? "note" : "event"

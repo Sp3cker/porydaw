@@ -184,6 +184,10 @@ public struct TimeSignature: Equatable, Sendable {
 @MainActor
 internal struct DocumentMutation {
     var state: SongState
+    private let before: SongState
+    private var chunkOrigin: [Int?]
+    private var chunkInsertion: [Int?]
+    private var provenance: [Int: [Int]] = [:]
     private(set) var nextSerial: UInt64
     private(set) var nextChunkKey: UInt64
     private struct NoteSlots {
@@ -215,6 +219,9 @@ internal struct DocumentMutation {
 
     init(_ state: SongState, nextSerial: UInt64, nextChunkKey: UInt64) {
         self.state = state
+        before = state
+        chunkOrigin = state.file.chunks.indices.map(Optional.some)
+        chunkInsertion = Array(repeating: nil, count: state.file.chunks.count)
         self.nextSerial = nextSerial
         self.nextChunkKey = nextChunkKey
     }
@@ -238,6 +245,70 @@ internal struct DocumentMutation {
             if let destination = remap(chunk) { remapped[destination] = slots }
         }
         reservedSlots = remapped
+    }
+
+    private mutating func prepareProvenance(in chunk: Int) {
+        guard provenance[chunk] == nil else { return }
+        if let origin = chunkOrigin[chunk] {
+            provenance[chunk] = Array(before.file.chunks[origin].events.indices)
+        } else {
+            provenance[chunk] = Array(repeating: -1, count: state.file.chunks[chunk].events.count)
+        }
+    }
+
+    private mutating func remapProvenance(_ remap: (Int) -> Int?) {
+        guard !provenance.isEmpty else { return }
+        var remapped: [Int: [Int]] = [:]
+        remapped.reserveCapacity(provenance.count)
+        for (chunk, entries) in provenance {
+            if let destination = remap(chunk) { remapped[destination] = entries }
+        }
+        provenance = remapped
+    }
+
+    fileprivate mutating func finalize() {
+        precondition(changes.splices.isEmpty, "Event splices must only be finalized once.")
+        for chunk in state.file.chunks.indices {
+            if let insertion = chunkInsertion[chunk] {
+                changes.chunkInsertions[insertion] = ChunkInsertion(
+                    offset: changes.chunkInsertions[insertion].offset, chunk: state.file.chunks[chunk])
+            }
+            guard let entries = provenance[chunk], let origin = chunkOrigin[chunk] else { continue }
+            let original = before.file.chunks[origin].events
+            let current = state.file.chunks[chunk].events
+            precondition(entries.count == current.count)
+            var removedAt: [Int] = []
+            var removed: [MidiEvent] = []
+            var insertedAt: [Int] = []
+            var inserted: [MidiEvent] = []
+            var survivor = 0
+            for position in entries.indices {
+                let index = entries[position]
+                if index == -1 {
+                    insertedAt.append(position)
+                    inserted.append(current[position])
+                    continue
+                }
+                precondition(index >= survivor && index < original.count, "Survivors must retain before-order.")
+                while survivor < index {
+                    removedAt.append(survivor)
+                    removed.append(original[survivor])
+                    survivor += 1
+                }
+                survivor += 1
+            }
+            while survivor < original.count {
+                removedAt.append(survivor)
+                removed.append(original[survivor])
+                survivor += 1
+            }
+            if !removedAt.isEmpty || !insertedAt.isEmpty {
+                changes.splices.append(
+                    ChunkSplice(
+                        chunk: chunk, removedAt: removedAt, removed: removed,
+                        insertedAt: insertedAt, inserted: inserted))
+            }
+        }
     }
 
     mutating func mintNoteID(chunk: Int) -> NoteID {
@@ -290,14 +361,12 @@ internal struct DocumentMutation {
     }
 
     mutating func insert(_ event: MidiEvent, chunk: Int) {
+        prepareProvenance(in: chunk)
         var event = event
         stamp(&event, chunk: chunk)
         let oldEnd = state.file.chunks[chunk].endTick
         let offset = state.file.chunks[chunk].insert(event)
-        changes.events.append(
-            .insert(
-                EventInsertion(
-                    chunk: chunk, offset: offset, event: event)))
+        provenance[chunk, default: []].insert(-1, at: offset)
         recordEnd(
             chunk: chunk, before: oldEnd,
             after: state.file.chunks[chunk].endTick)
@@ -307,6 +376,7 @@ internal struct DocumentMutation {
         removing removals: [Int], inserting insertions: [MidiEvent],
         chunk: Int
     ) {
+        prepareProvenance(in: chunk)
         var insertions = insertions
         if removals.contains(where: {
             state.file.chunks[chunk].events.indices.contains($0) && state.file.chunks[chunk].events[$0].isNoteOn
@@ -321,16 +391,10 @@ internal struct DocumentMutation {
             removing: removals,
             inserting: insertions)
         for removal in result.removals {
-            changes.events.append(
-                .remove(
-                    EventRemoval(
-                        chunk: chunk, offset: removal.offset, event: removal.event)))
+            provenance[chunk, default: []].remove(at: removal.offset)
         }
         for insertion in result.insertions {
-            changes.events.append(
-                .insert(
-                    EventInsertion(
-                        chunk: chunk, offset: insertion.offset, event: insertion.event)))
+            provenance[chunk, default: []].insert(-1, at: insertion.offset)
         }
         recordEnd(
             chunk: chunk, before: oldEnd,
@@ -339,13 +403,11 @@ internal struct DocumentMutation {
 
     @discardableResult
     mutating func remove(chunk: Int, offset: Int) -> MidiEvent {
+        prepareProvenance(in: chunk)
         if state.file.chunks[chunk].events[offset].isNoteOn { reserveSlots(in: chunk) }
         let event = state.file.chunks[chunk].events.remove(at: offset)
         state.file.chunks[chunk].noteTable.invalidate()
-        changes.events.append(
-            .remove(
-                EventRemoval(
-                    chunk: chunk, offset: offset, event: event)))
+        provenance[chunk, default: []].remove(at: offset)
         return event
     }
 
@@ -363,19 +425,13 @@ internal struct DocumentMutation {
         }
         _ = remove(chunk: chunk, offset: offset)
         state.file.chunks[chunk].events.insert(event, at: offset)
-        changes.events.append(
-            .insert(
-                EventInsertion(
-                    chunk: chunk, offset: offset, event: event)))
+        provenance[chunk, default: []].insert(-1, at: offset)
     }
 
     mutating func moveEvent(chunk: Int, from: Int, to: Int) {
         let event = remove(chunk: chunk, offset: from)
         state.file.chunks[chunk].events.insert(event, at: to)
-        changes.events.append(
-            .insert(
-                EventInsertion(
-                    chunk: chunk, offset: to, event: event)))
+        provenance[chunk, default: []].insert(-1, at: to)
     }
 
     private mutating func forkChunk(_ chunk: MidiChunk) -> MidiChunk {
@@ -397,12 +453,17 @@ internal struct DocumentMutation {
         let chunk = forkChunk(chunk)
         let offset = state.file.chunks.count
         state.file.chunks.append(chunk)
+        chunkOrigin.append(nil)
+        chunkInsertion.append(changes.chunkInsertions.count)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
     }
 
     @discardableResult
     mutating func removeChunk(at offset: Int) -> MidiChunk {
         let chunk = state.file.chunks.remove(at: offset)
+        chunkOrigin.remove(at: offset)
+        chunkInsertion.remove(at: offset)
+        remapProvenance { $0 == offset ? nil : ($0 > offset ? $0 - 1 : $0) }
         remapReservedSlots { $0 == offset ? nil : ($0 > offset ? $0 - 1 : $0) }
         changes.chunkRemovals.append(ChunkRemoval(offset: offset, chunk: chunk))
         return chunk
@@ -411,6 +472,9 @@ internal struct DocumentMutation {
     mutating func insertChunk(_ chunk: MidiChunk, at offset: Int) {
         let chunk = forkChunk(chunk)
         remapReservedSlots { $0 >= offset ? $0 + 1 : $0 }
+        remapProvenance { $0 >= offset ? $0 + 1 : $0 }
+        chunkOrigin.insert(nil, at: offset)
+        chunkInsertion.insert(changes.chunkInsertions.count, at: offset)
         state.file.chunks.insert(chunk, at: offset)
         changes.chunkInsertions.append(ChunkInsertion(offset: offset, chunk: chunk))
     }
@@ -418,6 +482,14 @@ internal struct DocumentMutation {
     mutating func moveChunk(from: Int, to: Int) {
         let chunk = state.file.chunks.remove(at: from)
         state.file.chunks.insert(chunk, at: to)
+        chunkOrigin.insert(chunkOrigin.remove(at: from), at: to)
+        chunkInsertion.insert(chunkInsertion.remove(at: from), at: to)
+        remapProvenance { index in
+            if index == from { return to }
+            if from < to && index > from && index <= to { return index - 1 }
+            if from > to && index >= to && index < from { return index + 1 }
+            return index
+        }
         remapReservedSlots { index in
             if index == from { return to }
             if from < to && index > from && index <= to { return index - 1 }
@@ -727,6 +799,8 @@ public final class SongDocument {
         guard history.acceptsDocumentMutation, changed, mutation.state.differs(from: state) else {
             return
         }
+        var mutation = mutation
+        mutation.finalize()
         let cachedOrigin: GestureOrigin?
         if let cached = gestureOrigin, cached.group == group,
             cached.identity == history.currentIdentity,
