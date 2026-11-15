@@ -27,6 +27,7 @@ class SwiftCoreTest final : public QObject
     void suppressionStartStop();
     void suppressionReplacement();
     void noteEdits();
+    void noteOracle();
     void documentHistory();
     void eventEdits();
     void xcmdEdits();

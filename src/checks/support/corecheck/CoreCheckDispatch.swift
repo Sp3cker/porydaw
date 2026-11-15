@@ -37,6 +37,7 @@ public func pdcSuiteRun(
             runEngineNoteNormalizerChecks($0)
             runTrackEffectModelChecks($0)
         }
+    case PDC_SUITE_NOTE_ORACLE: onMain(report, runNoteOracleSuite)
     case PDC_SUITE_DOCUMENT_HISTORY: onMain(report, runDocumentHistorySuite)
     case PDC_SUITE_EVENT_EDITS: onMain(report, runEventEditsSuite)
     case PDC_SUITE_XCMD_EDITS: onMain(report, runXcmdEditsSuite)

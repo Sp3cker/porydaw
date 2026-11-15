@@ -179,6 +179,11 @@ void SwiftCoreTest::noteEdits()
     pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);
 }
 
+void SwiftCoreTest::noteOracle()
+{
+    pdc_suite_run(PDC_SUITE_NOTE_ORACLE, reportSwiftCheck, this);
+}
+
 void SwiftCoreTest::documentHistory()
 {
     pdc_suite_run(PDC_SUITE_DOCUMENT_HISTORY, reportSwiftCheck, this);

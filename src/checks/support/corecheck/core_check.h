@@ -68,6 +68,7 @@ enum PdcSuite {
     PDC_SUITE_PLUGINHOST = 60,
     PDC_SUITE_PLUGINHOST_EDITOR = 61,
     PDC_SUITE_TRACKEFFECTS_EDITOR = 62,
+    PDC_SUITE_NOTE_ORACLE = 63,
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);
