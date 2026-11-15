@@ -71,6 +71,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     public var masterTuningMinimumUnits: Int = -64
     public var masterTuningMaximumUnits: Int = 63
     public var masterTuningEdited: Bool = false
+    public var songHasTuningEvents: Bool = false
     public var settingsError: String = ""
     @QtTracked public var isApplying = false
     @QtTracked public var revision = 0
@@ -124,6 +125,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
         resetEngine()
         target = session?.selectedDocument
         songAvailable = target != nil
+        refreshTuningEvents()
         songLabel = session?.settingsSongLabel() ?? ""
         refreshVoicegroups()
         guard let config = target?.document.state.config else { return }
@@ -175,6 +177,16 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
     public func changeExactGate(value: Bool) { exactGate = value }
     public func changeExtendedClocks(value: Bool) { extendedClocks = value }
     public func changeNoCompression(value: Bool) { noCompression = value }
+
+    private func refreshTuningEvents() {
+        songHasTuningEvents =
+            target?.document.state.file.chunks.contains { (chunk: MidiChunk) in
+                chunk.events.contains { (event: MidiEvent) in
+                    guard case .channel(let status, let controller, _) = event.payload else { return false }
+                    return status >> 4 == 0xB && controller == TimeDefaults.ccFineTune
+                }
+            } ?? false
+    }
 
     private func validateMasterTuning() -> Bool {
         guard tuningInputValid else { return false }
@@ -285,6 +297,7 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
                 if replaceTuning {
                     try target.document.setMasterTuning(units: tuning)
                     self.masterTuningEdited = false
+                    self.refreshTuningEvents()
                 }
                 let original = target.document.state.config
                 var config = original

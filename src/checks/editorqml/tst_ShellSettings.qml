@@ -463,6 +463,9 @@ ShellLaneSupport {
         const presenter = openTuningSettings()
         const model = presenter.settingsStore
         const original = model.masterTuningUnits
+        const warning = findChild(dialog(), "song.master-tuning-warning")
+        compare(tuningEvents(presenter.session).length, 0, "fixture has no existing TUNE commands")
+        tryCompare(warning, "visible", false, 3000, "opening Settings never warns")
         const dial = findChild(dialog(), "song.master-tuning")
         verify(dial !== null, "Song settings exposes a real Dial")
         compare(dial.stepSize, 1)
@@ -472,6 +475,7 @@ ShellLaneSupport {
         keyClick(original < dial.to ? Qt.Key_Right : Qt.Key_Left)
         tryCompare(model, "masterTuningUnits", original < dial.to ? original + 1 : original - 1)
         compare(presenter.session.documentDirty, false, "dial changes only the draft")
+        tryCompare(warning, "visible", false, 3000, "changing master tune without existing TUNE never warns")
         enterTuningFrequency("450")
         tryCompare(model, "masterTuningUnits", 25)
         const nominal = 440 * Math.pow(2, 25 / 768)
@@ -488,6 +492,7 @@ ShellLaneSupport {
         tryCompare(model, "masterTuningUnits", original)
         compare(presenter.session.documentDirty, false, "Cancel leaves MIDI untouched")
         compare(model.masterTuningEdited, false, "Cancel and reopening clear tuning-edit intent")
+        tryCompare(findChild(dialog(), "song.master-tuning-warning"), "visible", false)
     }
     function test_masterTuningApplyReopenUndoRedo() {
         const presenter = openTuningSettings()
@@ -584,8 +589,8 @@ ShellLaneSupport {
         return points
     }
     function test_masterTuningExplicitReplacementIntent_data() {
-        return [{ tag: "reset", action: "reset" },
-                { tag: "current-reference", action: "frequency" }]
+        return [{ tag: "reset", action: "reset", track: 0 },
+                { tag: "current-reference-other-track", action: "frequency", track: 1 }]
     }
     function test_masterTuningExplicitReplacementIntent(data) {
         const presenter = openTuningSettings()
@@ -595,7 +600,7 @@ ShellLaneSupport {
         dialog().close()
         waitForShellScene()
         const grid = app.gridPresenter()
-        grid.setTrack(0)
+        grid.setTrack(data.track)
         grid.setEditCursorTick(0)
         verify(tuningClipProbe.writeClipJson(JSON.stringify({
             format: 1, ticksPerBeat: grid.ticksPerBeat, span: 96, wholeLane: false,
@@ -610,19 +615,21 @@ ShellLaneSupport {
             return tuningEvents(app).some(function(point) { return point[1] === 48 && point[3] === 127 })
         }, 5000), "normal Paste plants TUNE automation")
         const automated = JSON.stringify(tuningEvents(app))
+        grid.setTrack(0)
         presenter.activate("edit.song_settings")
         tryCompare(dialog(), "visible", true)
         compare(model.masterTuningEdited, false, "opening Settings does not request replacement")
         compare(model.masterTuningMinimumUnits, -64)
         compare(model.masterTuningMaximumUnits, 63)
         const warning = findChild(dialog(), "song.master-tuning-warning")
-        verify(warning && warning.visible && warning.text.indexOf("replaces") >= 0
-               && warning.text.indexOf("Undo") >= 0, "replacement and Undo warning is visible before Apply")
+        verify(warning !== null, "conditional replacement warning is mounted")
+        tryCompare(warning, "visible", false, 3000, "existing TUNE alone does not show the warning")
         model.changeMasterVolume(model.masterVolume === 110 ? 109 : 110)
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying }, 10000))
         compare(JSON.stringify(tuningEvents(app)), automated, "unrelated Apply preserves every TUNE point")
         compare(model.masterTuningEdited, false)
+        tryCompare(warning, "visible", false, 3000, "unrelated settings changes do not show the warning")
         if (data.action === "reset") {
             const reset = findChild(dialog(), "song.master-tuning-reset")
             mouseClick(reset, reset.width / 2, reset.height / 2)
@@ -631,8 +638,10 @@ ShellLaneSupport {
         }
         tryCompare(model, "masterTuningEdited", true, 3000, "same-value input explicitly requests replacement")
         compare(model.masterTuningUnits, 0)
+        tryCompare(warning, "visible", true, 3000, "a master-tuning edit warns when any track has TUNE")
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying && !model.masterTuningEdited }, 10000))
+        tryCompare(warning, "visible", false, 3000, "successful Apply clears the pending overwrite warning")
         const uniform = tuningEvents(app)
         verify(uniform.length > 0 && uniform.every(function(point) {
             return point[1] === 0 && point[3] === 64

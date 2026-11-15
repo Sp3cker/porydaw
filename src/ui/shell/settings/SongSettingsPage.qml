@@ -234,6 +234,7 @@ Item {
         }
         Text {
             objectName: "song.master-tuning-warning"
+            visible: page.store.masterTuningEdited && page.store.songHasTuningEvents
             width: parent.width
             wrapMode: Text.WordWrap
             text: qsTr("Warning: applying a master-tuning edit replaces all tracks’ Fine tune / TUNE (CC24) automation. Undo restores it.")

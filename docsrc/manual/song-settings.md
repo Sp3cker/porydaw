@@ -43,6 +43,9 @@ TUNE values.
 the original automation.** Notes, pitch bends, programs, and timing are not
 changed.
 
+The overwrite warning appears only after a master-tuning edit and only when
+any track already contains TUNE commands. It clears after Apply or Cancel.
+
 Moving the dial, typing an A4 reference, or choosing **Reset to 440** requests
 this replacement when you press **Apply** or **OK**. Typing the current
 reference or resetting an already-zero master still counts: it can clear
