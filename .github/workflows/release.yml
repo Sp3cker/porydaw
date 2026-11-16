@@ -299,8 +299,8 @@ jobs:
       - name: Set up Swift
         uses: compnerd/gha-setup-swift@main
         with:
-          swift-version: swift-6.4.0-release
-          swift-build: 6.4.0-RELEASE
+          swift-version: swift-6.4.2-release
+          swift-build: 6.4.2-RELEASE
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPORYDAW_BUILD_CHECKS=OFF

@@ -9,7 +9,7 @@ the feature branch in `8e3b6871`; the temporary
 
 | Component | Selection |
 | --- | --- |
-| Swift compiler, SDK, and runtime | 6.4.0, matching `.swift-version` |
+| Swift compiler, SDK, and runtime | 6.4.2, matching `.swift-version` |
 | Native compiler | Swift's bundled `clang.exe` / `clang++.exe`, targeting the MSVC ABI |
 | Windows native dependencies | Visual Studio 2022 C++ tools and Windows SDK |
 | Qt | 6.11.2, `win64_msvc2022_64` package / `msvc2022_64` kit |
@@ -22,9 +22,9 @@ The Windows build runner selects the version in `.swift-version` from the
 standard installer directories under `%LOCALAPPDATA%\Programs\Swift`:
 
 ```text
-Toolchains\6.4.0+Asserts\usr\bin
-Runtimes\6.4.0\usr\bin
-Platforms\6.4.0\Windows.platform\Developer\SDKs\Windows.sdk
+Toolchains\6.4.2+Asserts\usr\bin
+Runtimes\6.4.2\usr\bin
+Platforms\6.4.2\Windows.platform\Developer\SDKs\Windows.sdk
 ```
 
 Use the MSVC Qt kit with this toolchain. The old MinGW Qt environment is

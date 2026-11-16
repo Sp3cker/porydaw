@@ -259,7 +259,7 @@ catalog is installed; failed or cancelled opens release the progress status.
 
 Builds use standard Ninja through the uv/Python harness against a checkout-local Qt 6.11.
 Existing build directories configured with another generator must be removed and recreated.
-On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.2) via swiftly.
 The Swift app builds on macOS, Linux, and Windows x86_64. Linux ARM64 and Windows
 x86_64 have been validated with Swift 6.4.0 and Qt 6.11.2.
 
