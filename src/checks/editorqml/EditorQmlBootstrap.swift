@@ -320,6 +320,11 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
     @QtIgnored
     public func velocityPage() -> Optional<VelocityPage> { session?.velocityPage() }
 
+    /// Decodes the production bulk drawing alongside the page's value-only interaction facts.
+    public func velocityDrawing() -> String {
+        velocityDrawingJSON(session?.velocityPage())
+    }
+
     /// `EditCommand.setVelocity`'s canonical value, so no case copies the table.
     public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }
 

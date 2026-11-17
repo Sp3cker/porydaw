@@ -34,7 +34,10 @@ ShellLaneSupport {
 
     closeAllSteps: 12
     closeAllBankGates: true
-    function preDestroyShell() { fileProbe.children.length = 0 }
+    function preDestroyShell() {
+        fileProbe.children.length = 0
+        bootstrap.children.length = 0
+    }
 
     function session() { return shell.shellPresenter.session }
 
@@ -54,6 +57,7 @@ ShellLaneSupport {
         seedDrawerPrefs()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        bootstrap.children.push(shell.shellPresenter)
         verify(waitForNative(function() {
             return shell.sceneLoader !== null && shell.sceneLoader.status === Loader.Ready
         }, 10000), "the presented window mounts its deferred editor scene")

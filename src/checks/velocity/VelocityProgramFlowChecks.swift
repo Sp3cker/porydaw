@@ -343,7 +343,7 @@ func drawerVelocityProgramFlowChecks(_ report: CheckReport, session: DocumentSes
                 message: "each raw ramp family retains its enabled detent preference")
             report.expect(
                 first.x < middleHandle.x && middleHandle.x < last.x
-                    && abs(middleHandle.x - (first.x + last.x) / 2) <= first.hitRadius,
+                    && abs(middleHandle.x - (first.x + last.x) / 2) <= fixture.geometry.hitRadius,
                 cppID: drawerVelocityUnlockedRampID,
                 message: "the mounted ramp midpoint is bracketed by distinct endpoint columns")
             let pressY = page.axisModel.velocityToY(37)
@@ -550,7 +550,7 @@ private func drawerVelocityFamilyPaint(
     let baseline = DocumentSnapshot(document)
     let depth = document.history.undoCount
     let publications = drawerVelocityPublicationCounter(session: fixture.session)
-    let pressX = first.x + first.hitRadius * 2
+    let pressX = first.x + fixture.geometry.hitRadius * 2
     let startSlope = (endY - startY) / (last.x - first.x)
     let pressY = startY + startSlope * (pressX - first.x)
     _ = page.pointerPress(x: pressX, y: pressY, surface: 1, button: 1, modifiers: locked ? 0 : unlock)

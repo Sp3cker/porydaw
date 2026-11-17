@@ -56,8 +56,9 @@
             doubleClickPlot(testCase, candidate)
             testCase.tryVerify(function() { return model.pickerOpen }, 1000,
                       "the double-click on the empty lane opened the picker")
+            var targetTick = testCase.bootstrap.voicePickerTargetTick()
             if (testCase.bootstrap.voiceMarkerTicks().split(",")
-                    .indexOf(String(testCase.bootstrap.voicePickerTargetTick())) >= 0) {
+                    .indexOf(String(targetTick)) >= 0) {
                 model.cancelPicker()
                 column = candidate + 24
                 continue
@@ -79,10 +80,10 @@
                 return voiceMarkerLines(testCase).length === drawnBefore + 1
             }, 1000, "the accepted picker inserted exactly one voice change")
             var drawn = voiceMarkerLines(testCase)
-            var input = voicePlotInput(testCase)
             for (var i = 0; i < drawn.length; ++i) {
-                if (Math.abs(drawn[i].mapToItem(input, 0, 0).x - candidate) < 14)
-                    return drawn[i]
+                if (drawn[i].parent.model.tick !== targetTick)
+                    continue
+                return drawn[i]
             }
             return null
         }

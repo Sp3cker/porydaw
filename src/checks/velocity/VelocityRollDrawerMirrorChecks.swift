@@ -41,6 +41,12 @@ func drawerVelocityRollDragMovesDrawerNodes(
     page.configureBody(
         width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
+    let drawerFont = GridCameraPolicy.seedBaseFontPx
+    workspace.drawer.configureLayout(
+        hostWidth: Int(fontPx(drawerFont, 70)), hostHeight: Int(fontPx(drawerFont, 60)),
+        gutterWidth: Int(fontPx(drawerFont, 8)), fontPx: drawerFont, appFontLineSpacing: fontPx(drawerFont, 1))
+    workspace.drawer.setSectionVisible(
+        kind: DrawerSectionKind.velocity.rawValue, visible: true, drawerOwnsFocus: false)
     let grid = workspace.grid
     grid.configureViewport(width: 640, height: 320, fontPx: 13, dpr: 2)
     grid.resetCameraScroll()
@@ -48,8 +54,7 @@ func drawerVelocityRollDragMovesDrawerNodes(
     grid.refreshFromSession()
     fixture.session.setSelectedNotes([notes[0].id, notes[1].id])
     func node(_ note: Note) -> (value: Int, y: Double)? {
-        let text = "\(note.id.rawValue)"
-        return page.publishedHandlesSnapshot.first { $0.noteIdText == text }.map { ($0.value, $0.y) }
+        return page.publishedHandlesSnapshot.first { $0.noteID == note.id }.map { ($0.value, $0.y) }
     }
     guard let rect = selectionRect(notes[0].id, grid: grid),
         let pressed = node(notes[0]), let companion = node(notes[1]), let other = node(notes[2])

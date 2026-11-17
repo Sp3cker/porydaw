@@ -321,7 +321,8 @@ func drawerVelocityStackedHitPriority(_ report: CheckReport, session: DocumentSe
     }
     let gapX = circles.x - stem.x
     let gapY = circles.y - stem.y
-    guard gapX * gapX + gapY * gapY > circles.hitRadius * circles.hitRadius else {
+    let hitRadius = fixture.geometry.hitRadius
+    guard gapX * gapX + gapY * gapY > hitRadius * hitRadius else {
         report.fail(drawerVelocityHitPriorityID, "the overlap circle covers the target node")
         return
     }
@@ -417,15 +418,16 @@ func drawerVelocityStemPressKeepsSelection(_ report: CheckReport, session: Docum
         report.fail(drawerVelocityHitPriorityID, "the fixture's target note has no published handle")
         return
     }
-    let stemX = stem.x + stem.hitRadius + 2
-    guard stem.endX - stem.x >= stem.hitRadius + 3 else {
+    let hitRadius = fixture.geometry.hitRadius
+    let stemX = stem.x + hitRadius + 2
+    guard stem.endX - stem.x >= hitRadius + 3 else {
         report.fail(drawerVelocityHitPriorityID, "the target stem spans less than one hit diameter")
         return
     }
-    for handle in fixture.handles where handle.noteIdText != stem.noteIdText {
+    for handle in fixture.handles where handle.noteID != stem.noteID {
         let dx = handle.x - stemX
         let dy = handle.y - stem.y
-        if dx * dx + dy * dy <= handle.hitRadius * handle.hitRadius {
+        if dx * dx + dy * dy <= hitRadius * hitRadius {
             report.fail(drawerVelocityHitPriorityID, "the stem point touches another node")
             return
         }
@@ -488,7 +490,7 @@ func drawerVelocityMovedNodeNoClickThrough(_ report: CheckReport, session: Docum
     var step = 0.0
     for candidate in [3.0, 4.0, 5.0, 2.0, -3.0, -4.0] {
         if page.axisModel.yToLevel(far.y + candidate) == page.axisModel.yToLevel(far.y),
-            abs(candidate) > far.hitRadius / 6
+            abs(candidate) > fixture.geometry.hitRadius / 6
         {
             step = candidate
             break

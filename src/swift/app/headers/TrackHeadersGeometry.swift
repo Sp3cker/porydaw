@@ -291,18 +291,54 @@ extension TrackHeadersPresenter {
         return String(format: "%03d Voice", program)
     }
 
+    func applySelectionAppearance(to row: inout TrackHeaderSnapshot, session: DocumentSession) {
+        let track = row.track
+        let primary = session.selectedTrack == track
+        let scoped = !primary && session.selectedTracks.contains(track)
+        if row.titleBold != primary { row.selectedTitleOffset = HeaderPoint() }
+        row.titleBold = primary
+        row.titleFont = primary ? boldTitleFont : normalTitleFont
+        row.baseColor = primary ? palette.selectionRing : palette.windowBackground
+        row.overlayColor = .clear
+        if scoped {
+            row.overlayColor = palette.selectionRing
+            row.overlayColor.alpha = 64.0 / 255
+        }
+        if primary {
+            row.titleColor = palette.selectionText
+            row.subtitleColor = palette.selectionText
+        } else if scoped {
+            row.titleColor = palette.windowText
+            row.subtitleColor = palette.windowText
+        } else {
+            row.titleColor = palette.primaryText
+            row.subtitleColor = palette.secondaryText
+        }
+        if track >= session.document.trackBudget {
+            let preset = palette.theme.rawValue
+            if primary {
+                row.titleColor = TrackHeadersGeometry.overBudgetPrimaryInk[preset]
+                row.subtitleColor = row.titleColor
+            } else if scoped {
+                row.titleColor = TrackHeadersGeometry.overBudgetScopedInk[preset]
+                row.subtitleColor = row.titleColor
+            } else {
+                row.titleColor = TrackHeadersGeometry.overBudgetTitleInk[preset]
+                row.subtitleColor = TrackHeadersGeometry.overBudgetSubtitleInk[preset]
+            }
+        }
+    }
+
     func makeSnapshot(
         track: Int, session: DocumentSession, program: Int? = nil
     )
         -> TrackHeaderSnapshot
     {
-        let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
         var row = TrackHeaderSnapshot(
             track: track, title: Self.title(track: track, session: session),
-            titleFont: primary ? boldTitleFont : normalTitleFont,
+            titleFont: normalTitleFont,
             subtitleFont: subtitleFont)
-        row.titleBold = primary
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         let effect = session.document.effect(onTrack: track)
@@ -323,37 +359,7 @@ extension TrackHeadersPresenter {
                 }
             }
         }
-        row.baseColor = primary ? palette.selectionRing : palette.windowBackground
-        let scoped = !primary && session.selectedTracks.contains(track)
-        if scoped {
-            row.overlayColor = palette.selectionRing
-            row.overlayColor.alpha = 64.0 / 255
-        }
-        if primary {
-            row.titleColor = palette.selectionText
-            row.subtitleColor = palette.selectionText
-        } else if scoped {
-            row.titleColor = palette.windowText
-            row.subtitleColor = palette.windowText
-        } else {
-            row.titleColor = palette.primaryText
-            row.subtitleColor = palette.secondaryText
-        }
-        if track >= session.document.trackBudget {
-            // Theme-only lookups: the dimmed inks depend solely on the preset
-            // palette, so they are checked-in literals indexed by ThemePreset.
-            let preset = palette.theme.rawValue
-            if primary {
-                row.titleColor = TrackHeadersGeometry.overBudgetPrimaryInk[preset]
-                row.subtitleColor = row.titleColor
-            } else if scoped {
-                row.titleColor = TrackHeadersGeometry.overBudgetScopedInk[preset]
-                row.subtitleColor = row.titleColor
-            } else {
-                row.titleColor = TrackHeadersGeometry.overBudgetTitleInk[preset]
-                row.subtitleColor = TrackHeadersGeometry.overBudgetSubtitleInk[preset]
-            }
-        }
+        applySelectionAppearance(to: &row, session: session)
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
         let program =

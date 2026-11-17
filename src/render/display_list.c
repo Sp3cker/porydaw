@@ -1,5 +1,7 @@
 #include "display_list.h"
 
+#include <math.h>
+
 static int pd_dl_aligned(const void *p) {
     return ((uintptr_t)p & 7u) == 0;
 }
@@ -70,7 +72,10 @@ bool pd_dl_decode(const void *bytes, size_t length, PdDlView *out) {
         }
     }
     for (uint32_t i = 0; i < header->rectCount; ++i) {
-        if ((rects[i].flags & (uint32_t)~PD_DL_RECT_OVER) || rects[i].reserved != 0) {
+        if ((rects[i].flags & (uint32_t)~(PD_DL_RECT_OVER | PD_DL_RECT_ELLIPSE))
+            || !isfinite(rects[i].strokeWidth) || rects[i].strokeWidth < 0
+            || (!(rects[i].flags & PD_DL_RECT_ELLIPSE) && rects[i].strokeWidth != 0)
+            || ((rects[i].flags & PD_DL_RECT_ELLIPSE) && rects[i].argb != rects[i].argbRight)) {
             return false;
         }
     }

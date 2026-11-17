@@ -63,7 +63,7 @@ func checkNoteBorders(_ report: CheckReport, viewport: DocumentViewport) {
     let selectedProbe = RollContentProbe(grid)
     report.expect(
         session.selectedNotes.contains(noteID)
-            && grid.notes.first(where: { $0.noteId == noteID })?.ghost == false,
+            && grid.notes.primaryNotes.first(where: { $0.noteId == noteID })?.ghost == false,
         cppID: id,
         message:
             "A007-A012 the selected real note publishes the selected, non-ghost flags that drive its ring and inner frame"
@@ -76,7 +76,7 @@ func checkNoteBorders(_ report: CheckReport, viewport: DocumentViewport) {
     let plainProbe = RollContentProbe(grid)
     report.expect(
         !session.selectedNotes.contains(noteID)
-            && grid.notes.first(where: { $0.noteId == noteID })?.ghost == false,
+            && grid.notes.primaryNotes.first(where: { $0.noteId == noteID })?.ghost == false,
         cppID: id, message: "A013/A014 the deselected note publishes no selection, time-cover, or ghost flag")
     report.expect(
         plainProbe.ringRects(noteID).isEmpty, cppID: id,
@@ -114,7 +114,7 @@ func checkNoteBorders(_ report: CheckReport, viewport: DocumentViewport) {
         !tinyBorders.isEmpty, cppID: tinyID,
         message: "A002 5.0-key-height note plots its frame border rects")
     report.expect(
-        grid.notes.first(where: { $0.noteId == tinyIDNote })?.ghost == false
+        grid.notes.primaryNotes.first(where: { $0.noteId == tinyIDNote })?.ghost == false
             && !session.selectedNotes.contains(tinyIDNote),
         cppID: tinyID,
         message: "A003 the tiny note publishes as a plain real note with no ghost, selection, or time-cover flag")

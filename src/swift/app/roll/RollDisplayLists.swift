@@ -6,14 +6,163 @@ import QtBridge
 
 struct RollNote {
     var id: UInt64
-    var tick: Int
-    var end: Int
-    var pitch: Int
     var velocity: Int
-    var flags: UInt8
-    var fill: UInt32
     var ink: UInt32
-    var order: Int
+}
+
+/// Neutral, revision-stamped tracks. Selecting a track changes presentation only;
+/// the retained arrays and flat max-end blocks remain shared.
+struct RollNoteContent: ExpressibleByArrayLiteral, Equatable {
+    static let blockSize = 128
+
+    struct TrackKey: Equatable {
+        var chunk: Int?
+        var notes: UInt64
+        var structure: UInt64
+    }
+
+    struct Track {
+        let key: TrackKey?
+        let notes: [GridNote]
+        let blockEnds: [Int]
+        let endTick: Int
+        let minPitch: Int?
+        let maxPitch: Int?
+        let hasUnterminated: Bool
+        let snap: Int
+
+        /// Flat max-end blocks retain long notes that start before the viewport.
+        func forEachCandidateBlock(from: Double, to: Double, _ body: (Range<Int>) -> Void) {
+            for block in blockEnds.indices {
+                let start = block * RollNoteContent.blockSize
+                if Double(notes[start].tick) >= to { break }
+                if Double(blockEnds[block]) < from { continue }
+                body(start..<min(start + RollNoteContent.blockSize, notes.count))
+            }
+        }
+
+        init(notes: [GridNote], key: TrackKey? = nil, hasUnterminated: Bool = false, snap: Int = 1) {
+            self.key = key
+            self.notes = notes
+            self.hasUnterminated = hasUnterminated
+            self.snap = snap
+            var ends: [Int] = []
+            ends.reserveCapacity((notes.count + RollNoteContent.blockSize - 1) / RollNoteContent.blockSize)
+            var end = 0
+            var low: Int?
+            var high: Int?
+            for start in stride(from: 0, to: notes.count, by: RollNoteContent.blockSize) {
+                var blockEnd = 0
+                for index in start..<min(start + RollNoteContent.blockSize, notes.count) {
+                    let note = notes[index]
+                    blockEnd = max(blockEnd, note.tick + note.duration)
+                    low = min(low ?? note.pitch, note.pitch)
+                    high = max(high ?? note.pitch, note.pitch)
+                }
+                ends.append(blockEnd)
+                end = max(end, blockEnd)
+            }
+            blockEnds = ends
+            endTick = end
+            minPitch = low
+            maxPitch = high
+        }
+    }
+
+    private(set) var tracks: [Track] = []
+    var selectedTrack: Int
+    // A concrete generation stamp keeps hot scene equality independent of note count.
+    private var generation = UUID()
+    private(set) var count = 0
+    private(set) var endTick = 0
+    private(set) var minPitch: Int?
+    private(set) var maxPitch: Int?
+    private var documentKey: (notes: UInt64, structure: UInt64, count: Int, snap: Int)?
+
+    private mutating func updateAggregates() {
+        count = 0
+        endTick = 0
+        minPitch = nil
+        maxPitch = nil
+        for track in tracks {
+            count += track.notes.count
+            endTick = max(endTick, track.endTick)
+            if let pitch = track.minPitch { minPitch = min(minPitch ?? pitch, pitch) }
+            if let pitch = track.maxPitch { maxPitch = max(maxPitch ?? pitch, pitch) }
+        }
+    }
+
+    init(arrayLiteral elements: GridNote...) {
+        selectedTrack = elements.first(where: { !$0.ghost })?.track ?? 0
+        let trackCount = (elements.map(\.track).max() ?? -1) + 1
+        tracks = (0..<trackCount).map { (track: Int) in
+            var notes: [GridNote] = []
+            for note in elements where note.track == track {
+                notes.append(
+                    GridNote(
+                        noteId: note.noteId, tick: note.tick, duration: note.duration,
+                        pitch: note.pitch, track: track, velocity: note.velocity, ghost: false))
+            }
+            return Track(notes: notes)
+        }
+        updateAggregates()
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.generation == rhs.generation && lhs.selectedTrack == rhs.selectedTrack
+    }
+
+    var primaryNotes: [GridNote] {
+        tracks.indices.contains(selectedTrack) ? tracks[selectedTrack].notes : []
+    }
+
+    @MainActor
+    mutating func refresh(session: DocumentSession, snap: Int) {
+        let document = session.document
+        let stamps = document.revisions
+        let map = document.engineTracks
+        let count = map.usedTrackCount
+        if let key = documentKey, key.notes == stamps.all.notes,
+            key.structure == stamps.structure, key.count == count, key.snap == snap
+        {
+            return
+        }
+        var refreshed: [Track] = []
+        refreshed.reserveCapacity(count)
+        var changed = count != tracks.count
+        for track in 0..<count {
+            let chunk = map.tracks[track].midiChunk
+            let stamp = chunk.map { stamps.chunks[$0].notes } ?? 0
+            let key = TrackKey(chunk: chunk, notes: stamp, structure: stamps.structure)
+            if tracks.indices.contains(track) {
+                let cached = tracks[track]
+                if cached.key == key, !cached.hasUnterminated || cached.snap == snap {
+                    refreshed.append(cached)
+                    continue
+                }
+            }
+            let source = session.projectionCache.notes(in: track)
+            var notes: [GridNote] = []
+            notes.reserveCapacity(source.count)
+            var unterminated = false
+            for note in source {
+                unterminated = unterminated || note.isUnterminated
+                notes.append(
+                    GridNote(
+                        noteId: note.id, tick: Int(note.tick),
+                        duration: note.isUnterminated ? snap : max(1, Int(note.duration)),
+                        pitch: Int(note.pitch), track: track, velocity: Int(note.velocity), ghost: false))
+            }
+            refreshed.append(Track(notes: notes, key: key, hasUnterminated: unterminated, snap: snap))
+            changed = true
+        }
+        if changed {
+            tracks = refreshed
+            generation = UUID()
+            updateAggregates()
+        }
+        documentKey = (stamps.all.notes, stamps.structure, count, snap)
+    }
 }
 
 public enum RollPaletteSlot: UInt16 {
@@ -126,12 +275,31 @@ enum RollStatusPresentation: Equatable {
     }
 }
 
+/// Render/key inputs only: scene caches must not retain a publication buffer.
+struct RollVelocityPreview: Equatable {
+    let revision: UInt64
+    let noteId: NoteID
+    let pressed: Int
+    let delta: Int
+    let selection: Set<NoteID>
+
+    func adjusted(_ velocity: Int) -> Int {
+        min(127, max(1, velocity + delta))
+    }
+
+    func velocity(for note: GridNote) -> Int {
+        if note.noteId == noteId { return pressed }
+        return selection.contains(note.noteId) ? adjusted(note.velocity) : note.velocity
+    }
+}
+
 // Everything the notes section reads; draw-preview motion leaves it equal.
 struct RollNotesSectionKey: Equatable {
-    var notes: [GridNote]
+    var notes: RollNoteContent
     var displacement: RollNoteDisplacement
     var displacedNotes: Set<NoteID>
     var selectedNotes: Set<NoteID>
+    var velocityPreview: RollVelocityPreview?
     var projection: PitchProjection
     var timeSelection: AutomationTimeSelection?
     var usedTrackCount: Int
@@ -140,7 +308,6 @@ struct RollNotesSectionKey: Equatable {
 
 struct RollDrawingContentKey: Equatable {
     var notesSection: RollNotesSectionKey
-    var projection: PitchProjection
     var scale: ScaleProjection
     var baseFontPx: Double
     var timeAxis: TimeAxis
@@ -151,35 +318,16 @@ struct RollDrawingContentKey: Equatable {
 
     var keyboardNames: [String]?
     var typographyAvailable: Bool
-    var fonts: RollDrawingContent.FontDescriptors
+    var fonts: [GridFontKind: GridFontSpec]
     var drawPreview: RollPreviewNote?
     var paintPreview: [RollPreviewNote]
     var lastVelocity: Int
     var noteNameMode: Bool
     var showVelocityValues: Bool
-    var timeSelection: AutomationTimeSelection?
-    var usedTrackCount: Int
-    var selectedTrack: Int
 }
 
 @MainActor
 enum RollDrawingContent {
-    static let noteRecordBlockSize = 128
-
-    struct FontDescriptors: Equatable {
-        var values: [GridFontKind: GridFontSpec]
-
-        static func == (lhs: Self, rhs: Self) -> Bool {
-            guard lhs.values.count == rhs.values.count else { return false }
-            for (kind, font) in lhs.values {
-                guard let other = rhs.values[kind],
-                    font.family == other.family, font.pixelSize == other.pixelSize,
-                    font.weight == other.weight, font.letterSpacing == other.letterSpacing
-                else { return false }
-            }
-            return true
-        }
-    }
 
     static func key(_ input: GridSceneInput, palette: [UInt32]) -> RollDrawingContentKey {
         RollDrawingContentKey(
@@ -188,11 +336,11 @@ enum RollDrawingContent {
                 displacement: input.displacement,
                 displacedNotes: input.displacedNotes,
                 selectedNotes: input.selectedNotes,
+                velocityPreview: input.velocityPreview,
                 projection: input.camera.projection,
                 timeSelection: input.timeSelection,
                 usedTrackCount: input.usedTrackCount,
                 theme: input.palette.theme),
-            projection: input.camera.projection,
             scale: input.scale,
             baseFontPx: input.metrics.baseFontPx,
             timeAxis: input.metrics.timeAxis,
@@ -202,124 +350,65 @@ enum RollDrawingContent {
             palette: palette,
             keyboardNames: input.keyboardNames,
             typographyAvailable: input.typography != nil,
-            fonts: FontDescriptors(values: input.fonts),
+            fonts: input.fonts,
             drawPreview: input.drawPreview.map {
                 RollPreviewNote(tick: $0.tick, duration: $0.duration, pitch: $0.pitch)
             },
             paintPreview: input.paintPreview,
             lastVelocity: input.lastVelocity,
             noteNameMode: input.noteNameMode,
-            showVelocityValues: input.showVelocityValues,
-            timeSelection: input.timeSelection,
-            usedTrackCount: input.usedTrackCount,
-            selectedTrack: input.selectedTrack)
+            showVelocityValues: input.showVelocityValues)
     }
 
-    static func paletteColors(_ input: GridSceneInput) -> [UInt32] {
+    static func updatePalette(_ input: GridSceneInput, into colors: inout [UInt32]) {
+        if colors.isEmpty {
+            colors = Array(repeating: 0, count: Int(RollPaletteSlot.noteLabelAaDark.rawValue) + 1)
+        }
+        func set(_ slot: RollPaletteSlot, _ value: UInt32) {
+            let index = Int(slot.rawValue)
+            if colors[index] != value { colors[index] = value }
+        }
         let p = input.palette
-        return [
-            PaletteMath.argb(p.rollBackground),
-            PaletteMath.argb(p.accidentalLane),
-            PaletteMath.argb(p.scaleHighlight),
-            PaletteMath.argb(p.gridLineBar),
-            PaletteMath.argb(p.gridLineBeat),
-            PaletteMath.argb(p.gridLineSub1),
-            PaletteMath.argb(p.gridLineSub2),
-            PaletteMath.argb(p.gridLineSub3),
-            PaletteMath.argb(p.noteBorder),
-            PaletteMath.argb(p.selectionRing),
-            PaletteMath.argb(p.selectionFill),
-            PaletteMath.argb(p.selectionEdge),
-            PaletteMath.argb(p.selectionFill),
-            PaletteMath.argb(p.selectionRing),
-            PaletteMath.argb(p.selectionRing),
-            p.noteFillArgb(track: input.selectedTrack, velocity: input.lastVelocity),
-            PaletteMath.argb(p.keyboardNatural),
-            PaletteMath.argb(p.keyboardBlack),
-            PaletteMath.argb(p.keyboardSeparator),
-            PaletteMath.argb(p.keyboardHover),
-            PaletteMath.argb(p.keyboardLabel),
-            PaletteMath.argb(p.keyboardNatural),
-            PaletteMath.argb(p.keyboardBlack),
-            PaletteMath.argb(p.primaryText),
-            PaletteMath.argb(p.rowLine),
-            PaletteMath.argb(p.gridLineBeatFine),
-            PaletteMath.argb(p.preRollMask),
-            PaletteMath.argb(p.rulerPreRollMask),
-            PaletteMath.argb(p.gridLine),
-            PaletteMath.argb(p.chromeBackground),
-            PaletteMath.argb(p.separator),
-            PaletteMath.argb(p.rulerDetailText),
-            PaletteMath.argb(p.implicitSignature),
-            PaletteMath.argb(p.noteVelocityZero),
-            PaletteMath.argb(p.noteLabelAaLight),
-            PaletteMath.argb(p.noteLabelAaDark),
-        ]
+        set(.rollBackground, PaletteMath.argb(p.rollBackground))
+        set(.accidentalLane, PaletteMath.argb(p.accidentalLane))
+        set(.scaleHighlight, PaletteMath.argb(p.scaleHighlight))
+        set(.gridBar, PaletteMath.argb(p.gridLineBar))
+        set(.gridBeat, PaletteMath.argb(p.gridLineBeat))
+        set(.gridSub1, PaletteMath.argb(p.gridLineSub1))
+        set(.gridSub2, PaletteMath.argb(p.gridLineSub2))
+        set(.gridSub3, PaletteMath.argb(p.gridLineSub3))
+        set(.noteBorder, PaletteMath.argb(p.noteBorder))
+        let ring = PaletteMath.argb(p.selectionRing)
+        set(.selectionRing, ring)
+        let selectionFill = PaletteMath.argb(p.selectionFill)
+        set(.selectionFill, selectionFill)
+        set(.selectionFrame, PaletteMath.argb(p.selectionEdge))
+        set(.timeSelectionFill, selectionFill)
+        set(.loopEdge, ring)
+        set(.loopGlow, ring)
+        set(.drawPreviewFill, p.noteFillArgb(track: input.notes.selectedTrack, velocity: input.lastVelocity))
+        let white = PaletteMath.argb(p.keyboardNatural)
+        set(.keyboardWhite, white)
+        let black = PaletteMath.argb(p.keyboardBlack)
+        set(.keyboardBlack, black)
+        set(.keyboardSeparator, PaletteMath.argb(p.keyboardSeparator))
+        set(.keyboardHighlight, PaletteMath.argb(p.keyboardHover))
+        set(.keyboardLabel, PaletteMath.argb(p.keyboardLabel))
+        set(.noteLabelLight, white)
+        set(.noteLabelDark, black)
+        set(.primaryText, PaletteMath.argb(p.primaryText))
+        set(.rowLine, PaletteMath.argb(p.rowLine))
+        set(.gridBeatFine, PaletteMath.argb(p.gridLineBeatFine))
+        set(.preRollMask, PaletteMath.argb(p.preRollMask))
+        set(.rulerPreRollMask, PaletteMath.argb(p.rulerPreRollMask))
+        set(.rulerTick, PaletteMath.argb(p.gridLine))
+        set(.chromeBackground, PaletteMath.argb(p.chromeBackground))
+        set(.separator, PaletteMath.argb(p.separator))
+        set(.rulerDetailText, PaletteMath.argb(p.rulerDetailText))
+        set(.implicitSignature, PaletteMath.argb(p.implicitSignature))
+        set(.noteVelocityZero, PaletteMath.argb(p.noteVelocityZero))
+        set(.noteLabelAaLight, PaletteMath.argb(p.noteLabelAaLight))
+        set(.noteLabelAaDark, PaletteMath.argb(p.noteLabelAaDark))
     }
 
-    static func resolveNotes(
-        _ input: borrowing GridSceneInput, notes: borrowing Span<GridNote>,
-        into records: inout [RollNote], blockEnds: inout [Int]
-    ) {
-        let projection = input.camera.projection
-        let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
-        let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
-        let light = PaletteMath.argb(input.palette.keyboardNatural)
-        let dark = PaletteMath.argb(input.palette.keyboardBlack)
-        let fallbackLight = PaletteMath.argb(input.palette.noteLabelAaLight)
-        let fallbackDark = PaletteMath.argb(input.palette.noteLabelAaDark)
-        let notes = input.notes
-        let selected = input.selectedNotes
-        records.removeAll(keepingCapacity: true)
-        records.reserveCapacity(notes.count)
-        // Ghost records precede plain notes in paint order, independently of tick order.
-        for pass in 0..<2 {
-            let ghostPass = pass == 0
-            for index in notes.indices {
-                let note = notes[index]
-                if note.ghost != ghostPass { continue }
-                let (tick, end, pitch) = input.displacement.displayed(note, selected: input.displacedNotes)
-                if (0..<128).contains(pitch),
-                    projection.row(forPitch: pitch) == PitchProjection.hiddenRow
-                {
-                    continue
-                }
-                var flags: UInt8 = note.ghost ? 1 : 0
-                if selected.contains(note.noteId) { flags |= 2 }
-                if GridScene.timeCovers(input, track: note.track, tick: tick, end: end) {
-                    flags |= 4
-                }
-                let trackIndex = PaletteMath.trackIdentityIndex(note.track)
-                let fill: UInt32
-                if ghostPass {
-                    fill = ghostTable[trackIndex * 2 + (GridScene.isBlackKey(pitch) ? 1 : 0)]
-                } else {
-                    fill = noteTable[trackIndex * 128 + min(127, max(0, note.velocity))]
-                }
-                let start = max(0, tick)
-                let duration = max(0, end - tick)
-                let boundedPitch = min(127, max(0, pitch))
-                let velocity = min(127, max(0, note.velocity))
-                records.append(
-                    RollNote(
-                        id: note.noteId.rawValue, tick: start, end: start + duration,
-                        pitch: boundedPitch, velocity: velocity, flags: flags, fill: fill,
-                        ink: PaletteMath.aaContrastInk(
-                            fill: fill, light: light, dark: dark,
-                            fallbackLight: fallbackLight, fallbackDark: fallbackDark),
-                        order: records.count))
-            }
-        }
-        records.sort { $0.tick == $1.tick ? $0.order < $1.order : $0.tick < $1.tick }
-        blockEnds.removeAll(keepingCapacity: true)
-        blockEnds.reserveCapacity((records.count + noteRecordBlockSize - 1) / noteRecordBlockSize)
-        for start in stride(from: 0, to: records.count, by: noteRecordBlockSize) {
-            let end = min(start + noteRecordBlockSize, records.count)
-            var maxEnd = records[start].end
-            for i in (start + 1)..<end {
-                maxEnd = max(maxEnd, records[i].end)
-            }
-            blockEnds.append(maxEnd)
-        }
-    }
 }

@@ -28,26 +28,38 @@ extension PianoGrid {
     public var interactionActive: Bool { gesture != nil || rightGesture != nil }
 
     @QtIgnored
-    public func previewVelocity(_ id: NoteID) -> Optional<Int> {
-        guard case .velocity(let state) = gesture, let preview = state.preview else { return nil }
-        if state.noteId == id { return preview }
-        guard session.selectedNotes.contains(id), let note = session.document.note(id) else { return nil }
-        return min(127, max(1, Int(note.velocity) + state.delta))
+    var velocityPreviewPresentation: RollVelocityPreview? {
+        guard case .velocity(let state) = gesture, let pressed = state.preview else { return nil }
+        return RollVelocityPreview(
+            revision: session.document.revision, noteId: state.noteId,
+            pressed: pressed, delta: state.delta, selection: session.selectedNotes)
     }
 
-    /// Forwards the staged velocity preview to `onVelocityPreviewChanged` when it changes.
     @QtIgnored
-    func publishVelocityPreview() {
-        var preview: [NoteID: UInt8] = [:]
-        if case .velocity(let state) = gesture, let pressed = state.preview {
-            preview[state.noteId] = UInt8(pressed)
-            for id in session.selectedNoteOrder where id != state.noteId {
-                if let velocity = previewVelocity(id) { preview[id] = UInt8(velocity) }
+    public func previewVelocity(_ id: NoteID) -> Optional<Int> {
+        guard let preview = velocityPreviewPresentation else { return nil }
+        if preview.noteId == id { return preview.pressed }
+        guard preview.selection.contains(id), let note = session.document.note(id) else { return nil }
+        return preview.adjusted(Int(note.velocity))
+    }
+
+    /// Publish a plain drawer snapshot only when its values actually change.
+    @QtIgnored
+    func publishVelocityPreview(_ preview: RollVelocityPreview?) {
+        guard preview != publishedVelocityPresentation else { return }
+        publishedVelocityPresentation = preview
+        var values: [NoteID: UInt8] = [:]
+        if let preview {
+            values.reserveCapacity(preview.selection.count + 1)
+            for id in preview.selection where id != preview.noteId {
+                guard let note = session.document.note(id) else { continue }
+                values[id] = UInt8(preview.adjusted(Int(note.velocity)))
             }
+            values[preview.noteId] = UInt8(preview.pressed)
         }
-        guard preview != publishedVelocityPreview else { return }
-        publishedVelocityPreview = preview
-        onVelocityPreviewChanged?(preview)
+        guard values != publishedVelocityPreview else { return }
+        publishedVelocityPreview = values
+        onVelocityPreviewChanged?(values)
     }
 
     @QtIgnored
@@ -63,42 +75,22 @@ extension PianoGrid {
         if count == 0 {
             session.selectedTrack = nil
             if trackIndex != 0 { trackIndex = 0 }
-            notes = []
         } else {
             let valid = min(max(0, session.selectedTrack ?? trackIndex), count - 1)
             session.selectedTrack = valid
             if trackIndex != valid { trackIndex = valid }
-            let snap = viewport.grid.snapTicksAt(session.editCursor, camera: viewport.camera)
-            var projected: [GridNote] = []
-            var noteCount = 0
-            for track in 0..<count { noteCount += session.document.notes(in: track).count }
-            projected.reserveCapacity(noteCount)
-            func emit(track: Int) {
-                for note in session.document.notes(in: track) {
-                    projected.append(
-                        GridNote(
-                            noteId: note.id, tick: Int(note.tick),
-                            duration: Int(note.isUnterminated ? max(1, snap) : max(1, note.duration)),
-                            pitch: Int(note.pitch), track: note.track,
-                            velocity: Int(note.velocity), ghost: track != valid))
-                }
-            }
-            emit(track: valid)
-            for track in 0..<count where track != valid { emit(track: track) }
-            notes = projected
         }
+        notes.selectedTrack = trackIndex
         let revisionText = String(session.document.revision)
         if appliedRevisionText != revisionText { appliedRevisionText = revisionText }
         let cursorTick = Int(session.editCursor)
         if editCursorTick != cursorTick { editCursorTick = cursorTick }
         updateTimeAxis()
         refreshGridMenuPresentation()
-        staticSceneDirty = true
         refreshNotes()
     }
 
-    /// Updates selection styling and commands while retaining document note buffers.
-    /// A different primary track changes note ordering and ghost presentation.
+    /// Updates selected-track style without reconstructing retained document content.
     @QtIgnored
     public func refreshSelectionPresentation() {
         let primaryTrack: Int? = session.document.engineTracks.usedTrackCount == 0 ? nil : trackIndex

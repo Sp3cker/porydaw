@@ -58,13 +58,12 @@ public final class CpuGraphScene: QmlInstantiable {
 
     private var frame: Frame?
     private var writer = DisplayListWriter()
-    // Clear this alias before rebuilding so the writer can reuse its Data storage without COW.
     private var bytes = Data()
     private var values: [Int] = []
     private var profileWidth = 0.0
 
     public required init() {
-        bytes = writer.finish()
+        writer.replace(into: &bytes)
     }
 
     /// The generic native renderer reads this frame directly, before scene-graph synchronization.
@@ -85,17 +84,16 @@ public final class CpuGraphScene: QmlInstantiable {
     }
 
     private func finish(_ next: Frame) {
-        bytes = writer.finish()
+        writer.replace(into: &bytes)
         frame = next
         displayRevision &+= 1
     }
 
     private func clearFrame() {
         guard frame != nil else { return }
-        bytes = Data()
         values.removeAll(keepingCapacity: true)
         profileWidth = 0
-        bytes = writer.finish()
+        writer.replace(into: &bytes)
         frame = nil
         displayRevision &+= 1
     }
@@ -110,7 +108,6 @@ public final class CpuGraphScene: QmlInstantiable {
             meter: ObjectIdentifier(meter), content: .history(revision: meter.historyRevision),
             width: width, height: height, colors: Colors(palette), budget: meter.budget)
         guard next != frame else { return }
-        bytes = Data()
         let scale = Double(CpuMeterPresenter.vblankCycles) * 1.4
         let capacity = Double(CpuMeterPresenter.historyCapacity)
         for index in meter.historyFrames.indices {
@@ -173,7 +170,6 @@ public final class CpuGraphScene: QmlInstantiable {
                 beatWidth: beatWidth, ticksPerBeat: ticksPerBeat, dpr: dpr),
             width: width, height: height, colors: Colors(palette), budget: meter.budget)
         guard next != frame else { return }
-        bytes = Data()
         profileWidth = width
         let count = min(16_384, max(0, Int((width * dpr).rounded(.up))))
         guard count > 0, height > 0, beatWidth > 0, ticksPerBeat > 0, !meter.profilePoints.isEmpty else {

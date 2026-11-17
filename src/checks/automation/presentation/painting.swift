@@ -374,7 +374,7 @@ func drawerAutomationPresentationPaintingModel(
         message: "the pinned Tempo hover sits above its own curve")
     for theme in themePresetRows {
         ShellAppearance.apply(to: page.palette, mode: theme.mode, contrast: 50)
-        page.refreshFromDocument()
+        page.refreshCamera()
         let drawing = AutomationDisplayProbe(page)
         let ink = PaletteMath.argb(page.palette.automationNodeInk)
         let channels = PaletteMath.channels(page.palette.automationNodeInk)
@@ -401,7 +401,7 @@ func drawerAutomationPresentationPaintingModel(
             message: "\(theme.mode): pinning Tempo preserves the active Volume curve")
     }
     ShellAppearance.apply(to: page.palette, mode: "vanilla", contrast: 50)
-    page.refreshFromDocument()
+    page.refreshCamera()
     report.expect(
         page.toggleGhostParameter(index: tempoIndex), cppID: drawerAutomationPaintingModelID,
         message: "the ghost unpins")

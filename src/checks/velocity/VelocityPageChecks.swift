@@ -134,9 +134,12 @@ struct drawerVelocityVelocityFixture {
     }
 
     var handles: [VelocityHandle] { page.publishedHandlesSnapshot }
+    var geometry: VelocityNodeGeometry {
+        VelocityNodeGeometry(baseFontPx: page.baseFontPx, devicePixelRatio: page.devicePixelRatio)
+    }
 
     func handle(_ note: Note) -> VelocityHandle? {
-        handles.first { $0.noteIdText == "\(note.id.rawValue)" }
+        handles.first { $0.noteID == note.id }
     }
 
     /// One press/move/release that starts exactly on the note's drawn node.

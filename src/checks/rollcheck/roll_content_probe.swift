@@ -127,9 +127,15 @@ import QtBridge
         let decoded = Self.decodePlot(bytes)
         plotRects = decoded.rects
         plotLabels = decoded.labels
-        let byID = Dictionary(
-            grid.notes.map { ($0.noteId.rawValue, $0) },
-            uniquingKeysWith: { first, _ in first })
+        var byID: [UInt64: GridNote] = [:]
+        for track in grid.notes.tracks {
+            for note in track.notes where byID[note.noteId.rawValue] == nil {
+                byID[note.noteId.rawValue] = GridNote(
+                    noteId: note.noteId, tick: note.tick, duration: note.duration,
+                    pitch: note.pitch, track: note.track, velocity: note.velocity,
+                    ghost: note.track != grid.notes.selectedTrack)
+            }
+        }
         var seen = Set<UInt64>()
         var built: [Note] = []
         for rect in decoded.rects
@@ -421,9 +427,11 @@ func checkRollPreviewInvalidation(_ report: CheckReport, viewport _: DocumentVie
         tick: 24, end: 48, pitch: 62,
         message: "changed displacement membership restores source geometry at the same delta")
     input.displacedNotes = [noteID]
-    input.notes[0] = GridNote(
-        noteId: noteID, tick: 36, duration: 30, pitch: 62, track: 0,
-        velocity: 100, ghost: false)
+    input.notes = [
+        GridNote(
+            noteId: noteID, tick: 36, duration: 30, pitch: 62, track: 0,
+            velocity: 100, ghost: false)
+    ]
     expectSpan(
         tick: 42, end: 72, pitch: 64,
         message: "changed source interval invalidates equal-delta move geometry")

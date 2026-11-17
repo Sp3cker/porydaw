@@ -131,14 +131,14 @@ private func checkOrdinaryProjection(_ report: CheckReport, fixture: DocumentSes
     let notes = document.notes(in: 2)
     report.expect(
         notes.count == 1 && grid.renderedNoteCount == 1
-            && grid.notes.count == 1 && grid.notes[0].ghost == false,
+            && grid.notes.count == 1 && grid.notes.primaryNotes.first?.ghost == false,
         cppID: id, message: "ordinary source note projects once into the visible roll")
     report.expect(
         notes.first.map {
             $0.id.isAssigned && $0.tick == 240 && $0.duration == 48
                 && $0.pitch == 65 && $0.velocity == 83 && $0.track == 2
         } == true
-            && grid.notes.first.map {
+            && grid.notes.primaryNotes.first.map {
                 $0.noteId == notes[0].id && $0.tick == 240 && $0.duration == 48
                     && $0.pitch == 65 && $0.velocity == 83 && $0.track == 2
             } == true, cppID: id,

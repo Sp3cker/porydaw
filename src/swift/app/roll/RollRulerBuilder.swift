@@ -11,6 +11,51 @@ import QtBridge
 struct RollRulerBuilder {
     private var writer = DisplayListWriter()
 
+    private struct Input: Equatable {
+        let camera: EditorCamera
+        let grid: RollGrid
+        let metrics: GridMetrics
+        let width: Double
+        let height: Double
+        let rulerFont: GridFontSpec?
+        let beatFont: GridFontSpec?
+        let boldFont: GridFontSpec?
+        let signatureFont: GridFontSpec?
+        let typography: GridTypography?
+        let background: UInt32
+        let separator: UInt32
+        let tick: UInt32
+        let preRoll: UInt32
+        let text: UInt32
+        let detail: UInt32
+        let implicitSignature: UInt32
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            // Only horizontal camera/grid facts affect the ruler. Font specs
+            // determine its typography; row fitting belongs to the keyboard.
+            lhs.camera.pixelsPerTick == rhs.camera.pixelsPerTick
+                && lhs.camera.snapshot.scrollX == rhs.camera.snapshot.scrollX
+                && lhs.width == rhs.width && lhs.height == rhs.height
+                && lhs.metrics.dpr == rhs.metrics.dpr
+                && lhs.metrics.spaceHalf == rhs.metrics.spaceHalf
+                && lhs.metrics.spaceTwo == rhs.metrics.spaceTwo
+                && lhs.metrics.rulerBeatLabelZoomFactor == rhs.metrics.rulerBeatLabelZoomFactor
+                && lhs.metrics.timeAxis == rhs.metrics.timeAxis
+                && lhs.grid.axis == rhs.grid.axis && lhs.grid.feel == rhs.grid.feel
+                && lhs.grid.selection == rhs.grid.selection && lhs.grid.clockTicks == rhs.grid.clockTicks
+                && lhs.grid.metrics.baseFontPx == rhs.grid.metrics.baseFontPx
+                && lhs.grid.metrics.dpr == rhs.grid.metrics.dpr
+                && lhs.rulerFont == rhs.rulerFont && lhs.beatFont == rhs.beatFont
+                && lhs.boldFont == rhs.boldFont && lhs.signatureFont == rhs.signatureFont
+                && (lhs.typography != nil) == (rhs.typography != nil)
+                && lhs.background == rhs.background && lhs.separator == rhs.separator
+                && lhs.tick == rhs.tick && lhs.preRoll == rhs.preRoll && lhs.text == rhs.text
+                && lhs.detail == rhs.detail && lhs.implicitSignature == rhs.implicitSignature
+        }
+    }
+
+    private var previousInput: Input?
+
     // Wire flags/ids from display_list.h; font ids 0-3 are the ruler slots.
     private static let idNone = UInt64(PD_DL_ID_NONE)
     private static let idLoopStart = UInt64(PD_DL_ID_LOOP_START)
@@ -20,12 +65,31 @@ struct RollRulerBuilder {
     private static let fontBold: UInt32 = 2
 
     mutating func build(
-        _ input: GridSceneInput,
+        _ source: GridSceneInput,
         palette: [UInt32],
         width: Double,
-        height: Double
-    ) -> Data {
+        height: Double,
+        into output: inout Data
+    ) -> Bool {
+        func ink(_ slot: RollPaletteSlot) -> UInt32 { palette[Int(slot.rawValue)] }
+        let input = Input(
+            camera: source.camera, grid: source.grid, metrics: source.metrics,
+            width: width, height: height,
+            rulerFont: source.fonts[.ruler], beatFont: source.fonts[.beat],
+            boldFont: source.fonts[.bold], signatureFont: source.fonts[.sig],
+            typography: source.typography,
+            background: ink(.chromeBackground), separator: ink(.separator), tick: ink(.rulerTick),
+            preRoll: ink(.rulerPreRollMask), text: ink(.primaryText),
+            detail: ink(.rulerDetailText), implicitSignature: ink(.implicitSignature))
+        guard input != previousInput else { return false }
+        previousInput = input
+        return render(input, into: &output)
+    }
+
+    private mutating func render(_ input: Input, into output: inout Data) -> Bool {
         let camera = input.camera
+        let width = input.width
+        let height = input.height
         let snapshot = camera.snapshot
         let metrics = input.metrics
         let axis = metrics.timeAxis
@@ -33,10 +97,6 @@ struct RollRulerBuilder {
         let ppt = snapshot.pixelsPerTick
         let soX = (snapshot.scrollX * dpr).rounded() / dpr
 
-        func ink(_ slot: RollPaletteSlot) -> UInt32 {
-            let i = Int(slot.rawValue)
-            return i < palette.count ? palette[i] : 0
-        }
         func emitClipped(
             _ x: Double, _ y: Double, _ w: Double, _ h: Double,
             _ argb: UInt32, id: UInt64 = Self.idNone
@@ -54,16 +114,16 @@ struct RollRulerBuilder {
         func intersects(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> Bool {
             w > 0 && h > 0 && x < width && x + w > 0 && y < height && y + h > 0
         }
-        emitClipped(0, 0, width, height, ink(.chromeBackground))
-        emitClipped(0, height - 0.5, width, 1, ink(.separator))
+        emitClipped(0, 0, width, height, input.background)
+        emitClipped(0, height - 0.5, width, 1, input.separator)
         // Typography-availability early-out: background-only list, exactly
         // as the C++ return with no records past the chrome.
         guard let typography = input.typography, ppt > 0,
-            let rulerSpec = input.fonts[.ruler],
-            let beatSpec = input.fonts[.beat],
-            let boldSpec = input.fonts[.bold],
-            input.fonts[.sig] != nil
-        else { return writer.finish() }
+            let rulerSpec = input.rulerFont,
+            let beatSpec = input.beatFont,
+            let boldSpec = input.boldFont,
+            input.signatureFont != nil
+        else { return writer.replaceIfChanged(into: &output) }
 
         let rulerAscent = typography.rulerAscent
         let rulerHeight = typography.rulerHeight
@@ -75,7 +135,7 @@ struct RollRulerBuilder {
         let tickCenter = (markerHeight + tickBottom) / 2
         let barCap = metrics.spaceHalf
         let labelGap = 1.0
-        let tickInk = ink(.rulerTick)
+        let tickInk = input.tick
 
         func visibleTick(_ x: Double, upper: Bool) -> Tick {
             let tick = max(0, upper ? (x / ppt).rounded(.up) + 1 : (x / ppt).rounded(.down))
@@ -102,7 +162,7 @@ struct RollRulerBuilder {
             + 2 * metrics.spaceHalf + metrics.spaceTwo
         let begin = visibleTick(soX - margin, upper: false)
         let end = visibleEnd
-        emitClipped(0, 0, max(0, -soX), height, ink(.rulerPreRollMask))
+        emitClipped(0, 0, max(0, -soX), height, input.preRoll)
         input.grid.forEachSubdivision(from: begin, to: end, camera: camera) { tick, level in
             let h = level == 1 ? metrics.spaceHalf : 1.0
             let x = camera.viewX(tick: Double(tick), dpr: dpr)
@@ -167,7 +227,7 @@ struct RollRulerBuilder {
                     PdDlLabel(
                         x: labelX, y: labelY, w: natural, h: labelH, id: Self.idNone,
                         textOffset: 0, textLength: 0,
-                        argb: ink(isBar ? .primaryText : .rulerDetailText),
+                        argb: isBar ? input.text : input.detail,
                         flags: 0, fontId: isBar ? Self.fontRuler : Self.fontBeat,
                         pixelSize: UInt32(isBar ? rulerSpec.pixelSize : beatSpec.pixelSize)),
                     text: text)
@@ -179,14 +239,14 @@ struct RollRulerBuilder {
         func marker(tick: Tick, id: UInt64, glyph: String) {
             if tick == TimeDefaults.noTick || tick < begin || tick >= end { return }
             let x = camera.viewX(tick: Double(tick), dpr: dpr)
-            emitClipped(x - 0.5, 0, 1, markerHeight - 1, ink(.primaryText), id: id)
+            emitClipped(x - 0.5, 0, 1, markerHeight - 1, input.text, id: id)
             let advance = typography.boldAdvance(glyph)
             if intersects(x + metrics.spaceHalf, 0, advance, markerHeight) {
                 writer.label(
                     PdDlLabel(
                         x: x + metrics.spaceHalf, y: 0, w: advance, h: markerHeight,
                         id: Self.idNone, textOffset: 0, textLength: 0,
-                        argb: ink(.primaryText), flags: 0, fontId: Self.fontBold,
+                        argb: input.text, flags: 0, fontId: Self.fontBold,
                         pixelSize: UInt32(boldSpec.pixelSize)),
                     text: glyph)
                 usedBoldFont = true
@@ -198,7 +258,7 @@ struct RollRulerBuilder {
         for start in axis.signatureStarts where start >= begin && start < end {
             let x = camera.viewX(tick: Double(start), dpr: dpr)
             let signature = axis.signatureAt(start)
-            let color = signature.implicit ? ink(.implicitSignature) : ink(.primaryText)
+            let color = signature.implicit ? input.implicitSignature : input.text
             emitClipped(x - 0.5, 0, 1, markerHeight - 1, color)
             let text = "\(signature.numerator)/\(1 << min(signature.denomPow2, 6))"
             let labelWidth = typography.signatureAdvance(text)
@@ -252,6 +312,6 @@ struct RollRulerBuilder {
                     familyOffset: 0, familyLength: 0),
                 family: boldSpec.family)
         }
-        return writer.finish()
+        return writer.replaceIfChanged(into: &output)
     }
 }

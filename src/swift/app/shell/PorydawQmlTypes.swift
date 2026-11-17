@@ -104,7 +104,6 @@ public enum PorydawQmlTypes {
         TypographyFonts.self,
         UndoHistoryPanel.self,
         UndoHistoryRow.self,
-        VelocityHandle.self,
         VirtualKeyboardPresenter.self,
         VoiceChangesPage.self,
         VoiceListArgChoice.self,
@@ -160,7 +159,6 @@ extension TrackHeadersPresenter: QmlUncreatable {}
 extension TypographyFonts: QmlUncreatable {}
 extension UndoHistoryPanel: QmlUncreatable {}
 extension UndoHistoryRow: QmlUncreatable {}
-extension VelocityHandle: QmlUncreatable {}
 extension VoiceChangesPage: QmlUncreatable {}
 extension VoiceListArgChoice: QmlUncreatable {}
 extension VoiceListRowHandle: QmlUncreatable {}

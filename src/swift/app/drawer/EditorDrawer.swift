@@ -328,19 +328,32 @@ public final class EditorDrawerPresenter {
 
     private func publish(_ change: EditorDrawerChangeSet) {
         guard !change.isEmpty else { return }
-        let visibilityChanges = change.sectionPreferences.compactMap { preference -> (DrawerSectionKind, Bool)? in
-            let current = section(kind: preference.kind.rawValue).visible
-            return current == preference.visible ? nil : (preference.kind, preference.visible)
-        }
+        let previousVisibility = (
+            automation: automationSection.visible, velocity: velocitySection.visible,
+            voiceChanges: voiceChangesSection.visible, effectOutput: effectOutputSection.visible
+        )
         if change.published { apply(change.snapshot) }
+        let currentVisibility = (
+            automation: automationSection.visible, velocity: velocitySection.visible,
+            voiceChanges: voiceChangesSection.visible, effectOutput: effectOutputSection.visible
+        )
         for preference in change.sectionPreferences {
             drawerSectionPreferenceChanged(
                 kind: preference.kind.rawValue,
                 visible: preference.visible,
                 height: preference.storedBodyHeight ?? 0)
         }
-        for (kind, visible) in visibilityChanges {
-            onSectionVisibilityChanged?(kind, visible)
+        if previousVisibility.automation != currentVisibility.automation {
+            onSectionVisibilityChanged?(.automation, currentVisibility.automation)
+        }
+        if previousVisibility.velocity != currentVisibility.velocity {
+            onSectionVisibilityChanged?(.velocity, currentVisibility.velocity)
+        }
+        if previousVisibility.voiceChanges != currentVisibility.voiceChanges {
+            onSectionVisibilityChanged?(.voiceChanges, currentVisibility.voiceChanges)
+        }
+        if previousVisibility.effectOutput != currentVisibility.effectOutput {
+            onSectionVisibilityChanged?(.effectOutput, currentVisibility.effectOutput)
         }
         if !change.sectionPreferences.isEmpty || change.activePagePreference != nil {
             onChromeChanged?(chromeState)

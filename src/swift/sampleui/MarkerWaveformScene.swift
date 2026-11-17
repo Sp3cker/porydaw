@@ -57,11 +57,12 @@ struct MarkerWaveformScene {
         samples: [Float], pyramid: SamplePeakPyramid, width: Double, height: Double,
         scroll: Double, spp: Double, gain: Double, markers: [WaveformMarkerRow],
         badges: [(frame: Int, text: String)], highlight: (start: Int, end: Int)?,
-        playheadFrame: Int?, fontPx: Double, sampleRate: Double = 1
-    ) -> Data {
-        guard width > 0, height > 0 else { return writer.finish() }
+        playheadFrame: Int?, fontPx: Double, sampleRate: Double = 1,
+        into output: inout Data
+    ) -> Bool {
+        guard width > 0, height > 0 else { return writer.replaceIfChanged(into: &output) }
         rect(0, 0, width, height, background, width: width, height: height)
-        guard !samples.isEmpty else { return writer.finish() }
+        guard !samples.isEmpty else { return writer.replaceIfChanged(into: &output) }
         func position(_ frame: Int) -> Double { ((Double(frame) - scroll) / spp).rounded() }
         // Time ruler above the marker tabs, sized from the base font.
         let rulerHeight = fontPx * 1.3
@@ -175,7 +176,7 @@ struct MarkerWaveformScene {
         if let playheadFrame {
             drawPlayhead(at: position(playheadFrame), fontPx: fontPx, width: width, height: height)
         }
-        return writer.finish()
+        return writer.replaceIfChanged(into: &output)
     }
 
     private mutating func rulerLabel(index: Int, stepIndex: Int) -> String {

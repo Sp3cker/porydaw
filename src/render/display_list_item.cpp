@@ -7,8 +7,10 @@
 #include <QtGui/qfont.h>
 #include <QtGui/qmatrix4x4.h>
 #include <QtGui/qpainter.h>
+#include <QtGui/qpainterpath.h>
 #include <QtGui/qtextlayout.h>
 #include <QtGui/qtextoption.h>
+#include <QtGui/qtransform.h>
 #include <QtQuick/qquickwindow.h>
 #include <QtQuick/qsggeometry.h>
 #include <QtQuick/qsgnode.h>
@@ -16,11 +18,16 @@
 #include <QtQuick/qsgrendernode.h>
 #include <QtQuick/qsgtextnode.h>
 #include <QtQuick/qsgvertexcolormaterial.h>
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <memory>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+static_assert(sizeof(PdDlHeader) == 24);
+static_assert(sizeof(PdDlRect) == 56);
 
 namespace {
 
@@ -44,6 +51,99 @@ bool onLayer(const PdDlRect &rect, bool over)
     return drawable(rect) && bool(rect.flags & PD_DL_RECT_OVER) == over;
 }
 
+constexpr int ellipseTableSegments = 64;
+
+const std::array<QPointF, ellipseTableSegments + 1> &unitEllipse()
+{
+    static const auto points = [] {
+        std::array<QPointF, ellipseTableSegments + 1> result;
+        constexpr double tau = 6.2831853071795864769;
+        for (int i = 0; i < ellipseTableSegments; ++i)
+            result[i] = QPointF(std::cos(tau * i / ellipseTableSegments),
+                               std::sin(tau * i / ellipseTableSegments));
+        result[ellipseTableSegments] = result[0];
+        return result;
+    }();
+    return points;
+}
+
+bool ellipseHasHole(const PdDlRect &rect)
+{
+    return rect.strokeWidth > 0 && 2 * double(rect.strokeWidth) < (std::min)(rect.w, rect.h);
+}
+
+int vertexCount(const PdDlRect &rect)
+{
+    if (!(rect.flags & PD_DL_RECT_ELLIPSE))
+        return 6;
+    return ellipseTableSegments * (ellipseHasHole(rect) ? 18 : 9);
+}
+
+void appendEllipse(QSGGeometry::ColoredPoint2D *&v, const PdDlRect &rect, double dpr)
+{
+    const double rx = rect.w / 2;
+    const double ry = rect.h / 2;
+    const double cx = rect.x + rx;
+    const double cy = rect.y + ry;
+    const double fringe = (std::min)(0.5 / dpr, (std::min)(rx, ry));
+    const bool hole = ellipseHasHole(rect);
+    const double stroke = double(rect.strokeWidth);
+    const double innerX = hole ? rx - stroke : 0;
+    const double innerY = hole ? ry - stroke : 0;
+    const double innerFringe = hole ? (std::min)(fringe, (std::min)(innerX, innerY)) : 0;
+    const double innerSolidX = (std::min)(innerX + fringe, rx - fringe);
+    const double innerSolidY = (std::min)(innerY + fringe, ry - fringe);
+    const double outerSolidX = hole ? (std::max)(innerX + fringe, rx - fringe) : rx - fringe;
+    const double outerSolidY = hole ? (std::max)(innerY + fringe, ry - fringe) : ry - fringe;
+    const double coverage = hole ? (std::min)(1.0, stroke / (2 * fringe)) : 1;
+    auto color = vertex(0, 0, rect.argb);
+    if (coverage < 1) {
+        color.r = uchar(std::lround(color.r * coverage));
+        color.g = uchar(std::lround(color.g * coverage));
+        color.b = uchar(std::lround(color.b * coverage));
+        color.a = uchar(std::lround(color.a * coverage));
+    }
+    const auto point = [&](const QPointF &unit, double xRadius, double yRadius, bool clear) {
+        auto result = color;
+        result.x = float(cx + unit.x() * xRadius);
+        result.y = float(cy + unit.y() * yRadius);
+        if (clear)
+            result.r = result.g = result.b = result.a = 0;
+        return result;
+    };
+    const auto strip = [&](const QPointF &a, const QPointF &b,
+                           double ax, double ay, double bx, double by,
+                           bool clearA, bool clearB) {
+        v[0] = point(a, ax, ay, clearA);
+        v[1] = point(b, ax, ay, clearA);
+        v[2] = point(a, bx, by, clearB);
+        v[3] = v[2];
+        v[4] = v[1];
+        v[5] = point(b, bx, by, clearB);
+        v += 6;
+    };
+    const auto &unit = unitEllipse();
+    auto center = color;
+    center.x = float(cx);
+    center.y = float(cy);
+    for (int i = 0; i < ellipseTableSegments; ++i) {
+        const QPointF &a = unit[i];
+        const QPointF &b = unit[i + 1];
+        if (hole) {
+            strip(a, b, innerSolidX, innerSolidY, outerSolidX, outerSolidY, false, false);
+            strip(a, b, innerX - innerFringe, innerY - innerFringe,
+                  innerSolidX, innerSolidY, true, false);
+        } else {
+            v[0] = center;
+            v[1] = point(a, outerSolidX, outerSolidY, false);
+            v[2] = point(b, outerSolidX, outerSolidY, false);
+            v += 3;
+        }
+        strip(a, b, outerSolidX, outerSolidY,
+              rx + fringe, ry + fringe, false, true);
+    }
+}
+
 class RectGeometryNode final : public QSGGeometryNode
 {
   public:
@@ -55,25 +155,30 @@ class RectGeometryNode final : public QSGGeometryNode
         setMaterial(&m_material);
     }
 
-    void commit(const PdDlView &view, bool over)
+    void commit(const PdDlView &view, bool over, double dpr)
     {
         const PdDlRect *rects = view.header ? view.rects : nullptr;
         const uint32_t count = view.header ? view.header->rectCount : 0;
         int visible = 0;
         for (uint32_t i = 0; i < count; ++i)
-            visible += onLayer(rects[i], over);
+            if (onLayer(rects[i], over))
+                visible += vertexCount(rects[i]);
         // Capacity only grows: allocate() invalidates the buffer and a fresh
         // allocation per visible-count change would churn every scroll frame.
-        if (visible > m_rectCapacity) {
-            m_geometry.allocate(visible * 6);
-            m_rectCapacity = visible;
+        if (visible > m_vertexCapacity) {
+            m_geometry.allocate(visible);
+            m_vertexCapacity = visible;
         }
-        m_geometry.setVertexCount(visible * 6);
+        m_geometry.setVertexCount(visible);
         QSGGeometry::ColoredPoint2D *v = m_geometry.vertexDataAsColoredPoint2D();
         for (uint32_t i = 0; i < count; ++i) {
             const PdDlRect &rect = rects[i];
             if (!onLayer(rect, over))
                 continue;
+            if (rect.flags & PD_DL_RECT_ELLIPSE) {
+                appendEllipse(v, rect, dpr);
+                continue;
+            }
             const float left = float(rect.x);
             const float top = float(rect.y);
             const float right = float(rect.x + rect.w);
@@ -93,33 +198,46 @@ class RectGeometryNode final : public QSGGeometryNode
   private:
     QSGGeometry m_geometry;
     QSGVertexColorMaterial m_material;
-    int m_rectCapacity = 0;
+    int m_vertexCapacity = 0;
 };
 
 class PainterRectNode final : public QSGRenderNode
 {
   public:
-    explicit PainterRectNode(QQuickWindow *window) : m_window(window) {}
+    explicit PainterRectNode(QQuickWindow *window) : m_window(window)
+    {
+        constexpr int ellipsePathElements = 1 + 4 * 3;
+        m_outline.reserve(2 * ellipsePathElements);
+    }
 
     void commit(const PdDlView &view, bool over)
     {
-        m_rects.clear();
+        m_used = 0;
         m_bounds = QRectF();
         const uint32_t count = view.header ? view.header->rectCount : 0;
+        const double ellipseFringe = 0.5 / m_window->effectiveDevicePixelRatio();
         for (uint32_t i = 0; i < count; ++i) {
             const PdDlRect &rect = view.rects[i];
             if (!onLayer(rect, over))
                 continue;
             const QRectF area(rect.x, rect.y, rect.w, rect.h);
-            if (rect.argb == rect.argbRight) {
-                m_rects.emplace_back(area, QColor::fromRgba(rect.argb));
-            } else {
-                QLinearGradient fade(area.topLeft(), area.topRight());
-                fade.setColorAt(0, QColor::fromRgba(rect.argb));
-                fade.setColorAt(1, QColor::fromRgba(rect.argbRight));
-                m_rects.emplace_back(area, QBrush(fade));
+            Primitive &primitive = m_used < m_rects.size() ? m_rects[m_used] : m_rects.emplace_back();
+            ++m_used;
+            const PdDlRect &previous = primitive.rect;
+            if (previous.argb != rect.argb || previous.argbRight != rect.argbRight
+                || (rect.argb != rect.argbRight && (previous.x != rect.x || previous.w != rect.w))) {
+                if (rect.argb == rect.argbRight) {
+                    primitive.brush = QColor::fromRgba(rect.argb);
+                } else {
+                    QLinearGradient fade(QPointF(rect.x, 0), QPointF(rect.x + rect.w, 0));
+                    fade.setColorAt(0, QColor::fromRgba(rect.argb));
+                    fade.setColorAt(1, QColor::fromRgba(rect.argbRight));
+                    primitive.brush = QBrush(fade);
+                }
             }
-            m_bounds = m_bounds.united(area);
+            primitive.rect = rect;
+            const double fringe = rect.flags & PD_DL_RECT_ELLIPSE ? ellipseFringe : 0;
+            m_bounds = m_bounds.united(area.adjusted(-fringe, -fringe, fringe, fringe));
         }
         markDirty(QSGNode::DirtyMaterial);
     }
@@ -136,17 +254,45 @@ class PainterRectNode final : public QSGRenderNode
         const QRegion *clip = state->clipRegion();
         if (clip && !clip->isEmpty())
             painter->setClipRegion(*clip, Qt::ReplaceClip);
-        painter->setTransform(matrix()->toTransform());
+        const QTransform transform = matrix()->toTransform();
+        painter->setTransform(transform);
         painter->setOpacity(inheritedOpacity());
         painter->setRenderHint(QPainter::Antialiasing, false);
-        for (const auto &[area, brush] : m_rects)
-            painter->fillRect(area, brush);
+        for (size_t i = 0; i < m_used; ++i) {
+            const Primitive &primitive = m_rects[i];
+            const PdDlRect &rect = primitive.rect;
+            const QRectF area(rect.x, rect.y, rect.w, rect.h);
+            if (!(rect.flags & PD_DL_RECT_ELLIPSE)) {
+                painter->setRenderHint(QPainter::Antialiasing, false);
+                painter->fillRect(area, primitive.brush);
+                continue;
+            }
+            painter->setRenderHint(QPainter::Antialiasing, true);
+            painter->setPen(Qt::NoPen);
+            if (ellipseHasHole(rect)) {
+                m_outline.clear();
+                m_outline.setFillRule(Qt::OddEvenFill);
+                m_outline.addEllipse(area);
+                const double stroke = double(rect.strokeWidth);
+                m_outline.addEllipse(area.adjusted(stroke, stroke, -stroke, -stroke));
+                painter->fillPath(m_outline, primitive.brush);
+            } else {
+                painter->setBrush(primitive.brush);
+                painter->drawEllipse(area);
+            }
+        }
         painter->restore();
     }
 
   private:
+    struct Primitive {
+        PdDlRect rect = {};
+        QBrush brush;
+    };
     QQuickWindow *m_window;
-    std::vector<std::pair<QRectF, QBrush>> m_rects;
+    std::vector<Primitive> m_rects;
+    QPainterPath m_outline;
+    size_t m_used = 0;
     QRectF m_bounds;
 };
 
@@ -167,12 +313,14 @@ class RectLayerNode final : public QSGTransformNode
     void commit(const PdDlView &view, bool over)
     {
         if (m_geometry)
-            m_geometry->commit(view, over);
+            m_geometry->commit(view, over, m_dpr);
         else
             m_painter->commit(view, over);
     }
 
+    void setDevicePixelRatio(double dpr) { m_dpr = dpr; }
   private:
+    double m_dpr = 1;
     RectGeometryNode *m_geometry = nullptr;
     PainterRectNode *m_painter = nullptr;
 };
@@ -549,6 +697,8 @@ QSGNode *DisplayList::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *)
     }
     if (!root)
         root = new DisplayRootNode(software, win);
+    root->under->setDevicePixelRatio(win->effectiveDevicePixelRatio());
+    root->over->setDevicePixelRatio(win->effectiveDevicePixelRatio());
     root->under->commit(m_view, false);
     root->labels->commit(m_view, win);
     root->over->commit(m_view, true);

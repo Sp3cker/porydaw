@@ -4,19 +4,24 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
 ShellTabsSupport {
+    function velocityDrawing() {
+        return VelocityDrawing.decodeDrawing(bootstrap.velocityDrawing(tabs().selectedId))
+    }
+
     function test_gBackgroundClosePreservesActive() {
         var ids = openShell(["mus_route101", "mus_littleroot_test", "mus_route102"])
         var firstId = ids[0]
         var secondId = ids[1]
         var thirdId = ids[2]
         var thirdSurface = surfaceOf(thirdId)
-        var thirdNode = findChild(thirdSurface, "velocityNodeFill")
+        var thirdNode = velocityDrawing()[0]
         var thirdInput = findChild(thirdSurface, "velocityPlotInput")
-        verify(thirdNode && thirdInput && thirdNode.width > 0,
+        verify(thirdNode && thirdInput && thirdNode.fill.w > 0,
                "the background-close candidate has a drawn velocity node")
-        var thirdHit = thirdNode.mapToItem(thirdInput, thirdNode.width / 2, thirdNode.height / 2)
+        var thirdHit = VelocityDrawing.center(thirdNode)
         mouseClick(thirdInput, thirdHit.x, thirdHit.y)
         tryCompare(pageOf(thirdId).session.velocityPage(), "selectedCount", 1, 3000)
         clickSelectTab(secondId)
@@ -49,8 +54,8 @@ ShellTabsSupport {
         compare(pageOf(freshThird).session.velocityPage().selectedNoteIdText(), "",
                 "the reopened background tab inherits no prior note selection")
         compare(session().canUndo, false, "the reopened background tab inherits no prior history")
-        var freshNode = findChild(surfaceOf(freshThird), "velocityNodeFill")
-        verify(freshNode && !freshNode.parent.model.preview,
+        var freshNode = velocityDrawing()[0]
+        verify(freshNode && !freshNode.preview,
                "the reopened background tab renders no old velocity preview")
     }
 
@@ -92,10 +97,10 @@ ShellTabsSupport {
         verify(JSON.parse(summaryOf(onlyId)).length > 0, "the staged song publishes notes")
         var surface = surfaceOf(onlyId)
         var plotInput = findChild(surface, "velocityPlotInput")
-        var node = findChild(surface, "velocityNodeFill")
-        verify(plotInput && node && node.width > 0 && node.height > 0,
+        var node = velocityDrawing()[0]
+        verify(plotInput && node && node.fill.w > 0 && node.fill.h > 0,
                "the closing tab exposes a real velocity note")
-        var hit = node.mapToItem(plotInput, node.width / 2, node.height / 2)
+        var hit = VelocityDrawing.center(node)
         mouseClick(plotInput, hit.x, hit.y)
         tryCompare(pageOf(onlyId).session.velocityPage(), "selectedCount", 1, 3000)
         var sceneRoot = tabsRoot()
@@ -104,7 +109,9 @@ ShellTabsSupport {
         mousePress(plotInput, hit.x, hit.y, Qt.LeftButton)
         mouseMove(plotInput, hit.x, hit.y - session().baseFontPx * 2, -1, Qt.LeftButton)
         tryVerify(function() {
-            return node.parent.model.preview
+            return velocityDrawing().some(function(handle) {
+                return handle.noteIdText === node.noteIdText && handle.preview
+            })
         }, 3000, "the mounted velocity gesture holds a preview before close")
         verify(session().canUndo === false && !session().documentDirty,
                "the held velocity preview has not committed a song edit")
@@ -158,8 +165,8 @@ ShellTabsSupport {
         compare(pageOf(reopenedId).session.velocityPage().selectedNoteIdText(), "",
                 "the fresh same-song page has an empty note selection")
         compare(session().canUndo, false, "the fresh same-song page has no prior undo history")
-        var reopenedNode = findChild(surfaceOf(reopenedId), "velocityNodeFill")
-        verify(reopenedNode && !reopenedNode.parent.model.preview,
+        var reopenedNode = velocityDrawing()[0]
+        verify(reopenedNode && !reopenedNode.preview,
                "A137 fresh same-song page has no carried velocity preview")
         verify(pageOf(reopenedId).visible, "the reopened page is presented")
         verify(selectButton(reopenedId) !== null, "the reopened song has a strip tab")
@@ -327,11 +334,11 @@ ShellTabsSupport {
         var closingId = ids[1]
         compare(tabs().selectedId, closingId, "the second tab is selected")
         var surface = surfaceOf(closingId)
-        var node = findChild(surface, "velocityNodeFill")
+        var node = velocityDrawing()[0]
         var plotInput = findChild(surface, "velocityPlotInput")
-        verify(node && plotInput && node.width > 0 && node.height > 0,
+        verify(node && plotInput && node.fill.w > 0 && node.fill.h > 0,
                "the closing tab draws a real velocity node")
-        var hit = node.mapToItem(plotInput, node.width / 2, node.height / 2)
+        var hit = VelocityDrawing.center(node)
         mouseClick(plotInput, hit.x, hit.y)
         tryCompare(pageOf(closingId).session.velocityPage(), "selectedCount", 1, 3000)
         var close = closeButton(closingId)

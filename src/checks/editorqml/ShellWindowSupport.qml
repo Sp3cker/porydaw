@@ -5,6 +5,7 @@ import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
 import "RollNoteFaces.js" as RollNoteFaces
+import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
 ShellLaneSupport {
     id: testCase
@@ -88,6 +89,7 @@ ShellLaneSupport {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        bootstrap.children.push(shell.shellPresenter)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000, "the two-song shell window becomes active")
         waitForShellScene()
@@ -177,6 +179,11 @@ ShellLaneSupport {
         return false
     }
 
+    function velocityDrawing(tabId) {
+        var id = tabId === undefined ? shell.shellPresenter.session.songTabs.selectedId : tabId
+        return VelocityDrawing.decodeDrawing(bootstrap.velocityDrawing(id))
+    }
+
     function selectDrawnVelocityNote(surface) {
         var drawer = surface.drawerPresenter
         var velocityKind = bootstrap.velocitySectionKind()
@@ -185,10 +192,10 @@ ShellLaneSupport {
         var node = null
         tryVerify(function() {
             plot = findChild(surface, "velocityPlotInput")
-            node = findChild(surface, "velocityNodeFill")
-            return plot !== null && node !== null && node.width > 0 && node.height > 0
+            node = velocityDrawing()[0]
+            return plot !== null && node !== undefined && node.fill.w > 0 && node.fill.h > 0
         }, 3000, "the original velocity page draws a note hit target")
-        var hit = node.mapToItem(plot, node.width / 2, node.height / 2)
+        var hit = VelocityDrawing.center(node)
         mouseClick(plot, hit.x, hit.y)
         tryCompare(shell.shellPresenter.session.velocityPage(), "selectedCount", 1, 3000)
     }

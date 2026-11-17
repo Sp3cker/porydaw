@@ -84,9 +84,6 @@ public final class DocumentWorkspace {
     private var appliedPrimaryTrack: Int?
     /// Stamps the last fan-out ran against; the next one refreshes only readers of what moved.
     private var appliedRevisions: DocumentRevisions
-    // Camera work a hidden drawer section skipped; showing or re-attaching it
-    // replays one catch-up (zoom subsumes horizontal).
-    private var deferredCameraZoom: [DrawerSectionKind: Bool] = [:]
     private var isActive = false
     private var isTornDown = false
     private var audioRelease: AudioOperation<Void>?
@@ -156,15 +153,19 @@ public final class DocumentWorkspace {
             audio?.previewVoice(program: program, key: key, velocity: velocity)
         }
         let velocityPage = VelocityPage(baseFontPx: Double(typography.baseFontPx))
+        velocityPage.contentVisible = false
         velocityPage.attach(viewport: viewport, palette: grid.palette)
         self.velocityPage = velocityPage
         let voiceChangesPage = VoiceChangesPage(baseFontPx: Double(typography.baseFontPx))
+        voiceChangesPage.contentVisible = false
         voiceChangesPage.attach(viewport: viewport, palette: grid.palette)
         self.voiceChangesPage = voiceChangesPage
         let automationPage = AutomationPage(baseFontPx: Double(typography.baseFontPx))
+        automationPage.contentVisible = false
         automationPage.attach(viewport: viewport, palette: grid.palette)
         self.automationPage = automationPage
         let effectOutputPage = EffectOutputPage(baseFontPx: Double(typography.baseFontPx))
+        effectOutputPage.contentVisible = false
         effectOutputPage.attach(viewport: viewport, palette: grid.palette, effects: effects)
         effectOutputPage.onCommandAvailabilityChanged = callbacks.gridCommandAvailabilityChanged
         effectOutputPage.onAddEffectRequested = { [weak midiEffects] (track: Int) in
@@ -185,8 +186,13 @@ public final class DocumentWorkspace {
             rulerMenu?.openTimeSelection(tick: tick)
         }
         drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
-            guard visible else { return }
-            self?.drawerSectionBecameVisible(kind)
+            guard let self else { return }
+            switch kind {
+            case .velocity: velocityPage.contentVisible = isActive && visible
+            case .voiceChanges: voiceChangesPage.contentVisible = isActive && visible
+            case .automation: automationPage.contentVisible = isActive && visible
+            case .effectOutput: effectOutputPage.contentVisible = isActive && visible
+            }
         }
         drawer.onChromeChanged = { [weak viewport] state in
             guard let viewport else { return }
@@ -297,9 +303,10 @@ public final class DocumentWorkspace {
                 elapsedSeconds: elapsed, playing: playing)
         }
         drawer.attachSections([velocityPage, voiceChangesPage, automationPage, effectOutputPage])
-        for kind in DrawerSectionKind.allCases {
-            flushDeferredCamera(kind)
-        }
+        velocityPage.contentVisible = drawer.section(kind: DrawerSectionKind.velocity.rawValue).visible
+        voiceChangesPage.contentVisible = drawer.section(kind: DrawerSectionKind.voiceChanges.rawValue).visible
+        automationPage.contentVisible = drawer.section(kind: DrawerSectionKind.automation.rawValue).visible
+        effectOutputPage.contentVisible = drawer.section(kind: DrawerSectionKind.effectOutput.rawValue).visible
         playheadGuides.attach(viewport: viewport)
         let initialChunk =
             eventList.mappedChunk(for: session.selectedTrack, in: session.document) ?? 0
@@ -312,7 +319,7 @@ public final class DocumentWorkspace {
     }
 
     /// Republishes palette-derived rows and drawing without document or camera changes.
-    /// Includes hidden tabs and drawer sections without cancelling interactions.
+    /// Hidden drawer drawing catches up on reveal without cancelling interactions.
     func refreshAppearance() {
         guard !isTornDown else { return }
         grid.reloadVisuals()
@@ -323,9 +330,8 @@ public final class DocumentWorkspace {
         velocityPage.refreshPromptStyle()
         voiceChangesPage.refreshPromptStyle()
         automationPage.refreshPromptStyles()
-        voiceChangesPage.rebuildContent()
-        automationPage.publishContent(viewport)
-        automationPage.publishDrawingContent()
+        voiceChangesPage.refreshCamera()
+        automationPage.refreshCamera()
     }
 
     public func cancel(reason: Int) {
@@ -382,6 +388,10 @@ public final class DocumentWorkspace {
         effectOutputPage.suspend()
         effects.suspend()
         isActive = false
+        velocityPage.contentVisible = false
+        automationPage.contentVisible = false
+        voiceChangesPage.contentVisible = false
+        effectOutputPage.contentVisible = false
         arpeggiator.close()
         trackHeaders.refreshFromDocument()
         rulerMenu.close()
@@ -476,10 +486,6 @@ public final class DocumentWorkspace {
     /// change takes the zoom path because it redraws the same lines a zoom does.
     private func refreshDrawerPagesGeometry(zoom: Bool) {
         for kind in DrawerSectionKind.allCases {
-            guard drawer.section(kind: kind.rawValue).visible else {
-                deferredCameraZoom[kind] = zoom || deferredCameraZoom[kind] == true
-                continue
-            }
             applyCamera(kind, zoom: zoom)
         }
     }
@@ -494,11 +500,18 @@ public final class DocumentWorkspace {
         }
     }
 
-    private func flushDeferredCamera(_ kind: DrawerSectionKind) {
-        guard drawer.section(kind: kind.rawValue).visible,
-            let zoom = deferredCameraZoom.removeValue(forKey: kind)
-        else { return }
-        applyCamera(kind, zoom: zoom)
+    /// Content reads current facts and the live camera, subsuming queued camera work.
+    private func refreshDrawerPageContent(_ kind: DrawerSectionKind) {
+        switch kind {
+        case .velocity:
+            velocityPage.refreshFromDocument(presentation: lastPlayheadPresentation)
+        case .voiceChanges:
+            voiceChangesPage.refreshFromDocument(presentation: lastPlayheadPresentation)
+        case .automation:
+            automationPage.refreshFromDocument()
+        case .effectOutput:
+            effectOutputPage.refreshFromDocument()
+        }
     }
 
     /// Which stamp groups advanced since the last fan-out, by consumer.
@@ -547,8 +560,7 @@ public final class DocumentWorkspace {
         let documentChanged = change.domains.contains(.document)
         let primaryTrackChanged = appliedPrimaryTrack != session.selectedTrack
         if primaryTrackChanged || !change.domains.intersection([.document, .effects]).isEmpty {
-            effectOutputPage.refreshFromDocument()
-            deferredCameraZoom[.effectOutput] = nil
+            refreshDrawerPageContent(.effectOutput)
         }
         let moved = documentChanged ? moved(since: appliedRevisions) : Moved()
         if documentChanged {
@@ -556,7 +568,7 @@ public final class DocumentWorkspace {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
             pitchBend.documentDidChange()
         }
-        let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState, .effects]
+        let headerDomains: SessionChangeDomains = [.bank, .cursor, .mixState, .effects]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank, .scale]
         if isActive {
             playheadGuides.sessionDidChange(change)
@@ -571,7 +583,11 @@ public final class DocumentWorkspace {
             trackHeaders.documentDidChange(change)
         } else {
             if documentChanged { trackHeaders.invalidateDocumentInteraction() }
-            if !change.domains.intersection(headerDomains).isEmpty { trackHeaders.refreshFromDocument() }
+            if !change.domains.intersection(headerDomains).isEmpty {
+                trackHeaders.refreshFromDocument()
+            } else if change.domains.contains(.selection) {
+                trackHeaders.refreshSelectionPresentation()
+            }
         }
         if documentChanged || change.domains.contains(.bank) {
             headerVoicePicker.refresh()
@@ -599,13 +615,9 @@ public final class DocumentWorkspace {
         if isActive && change.domains.contains(.bank) {
             audio.updateVoicegroup(session.bankLease)
         }
-        if change.domains.contains(.bank) {
-            velocityPage.cancelSectionInteraction()
-        }
+        if change.domains.contains(.bank) { velocityPage.cancelSectionInteraction() }
         if moved.primaryNotes || moved.primaryVoices || change.domains.contains(.bank) || primaryTrackChanged {
-            // Document rebuilds read the live camera, so they settle deferred camera work.
-            velocityPage.refreshFromDocument()
-            deferredCameraZoom[.velocity] = nil
+            refreshDrawerPageContent(.velocity)
         } else {
             if documentChanged { velocityPage.invalidateDocumentInteraction() }
             if change.domains.contains(.selection) {
@@ -615,15 +627,13 @@ public final class DocumentWorkspace {
             }
         }
         if moved.primaryVoices || change.domains.contains(.bank) || primaryTrackChanged {
-            voiceChangesPage.refreshFromDocument()
-            deferredCameraZoom[.voiceChanges] = nil
+            refreshDrawerPageContent(.voiceChanges)
         } else {
             if documentChanged { voiceChangesPage.invalidateDocumentInteraction() }
             if change.domains.contains(.cursor) { voiceChangesPage.refreshEditCursor() }
         }
         if moved.primaryLanes || change.domains.contains(.bank) || primaryTrackChanged {
-            automationPage.refreshFromDocument()
-            deferredCameraZoom[.automation] = nil
+            refreshDrawerPageContent(.automation)
         } else {
             if documentChanged { automationPage.invalidateDocumentInteraction() }
             if change.domains.contains(.cursor) { automationPage.refreshEditCursor() }
@@ -642,31 +652,10 @@ public final class DocumentWorkspace {
 
     private func present(playhead presentation: SharedPlayheadPresentation) {
         lastPlayheadPresentation = presentation
-        if drawer.section(kind: DrawerSectionKind.velocity.rawValue).visible {
-            velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        }
-        if drawer.section(kind: DrawerSectionKind.voiceChanges.rawValue).visible {
-            voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        }
-        if drawer.section(kind: DrawerSectionKind.automation.rawValue).visible {
-            automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        }
+        velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         trackHeaders.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
         eventList.setPlayheadTick(tick: presentation.tick, playing: presentation.playing)
-    }
-
-    private func drawerSectionBecameVisible(_ kind: DrawerSectionKind) {
-        flushDeferredCamera(kind)
-        guard let presentation = lastPlayheadPresentation else { return }
-        switch kind {
-        case .velocity:
-            velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        case .voiceChanges:
-            voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        case .automation:
-            automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        case .effectOutput:
-            break
-        }
     }
 }

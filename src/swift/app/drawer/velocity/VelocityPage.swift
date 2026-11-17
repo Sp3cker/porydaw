@@ -31,60 +31,23 @@ enum VelocityModifier {
     static let shortcutMask = shift | control | alt | meta
 }
 
-// MARK: - Published note handle
+// MARK: - Value-semantic note geometry
 
-/// One published note handle: QML places it from its ticks inside one
-/// scroll-shifted container; hit tests read its scroll-stable x.
-@MainActor
-@QtBridgeable
-public final class VelocityHandle {
-    @QtIgnored var noteID = NoteID(0)
-    /// The stable `NoteID` token as text: `UInt64` is not a bridge type.
-    public var noteIdText: String = ""
-    public var tick: Double = 0
-    public var endTick: Double = 0
-    public var x: Double = 0
-    public var endX: Double = 0
-    public var value: Int = 1
-    public var y: Double = 0
-    public var selected: Bool = false
-    public var hovered: Bool = false
-    public var preview: Bool = false
-    public var dimmed: Bool = false
-    public var level: Int = -1
-    public var label: String = ""
-    public var hitRadius: Double = 0
-    public var stemWidth: Double = 0
-    public var nodeRadius: Double = 0
-    public var outlineRadius: Double = 0
-    public var outlineWidth: Double = 0
-    public var ringRadius: Double = 0
-    public var ringWidth: Double = 0
-    public var fillColor: QmlColor = .clear
-    public var stemColor: QmlColor = .clear
-    public var ringColor: QmlColor = .clear
-    public var outlineColor: QmlColor = .clear
-    public var primitiveName: String = ""
+/// Retained geometry shared by hit testing, readouts and bulk drawing.
+public struct VelocityHandle: Sendable {
+    public internal(set) var noteID = NoteID(0)
+    public internal(set) var tick: Double = 0
+    public internal(set) var endTick: Double = 0
+    public internal(set) var x: Double = 0
+    public internal(set) var endX: Double = 0
+    public internal(set) var value: Int = 1
+    public internal(set) var y: Double = 0
+    public internal(set) var selected: Bool = false
+    public internal(set) var hovered: Bool = false
+    public internal(set) var preview: Bool = false
+    public internal(set) var dimmed: Bool = false
+    public internal(set) var level: Int = -1
 
-    public init() {}
-
-
-    /// The model's no-op rule: an unchanged handle stays in place, so an
-    /// unchanged row emits nothing.
-    @QtIgnored
-    func matches(_ other: VelocityHandle) -> Bool {
-        noteIdText == other.noteIdText && tick == other.tick && endTick == other.endTick
-            && value == other.value && y == other.y
-            && selected == other.selected && hovered == other.hovered
-            && preview == other.preview && dimmed == other.dimmed && level == other.level
-            && label == other.label && hitRadius == other.hitRadius
-            && stemWidth == other.stemWidth && nodeRadius == other.nodeRadius
-            && outlineRadius == other.outlineRadius && outlineWidth == other.outlineWidth
-            && ringRadius == other.ringRadius && ringWidth == other.ringWidth
-            && fillColor == other.fillColor && stemColor == other.stemColor
-            && ringColor == other.ringColor && outlineColor == other.outlineColor
-            && primitiveName == other.primitiveName
-    }
 }
 
 // MARK: - Page owner
@@ -164,8 +127,6 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     public var axisGraduations: QListModel<SceneRect> = QListModel()
     public var axisMarkers: QListModel<SceneRect> = QListModel()
     public var axisLabels: QListModel<SceneText> = QListModel()
-    /// Retained tick-space rows translate with the camera; overscan edges admit and retire rows.
-    public var handles: QListModel<VelocityHandle> = QListModel()
 
     /// Distinct content rebuilds: shared-playhead movement inside one voice
     /// context, and repeated equal publications, rebuild nothing.
@@ -209,12 +170,13 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored var axis = VelocityAxisModel()
     @QtIgnored var resolvedContextValue = VelocityVoiceContext(status: .unresolvedVoice)
     @QtIgnored var publishedHandles: [VelocityHandle] = []
+    @QtIgnored var handleBuffer: [VelocityHandle] = []
     @QtIgnored var publishedHandleWindow: ClosedRange<Double>?
     @QtIgnored var drawingBands: [DrawerStaticRect] = []
-    // Retained display-list buffers (list 0 grid + bands, list 1 transient)
-    // and the writer reused across frames; lists rebuild together with one bump.
+    // Each viewport-space list owns its output; its writer retains staging only.
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var listWriter = DisplayListWriter()
+    @QtIgnored var transientWriter = DisplayListWriter()
     @QtIgnored var cachedEmptyDisplayList: Data?
     @QtIgnored var gesture: VelocityGestureState?
     @QtIgnored var prompt: VelocityPromptState?
@@ -226,17 +188,36 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored var contextTick: Tick = 0
     @QtIgnored var playing = false
     @QtIgnored var lastContextKey: VelocityContextKey?
+    @QtIgnored var contentVisible = true {
+        didSet {
+            guard contentVisible != oldValue else { return }
+            if contentVisible {
+                if contentRefreshPending { refreshFromDocument() }
+            } else {
+                cancelSectionInteraction()
+            }
+        }
+    }
+    @QtIgnored var contentRefreshPending = false
     @QtIgnored var metricsCache: (key: MetricsKey, value: GridMetrics)?
-    @QtIgnored var handlesByID: [NoteID: VelocityHandle] = [:]
+    @QtIgnored var handleIndicesByID: [NoteID: Int] = [:]
     @QtIgnored var paintCandidates: [Note] = []
-    @QtIgnored var handleGeometryKey: HandleGeometryKey?
+    @QtIgnored var handleDrawing: HandleDrawing?
     private var appliedPrimaryTrack: Int?
 
-    struct HandleGeometryKey: Equatable {
-        var geometry: VelocityNodeGeometry
-        var track: Int
-        var dpr: Double
-        var intrinsic: Bool
+    struct HandleDrawing {
+        var stemWidth: Double
+        var selectedStemWidth: Double
+        var nodeRadius: Double
+        var outlineRadius: Double
+        var outlineWidth: Float
+        var ringRadius: Double
+        var ringWidth: Float
+        var fill: UInt32
+        var dimFill: UInt32
+        var stem: UInt32
+        var selection: UInt32
+        var border: UInt32
     }
 
     struct MetricsKey: Equatable {
@@ -245,6 +226,12 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         var dpr: Double
         var width: Double
         var height: Double
+    }
+
+    struct SemanticFacts {
+        var source: VelocityContextSource
+        var selectionContext: VelocityVoiceContext?
+        var selectedNotes: [Note]
     }
 
     public init(baseFontPx: Double = VelocityPagePolicy.seedBaseFontPx) {
@@ -267,7 +254,6 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     @QtIgnored
     public func attach(viewport: DocumentViewport, palette: GridPalette) {
         metricsCache = nil
-        handleGeometryKey = nil
         publishedHandleWindow = nil
         self.viewport = viewport
         self.palette = palette
@@ -286,11 +272,11 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         hovered = nil
         metricsCache = nil
         rollPreview = [:]
-        handleGeometryKey = nil
         publishedHandleWindow = nil
         paintCandidates = []
         refreshInteractionPublished()
-        publishHandles([])
+        handleBuffer.removeAll(keepingCapacity: true)
+        publishHandles()
     }
 
     // MARK: Composition input
@@ -339,12 +325,43 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
 
     // MARK: Session refresh
 
+    @QtIgnored func publishPresentationContext(_ facts: SemanticFacts?) {
+        let tick = VelocityScene.effectiveContextTick(session, playing: playing, contextTick: contextTick)
+        let presented =
+            facts?.selectionContext ?? facts?.source.context(at: tick)
+            ?? VelocityVoiceContext(status: .unresolvedVoice)
+        resolvedContextValue = presented
+        if contentVisible { lastContextKey = VelocityContextKey(context: presented, playing: playing) }
+        presentedContextTick = contextTick
+        presentedContextSlot = facts?.source.key(at: tick, playing: playing).slot ?? -1
+        presentedPlaying = playing
+        publish(\.selectedCount, facts?.selectedNotes.count ?? 0)
+        contextUnsupported = !presented.editable
+        contextDiagnostic = presented.diagnostic
+        contextSlot = presented.slot
+        contextVoiceName = presented.map.voiceName
+        publish(\.detentsAvailable, presented.status == .resolved && presented.map.isPSG)
+    }
+
+    private func applyPresentation(_ presentation: SharedPlayheadPresentation) {
+        let tick = velocityContextTick(presentation.tick)
+        if lastPresentedPublication?.tick != tick || lastPresentedPublication?.playing != presentation.playing {
+            lastPresentedPublication = (tick, presentation.playing)
+            playheadPresentationCount &+= 1
+        }
+        playing = presentation.playing
+        contextTick = tick
+    }
+
     /// Document, undo/redo, track or bank publication: stale captures cancel,
     /// then document content and selection presentation rebuild together.
     @QtIgnored
-    public func refreshFromDocument() {
+    public func refreshFromDocument(presentation: SharedPlayheadPresentation? = nil) {
         refreshPromptStyle()
         guard let session else { return }
+        if let presentation {
+            applyPresentation(presentation)
+        }
         appliedPrimaryTrack = session.selectedTrack
         reconcileCapturedTargets(session)
         rebuildContent()
@@ -360,10 +377,17 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
             return
         }
         reconcileCapturedTargets(session)
+        let facts = resolveSemanticFacts()
+        publishPresentationContext(facts)
+        guard contentVisible else {
+            contentRefreshPending = true
+            publishReadout(facts: facts)
+            return
+        }
         guard plotHeight > 0 || plotWidth > 0 else { return }
-        publishPresentationContext()
-        refreshAxisAndHandles(republishDisplayLists: false)
+        refreshAxisAndHandles(facts: facts, republishDisplayLists: false)
         publishTransient(updateDrawing: false)
+        publishDisplayLists()
     }
 
     /// Retires a gesture or prompt frozen against an older revision or track
@@ -375,6 +399,10 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     }
 
     private func reconcileCapturedTargets(_ session: DocumentSession) {
+        if let hovered {
+            let current = session.selectedTrack.flatMap { session.projectionCache.note(hovered, in: $0) }
+            if current == nil { self.hovered = nil }
+        }
         if let gesture,
             gesture.revision != session.document.revision
                 || gesture.track != (session.selectedTrack ?? -1)
@@ -392,12 +420,13 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
     public func refreshEditCursor() {
         guard let session, !playing else { return }
         contextTick = session.editCursor
-        let presented = VelocityScene.presentation(
-            session, playing: false,
-            contextTick: contextTick)
+        let facts = resolveSemanticFacts()
+        let presented =
+            facts?.selectionContext ?? facts?.source.context(at: contextTick)
+            ?? VelocityVoiceContext(status: .unresolvedVoice)
         let next = VelocityContextKey(context: presented, playing: false)
         guard lastContextKey != next else { return }
-        rebuildContent()
+        rebuildContent(facts: facts)
     }
 
     /// One shared-playhead presentation, delivered by `ApplicationSession`'s
@@ -430,12 +459,15 @@ public final class VelocityPage: EditorDrawerPage, QmlUncreatable {
         }
 
         let effective = playing ? resolvedTick : session.editCursor
-        let next = VelocityScene.contextKey(session, at: effective, playing: playing)
+        let facts = resolveSemanticFacts()
+        let next =
+            facts?.source.key(at: effective, playing: playing)
+            ?? VelocityContextKey(context: VelocityVoiceContext(status: .unresolvedVoice), playing: playing)
         presentedContextTick = resolvedTick
         presentedContextSlot = next.slot
         presentedPlaying = playing
         if lastContextKey != next || playingChanged {
-            rebuildContent()
+            rebuildContent(facts: facts)
         } else {
             publishReadout()
         }

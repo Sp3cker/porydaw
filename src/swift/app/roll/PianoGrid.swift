@@ -6,7 +6,6 @@ import QtBridge
 import PorydawAppCommands
 import PorydawAppPresentation
 
-@MainActor
 struct GridNote: Equatable {
     let noteId: NoteID
     let tick: Int
@@ -44,7 +43,7 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored
     let commands: NoteCommands
     @QtIgnored
-    var notes: [GridNote] = []
+    var notes: RollNoteContent = []
     @QtIgnored
     var gesture: GridGesture?
     @QtIgnored
@@ -73,6 +72,7 @@ public final class PianoGrid: QmlUncreatable {
     /// Receives the roll's live Ctrl-drag velocity preview; empty when none is staged.
     @QtIgnored public var onVelocityPreviewChanged: (([NoteID: UInt8]) -> Void)?
     @QtIgnored var publishedVelocityPreview: [NoteID: UInt8] = [:]
+    @QtIgnored var publishedVelocityPresentation: RollVelocityPreview?
     @QtIgnored
     var lastCommandAvailability: [Bool] = []
     @QtIgnored var lastStatusPresentation: RollStatusPresentation?
@@ -98,16 +98,6 @@ public final class PianoGrid: QmlUncreatable {
     @QtIgnored var didApplyInitialHome = false
     @QtIgnored
     var contentEndTick = GridMetrics.songLengthTicks
-    @QtIgnored
-    var staticSceneDirty = true
-    @QtIgnored
-    var lastEndTickNotes: [GridNote]?
-    @QtIgnored
-    var lastEndTickPreview: (tick: Int, duration: Int, pitch: Int)?
-    @QtIgnored
-    var lastEndTickPaintCount = 0
-    @QtIgnored
-    var lastEndTickLength: Tick?
 
     @QtTracked public var scene = GridScene()
     /// The palette the roll draws with: assigned once by `init`, either the
@@ -327,7 +317,7 @@ public final class PianoGrid: QmlUncreatable {
 
     public func focusNoteUnderCursor(x: Double, y: Double) -> Bool {
         guard let hit = hitNote(x: x, y: y) else { return false }
-        applyPressSelection(notes[hit.index].noteId, modifiers: 0)
+        applyPressSelection(notes.primaryNotes[hit.index].noteId, modifiers: 0)
         refreshNotes()
         return true
     }
@@ -373,7 +363,9 @@ public final class PianoGrid: QmlUncreatable {
         let next = key >= 0 ? key : -1
         if next != hoverKey {
             hoverKey = next
-            scene.rebuildHover(sceneInput())
+            let input = sceneInput()
+            scene.rebuildNotes(input)
+            scene.rebuildHoverChip(input)
         }
         guard gesture == nil else { return }
         let hovered: GridCursorKind
@@ -395,7 +387,9 @@ public final class PianoGrid: QmlUncreatable {
     public func clearKeyboardHover() {
         guard hoverKey != -1 else { return }
         hoverKey = -1
-        scene.rebuildHover(sceneInput())
+        let input = sceneInput()
+        scene.rebuildNotes(input)
+        scene.rebuildHoverChip(input)
     }
 
     public func beginKeyboardPointer(y: Double) { beginKeyboardPointerImpl(y: y) }

@@ -68,7 +68,8 @@ extension DrawerStaticsContent {
     public static func retainedEmptyDisplayList(cached: inout Data?) -> Data {
         if let cached { return cached }
         var writer = DisplayListWriter()
-        let empty = writer.finish()
+        var empty = Data()
+        writer.replace(into: &empty)
         cached = empty
         return empty
     }
@@ -99,8 +100,9 @@ extension DrawerStaticsContent {
         let begin = Tick(min(limit, floor(max(0.0, origin - margin) / ppt)))
         let end = Tick(min(limit, max(0.0, ceil((origin + width + margin) / ppt) + 1.0)))
         guard end > begin else { return }
-        var out = writer
-        defer { writer = out }
+        var out = DisplayListWriter()
+        swap(&writer, &out)
+        defer { swap(&writer, &out) }
         grid.forEachSubdivision(from: begin, to: end, camera: camera) { tick, level in
             let argb: UInt32 = level == 1 ? sub1 : level == 2 ? sub2 : sub3
             Self.drawerEmit(

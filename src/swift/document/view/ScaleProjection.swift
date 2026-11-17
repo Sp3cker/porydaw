@@ -21,17 +21,21 @@ public struct ScaleProjection: Equatable, Sendable {
         (0..<128).contains(pitch) && scale.isPitch(pitch, root: root)
     }
 
-    /// Fold displays exactly the selected track's occupied MIDI pitches, not
-    /// every member of the scale: occupied chromatic exceptions stay visible.
-    public func projection(notes: [Note]) -> PitchProjection {
-        guard fold else { return PitchProjection() }
-        var occupied = Array(repeating: false, count: 128)
+    static func occupiedPitchProjection(notes: [Note]) -> PitchProjection {
+        var occupied = InlineArray<128, Bool>(repeating: false)
         for note in notes { occupied[Int(note.pitch)] = true }
         var visible: [UInt8] = []
         visible.reserveCapacity(128)
         for pitch in 0..<128 where occupied[pitch] { visible.append(UInt8(pitch)) }
 
         return PitchProjection(visiblePitches: visible)
+    }
+
+    /// Fold displays exactly the selected track's occupied MIDI pitches, not
+    /// every member of the scale: occupied chromatic exceptions stay visible.
+    public func projection(notes: [Note]) -> PitchProjection {
+        guard fold else { return PitchProjection() }
+        return Self.occupiedPitchProjection(notes: notes)
     }
     /// Resolve a selected batch in pitch order, preserving distinct degrees
     /// and assigning repeated source pitches the same destination.

@@ -472,8 +472,9 @@ private func checkKeyboardSkipsGhosts(_ report: CheckReport, viewport: DocumentV
         }
         grid.refreshFromSession()
         report.expect(
-            grid.notes.contains {
-                $0.noteId == ghostID && $0.ghost
+            other != grid.notes.selectedTrack
+                && grid.notes.tracks[other].notes.contains {
+                    $0.noteId == ghostID
             }, cppID: id, message: "the other-track note projects as a ghost")
         session.setSelectedNotes([seed.id])
         grid.performCommand(command: EditCommand.transposeUp.rawValue)

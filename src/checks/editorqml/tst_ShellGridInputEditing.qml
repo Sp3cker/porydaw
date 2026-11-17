@@ -1,6 +1,7 @@
 import QtQuick
 import QtTest
 import "RollNoteFaces.js" as RollNoteFaces
+import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
 ShellGridInputSupport {
     function test_drawMoveNeighborTrim() {
@@ -285,24 +286,13 @@ ShellGridInputSupport {
                "the expanded velocity band paints its interior")
         verify(!changedAt(expanded, farX / 2, (farY + startY) / 2),
                "the expanded velocity band starts at the pointer horizontally")
-        // Handles publish scroll-stable x; the rendered note sits at the
-        // shared camera scroll offset, exactly as the mounted delegates draw it.
-        var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
-        var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
-        function findHandleRow(item) {
-            for (var child of item.children) {
-                if (child.model && child.model.noteIdText === String(target.id))
-                    return child.model
-                var nested = findHandleRow(child)
-                if (nested !== null)
-                    return nested
-            }
-            return null
-        }
-        var targetNode = findHandleRow(plot)
-        verify(targetNode && targetNode.x + originX > farX
-               && targetNode.x + originX < startX
-               && targetNode.y > farY && targetNode.y < startY,
+        var targetNode = velocityDrawing().find(function(handle) {
+            return handle.noteIdText === String(target.id)
+        })
+        var targetCenter = targetNode ? VelocityDrawing.center(targetNode) : null
+        verify(targetCenter && targetCenter.x > farX
+               && targetCenter.x < startX
+               && targetCenter.y > farY && targetCenter.y < startY,
                "the expanded mounted band actually covers the independently located note")
         mouseMove(input, nearX, nearY, -1, Qt.RightButton)
         wait(0)
@@ -312,7 +302,7 @@ ShellGridInputSupport {
                "the contracted velocity band still paints its interior")
         verify(!changedAt(contracted, (farX + nearX) / 2, (nearY + startY) / 2),
                "the contracted velocity band retracts horizontally while pressed")
-        verify(targetNode.x + originX < nearX,
+        verify(targetCenter.x < nearX,
                "the contracted mounted band excludes the rendered note before release")
         mouseRelease(input, nearX, nearY, Qt.RightButton)
         wait(0)
@@ -371,16 +361,6 @@ ShellGridInputSupport {
         verify(intended.length > 0, "the eligible selection is non-empty before the incidental presses")
         // One row per fork probe in kCoreBands; the single verify below is
         // the fork's :159 predicate, executed once per incidental surface.
-        function findStemRow(item, wanted) {
-            for (var child of item.children) {
-                if (child.model && child.model.noteIdText === String(wanted))
-                    return child.model
-                var nested = findStemRow(child, wanted)
-                if (nested !== null)
-                    return nested
-            }
-            return null
-        }
         // Velocity mirrors the fork probe: a threshold-crossing drag from
         // the selected stem retains the group instead of collapsing it.
         function pressVelocityStem() {
@@ -389,16 +369,16 @@ ShellGridInputSupport {
             var input = findChild(page, "velocityPlotInput")
             verify(page && plot && input && input.visible, "the mounted velocity plot takes the stem drag")
             var stemId = banded[0].id
-            var stem = findStemRow(plot, stemId)
-            if (stem === null) {
+            var drawing = velocityDrawing()
+            var stem = drawing.find(function(handle) { return handle.noteIdText === String(stemId) })
+            if (stem === undefined) {
                 stemId = banded[1].id
-                stem = findStemRow(plot, stemId)
+                stem = drawing.find(function(handle) { return handle.noteIdText === String(stemId) })
             }
-            verify(stem !== null, "the staged selection publishes a velocity stem")
-            var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
-            var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
-            var px = Math.max(1, Math.min(input.width - 1, Math.round(stem.x + originX)))
-            var py = Math.max(1, Math.min(input.height - 1, Math.round(stem.y)))
+            verify(stem !== undefined, "the staged selection publishes a velocity stem")
+            var point = VelocityDrawing.center(stem)
+            var px = Math.max(1, Math.min(input.width - 1, Math.round(point.x)))
+            var py = Math.max(1, Math.min(input.height - 1, Math.round(point.y)))
             verify(px > 1 && px < input.width - 1 && py > 1 && py < input.height - 1,
                    "the selected stem lands inside the mounted velocity plot")
             var beforeVelocity = noteById(grid, stemId).velocity

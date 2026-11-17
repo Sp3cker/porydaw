@@ -110,9 +110,11 @@ extension AutomationPage {
             previousSession.removeSelectionTransitionObserver(selectionTransitionToken)
         }
         self.viewport = viewport
+        appliedContentFacts = nil
         selectionTransitionToken = viewport.session.addSelectionTransitionObserver { [weak self] _ in
             guard let self else { return }
-            self.rebuildContent(selectionOnly: true)
+            self.invalidateDocumentInteraction()
+            self.refreshFromDocumentImpl(selectionOnly: true)
             self.onCommandAvailabilityChanged?()
         }
         self.palette = palette
@@ -132,6 +134,8 @@ extension AutomationPage {
         }
         selectionTransitionToken = nil
         viewport = nil
+        appliedContentFacts = nil
+        contentRefreshPending = false
         projection = nil
         rows = []
         selectedParameters = []

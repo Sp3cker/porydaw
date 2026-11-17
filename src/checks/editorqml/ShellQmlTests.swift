@@ -626,6 +626,11 @@ public final class ShellQmlBootstrap: QmlInstantiableStatus {
             """
     }
 
+    /// Decodes the mounted page's real display-list geometry, not visual delegates.
+    public func velocityDrawing(tabId: Int) -> String {
+        velocityDrawingJSON(polyphonySession?.songTabs.tab(id: tabId)?.velocityPage())
+    }
+
     public func setVelocityCommand() -> Int { EditCommand.setVelocity.rawValue }
     public func velocitySectionKind() -> Int { DrawerSectionKind.velocity.rawValue }
 }

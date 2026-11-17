@@ -1,4 +1,5 @@
 import Foundation
+import NativeDisplayList
 import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
@@ -19,47 +20,70 @@ extension VelocityPage {
         DrawerStaticsContent.retainedEmptyDisplayList(cached: &cachedEmptyDisplayList)
     }
 
-    @QtIgnored func rebuildContent() {
-        guard session != nil, plotHeight > 0 || plotWidth > 0 else { return }
+    @QtIgnored func rebuildContent(facts: SemanticFacts? = nil) {
+        guard session != nil else { return }
+        let facts = facts ?? resolveSemanticFacts()
+        publishPresentationContext(facts)
+        guard contentVisible else {
+            contentRefreshPending = true
+            publishReadout(facts: facts)
+            return
+        }
+        guard plotHeight > 0 || plotWidth > 0 else {
+            contentRefreshPending = true
+            return
+        }
+        contentRefreshPending = false
         contentBuildCount &+= 1
         geometry = VelocityNodeGeometry(
             baseFontPx: baseFontPx,
             devicePixelRatio: devicePixelRatio)
-        publishPresentationContext()
-        refreshAxisAndHandles(republishDisplayLists: false)
+        let input = refreshAxisAndHandles(facts: facts, republishDisplayLists: false)
         publishTransient(updateDrawing: false)
-        publishDisplayLists()
+        publishDisplayLists(bandsInput: input)
     }
-
-    @QtIgnored func publishPresentationContext() {
-        let presented = VelocityScene.presentation(
-            session, playing: playing,
-            contextTick: contextTick)
-        resolvedContextValue = presented
-        lastContextKey = VelocityContextKey(context: presented, playing: playing)
-        contextUnsupported = !presented.editable
-        contextDiagnostic = presented.diagnostic
-        contextSlot = presented.slot
-        contextVoiceName = presented.map.voiceName
-        publish(\.detentsAvailable, presented.status == .resolved && presented.map.isPSG)
+    /// Resolves one refresh's semantic snapshot; consumers share these facts.
+    func resolveSemanticFacts() -> SemanticFacts? {
+        guard let session else { return nil }
+        let source = VelocityScene.contextSource(session)
+        let selected = VelocityScene.selectedTrackNotes(session)
+        let selectionContext: VelocityVoiceContext?
+        if selected.isEmpty {
+            selectionContext = nil
+        } else {
+            selectionContext = VelocityContextPolicy.presentation(
+                selectedNotes: selected, effectiveTick: 0, resolve: source.resolver())
+        }
+        return SemanticFacts(
+            source: source, selectionContext: selectionContext, selectedNotes: selected)
     }
 
     /// Republishes the axis, handle and ruler rows; a content rebuild passes
     /// `false` because it publishes its display lists after the transient.
-    @QtIgnored func refreshAxisAndHandles(republishDisplayLists: Bool = true) {
-        var input = sceneInput(reuseGeometry: false)
+    @discardableResult
+    @QtIgnored func refreshAxisAndHandles(
+        facts: SemanticFacts? = nil, republishDisplayLists: Bool = true
+    ) -> VelocitySceneInput? {
+        let facts = facts ?? resolveSemanticFacts()
+        let input = sceneInput(facts: facts)
         let nextAxis = VelocityScene.axisModel(input)
-        input.reuseGeometry = handleReuseGeometry(axis: nextAxis)
-        let values = VelocityScene.handleRows(input, axis: nextAxis, previousHandles: handlesByID)
+        VelocityScene.handleRows(input, axis: nextAxis, into: &handleBuffer)
+        rebuildAxis(nextAxis)
+        publishHandles()
+        publish(\.selectedCount, facts?.selectedNotes.count ?? 0)
+        guard contentVisible else {
+            contentRefreshPending = true
+            publishReadout(facts: facts)
+            return nil
+        }
         let relativeGesture =
             input.interaction.relativeActivated
             || input.selectedNotes.count > 1 || input.interaction.hovered != nil
         let rows = VelocityScene.axisRows(input, axis: nextAxis, relativeGesture: relativeGesture)
-        rebuildAxis(nextAxis)
-        publishHandles(values)
         publishAxis(rows)
         publishReadout()
-        if republishDisplayLists { publishDisplayLists() }
+        if republishDisplayLists { publishDisplayLists(bandsInput: input) }
+        return input
     }
 
     /// Applies one build's value axis to the page's published axis values.
@@ -72,12 +96,16 @@ extension VelocityPage {
 
     // MARK: Scene input
 
-    /// The primary track's note rows, projected against the published axis: the
-    /// scoped build a live gesture uses, so motion never rebuilds static content.
-    @QtIgnored func projectHandles(window: ClosedRange<Double>? = nil) -> [VelocityHandle] {
+    /// Reprojects live geometry without rebuilding the retained axes and bands.
+    @QtIgnored func refreshHandles(window: ClosedRange<Double>? = nil, updateDrawing: Bool = true) {
         VelocityScene.handleRows(
-            sceneInput(reuseGeometry: handleReuseGeometry(), window: window),
-            axis: axis, previousHandles: handlesByID)
+            sceneInput(window: window), axis: axis, into: &handleBuffer)
+        publishHandles(window: window)
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
+        if updateDrawing { publishDisplayLists() }
     }
 
     /// Camera movement keeps retained rows stable until the viewport leaves
@@ -85,32 +113,28 @@ extension VelocityPage {
     @QtIgnored
     public func refreshCamera() {
         guard viewport != nil else { return }
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
+        if contentRefreshPending {
+            rebuildContent()
+            return
+        }
         let window = handleWindowForCamera()
         if window != publishedHandleWindow {
-            publishHandles(projectHandles(window: window), window: window)
+            refreshHandles(window: window, updateDrawing: false)
         }
         let projection = self.projection
-        for handle in publishedHandles {
-            let x = projection.stableXForTick(handle.tick)
-            let endX = projection.stableXForTick(handle.endTick)
-            handle.publish(\.x, x)
-            handle.publish(\.endX, endX)
+        for index in publishedHandles.indices {
+            publishedHandles[index].x = projection.stableXForTick(publishedHandles[index].tick)
+            publishedHandles[index].endX = projection.stableXForTick(publishedHandles[index].endTick)
         }
         publishTransient(updateDrawing: false)
         // Viewport-space lists: every camera move rebuilds both lists together.
-        publishDisplayLists(rebuildBands: false)
+        publishDisplayLists()
     }
 
-    /// The handle-reuse decision: geometry, track, DPR and axis mode form one
-    /// key, and an unchanged key reuses the previous handle objects in place.
-    private func handleReuseGeometry(axis nextAxis: VelocityAxisModel? = nil) -> Bool {
-        let key = HandleGeometryKey(
-            geometry: geometry, track: session?.selectedTrack ?? 0,
-            dpr: devicePixelRatio, intrinsic: (nextAxis ?? axis).mode == .intrinsic)
-        let reuse = handleGeometryKey == key
-        handleGeometryKey = key
-        return reuse
-    }
 
     /// Keep the current overscan until the visible ticks escape it.
     private func handleWindowForCamera() -> ClosedRange<Double>? {
@@ -129,30 +153,27 @@ extension VelocityPage {
     }
 
     /// Everything one scene build reads, as values: the session's document facts,
-    /// the page's live interaction snapshot and its cached grid metrics.
-    func sceneInput(reuseGeometry: Bool, window: ClosedRange<Double>? = nil) -> VelocitySceneInput {
+    /// the page's live interaction snapshot and drawn geometry.
+    func sceneInput(
+        facts: SemanticFacts? = nil, window: ClosedRange<Double>? = nil
+    ) -> VelocitySceneInput {
         let session = self.session
         return VelocitySceneInput(
             camera: viewport?.camera,
             handleTickWindow: window ?? handleWindowForCamera(),
             context: resolvedContextValue,
             notes: VelocityScene.trackNotes(session),
-            selectedNotes: VelocityScene.selectedTrackNotes(session),
+            selectedNotes: facts?.selectedNotes ?? VelocityScene.selectedTrackNotes(session),
             selectedNoteIDs: session?.selectedNotes ?? [],
-            track: session?.selectedTrack ?? 0,
-            source: VelocityScene.contextSource(session),
+            source: facts?.source ?? VelocityScene.contextSource(session),
             interaction: interactionSnapshot(),
             geometry: geometry,
-            plotWidth: plotWidth,
             plotHeight: plotHeight,
             rulerWidth: rulerWidth,
             devicePixelRatio: devicePixelRatio,
             baseFontPx: baseFontPx,
             typography: typography,
-            metrics: session.map { gridMetrics($0) },
-            grid: viewport?.grid,
-            palette: scenePalette(),
-            reuseGeometry: reuseGeometry)
+            palette: scenePalette())
     }
 
     /// The page's live gesture and hover facts, frozen for one build.
@@ -169,17 +190,9 @@ extension VelocityPage {
     /// The palette colours a scene build draws with, as values.
     private func scenePalette() -> VelocityScenePalette {
         VelocityScenePalette(
-            gridLineSub1: palette.gridLineSub1,
-            gridLineSub2: palette.gridLineSub2,
-            gridLineSub3: palette.gridLineSub3,
-            gridLineBar: palette.gridLineBar,
-            gridLineBeat: palette.gridLineBeat,
-            gridLineBeatFine: palette.gridLineBeatFine,
             separator: palette.separator,
             primaryText: palette.primaryText,
-            selectionRing: palette.selectionRing,
-            outline: palette.outline,
-            noteBorder: palette.noteBorder)
+            selectionRing: palette.selectionRing)
     }
 
     /// The page's own projection for hit tests and gesture maths: the shared
@@ -192,19 +205,48 @@ extension VelocityPage {
 
     // MARK: Publication
 
-    /// Publishes one handle projection. The page's own array is the authoritative
-    /// copy the hit tests and the checks read, so it moves with the model.
-    @QtIgnored func publishHandles(_ values: [VelocityHandle], window: ClosedRange<Double>? = nil) {
-        let nextByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
-        publishedHandles = values
-        handlesByID = nextByID
-        publishedHandleWindow = window ?? handleWindowForCamera()
-        let selected = session?.selectedNotes ?? []
-        let count = VelocityScene.trackNotes(session).reduce(0) {
-            $0 + (selected.contains($1.id) ? 1 : 0)
+    /// Swaps retained value buffers; no per-note bridge objects are published.
+    @QtIgnored func publishHandles(window: ClosedRange<Double>? = nil) {
+        swap(&publishedHandles, &handleBuffer)
+        handleBuffer.removeAll(keepingCapacity: true)
+        handleIndicesByID.removeAll(keepingCapacity: true)
+        for (index, handle) in publishedHandles.enumerated() {
+            handleIndicesByID[handle.noteID] = index
         }
-        publish(\.selectedCount, count)
-        syncModel(handles, values, matches: { $0.matches($1) })
+        // Coverage changes ink only; axis and editing context keep session selection.
+        if let gesture, gesture.kind == .band {
+            for index in publishedHandles.indices {
+                publishedHandles[index].selected = false
+                publishedHandles[index].dimmed = selectedCount > 1
+            }
+            for id in gesture.bandPreview {
+                guard let index = handleIndicesByID[id] else { continue }
+                publishedHandles[index].selected = true
+                publishedHandles[index].dimmed = false
+            }
+            if gesture.controlPress {
+                for id in selectionBeforePress {
+                    guard let index = handleIndicesByID[id] else { continue }
+                    publishedHandles[index].selected = true
+                    publishedHandles[index].dimmed = false
+                }
+            }
+        }
+        publishedHandleWindow = window ?? handleWindowForCamera()
+        let track = PaletteMath.trackIdentityIndex(session?.selectedTrack ?? 0)
+        handleDrawing = HandleDrawing(
+            stemWidth: geometry.stemDipWidth / devicePixelRatio,
+            selectedStemWidth: geometry.selectedStemDipWidth / devicePixelRatio,
+            nodeRadius: geometry.nodePaintRadius,
+            outlineRadius: geometry.nodePaintRadius + geometry.nodeOutlineDipWidth / 2,
+            outlineWidth: Float(geometry.nodeOutlineDipWidth / devicePixelRatio),
+            ringRadius: geometry.selectedNodeRingRadius + geometry.selectedNodeRingDipWidth / 2,
+            ringWidth: Float(geometry.selectedNodeRingDipWidth / devicePixelRatio),
+            fill: PaletteMath.argb(PaletteMath.trackIdentityColors[track]),
+            dimFill: PaletteMath.argb(palette.outline),
+            stem: PaletteMath.argb(PaletteMath.velocityStemColors[track]),
+            selection: PaletteMath.argb(palette.selectionRing),
+            border: PaletteMath.argb(palette.noteBorder))
     }
 
     /// Publishes one build's ruler rows: the ticks, graduations, markers and
@@ -230,29 +272,83 @@ extension VelocityPage {
         return value
     }
 
-    @QtIgnored func publishDisplayLists(rebuildBands: Bool = true) {
-        guard viewport != nil else { return }
-        let input = sceneInput(reuseGeometry: true)
-        guard let metrics = input.metrics, let grid = input.grid,
-            let camera = input.camera
-        else { return }
-        if rebuildBands { drawingBands = VelocityScene.modelBands(input, axis: axis) }
+    /// Records stay in note paint order: stem, selection ring, fill, outline, hover ring.
+    private func appendHandleDrawing() {
+        guard let drawing = handleDrawing else { return }
+        let scroll = projection.scrollOffsetX
+        let fringe = 0.5 / devicePixelRatio
+        let viewport = CGRect(x: 0, y: 0, width: plotWidth, height: plotHeight)
+        let markerViewport = viewport.insetBy(dx: -fringe, dy: -fringe)
+        for handle in publishedHandles {
+            let x = handle.x - scroll
+            let endX = handle.endX - scroll
+            let id = handle.noteID.rawValue
+            let stemWidth = handle.selected ? drawing.selectedStemWidth : drawing.stemWidth
+            let stem = CGRect(
+                x: min(x, endX), y: handle.y - stemWidth / 2,
+                width: max(1, abs(endX - x)), height: stemWidth)
+            if viewport.intersects(stem) {
+                listWriter.rect(
+                    PdDlRect(
+                        x: stem.minX, y: stem.minY, w: stem.width, h: stem.height,
+                        id: id, argb: handle.selected ? drawing.selection : drawing.stem, flags: 0))
+            }
+            if handle.selected {
+                let ring = drawing.ringRadius
+                let bounds = CGRect(x: x - ring, y: handle.y - ring, width: 2 * ring, height: 2 * ring)
+                if markerViewport.intersects(bounds) {
+                    listWriter.rect(
+                        PdDlRect(
+                            ellipseX: bounds.minX, y: bounds.minY, w: bounds.width, h: bounds.height,
+                            id: id, argb: drawing.selection, strokeWidth: drawing.ringWidth))
+                }
+            }
+            let radius = drawing.nodeRadius
+            let node = CGRect(x: x - radius, y: handle.y - radius, width: 2 * radius, height: 2 * radius)
+            if markerViewport.intersects(node) {
+                listWriter.rect(
+                    PdDlRect(
+                        ellipseX: node.minX, y: node.minY, w: node.width, h: node.height,
+                        id: id, argb: handle.dimmed ? drawing.dimFill : drawing.fill))
+                if handle.selected || !handle.dimmed {
+                    listWriter.rect(
+                        PdDlRect(
+                            ellipseX: node.minX, y: node.minY, w: node.width, h: node.height,
+                            id: id, argb: drawing.border, strokeWidth: drawing.outlineWidth))
+                }
+            }
+            if handle.hovered && !handle.selected {
+                let ring = drawing.outlineRadius
+                let bounds = CGRect(x: x - ring, y: handle.y - ring, width: 2 * ring, height: 2 * ring)
+                if markerViewport.intersects(bounds) {
+                    listWriter.rect(
+                        PdDlRect(
+                            ellipseX: bounds.minX, y: bounds.minY, w: bounds.width, h: bounds.height,
+                            id: id, argb: drawing.selection, strokeWidth: drawing.ringWidth))
+                }
+            }
+        }
+    }
+
+    @QtIgnored func publishDisplayLists(bandsInput: VelocitySceneInput? = nil) {
+        guard contentVisible, let session, let owner = viewport else { return }
+        let camera = owner.camera
+        let grid = owner.grid
+        let metrics = gridMetrics(session)
+        if let bandsInput { drawingBands = VelocityScene.modelBands(bandsInput, axis: axis) }
         let viewport = CGSize(width: plotWidth, height: plotHeight)
         let dpr = devicePixelRatio
         let colors = DrawerStaticsContent.gridPaletteColors(palette)
-        // Release the previous buffers before the retained writer reuses its
-        // own: otherwise finish()'s shared output copies on write each frame.
-        var writer = listWriter
         DrawerStaticsContent.buildGrid(
-            into: &writer, axis: metrics.timeAxis, grid: grid,
+            into: &listWriter, axis: metrics.timeAxis, grid: grid,
             camera: camera, viewport: viewport, paletteColors: colors)
         DrawerStaticsContent.buildTickRects(
-            into: &writer, rects: drawingBands,
+            into: &listWriter, rects: drawingBands,
             camera: camera, dpr: dpr, viewport: viewport)
-        let list0 = writer.finish()
+        appendHandleDrawing()
         if let transient = drawingTransientRects() {
             DrawerStaticsContent.buildTickRects(
-                into: &writer, rects: [transient.fill],
+                into: &transientWriter, rects: [transient.fill],
                 camera: camera, dpr: dpr, viewport: viewport)
             let x0 = camera.viewX(tick: Double(transient.frame.tickStart), dpr: dpr)
             let x1 = camera.viewX(tick: Double(transient.frame.tickEnd), dpr: dpr)
@@ -260,14 +356,13 @@ extension VelocityPage {
                 x: x0, y: Double(transient.frame.y),
                 width: x1 - x0, height: Double(transient.frame.height))
             DrawerStaticsContent.buildDashedFrame(
-                into: &writer, box: box, argb: transient.frame.argb,
+                into: &transientWriter, box: box, argb: transient.frame.argb,
                 dashDevicePx: 4, gapDevicePx: 2, dpr: dpr, viewport: viewport)
         }
-        let list1 = writer.finish()
-        listWriter = writer
-        let next = [list0, list1]
-        guard next != displayLists else { return }
-        displayLists = next
+        if displayLists.isEmpty { displayLists = [Data(), Data()] }
+        let contentChanged = listWriter.replaceIfChanged(into: &displayLists[0])
+        let transientChanged = transientWriter.replaceIfChanged(into: &displayLists[1])
+        guard contentChanged || transientChanged else { return }
         displayRevision &+= 1
     }
 
@@ -316,33 +411,53 @@ extension VelocityPage {
             }
         }
         publishReadout()
-        if updateDrawing { publishDisplayLists(rebuildBands: false) }
+        if updateDrawing { publishDisplayLists() }
     }
 
-    /// The readout: the hovered or dragged value plus the selection count. An
-    /// unchanged publication writes nothing.
-    func publishReadout() {
-        var text = ""
-        var visible = false
-        var x = 0.0
-        var y = 0.0
-        if let hovered, let handle = handlesByID[hovered] {
-            text = handle.label
-            visible = true
-            x = handle.x
-            y = handle.y
+    /// Hidden pages resolve hovered readout semantics without stale drawing rows.
+    func publishReadout(facts: SemanticFacts? = nil) {
+        let readout: (text: String, visible: Bool, x: Double, y: Double)
+        if !contentVisible {
+            if let hovered, let session, let track = session.selectedTrack,
+                let note = session.projectionCache.note(hovered, in: track)
+            {
+                let value = Int(rollPreview[hovered] ?? note.velocity)
+                let source = facts?.source ?? VelocityScene.contextSource(session)
+                let map = source.map(at: note.tick, key: Int(note.pitch))
+                let level = map.level(of: value) ?? -1
+                let text = map.levelCount > 0 && level >= 0 ? "Vol \(level + 1)" : "\(value)"
+                let projection = self.projection
+                readout = (
+                    text, true, projection.stableXForTick(Double(note.tick)),
+                    projection.yForNote(map: map, velocity: value, detentUnlock: !detentsEnabled)
+                )
+            } else {
+                readout = ("", false, 0, 0)
+            }
+        } else if let hovered, let index = handleIndicesByID[hovered] {
+            let handle = publishedHandles[index]
+            let text =
+                axis.mode == .intrinsic && handle.level >= 0
+                ? "Vol \(handle.level + 1)" : "\(handle.value)"
+            readout = (text, true, handle.x, handle.y)
         } else if let gesture, let first = gesture.notes.first {
-            let handle = handlesByID[first.noteID]
+            let handle = handleIndicesByID[first.noteID].map { publishedHandles[$0] }
             let preview = gesture.preview[first.noteID].map(Int.init) ?? Int(first.velocity)
-            text = handle?.label ?? "\(preview)"
-            visible = true
-            x = handle?.x ?? 0
-            y = handle?.y ?? 0
+            let text: String =
+                if let handle {
+                    axis.mode == .intrinsic && handle.level >= 0
+                        ? "Vol \(handle.level + 1)" : "\(handle.value)"
+                } else {
+                    "\(preview)"
+                }
+            readout = (text, true, handle?.x ?? 0, handle?.y ?? 0)
+        } else {
+            readout = ("", false, 0, 0)
         }
-        publish(\.readoutText, text)
-        publish(\.readoutVisible, visible)
-        publish(\.readoutX, x)
-        publish(\.readoutY, y)
+        publish(\.readoutText, readout.text)
+        publish(\.readoutVisible, readout.visible)
+        publish(\.readoutX, readout.x)
+        publish(\.readoutY, readout.y)
         publish(\.hoveredNoteText, hovered.map(velocityNoteText) ?? "")
     }
 

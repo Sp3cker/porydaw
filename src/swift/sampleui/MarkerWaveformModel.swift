@@ -301,11 +301,13 @@ public final class MarkerWaveformModel: QmlUncreatable {
         let highlightHi = min(max(0, highlightEnd), upper)
         let highlight: (start: Int, end: Int)? =
             highlightLo < highlightHi ? (highlightLo, highlightHi) : nil
-        lists[0] = scene.buildMain(
+        guard
+            scene.buildMain(
             samples: samples, pyramid: pyramid, width: width, height: height,
             scroll: scroll, spp: spp, gain: gain, markers: rows,
             badges: sliceBadges, highlight: highlight,
-            playheadFrame: playheadFrame, fontPx: baseFontPx, sampleRate: sampleRate)
+                playheadFrame: playheadFrame, fontPx: baseFontPx, sampleRate: sampleRate, into: &lists[0])
+        else { return }
         displayRevision += 1
     }
 }

@@ -134,6 +134,10 @@ extension AutomationPage {
     /// without rebuilding the value axis or document-derived selector state.
     @QtIgnored
     public func refreshHorizontalProjection() {
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
         guard let viewport, projection != nil else { return }
         let facts = facts(parameter: activeParameter, modifiers: .init(), viewport: viewport)
         let cameraProjection = makeProjection(facts: facts, camera: viewport.camera)

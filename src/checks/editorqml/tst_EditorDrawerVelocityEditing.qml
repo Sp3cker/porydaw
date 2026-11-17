@@ -61,7 +61,7 @@ EditorDrawerTestSupport {
 
         var input = VelocitySupport.velocityPlotInput(testCase)
         var node = nodes[0]
-        var center = node.mapToItem(input, node.width / 2, node.height / 2)
+        var center = VelocitySupport.center(node)
         mouseClick(input, center.x, center.y, Qt.LeftButton)
         tryVerify(function() { return VelocitySupport.velocityModel(testCase).selectedCount === 1 },
                   1000, "a node click selected exactly its own note")
@@ -79,7 +79,7 @@ EditorDrawerTestSupport {
                 "A001 real pointer press and motion leave published document notes unchanged")
         tryVerify(function() {
             return VelocitySupport.velocityNodes(testCase).some(function(item) {
-                return item.parent.model.noteIdText === String(targetId) && item.parent.model.preview
+                return item.noteIdText === String(targetId) && item.preview
             })
         }, 1000, "A002 the mounted node draws a staged preview before release")
         mouseRelease(input, center.x, raised, Qt.LeftButton)
@@ -170,7 +170,7 @@ EditorDrawerTestSupport {
         }
         var originalNotes = songNotes()
         var node = nodes[0]
-        var center = node.mapToItem(input, node.width / 2, node.height / 2)
+        var center = VelocitySupport.center(node)
         mousePress(input, center.x, center.y, Qt.LeftButton)
         mouseMove(input, center.x, center.y - 24, -1, Qt.LeftButton)
         var model = VelocitySupport.velocityModel(testCase)

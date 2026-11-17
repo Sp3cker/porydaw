@@ -64,7 +64,7 @@ enum GridGesture {
                 return
             }
             for note in existing
-            where !note.ghost && note.pitch == key && note.tick < end && tick < note.tick + note.duration {
+            where note.pitch == key && note.tick < end && tick < note.tick + note.duration {
                 return
             }
             notes.append(RollPreviewNote(tick: tick, duration: end - tick, pitch: key))
@@ -360,9 +360,9 @@ extension PianoGrid {
         var hit: (index: Int, zone: HitZone)?
         var hitInside = false
         var grip: (index: Int, zone: HitZone)?
-        for index in notes.indices {
-            if notes[index].ghost { continue }
-            let (zone, inside) = hitZone(x: x, y: y, note: notes[index])
+        let primary = notes.primaryNotes
+        for index in primary.indices {
+            let (zone, inside) = hitZone(x: x, y: y, note: primary[index])
             if zone == .none { continue }
             hit = (index, zone)
             hitInside = inside
@@ -507,7 +507,7 @@ extension PianoGrid {
     @QtIgnored
     func bandCoveredNotes() -> [GridNote] {
         guard let band = selectionBand else { return [] }
-        return notes.filter { bandContains($0, in: band) }
+        return notes.primaryNotes.filter { bandContains($0, in: band) }
     }
 
     @QtIgnored
@@ -536,10 +536,7 @@ extension PianoGrid {
     func publishBandAuditionCoverage() {
         guard let onBandAudition, let band = selectionBand else { return }
         bandAuditionScratch.removeAll(keepingCapacity: true)
-        let currentNotes = notes
-        let projected = currentNotes.span
-        for index in projected.indices {
-            let note = projected[index]
+        for note in notes.primaryNotes {
             guard bandContains(note, in: band),
                 let source = session.document.note(note.noteId), source.duration > 0
             else {
@@ -571,9 +568,8 @@ extension PianoGrid {
             let pressTick = viewport.camera.tickAtContentX(x)
             let pressKey = pitch(atY: y)
             guard pressKey >= 0 else { return false }
-            let previousHoverKey = hoverKey
             if let hit = hitNote(x: x, y: y) {
-                let note = notes[hit.index]
+                let note = notes.primaryNotes[hit.index]
                 let control = modifiers & QtFact.controlModifier != 0
                 pendingControlToggle =
                     control && session.selectedNotes.contains(note.noteId)
@@ -625,7 +621,7 @@ extension PianoGrid {
                     let cell = viewport.grid.visibleGridCellContaining(
                         TimeDefaults.tick(from: max(0, pressTick)), camera: viewport.camera)
                     var paint = GridGesture.Paint(
-                        existing: notes, cellTick: cell.start, key: pressKey, pointerX: x, pointerY: y)
+                        existing: notes.primaryNotes, cellTick: cell.start, key: pressKey, pointerX: x, pointerY: y)
                     paint.add(cell)
                     gesture = .paint(paint)
                 } else {
@@ -637,7 +633,6 @@ extension PianoGrid {
                 keyboardAuditionTrack = trackIndex
                 onAudition?(trackIndex, pressKey, min(127, max(1, lastVelocity)))
             }
-            if hoverKey != previousHoverKey { scene.rebuildHover(sceneInput()) }
             return true
         }
         guard began else { return }
@@ -808,7 +803,7 @@ extension PianoGrid {
         rightGesture = .pendingMenu(
             GridGesture.PendingMenu(
                 pressX: x, pressY: y, threshold: blockedByLeft ? .infinity : dragDistance,
-                hitNoteId: hit.map { notes[$0.index].noteId } ?? NoteID()))
+                hitNoteId: hit.map { notes.primaryNotes[$0.index].noteId } ?? NoteID()))
         publishOutputs()
     }
 
@@ -879,7 +874,7 @@ extension PianoGrid {
         stopAudition()
         if let hit = hitNote(x: x, y: y) {
             gesture = nil
-            let id = notes[hit.index].noteId
+            let id = notes.primaryNotes[hit.index].noteId
             let ids = session.selectedNotes.contains(id) ? session.selectedNoteOrder : [id]
             session.document.deleteNotes(ids)
             session.clearSelectedNotes()
@@ -911,7 +906,7 @@ extension PianoGrid {
     func beginKeyboardPointerImpl(y: Double) {
         let key = pitch(atY: y)
         guard (0...127).contains(key) else { return }
-        session.setSelectedNotes(notes.filter { !$0.ghost && $0.pitch == key }.map(\.noteId))
+        session.setSelectedNotes(notes.primaryNotes.filter { $0.pitch == key }.map(\.noteId))
         refreshNotes()
         updateKeyboardPointer(y: y)
     }
@@ -925,7 +920,9 @@ extension PianoGrid {
         keyboardAuditionTrack = track
         onAudition?(track, key, 100)
         hoverKey = key
-        scene.rebuildHover(sceneInput())
+        let input = sceneInput()
+        scene.rebuildNotes(input)
+        scene.rebuildHoverChip(input)
     }
 
     func endKeyboardPointerImpl() {

@@ -73,6 +73,17 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     private var bytes = Data()
     private var emptyBytes: Data?
     private var active = false
+    @QtIgnored var contentVisible = true {
+        didSet {
+            guard contentVisible != oldValue else { return }
+            if contentVisible {
+                if contentRefreshPending { refreshFromDocument() }
+            } else {
+                cancelSectionInteraction()
+            }
+        }
+    }
+    @QtIgnored var contentRefreshPending = false
     private var message = ""
     private var outputMessage = ""
     private var renderMessage = ""
@@ -178,6 +189,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         selectedTrack = nil
         effectID = nil
         output = nil
+        contentRefreshPending = false
         maximumDuration = 0
         visibleRange = 0..<0
         noteGeometry = nil
@@ -206,10 +218,12 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         publish(\.selectedCount, selected.count)
         var low = 127
         var high = 0
+        maximumDuration = 0
         if let output {
             for note in output.notes {
                 low = min(low, Int(note.pitch))
                 high = max(high, Int(note.pitch))
+                maximumDuration = max(maximumDuration, note.duration)
             }
         }
         publish(\.minimumPitch, noteCount == 0 ? 0 : low)
@@ -285,11 +299,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         cancelSectionInteraction()
         selected.removeAll(keepingCapacity: true)
         output = effectID.flatMap { (id: EffectID) -> EffectOutput? in effects?.outputs[id] }
-        maximumDuration = 0
         visibleRange = 0..<(output?.notes.count ?? 0)
-        if let output {
-            for note in output.notes { maximumDuration = max(maximumDuration, note.duration) }
-        }
         message = ""
         outputMessage = ""
         if let output {
@@ -310,15 +320,29 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
         refreshHeader()
     }
 
+    /// Retires captured interaction immediately even when content waits for reveal.
+    @QtIgnored
+    public func invalidateDocumentInteraction() {
+        let track = viewport?.session.selectedTrack
+        let id = track.flatMap { viewport?.session.document.effect(onTrack: $0)?.id }
+        if track != selectedTrack || id != effectID {
+            cancelOperation()
+            cancelSectionInteraction()
+        }
+    }
+
     @QtIgnored
     public func refreshFromDocument() {
         let track = viewport?.session.selectedTrack
         let id = track.flatMap { (track: Int) -> EffectID? in viewport?.session.document.effect(onTrack: track)?.id }
         if track != selectedTrack || id != effectID {
-            cancelOperation()
+            invalidateDocumentInteraction()
             selectedTrack = track
             effectID = id
             loadOutput()
+        } else if contentRefreshPending {
+            rebuildGeometry()
+            refreshHeader()
         } else {
             refreshHeader()
         }
@@ -369,6 +393,11 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     }
 
     private func rebuildGeometry() {
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
+        contentRefreshPending = false
         let count = output?.notes.count ?? 0
         fills.removeAll(keepingCapacity: true)
         fills.reserveCapacity(count)
@@ -396,6 +425,10 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
 
     @QtIgnored
     public func refreshCamera() {
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
         guard let camera = viewport?.camera.snapshot, let output else {
             noteGeometry = nil
             if output == nil { visibleRange = 0..<0 }
@@ -435,8 +468,6 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
     }
 
     private func publishScene() {
-        // Drop the Data alias before the retained writer mutates its output storage.
-        bytes = Data()
         let pixel = 1 / devicePixelRatio
         if let rangeBand {
             emit(rangeBand, argb: PaletteMath.argb(colors.selectionFill))
@@ -463,7 +494,7 @@ public final class EffectOutputPage: EditorDrawerPage, QmlUncreatable {
                 dashDevicePx: baseFontPx / 3 * devicePixelRatio, gapDevicePx: baseFontPx / 6 * devicePixelRatio,
                 dpr: devicePixelRatio, viewport: CGSize(width: plotWidth, height: plotHeight))
         }
-        bytes = writer.finish()
+        writer.replace(into: &bytes)
         displayRevision &+= 1
     }
 

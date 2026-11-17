@@ -330,6 +330,7 @@ ShellDrawerParitySupport {
                 && Math.abs(tick - fineEndpoint.coarse) > pixelTickTolerance
         }), "the visible Alt stroke follows the fine endpoint within one painted pixel, not coarse snap")
     }
+
     function test_dGripKeyboardIsolation() {
         openDrawerShell("automations")
         var page = automationPageItem()

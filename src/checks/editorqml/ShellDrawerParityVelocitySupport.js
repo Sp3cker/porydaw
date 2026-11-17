@@ -1,5 +1,6 @@
 .import "ShellDrawerParityRasterSupport.js" as Raster
 .import "ShellDrawerParityVelocityInputSupport.js" as VelocityInput
+.import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
     function dragMountedVelocity(testCase, unlockAtPress) {
         testCase.openDrawerShell("velocity")
@@ -40,17 +41,17 @@
         var notes = [originalNotes[3], originalNotes[5], originalNotes[4]]
         var capture = testCase.shell.contentItem
         var page = testCase.velocityPageItem()
-        var unselectedFill = testCase.collectByName(page, "velocityNodeFill", []).find(function(fill) {
-            return fill.parent.model.noteIdText === String(notes[0].id)
-        })
+        var plot = testCase.findChild(page, "velocityPlot")
+        var unselected = testCase.velocityHandleFor(notes[0].id)
+        var unselectedFill = unselected ? unselected.fill : null
         testCase.verify(unselectedFill, "the staged ordinary velocity node is mounted before selection")
         testCase.waitForRendering(testCase.tabsRoot())
         var ordinaryFrame = testCase.grabImage(capture)
-        testCase.verify(Raster.nearestPaintedColor(testCase, ordinaryFrame, capture, unselectedFill,
+        testCase.verify(VelocityDrawing.nearestRecordInk(testCase, ordinaryFrame, capture, plot, unselectedFill,
                                    page.gridPalette.noteBorder) <= 16,
                "an ordinary velocity node paints the antialiased semantic black outline")
-        testCase.verify(Raster.paintedColor(testCase, ordinaryFrame, capture, unselectedFill,
-                            page.gridPalette.noteFill(0, 127)),
+        testCase.verify(VelocityDrawing.nearestRecordInk(testCase, ordinaryFrame, capture, plot, unselectedFill,
+                            page.gridPalette.noteFill(0, 127)) <= 3,
                "an ordinary velocity node paints its track identity fill")
         var roll = testCase.rollInput()
         grid.setCameraVScroll((127 - (notes[0].pitch + notes[1].pitch) / 2 + 0.5)
@@ -73,7 +74,6 @@
                               selected: JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
                                   return note.selected
                               }).map(function(note) { return [note.id, note.velocity] }) }))
-        var plot = testCase.findChild(page, "velocityPlot")
         var ruler = testCase.findChild(page, "velocityRuler")
         var drawer = testCase.findChild(testCase.selectedSurface(), "editorDrawer")
         var bar = testCase.findChild(drawer, "drawerBar")
@@ -101,27 +101,24 @@
         var graduation = testCase.collectByName(ruler, "velocityRulerGraduations", [])
         testCase.verify(graduation.length === 1,
                "the composed ruler has an intrinsic graduation paint layer")
-        var ring = testCase.findChild(testCase.collectByName(page, "velocityNodeFill", []).find(function(fill) {
-            return fill.parent.model.noteIdText === String(notes[0].id)
-        }).parent, "velocityNodeRing")
-        var outsiderFill = testCase.collectByName(page, "velocityNodeFill", []).find(function(fill) {
-            return fill.parent.model.noteIdText === String(notes[2].id)
-        })
-        var outsiderStem = testCase.findChild(outsiderFill.parent, "velocityNodeStem")
-        testCase.verify(ring && outsiderStem && outsiderFill, "selected and unselected note paint is mounted")
+        var ring = testCase.velocityHandleFor(notes[0].id).ring
+        var outsider = testCase.velocityHandleFor(notes[2].id)
+        var outsiderFill = outsider.fill
+        var outsiderStem = outsider.stem
+        testCase.verify(ring && outsiderStem && outsiderFill, "selected and unselected geometry decodes")
         testCase.waitForRendering(testCase.tabsRoot())
         var selectedFrame = testCase.grabImage(capture)
-        testCase.verify(Raster.paintedColor(testCase, selectedFrame, capture, ring, page.gridPalette.selectionRing),
+        testCase.verify(VelocityDrawing.nearestRecordInk(testCase, selectedFrame, capture, plot, ring, page.gridPalette.selectionRing) <= 3,
                "the selected velocity ring paints the semantic highlight ink")
         var expectedStem = Raster.forkStemShade(testCase, page.gridPalette.noteFill(0, 127))
-        testCase.verify(Raster.nearestPaintedColor(testCase, selectedFrame, capture, outsiderStem, expectedStem) <= 16,
+        testCase.verify(VelocityDrawing.nearestRecordInk(testCase, selectedFrame, capture, plot, outsiderStem, expectedStem) <= 16,
                "the outsider stem paints the independent one-third Oklab track shade")
-        testCase.verify(Raster.paintedColor(testCase, selectedFrame, capture, outsiderFill, page.gridPalette.outline),
+        testCase.verify(VelocityDrawing.nearestRecordInk(testCase, selectedFrame, capture, plot, outsiderFill, page.gridPalette.outline) <= 3,
                "the unselected note paints the semantic dimmed mid ink")
-        testCase.compare(outsiderFill.border.width, 0,
+        testCase.compare(outsider.outline, null,
                 "a dimmed note no longer paints an ordinary black outline")
-        testCase.mouseMove(input, outsiderFill.parent.model.x + VelocityInput.velocityPlotOrigin(grid),
-                           outsiderFill.parent.model.y, -1, Qt.NoButton)
+        testCase.mouseMove(input, outsider.x + VelocityInput.velocityPlotOrigin(grid),
+                           outsider.y, -1, Qt.NoButton)
         testCase.verify(testCase.waitForNative(function() {
             return model.hoveredNoteText === String(notes[2].id)
         }, 3000), "hovering the outsider selects its own ruler context")
@@ -172,7 +169,7 @@
         grid.setCameraHScroll(0)
         var velocityBody = testCase.findChild(drawer, "drawerBody_velocity")
         var bodyHeight = velocityBody.height
-        var rowCount = testCase.collectByName(page, "velocityNodeFill", []).length
+        var rowCount = testCase.velocityDrawing().length
         var textRowCount = ruler.children.filter(function(item) {
             return item.labelText !== undefined
         }).length
@@ -185,7 +182,7 @@
         testCase.tryCompare(velocityBody, "visible", true)
         testCase.compare(velocityBody.height, bodyHeight,
                 "showing velocity restores its requested body height")
-        testCase.compare(testCase.collectByName(page, "velocityNodeFill", []).length, rowCount,
+        testCase.compare(testCase.velocityDrawing().length, rowCount,
                 "velocity hide and show retain every painted note row")
         testCase.compare(ruler.children.filter(function(item) {
             return item.labelText !== undefined
@@ -398,21 +395,19 @@
                    "drawing in the real roll commits one selected note stacked over the first stem")
             var stackedHandle = testCase.velocityHandleFor(newStack[0].id)
             testCase.verify(stackedHandle, "the stacked roll note paints a velocity handle")
-            var stackedRing = testCase.collectByName(page, "velocityNodeRing", []).find(function(ring) {
-                return ring.parent.model.noteIdText === String(newStack[0].id)
-            })
-            testCase.verify(stackedRing && stackedRing.visible,
+            var stackedRing = stackedHandle.ring
+            testCase.verify(stackedRing && stackedRing.strokeWidth > 0,
                    "the stacked velocity node owns a visible selected ring")
             testCase.mousePress(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.LeftButton)
             var leftStackFrame = testCase.grabImage(capture)
-            testCase.verify(Raster.paintedColor(testCase, leftStackFrame, capture, stackedRing,
-                                page.gridPalette.selectionRing),
+            testCase.verify(VelocityDrawing.nearestRecordInk(testCase, leftStackFrame, capture, plot, stackedRing,
+                                page.gridPalette.selectionRing) <= 3,
                    "left-pressing the selected stacked velocity node paints highlight ink")
             testCase.mouseRelease(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.LeftButton)
             testCase.mousePress(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.RightButton)
             var pressedStackFrame = testCase.grabImage(capture)
-            testCase.verify(Raster.paintedColor(testCase, pressedStackFrame, capture, stackedRing,
-                                page.gridPalette.selectionRing),
+            testCase.verify(VelocityDrawing.nearestRecordInk(testCase, pressedStackFrame, capture, plot, stackedRing,
+                                page.gridPalette.selectionRing) <= 3,
                    "right-pressing the selected stacked velocity node keeps its highlight ink")
             testCase.mouseRelease(input, stackedHandle.x + VelocityInput.velocityPlotOrigin(grid), stackedHandle.y, Qt.RightButton)
             grid.setCameraHScroll(1e9)

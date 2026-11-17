@@ -364,10 +364,16 @@ func drawerVelocityLifecycleCancellation(
     page.configureBody(
         width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
+    let drawerFont = GridCameraPolicy.seedBaseFontPx
+    workspace.drawer.configureLayout(
+        hostWidth: Int(fontPx(drawerFont, 70)), hostHeight: Int(fontPx(drawerFont, 60)),
+        gutterWidth: Int(fontPx(drawerFont, 8)), fontPx: drawerFont, appFontLineSpacing: fontPx(drawerFont, 1))
+    workspace.drawer.setSectionVisible(
+        kind: DrawerSectionKind.velocity.rawValue, visible: true, drawerOwnsFocus: false)
     bankFixture.session.setSelectedNotes([note.id])
     guard
         let handle = page.publishedHandlesSnapshot.first(where: {
-            $0.noteIdText == "\(note.id.rawValue)"
+            $0.noteID == note.id
         })
     else {
         report.fail(drawerVelocityCancellationID, "bank transition fixture lacks a drawn handle")
@@ -482,10 +488,17 @@ func drawerVelocityLifecycleCancellation(
     switchPage.configureBody(
         width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1,
         baseFontPx: 13, dragDistance: 10)
+    let switchDrawerFont = GridCameraPolicy.seedBaseFontPx
+    switchWorkspace.drawer.configureLayout(
+        hostWidth: Int(fontPx(switchDrawerFont, 70)), hostHeight: Int(fontPx(switchDrawerFont, 60)),
+        gutterWidth: Int(fontPx(switchDrawerFont, 8)), fontPx: switchDrawerFont,
+        appFontLineSpacing: fontPx(switchDrawerFont, 1))
+    switchWorkspace.drawer.setSectionVisible(
+        kind: DrawerSectionKind.velocity.rawValue, visible: true, drawerOwnsFocus: false)
     switchFixture.session.setSelectedNotes([switchNote.id])
     guard
         let switchHandle = switchPage.publishedHandlesSnapshot.first(where: {
-            $0.noteIdText == "\(switchNote.id.rawValue)"
+            $0.noteID == switchNote.id
         }), switchFixture.document.state.config.voicegroupArgument == "_fixture_rich"
     else {
         report.fail(drawerVelocityCancellationID, "voicegroup switch needs the original bank and a drawn note")
@@ -635,15 +648,16 @@ func drawerVelocityStemDragGuardsEdits(_ report: CheckReport, session: DocumentS
         report.fail(drawerVelocityCancellationID, "the fixture's target note has no published handle")
         return
     }
-    let stemX = stem.x + stem.hitRadius + 2
-    guard stem.endX - stem.x >= stem.hitRadius + 3 else {
+    let hitRadius = fixture.geometry.hitRadius
+    let stemX = stem.x + hitRadius + 2
+    guard stem.endX - stem.x >= hitRadius + 3 else {
         report.fail(drawerVelocityCancellationID, "the target stem spans less than one hit diameter")
         return
     }
-    for handle in fixture.handles where handle.noteIdText != stem.noteIdText {
+    for handle in fixture.handles where handle.noteID != stem.noteID {
         let dx = handle.x - stemX
         let dy = handle.y - stem.y
-        if dx * dx + dy * dy <= handle.hitRadius * handle.hitRadius {
+        if dx * dx + dy * dy <= hitRadius * hitRadius {
             report.fail(drawerVelocityCancellationID, "the stem point touches another node")
             return
         }

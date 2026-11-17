@@ -3,11 +3,9 @@ import QtTest
 import PorydawApp
 import EditorQmlCheck 1.0
 import Porydaw.Ui
-import "EditorDrawerPageSupport.js" as PageSupport
 import "EditorDrawerVelocitySupport.js" as VelocitySupport
 
-// Same-frame production check: records are PD_DL_ID_NONE, so the stem is
-// checked against the carrier-derived viewX oracle plus fetched==published.
+// Same-frame production check: the fetched stem is compared with the live camera oracle.
 EditorDrawerTestSupport {
     id: testCase
     name: "EditorDrawerLane"
@@ -15,13 +13,18 @@ EditorDrawerTestSupport {
     property var samples: []
     property var pendingFrame: null
     property int missedFrames: 0
-    property var stemItem: null
+    property double handleID: 0
     property var gridItem: null
     property var pageModel: null
-    property var plotItem: null
     property double handleTick: 0
 
-    function stemX() { return testCase.stemItem.mapToItem(testCase.plotItem, 0, 0).x }
+    function stemX() { return testCase.gridItem.face(testCase.handleID).x }
+    function expectedX() {
+        var grid = testCase.surface.gridModel
+        var dpr = testCase.pageModel.devicePixelRatio
+        var stable = Math.round(testCase.handleTick * grid.beatWidth / grid.ticksPerBeat * dpr) / dpr
+        return stable - Math.round(grid.cameraScrollX * dpr) / dpr
+    }
     Connections {
         id: frameObserver
         target: null
@@ -32,7 +35,7 @@ EditorDrawerTestSupport {
                 return
             if (testCase.pendingFrame !== null)
                 testCase.missedFrames++
-            testCase.pendingFrame = { x: testCase.stemX(),
+            testCase.pendingFrame = { x: testCase.expectedX(),
                                       published: testCase.pageModel.displayRevision }
         }
     }
@@ -43,7 +46,7 @@ EditorDrawerTestSupport {
         function onFetchedRevisionChanged() {
             if (testCase.pendingFrame === null)
                 return
-            testCase.samples.push({ x: testCase.pendingFrame.x,
+            testCase.samples.push({ x: testCase.stemX(), expectedX: testCase.pendingFrame.x,
                                     published: testCase.pendingFrame.published,
                                     fetched: testCase.gridItem.fetchedRevision,
                                     faceWidth: testCase.gridItem.face(0).width })
@@ -61,36 +64,48 @@ EditorDrawerTestSupport {
         var grid = testCase.findChild(plot, "velocityGridLines")
         verify(plot && input && grid, "the mounted velocity plot exposes its grid list")
         verify(grid.visible, "the grid list remains mounted")
-        waitForRendering(testCase.surface)
-        var nodes = VelocitySupport.velocityNodes(testCase)
-        verify(nodes.length > 0, "the staged song exposes a node before the scroll")
-        var stems = PageSupport.collectByName(testCase, plot, "velocityNodeStem", [])
-        verify(stems.length === nodes.length, "every drawn node owns its stem")
-        testCase.stemItem = stems[0]
-        testCase.gridItem = grid
-        testCase.pageModel = model
-        testCase.plotItem = plot
-        testCase.handleTick = nodes[0].parent.model.tick
-        function expectedX() {
-            var dpr = model.devicePixelRatio > 0 ? model.devicePixelRatio : 1
-            var ppt = gridModel.beatWidth / gridModel.ticksPerBeat
-            var stable = Math.round(testCase.handleTick * ppt * dpr) / dpr
-            var scroll = Math.round(gridModel.cameraScrollX * dpr) / dpr
-            return stable - scroll
-        }
-
-        frameObserver.target = grid.Window.window
-        fetchObserver.target = grid
         gridModel.setCameraHScroll(0)
         waitForRendering(testCase.surface)
-        testCase.samples = []
-        testCase.pendingFrame = null
-        testCase.missedFrames = 0
         var scroll0 = gridModel.cameraScrollX
         var range = Math.min(gridModel.beatWidth, gridModel.cameraMaxHScroll - scroll0)
+        var nodes = VelocitySupport.velocityNodes(testCase)
+        verify(nodes.length > 0, "the staged song exposes a node before the scroll")
+        var drawing = JSON.parse(bootstrap.velocityDrawing())
+        var dpr = model.devicePixelRatio
+        var scroll = Math.round(gridModel.cameraScrollX * dpr) / dpr
+        var stemNodes = drawing.handles.filter(function(node) {
+            var left = Math.min(node.x, node.endX) - scroll
+            var width = Math.max(1, Math.abs(node.endX - node.x))
+            var height = Math.max(1, Math.round(model.baseFontPx * (node.selected ? 1 / 4 : 1 / 6))) / dpr
+            return left < plot.width && left + width > 0
+                && node.y - height / 2 < plot.height && node.y + height / 2 > 0
+        })
+        verify(stemNodes.length > 0 && stemNodes.every(function(node) {
+            return drawing.records.some(function(record) {
+                return record.id === node.noteIdText && (record.flags & 2) === 0
+                    && record.w > 0 && record.h > 0
+            })
+        }), "every paintable node owns its actual decoded duration stem")
         if (!(range >= 20))
             skip("the staged song fits without horizontal scroll")
         var stepPx = Math.max(1, Math.floor(range / 10))
+        var scrollEnd = Math.round((scroll0 + 10 * stepPx) * dpr) / dpr
+        var margin = Math.max(model.baseFontPx, 1 / dpr)
+        var trackedNode = stemNodes.find(function(node) {
+            return node.x - scrollEnd >= margin && node.x - scroll <= plot.width - margin
+        })
+        verify(trackedNode !== undefined,
+               "the staged song exposes a stem throughout the complete tested pan")
+        testCase.handleID = Number(trackedNode.noteIdText)
+        testCase.gridItem = grid
+        testCase.pageModel = model
+        testCase.handleTick = trackedNode.tick
+
+        frameObserver.target = grid.Window.window
+        fetchObserver.target = grid
+        testCase.samples = []
+        testCase.pendingFrame = null
+        testCase.missedFrames = 0
         var observedX = testCase.stemX()
         var rev0 = model.displayRevision
         for (var frame = 1; frame <= 10; ++frame) {
@@ -109,7 +124,7 @@ EditorDrawerTestSupport {
             for (var index = before; index < testCase.samples.length; ++index) {
                 var sample = testCase.samples[index]
                 compare(sample.fetched, sample.published)
-                fuzzyCompare(sample.x, expectedX(), 0.01,
+                fuzzyCompare(sample.x, sample.expectedX, 0.01,
                              "the stem tracks the fresh grid projection at step " + frame)
                 verify(sample.faceWidth > 0, "the grid list decodes and paints at step " + frame)
             }

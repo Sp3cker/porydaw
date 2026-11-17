@@ -215,6 +215,25 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored weak var viewport: DocumentViewport?
     @QtIgnored var session: DocumentSession? { viewport?.session }
     @QtIgnored var selectionTransitionToken: UUID?
+    struct ContentFacts: Equatable {
+        let revision: UInt64
+        let track: Int?
+        let selection: AutomationTimeSelection?
+        let bank: ObjectIdentifier
+        let bankRevision: UInt64
+    }
+    @QtIgnored var appliedContentFacts: ContentFacts?
+    @QtIgnored var contentVisible = true {
+        didSet {
+            guard contentVisible != oldValue else { return }
+            if contentVisible {
+                if contentRefreshPending { refreshFromDocument() }
+            } else {
+                cancelSectionInteraction()
+            }
+        }
+    }
+    @QtIgnored var contentRefreshPending = false
     @QtIgnored var gesture: AutomationGesture?
     @QtIgnored var frozen: AutomationFrozenFacts?
     /// The camera the live gesture froze with its facts. `EditorCamera` is a

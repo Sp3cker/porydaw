@@ -69,22 +69,13 @@ struct VelocityContextSource: Sendable {
 
 /// Palette colors copied into the scene's value inputs.
 struct VelocityScenePalette: Sendable {
-    var gridLineSub1: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var gridLineSub2: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var gridLineSub3: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var gridLineBar: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var gridLineBeat: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var gridLineBeatFine: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
     var separator: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
     var primaryText: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
     var selectionRing: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var outline: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
-    var noteBorder: QmlColor = QmlColor(red: 0, green: 0, blue: 0)
 }
 
 /// Everything one static scene build reads: the document facts, the page's
-/// frozen interaction snapshot, the drawn geometry, the palette colours as
-/// values, and the page's reuse decision for handle rows.
+/// frozen interaction snapshot, the drawn geometry and the palette colours.
 struct VelocitySceneInput: Sendable {
     /// The shared camera at the page's device pixel ratio, or `nil` while the
     /// page has no session: camera-derived rows are then empty and x reads zero.
@@ -98,23 +89,16 @@ struct VelocitySceneInput: Sendable {
     var notes: [Note]
     var selectedNotes: [Note]
     var selectedNoteIDs: Set<NoteID>
-    var track: Int
     /// The bank/timeline facts per-note and per-section resolution reads.
     var source: VelocityContextSource
     var interaction: VelocityInteractionSnapshot
     var geometry: VelocityNodeGeometry
-    var plotWidth: Double
     var plotHeight: Double
     var rulerWidth: Double
     var devicePixelRatio: Double
     var baseFontPx: Double
     var typography: Typography
-    /// The page's cached grid metrics; the scene owns no cache of its own.
-    var metrics: GridMetrics?
-    var grid: RollGrid? = nil
     var palette: VelocityScenePalette
-    /// The page's handle-reuse decision.
-    var reuseGeometry: Bool
 }
 
 // MARK: - Axis and handle build
@@ -132,28 +116,24 @@ extension VelocityScene {
     /// page's published `axis`; the ruler rows, grid and bands stay as published.
     static func handleRows(
         _ input: VelocitySceneInput, axis: VelocityAxisModel,
-        previousHandles: [NoteID: VelocityHandle]
-    ) -> [VelocityHandle] {
+        into result: inout [VelocityHandle]
+    ) {
         projectedHandleRows(
-            input, axis: axis,
+            input,
             projection: VelocityProjection(
                 camera: input.camera, geometry: input.geometry,
                 devicePixelRatio: input.devicePixelRatio, axis: axis),
-            previousHandles: previousHandles)
+            into: &result)
     }
 
-    /// Note handle rows for one projection; unchanged handles are reused in
-    /// place so an unchanged row emits nothing.
+    /// Projects the current note facts into the retained overscan buffer.
     private static func projectedHandleRows(
-        _ input: VelocitySceneInput, axis: VelocityAxisModel, projection: VelocityProjection,
-        previousHandles: [NoteID: VelocityHandle]
-    ) -> [VelocityHandle] {
+        _ input: VelocitySceneInput, projection: VelocityProjection,
+        into result: inout [VelocityHandle]
+    ) {
         let selected = input.selectedNoteIDs
         let notes = input.notes
-        let trackColor = PaletteMath.trackIdentityColors[PaletteMath.trackIdentityIndex(input.track)]
-        let stemColor = PaletteMath.velocityStemColors[PaletteMath.trackIdentityIndex(input.track)]
-        let selectedCount = notes.reduce(0) { $0 + (selected.contains($1.id) ? 1 : 0) }
-        let dimUnselected = selectedCount > 1
+        let dimUnselected = input.selectedNotes.count > 1
         let resolve = input.source.resolver()
         let candidates = notes.lazy.filter { note in
             guard let window = input.handleTickWindow else { return true }
@@ -164,8 +144,7 @@ extension VelocityScene {
                 || input.interaction.hovered == note.id
                 || input.interaction.preview[note.id] != nil
         }
-        var result: [VelocityHandle] = []
-        result.reserveCapacity(notes.count)
+        result.removeAll(keepingCapacity: true)
         for note in candidates {
             let frozen = input.interaction.frozenNote(note.id)
             let map = frozen?.map ?? resolve(note.tick, Int(note.pitch)).map
@@ -180,22 +159,8 @@ extension VelocityScene {
                 map: map, velocity: displayed,
                 detentUnlock: !input.interaction.detentsEnabled || input.interaction.detentUnlock)
             let level = map.level(of: displayed) ?? -1
-            let previous = previousHandles[note.id]
-            if input.reuseGeometry, let previous,
-                previous.tick == Double(note.tick), previous.endTick == endTick,
-                previous.y == y, previous.value == displayed, previous.level == level,
-                previous.selected == isSelected, previous.hovered == isHovered,
-                previous.preview == (previewValue != nil),
-                previous.dimmed == (dimUnselected && !isSelected)
-            {
-                previous.publish(\.x, x)
-                previous.publish(\.endX, endX)
-                result.append(previous)
-                continue
-            }
-            let handle = VelocityHandle()
+            var handle = VelocityHandle()
             handle.noteID = note.id
-            handle.noteIdText = previous?.noteIdText ?? velocityNoteText(note.id)
             handle.tick = Double(note.tick)
             handle.endTick = endTick
             handle.x = x
@@ -207,35 +172,7 @@ extension VelocityScene {
             handle.preview = previewValue != nil
             handle.dimmed = dimUnselected && !isSelected
             handle.level = level
-            if input.reuseGeometry, let previous, previous.level == level, previous.value == displayed {
-                handle.label = previous.label
-            } else {
-                handle.label =
-                    axis.mode == .intrinsic && level >= 0
-                    ? "Vol \(level + 1)" : "\(displayed)"
-            }
-            handle.hitRadius = input.geometry.hitRadius
-            handle.stemWidth =
-                (isSelected
-                    ? input.geometry.selectedStemDipWidth
-                    : input.geometry.stemDipWidth) / input.devicePixelRatio
-            handle.nodeRadius = input.geometry.nodePaintRadius
-            handle.outlineRadius =
-                input.geometry.nodePaintRadius
-                + input.geometry.nodeOutlineDipWidth / 2
-            handle.outlineWidth = input.geometry.nodeOutlineDipWidth / input.devicePixelRatio
-            handle.ringRadius =
-                input.geometry.selectedNodeRingRadius
-                + input.geometry.selectedNodeRingDipWidth / 2
-            handle.ringWidth = input.geometry.selectedNodeRingDipWidth / input.devicePixelRatio
-            handle.fillColor =
-                isSelected || !dimUnselected ? trackColor : input.palette.outline
-            handle.stemColor = isSelected ? input.palette.selectionRing : stemColor
-            handle.ringColor = input.palette.selectionRing
-            handle.outlineColor = input.palette.noteBorder
-            handle.primitiveName = "velocityNode"
             result.append(handle)
         }
-        return result
     }
 }

@@ -54,12 +54,12 @@ EditorDrawerTestSupport {
         tryCompare(VelocitySupport.velocityModel(testCase), "selectedCount", 0)
         var input = VelocitySupport.velocityPlotInput(testCase)
         var nodes = VelocitySupport.velocityNodes(testCase).filter(function(item) {
-            return pair.some(function(note) { return item.parent.model.noteIdText === String(note.id) })
+            return pair.some(function(note) { return item.noteIdText === String(note.id) })
         })
-        verify(nodes.length === 2 && nodes[0].parent.model.x === nodes[1].parent.model.x
-               && nodes[0].parent.model.y === nodes[1].parent.model.y,
+        verify(nodes.length === 2 && nodes[0].x === nodes[1].x
+               && nodes[0].y === nodes[1].y,
                "production velocity geometry exposes both coincident nodes")
-        var point = nodes[0].mapToItem(input, nodes[0].width / 2, nodes[0].height / 2)
+        var point = VelocitySupport.center(nodes[0])
         mouseClick(input, point.x, point.y, Qt.LeftButton)
         tryVerify(function() { return VelocitySupport.selectedNoteId(testCase) === pair[1].id },
                   1000, "equal unselected velocity nodes retain later-model-order priority")
@@ -83,24 +83,24 @@ EditorDrawerTestSupport {
         var input = VelocitySupport.velocityPlotInput(testCase)
         var nodes = VelocitySupport.velocityNodes(testCase)
         verify(nodes.length > 2, "the staged song draws selected and outsider stems")
-        var firstId = parseInt(nodes[0].parent.model.noteIdText, 10)
-        var thirdId = parseInt(nodes[2].parent.model.noteIdText, 10)
+        var firstId = parseInt(nodes[0].noteIdText, 10)
+        var thirdId = parseInt(nodes[2].noteIdText, 10)
         VelocitySupport.clickNode(testCase, nodes[0])
-        var thirdPoint = nodes[2].mapToItem(input, nodes[2].width / 2, nodes[2].height / 2)
+        var thirdPoint = VelocitySupport.center(nodes[2])
         mouseClick(input, thirdPoint.x, thirdPoint.y, Qt.LeftButton, Qt.ControlModifier)
         tryCompare(VelocitySupport.velocityModel(testCase), "selectedCount", 2)
         var selected = bootstrap.velocitySelectedNoteIds()
         verify(selected.indexOf(String(firstId)) >= 0 && selected.indexOf(String(thirdId)) >= 0,
                "the earlier and later fixture notes are selected")
         var first = VelocitySupport.velocityNodes(testCase)[0]
-        var stem = findChild(first.parent, "velocityNodeStem")
-        var press = stem.mapToItem(input, stem.width * 3 / 4, stem.height / 2)
-        verify(stem.width > first.width && press.x > 0 && press.x < input.width,
+        var stem = first.stem
+        var press = VelocitySupport.rectPoint(stem, 3 / 4, 1 / 2)
+        verify(stem.w > first.fill.w && press.x > 0 && press.x < input.width,
                "production velocity geometry exposes the selected duration stem")
         var revision = bootstrap.automationDocumentRevision()
         var notes = JSON.stringify(VelocitySupport.primaryGridNotes(testCase))
         mousePress(input, press.x, press.y, Qt.LeftButton)
-        mouseMove(input, press.x, press.y - first.height * 2, -1, Qt.LeftButton)
+        mouseMove(input, press.x, press.y - first.fill.h * 2, -1, Qt.LeftButton)
         tryCompare(VelocitySupport.velocityModel(testCase), "interactionActive", true)
         compare(bootstrap.velocitySelectedNoteIds(), selected,
                 "the selected velocity-stem drag retains its captured note selection")
@@ -108,7 +108,7 @@ EditorDrawerTestSupport {
         tryCompare(VelocitySupport.velocityModel(testCase), "interactionActive", false)
         compare(bootstrap.velocitySelectedNoteIds(), selected,
                 "first Escape consumes the drag without clearing its selection")
-        mouseRelease(input, press.x, press.y - first.height * 2, Qt.LeftButton)
+        mouseRelease(input, press.x, press.y - first.fill.h * 2, Qt.LeftButton)
         compare(VelocitySupport.velocityModel(testCase).interactionActive, false,
                 "releasing an escaped pointer cannot revive the cancelled gesture")
         compare(bootstrap.velocitySelectedNoteIds(), selected,
@@ -122,10 +122,9 @@ EditorDrawerTestSupport {
         compare(bootstrap.velocitySelectedNoteIds(), "",
                 "second Escape clears the remaining selection")
         nodes = VelocitySupport.velocityNodes(testCase)
-        var outsiderId = parseInt(nodes[1].parent.model.noteIdText, 10)
-        var outsiderStem = findChild(nodes[1].parent, "velocityNodeStem")
-        var outsiderPoint = outsiderStem.mapToItem(input, outsiderStem.width * 3 / 4,
-                                                   outsiderStem.height / 2)
+        var outsiderId = parseInt(nodes[1].noteIdText, 10)
+        var outsiderStem = nodes[1].stem
+        var outsiderPoint = VelocitySupport.rectPoint(outsiderStem, 3 / 4, 1 / 2)
         mouseClick(input, outsiderPoint.x, outsiderPoint.y, Qt.LeftButton)
         tryVerify(function() { return VelocitySupport.selectedNoteId(testCase) === outsiderId },
                   1000, "clicking an unselected velocity stem replaces the note selection")
@@ -133,7 +132,7 @@ EditorDrawerTestSupport {
 
     function test_productionVelocityOverlapTargetsVisibleNode() {
         if (testCase.containerPhase) skip("production composition only")
-        VelocitySupport.mountProductionVelocity(testCase, "velocity-node-stem-overlap")
+        var page = VelocitySupport.mountProductionVelocity(testCase, "velocity-node-stem-overlap")
         var grid = testCase.surface.gridModel
         var roll = testCase.rollInput()
         var notes = VelocitySupport.primaryGridNotes(testCase)
@@ -182,18 +181,16 @@ EditorDrawerTestSupport {
         var nextId = pair[1].id
         function projected(id) {
             return VelocitySupport.velocityNodes(testCase).find(function(item) {
-                return item.parent.model.noteIdText === String(id)
+                return item.noteIdText === String(id)
             })
         }
         function overlappingPoint() {
             var first = projected(firstId)
             var next = projected(nextId)
-            var stem = findChild(first.parent, "velocityNodeStem")
-            var point = next.mapToItem(input, next.width / 2, next.height / 2)
-            // Stems sit relative to their handle delegate; compare in content space.
-            var stemX = stem.parent.x + stem.x
-            verify(next.parent.model.x > stemX && next.parent.model.x < stemX + stem.width
-                   && Math.abs(next.parent.model.y - first.parent.model.y) < stem.height
+            var stem = first.stem
+            var point = VelocitySupport.center(next)
+            verify(point.x > stem.x && point.x < stem.x + stem.w
+                   && Math.abs(next.y - first.y) < stem.h
                    && point.x > 0 && point.x < input.width,
                    "production velocity geometry exposes the following node over the selected stem")
             return point
@@ -202,10 +199,11 @@ EditorDrawerTestSupport {
         tryVerify(function() { return VelocitySupport.selectedNoteId(testCase) === firstId },
                   1000, "the earlier overlapping note is selected")
         var point = overlappingPoint()
-        var selectedStem = findChild(projected(firstId).parent, "velocityNodeStem")
+        var selectedStem = projected(firstId).stem
         var node = projected(nextId)
-        verify(node.visible && Qt.colorEqual(node.color, node.parent.model.fillColor)
-               && Qt.colorEqual(selectedStem.color, selectedStem.parent.model.stemColor),
+        verify(node.fill.w > 0 && selectedStem.w > 0
+               && Qt.colorEqual(VelocitySupport.color(node.fill), page.gridPalette.noteFill(grid.trackIndex, 127))
+               && Qt.colorEqual(VelocitySupport.color(selectedStem), page.gridPalette.selectionRing),
                "the following node and earlier selected stem render their published ink")
         var width = grid.beatWidth
         mouseWheel(roll, point.x, roll.height / 2, 0, 120, Qt.NoButton, Qt.NoModifier)
@@ -218,13 +216,13 @@ EditorDrawerTestSupport {
         point = overlappingPoint()
         var revision = bootstrap.automationDocumentRevision()
         mousePress(input, point.x, point.y, Qt.LeftButton)
-        mouseMove(input, point.x, point.y - node.height * 2, -1, Qt.LeftButton)
+        mouseMove(input, point.x, point.y - node.fill.h * 2, -1, Qt.LeftButton)
         tryCompare(VelocitySupport.velocityModel(testCase), "interactionActive", true)
         compare(VelocitySupport.selectedNoteId(testCase), nextId,
                 "beginning an overlap-node drag targets the visible following node")
         verify(session.handleGridEscape(), "the production Escape route owns the overlap drag")
         tryCompare(VelocitySupport.velocityModel(testCase), "interactionActive", false)
-        mouseRelease(input, point.x, point.y - node.height * 2, Qt.LeftButton)
+        mouseRelease(input, point.x, point.y - node.fill.h * 2, Qt.LeftButton)
         compare(VelocitySupport.selectedNoteId(testCase), firstId,
                 "cancelling an overlap-node drag restores the earlier selection")
         compare(bootstrap.automationDocumentRevision(), revision,

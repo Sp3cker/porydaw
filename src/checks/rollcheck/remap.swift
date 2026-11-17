@@ -753,11 +753,18 @@ func checkTrackOwnerRemap(_ report: CheckReport, viewport: DocumentViewport) {
         RollContentProbe(switchGrid).plotRects.compactMap {
             $0.id != 0 && $0.id < RollContentProbe.loopStartId ? $0.id : nil
         })
+    struct SummaryNote: Decodable {
+        let track: Int
+        let ghost: Bool
+    }
+    let switchedSummary = try? JSONDecoder().decode(
+        [SummaryNote].self, from: Data(switchGrid.fetchNoteSummary().utf8))
     report.expect(
         switchGrid.trackIndex == added
             && switchGrid.renderedNoteCount == plottedFills.count
             && switchGrid.notes.count == switchedTotal
-            && switchGrid.notes.allSatisfy { $0.ghost == ($0.track != added) },
+            && switchedSummary?.count == switchedTotal
+            && switchedSummary?.allSatisfy { $0.ghost == ($0.track != added) } == true,
         cppID: id, message: "track switch republishes every track with ghost roles following the new track")
     switchGrid.setTrack(index: 0)
     session.soloedTracks = [1]

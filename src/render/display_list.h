@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 #define PD_DL_MAGIC   0x314C4450u        /* "PDL1" little-endian */
-#define PD_DL_VERSION 2u
+#define PD_DL_VERSION 3u
 
 typedef struct {
     uint32_t magic, version;
@@ -27,10 +27,10 @@ typedef struct {                         /* 24 B */
 typedef struct {                         /* 56 B; viewport logical px, already snapped; w,h > 0 */
     double   x, y, w, h;
     uint64_t id;                         /* PD_DL_ID_NONE, a note id, or a PD_DL_ID_* reserved id */
-    uint32_t argb, argbRight;            /* left/right edge colours, interpolated across w;
-                                            equal for a solid fill */
-    uint32_t flags;                      /* PD_DL_RECT_OVER: paint above this list's labels */
-    uint32_t reserved;                   /* zero */
+    uint32_t argb, argbRight;            /* rectangle left/right edge colours, interpolated across w;
+                                            equal for a solid fill; ellipses require equal colours */
+    uint32_t flags;                      /* PD_DL_RECT_OVER | PD_DL_RECT_ELLIPSE */
+    float    strokeWidth;                /* ellipse inward stroke; zero fills, rectangles require zero */
 } PdDlRect;
 
 typedef struct {                         /* 64 B; viewport logical px; text laid out in (w,h) */
@@ -41,7 +41,7 @@ typedef struct {                         /* 64 B; viewport logical px; text laid
     uint32_t fontId, pixelSize;          /* pixelSize is the fitted size Swift decided */
 } PdDlLabel;
 
-enum { PD_DL_RECT_OVER = 1u };
+enum { PD_DL_RECT_OVER = 1u, PD_DL_RECT_ELLIPSE = 2u };
 enum { PD_DL_LABEL_CLIP = 1u, PD_DL_LABEL_ALIGN_LEFT = 0u, PD_DL_LABEL_ALIGN_RIGHT = 2u,
        PD_DL_LABEL_ALIGN_CENTER = 4u, PD_DL_LABEL_ALIGN_MASK = 6u };
 

@@ -549,7 +549,7 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
         cppID: drawerVelocityUnlockedRampID, message: "the square middle note sits inside the swept span")
     let squarePressX = 2 * middleHandle.x - lastHandle.x
     report.expect(
-        squarePressX < middleHandle.x && abs(squarePressX - firstHandle.x) <= firstHandle.hitRadius,
+        squarePressX < middleHandle.x && abs(squarePressX - firstHandle.x) <= fixture.geometry.hitRadius,
         cppID: drawerVelocityUnlockedRampID,
         message: "the square midpoint brackets a first-column press inside its hit radius")
     var baseline = DocumentSnapshot(document)
@@ -620,7 +620,7 @@ func drawerVelocityUnlockedRampInterpolates(_ report: CheckReport, session: Docu
         message: "the noise middle note sits inside the swept span")
     let noisePressX = 2 * noiseMiddleHandle.x - noiseLastHandle.x
     report.expect(
-        noisePressX < noiseMiddleHandle.x && abs(noisePressX - noiseFirstHandle.x) <= noiseFirstHandle.hitRadius,
+        noisePressX < noiseMiddleHandle.x && abs(noisePressX - noiseFirstHandle.x) <= fixture.geometry.hitRadius,
         cppID: drawerVelocityUnlockedRampID,
         message: "the noise midpoint brackets a first-column press inside its hit radius")
     baseline = DocumentSnapshot(document)

@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
 ShellLaneSupport {
     id: testCase
@@ -34,6 +35,7 @@ ShellLaneSupport {
             focusWindow = null
         }
     }
+    function preDestroyShell() { bootstrap.children.length = 0 }
     function session() { return shell.shellPresenter.session }
 
     laneBootstrap: bootstrap
@@ -49,6 +51,7 @@ ShellLaneSupport {
         settings.setString("lastProjectDir", "")
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
+        bootstrap.children.push(shell.shellPresenter)
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session
@@ -85,14 +88,11 @@ ShellLaneSupport {
         var page = velocityPageItem()
         return page ? findChild(page, "velocityPlotInput") : null
     }
+    function velocityDrawing() {
+        return VelocityDrawing.decodeDrawing(bootstrap.velocityDrawing(session().songTabs.selectedId))
+    }
     function velocityHandleFor(noteId) {
-        var fills = collectByName(velocityPageItem(), "velocityNodeFill", [])
-        for (var i = 0; i < fills.length; ++i) {
-            var handle = fills[i].parent.model
-            if (handle && handle.noteIdText === String(noteId))
-                return handle
-        }
-        return null
+        return velocityDrawing().find(function(handle) { return handle.noteIdText === String(noteId) }) || null
     }
     function automationPlotInput() {
         var page = automationPageItem()

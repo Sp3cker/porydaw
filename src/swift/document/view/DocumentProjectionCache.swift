@@ -19,6 +19,11 @@ public final class DocumentProjectionCache {
         let structure: UInt64
     }
 
+    private struct NoteContent {
+        let notes: [Note]
+        var foldedPitches: PitchProjection?
+    }
+
     private struct LaneKey: Hashable {
         let track: Int
         let lane: Lane
@@ -35,7 +40,7 @@ public final class DocumentProjectionCache {
     }
 
     private unowned let session: DocumentSession
-    private var trackNotes: [Int: (key: NotesKey, notes: [Note])] = [:]
+    private var trackNotes: [Int: (key: NotesKey, content: NoteContent)] = [:]
     private var lanes: [LaneKey: (key: TrackKey, points: [LanePoint])] = [:]
     private var cachedTimeAxis: (key: AxisKey, axis: TimeAxis)?
 
@@ -43,7 +48,7 @@ public final class DocumentProjectionCache {
         self.session = session
     }
 
-    public func notes(in track: Int) -> [Note] {
+    private func noteContent(in track: Int) -> NoteContent {
         let document = session.document
         let stamps = document.revisions
         let map = document.engineTracks
@@ -52,10 +57,25 @@ public final class DocumentProjectionCache {
             ? map.tracks[track].midiChunk : nil
         let stamp = chunk.flatMap { stamps.chunks.indices.contains($0) ? stamps.chunks[$0].notes : nil } ?? 0
         let key = NotesKey(chunk: chunk, notes: stamp, structure: stamps.structure)
-        if let cached = trackNotes[track], cached.key == key { return cached.notes }
-        let notes = session.document.notes(in: track)
-        trackNotes[track] = (key, notes)
-        return notes
+        if let cached = trackNotes[track], cached.key == key { return cached.content }
+        let content = NoteContent(notes: session.document.notes(in: track))
+        trackNotes[track] = (key, content)
+        return content
+    }
+
+    public func notes(in track: Int) -> [Note] {
+        noteContent(in: track).notes
+    }
+
+    /// Occupied pitches are document facts; warm folded track changes reuse
+    /// the same fixed-size projection without materializing or scanning notes.
+    public func foldedPitchProjection(in track: Int?) -> PitchProjection {
+        guard let track else { return PitchProjection(visiblePitches: [UInt8]()) }
+        let content = noteContent(in: track)
+        if let folded = content.foldedPitches { return folded }
+        let folded = ScaleProjection.occupiedPitchProjection(notes: content.notes)
+        trackNotes[track]?.content.foldedPitches = folded
+        return folded
     }
 
     public func note(_ id: NoteID, in track: Int) -> Note? {

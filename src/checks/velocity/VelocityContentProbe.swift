@@ -6,12 +6,16 @@ import PorydawCore
 @testable import PorydawApp
 @testable import PorydawAppPresentation
 @MainActor
-struct VelocityDisplayRect {
+struct VelocityDisplayRect: Equatable {
     let x: Double
     let y: Double
     let w: Double
     let h: Double
     let argb: UInt32
+    let argbRight: UInt32
+    let id: UInt64
+    let flags: UInt32
+    let strokeWidth: Float
 }
 
 @MainActor
@@ -25,7 +29,9 @@ func velocityDisplayRects(_ data: Data) -> [VelocityDisplayRect]? {
         return (0..<count).map { index in
             let rect = rectBase[index]
             return VelocityDisplayRect(
-                x: rect.x, y: rect.y, w: rect.w, h: rect.h, argb: rect.argb)
+                x: rect.x, y: rect.y, w: rect.w, h: rect.h, argb: rect.argb,
+                argbRight: rect.argbRight, id: rect.id, flags: rect.flags,
+                strokeWidth: rect.strokeWidth)
         }
     }
 }
@@ -84,22 +90,57 @@ func drawerVelocityContentBlobChecks(
             && page.displayList(list: 0) == settledBytes,
         cppID: drawerVelocityProjectionID,
         message: "a settled camera refresh republishes identical list bytes with no new revision")
+    guard let settledRects = velocityDisplayRects(settledBytes) else {
+        report.fail(drawerVelocityProjectionID, "the settled velocity drawing decodes")
+        page.detach()
+        return
+    }
+    let staticGrid = settledRects.filter { $0.id == 0 }
     fixture.session.setSelectedNotes([fixture.notes[0].id])
     page.refreshFromDocument()
+    guard let selectedRects = velocityDisplayRects(page.displayList(list: 0)),
+        let selectedStem = selectedRects.first(where: {
+            $0.id == fixture.notes[0].id.rawValue && $0.flags & 2 == 0
+        }),
+        let selectedHandle = fixture.handle(fixture.notes[0])
+    else {
+        report.fail(drawerVelocityProjectionID, "the selected note owns an actual decoded stem")
+        page.detach()
+        return
+    }
     report.expect(
-        page.displayRevision == settledRevision
-            && page.displayList(list: 0) == settledBytes,
+        page.displayRevision == settledRevision + 1
+            && selectedRects.filter({ $0.id == 0 }) == staticGrid
+            && page.displayList(list: 1) == initial1
+            && selectedHandle.selected
+            && selectedStem.argb == PaletteMath.argb(palette.selectionRing)
+            && selectedStem.h == fixture.geometry.selectedStemDipWidth / page.devicePixelRatio,
         cppID: drawerVelocityProjectionID,
-        message: "a selection-only refresh keeps the delegate-owned lists untouched")
+        message: "a selection-only refresh republishes selected stem ink while preserving the static grid")
     let velocityBefore = fixture.document.note(fixture.notes[0].id)?.velocity
+    let selectedRevision = page.displayRevision
     fixture.drag(fixture.notes[0], dy: -24)
-    let velocityAfter = fixture.document.note(fixture.notes[0].id)?.velocity
+    guard let velocityAfter = fixture.document.note(fixture.notes[0].id)?.velocity,
+        let committedHandle = fixture.handle(fixture.notes[0]),
+        let committedRects = velocityDisplayRects(page.displayList(list: 0)),
+        let committedStem = committedRects.first(where: {
+            $0.id == fixture.notes[0].id.rawValue && $0.flags & 2 == 0
+        })
+    else {
+        report.fail(drawerVelocityProjectionID, "the committed note owns an actual decoded stem")
+        page.detach()
+        return
+    }
     report.expect(
         velocityAfter != velocityBefore
-            && page.displayRevision == settledRevision
-            && page.displayList(list: 0) == settledBytes,
+            && page.displayRevision > selectedRevision
+            && committedRects.filter({ $0.id == 0 }) == staticGrid
+            && page.displayList(list: 1) == initial1
+            && committedHandle.value == Int(velocityAfter)
+            && committedStem.y != selectedStem.y
+            && committedStem.y + committedStem.h / 2 == committedHandle.y,
         cppID: drawerVelocityProjectionID,
-        message: "a committed note edit moves the handle delegate without rebuilding the lists")
+        message: "a committed note edit moves its decoded stem to the committed value while preserving the static grid")
     let stableOrigin = page.projection.scrollOffsetX
     let stableEnd = stableOrigin + 48
     let pressed = page.pointerPress(x: stableOrigin, y: 0, surface: 1, button: 2, modifiers: 0)

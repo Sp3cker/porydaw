@@ -11,7 +11,6 @@ import QtBridge
 struct RollPlotBuilder {
     private var writer = DisplayListWriter()
     // Retained across builds: no reallocation on steady frames.
-    private var visible: [Int] = []
     private var painted: [Painted] = []
     private var paintedRecords: [RollNote] = []
     private var previewBoxes: [Painted] = []
@@ -49,12 +48,11 @@ struct RollPlotBuilder {
 
     mutating func build(
         _ input: GridSceneInput,
-        records: [RollNote],
         palette: [UInt32],
-        blockEnds: [Int],
         width: Double,
-        height: Double
-    ) -> (data: Data, count: Int) {
+        height: Double,
+        into output: inout Data
+    ) -> (changed: Bool, count: Int) {
         let camera = input.camera
         let snapshot = camera.snapshot
         let metrics = input.metrics
@@ -261,53 +259,90 @@ struct RollPlotBuilder {
             }
         }
 
-        // Note fills with cull: skip expired blocks, order-sort paint.
+        // Cull neutral track records before resolving any presentation. Per-track
+        // tick order is also stable paint order; ghost tracks always precede primary.
         painted.removeAll(keepingCapacity: true)
         paintedRecords.removeAll(keepingCapacity: true)
-        visible.removeAll(keepingCapacity: true)
-        if ppt > 0 {
-            let slack = 2 * pixel
-            let lo = (soX - metrics.noteMinWidth - slack) / ppt
-            let hi = (soX + width + slack) / ppt
-            for block in blockEnds.indices {
-                let start = block * RollDrawingContent.noteRecordBlockSize
-                if Double(records[start].tick) >= hi { break }
-                if Double(blockEnds[block]) < lo { continue }
-                let end = min(start + RollDrawingContent.noteRecordBlockSize, records.count)
-                var i = start
-                while i < end && Double(records[i].tick) < hi {
-                    let duration = records[i].end - records[i].tick
-                    if Double(records[i].tick) + Double(duration) >= lo {
-                        visible.append(i)
+        let slack = 2 * pixel
+        let lo = ppt > 0 ? (soX - metrics.noteMinWidth - slack) / ppt : -Double.infinity
+        let hi = ppt > 0 ? (soX + width + slack) / ppt : Double.infinity
+        let noteTable = ThemeColorTables.noteFillTable(input.palette.theme)
+        let ghostTable = ThemeColorTables.ghostFillTable(input.palette.theme)
+        let light = PaletteMath.argb(input.palette.keyboardNatural)
+        let dark = PaletteMath.argb(input.palette.keyboardBlack)
+        let fallbackLight = PaletteMath.argb(input.palette.noteLabelAaLight)
+        let fallbackDark = PaletteMath.argb(input.palette.noteLabelAaDark)
+        let tracks = input.notes.tracks
+        for pass in 0..<2 {
+            let ghost = pass == 0
+            for trackIndex in tracks.indices where (trackIndex != input.notes.selectedTrack) == ghost {
+                let track = tracks[trackIndex]
+                var sourceLo = lo
+                var sourceHi = hi
+                if !ghost {
+                    // Query the union of source and displaced bounds, then test the
+                    // actual interval. This includes offscreen notes dragged into view.
+                    switch input.displacement {
+                    case .none: break
+                    case .move(let ticks, _, _, _, _):
+                        sourceLo -= Double(max(0, ticks))
+                        sourceHi -= Double(min(0, ticks))
+                    case .resize(let leading, let ticks):
+                        if leading { sourceHi += Double(max(0, -ticks)) } else { sourceLo -= Double(max(0, ticks)) }
                     }
-                    i += 1
+                }
+                track.forEachCandidateBlock(from: sourceLo, to: sourceHi) { range in
+                    for index in range {
+                        let source = track.notes[index]
+                        if Double(source.tick) >= sourceHi { break }
+                        let note = GridNote(
+                            noteId: source.noteId, tick: source.tick, duration: source.duration,
+                            pitch: source.pitch, track: source.track, velocity: source.velocity, ghost: ghost)
+                        let (tick, end, pitch) = input.displacement.displayed(
+                            note, selected: input.displacedNotes)
+                        if Double(end) < lo || Double(tick) >= hi { continue }
+                        guard projection.row(forPitch: pitch) >= 0 else { continue }
+                        let box = metrics.noteBox(
+                            camera: camera,
+                            x0: camera.viewX(tick: Double(tick), dpr: dpr),
+                            x1: camera.viewX(tick: Double(end), dpr: dpr), pitch: pitch)
+                        if !(box.w > 0 && box.h > 0) || box.x >= width || box.x + box.w <= 0
+                            || box.y >= height || box.y + box.h <= 0
+                        {
+                            continue
+                        }
+                        let velocity = min(
+                            127, max(0, input.velocityPreview?.velocity(for: note) ?? note.velocity))
+                        let identity = PaletteMath.trackIdentityIndex(note.track)
+                        let fill =
+                            ghost
+                            ? ghostTable[identity * 2 + (GridScene.isBlackKey(pitch) ? 1 : 0)]
+                            : noteTable[identity * 128 + velocity]
+                        var flags: UInt8 = ghost ? 1 : 0
+                        let bandCovered: Bool
+                        if !ghost, let band = input.bandSelection {
+                            bandCovered =
+                                box.x < band.x + band.w && box.x + box.w > band.x
+                                && box.y < band.y + band.h && box.y + box.h > band.y
+                        } else {
+                            bandCovered = false
+                        }
+                        if input.selectedNotes.contains(note.noteId) || bandCovered { flags |= 2 }
+                        if GridScene.timeCovers(input, track: note.track, tick: tick, end: end) { flags |= 4 }
+                        let record = RollNote(
+                            id: note.noteId.rawValue, velocity: velocity,
+                            ink: PaletteMath.aaContrastInk(
+                                fill: fill, light: light, dark: dark,
+                                fallbackLight: fallbackLight, fallbackDark: fallbackDark))
+                        emitClipped(box.x, box.y, box.w, box.h, fill, id: record.id)
+                        painted.append(
+                            Painted(
+                                x: box.x, y: box.y, w: box.w, h: box.h, id: record.id,
+                                pitch: pitch, flags: flags, fill: fill))
+                        paintedRecords.append(record)
+                    }
                 }
             }
-            visible.sort { records[$0].order < records[$1].order }
-        } else {
-            visible.append(contentsOf: records.indices)
-            visible.sort { records[$0].order < records[$1].order }
-        }
-        for i in visible {
-            let record = records[i]
-            let row = projection.row(forPitch: record.pitch)
-            if row < 0 { continue }
-            let box = metrics.noteBox(
-                camera: camera,
-                x0: camera.viewX(tick: Double(record.tick), dpr: dpr),
-                x1: camera.viewX(tick: Double(record.end), dpr: dpr),
-                pitch: record.pitch)
-            if !(box.w > 0 && box.h > 0) || box.x >= width || box.x + box.w <= 0
-                || box.y >= height || box.y + box.h <= 0
-            {
-                continue
-            }
-            emitClipped(box.x, box.y, box.w, box.h, record.fill, id: record.id)
-            painted.append(
-                Painted(
-                    x: box.x, y: box.y, w: box.w, h: box.h, id: record.id,
-                    pitch: record.pitch, flags: record.flags, fill: record.fill))
-            paintedRecords.append(record)
         }
 
         // Preview fills: the paint stroke's cells, then the draw note.
@@ -416,12 +451,7 @@ struct RollPlotBuilder {
                 if covered { addSelectionRing(box: p, id: p.id) }
                 continue
             }
-            let swept =
-                band.map {
-                    p.x < $0.x + $0.w && p.x + p.w > $0.x
-                        && p.y < $0.y + $0.h && p.y + p.h > $0.y
-                } ?? false
-            if p.flags & 2 != 0 || swept || covered {
+            if p.flags & 2 != 0 || covered {
                 addSelectionRing(box: p, id: p.id)
             } else {
                 addNoteBorder(box: p, argb: ink(.noteBorder), insetPixels: 0, id: p.id)
@@ -462,8 +492,8 @@ struct RollPlotBuilder {
         // Time selection.
         if let selection = input.timeSelection, selection.isActive,
             case .tracks(let scope) = selection.scope,
-            input.selectedTrack < input.usedTrackCount,
-            scope.contains(input.selectedTrack)
+            input.notes.selectedTrack < input.usedTrackCount,
+            scope.contains(input.notes.selectedTrack)
         {
             let x0 = camera.viewX(tick: Double(selection.range.startTick), dpr: dpr)
             let x1 = camera.viewX(tick: Double(selection.range.endTick), dpr: dpr)
@@ -550,7 +580,7 @@ struct RollPlotBuilder {
         }
 
         let count = painted.count
-        let data = writer.finish()
-        return (data, count)
+        let changed = writer.replaceIfChanged(into: &output)
+        return (changed, count)
     }
 }

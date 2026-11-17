@@ -255,7 +255,7 @@ extension VelocityPage {
         publish(\.promptError, "")
         publish(\.promptInitialValue, initial)
         refreshInteractionPublished()
-        publishHandles(projectHandles())
+        refreshHandles()
         return true
     }
 
@@ -280,7 +280,7 @@ extension VelocityPage {
         promptDraft = ""
         publish(\.promptError, "")
         refreshInteractionPublished()
-        defer { publishHandles(projectHandles()) }
+        defer { refreshHandles() }
         guard live.revision == session.document.revision,
             live.track == (session.selectedTrack ?? -1)
         else { return false }
@@ -303,7 +303,7 @@ extension VelocityPage {
         promptDraft = ""
         publish(\.promptError, "")
         refreshInteractionPublished()
-        publishHandles(projectHandles())
+        refreshHandles()
     }
 
     // MARK: Gesture plumbing
@@ -367,7 +367,7 @@ extension VelocityPage {
         paintCandidates = candidates
         gesture = frozen
         refreshInteractionPublished()
-        publishHandles(projectHandles())
+        refreshHandles()
     }
 
     private func freeze(_ notes: [Note]) -> [VelocityFrozenNote] {
@@ -455,7 +455,7 @@ extension VelocityPage {
         live.previousX = x
         live.previousY = y
         gesture = live
-        publishHandles(projectHandles())
+        refreshHandles(updateDrawing: false)
         publishTransient()
     }
 
@@ -494,7 +494,7 @@ extension VelocityPage {
         }
         _ = live.updatePreview(updates)
         gesture = live
-        publishHandles(projectHandles())
+        refreshHandles()
     }
 
     private func updateBandPreview(x: Double, y: Double) {
@@ -518,7 +518,7 @@ extension VelocityPage {
         }
         live.bandPreview = hits
         gesture = live
-        publishHandles(projectHandles())
+        refreshHandles(updateDrawing: false)
         publishTransient()
     }
 

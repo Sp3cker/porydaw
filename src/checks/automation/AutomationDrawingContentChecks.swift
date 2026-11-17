@@ -109,7 +109,7 @@ func drawerAutomationDrawingContentChecks(
         message: "automation zoom rebuilds viewport lists and bumps revision")
     let zoomedStatics = page.displayList(list: 1)
     page.palette.gridLineBar = PaletteMath.qmlColor(argb: 0xFF214365)
-    page.refreshFromDocument()
+    page.refreshCamera()
     let changed = AutomationDisplayProbe(page)
     report.expect(
         changed.valid && page.displayRevision == scrolledRevision + 2

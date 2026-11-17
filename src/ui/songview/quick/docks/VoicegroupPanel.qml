@@ -331,6 +331,7 @@ ColumnLayout {
             clip: true
             model: panel.controller.rows
             boundsBehavior: Flickable.StopAtBounds
+            reuseItems: true
             // -1 stops the unused highlight animating ~470 ms of frames after each bank load.
             currentIndex: -1
             ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
@@ -343,6 +344,21 @@ ColumnLayout {
                 required property int typeIconKey
                 required property bool altChip
                 required property bool used
+                property bool pooled: false
+                property int auditionSlot: -1
+                function finishAudition(): void {
+                    if (row.auditionSlot < 0)
+                        return
+                    if (panel.controller.soundingVoice === row.auditionSlot)
+                        panel.controller.releaseVoice()
+                    row.auditionSlot = -1
+                }
+                ListView.onPooled: {
+                    row.pooled = true
+                    row.finishAudition()
+                    row.focus = false
+                }
+                ListView.onReused: row.pooled = false
                 objectName: "voicegroupRow_" + slot
                 width: voiceList.width - Math.round(panel.baseFontPx * 0.67)
                 height: panel.rowHeight
@@ -377,7 +393,7 @@ ColumnLayout {
                         Layout.fillHeight: true
                         Accessible.role: Accessible.StaticText
                         Accessible.name: row.typeName
-                        HoverHandler { id: iconHover }
+                        HoverHandler { id: iconHover; enabled: !row.pooled }
                         Rectangle {
                             anchors.centerIn: parent
                             width: panel.baseFontPx * 1.25
@@ -412,11 +428,14 @@ ColumnLayout {
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    enabled: !row.pooled
                     onPressed: function(mouse: MouseEvent) {
                         row.forceActiveFocus()
                         if (mouse.button === Qt.LeftButton) {
-                            panel.controller.selectSlot(row.slot)
-                            panel.controller.pressVoice(row.slot)
+                            const pressedSlot = row.slot
+                            panel.controller.selectSlot(pressedSlot)
+                            row.auditionSlot = pressedSlot
+                            panel.controller.pressVoice(pressedSlot)
                         }
                     }
                     onClicked: function(mouse: MouseEvent) {
@@ -427,16 +446,21 @@ ColumnLayout {
                     }
                     onReleased: function(mouse: MouseEvent) {
                         if (mouse.button === Qt.LeftButton)
-                            panel.controller.releaseVoice()
+                            row.finishAudition()
                     }
-                    onCanceled: panel.controller.releaseVoice()
+                    onCanceled: row.finishAudition()
                 }
             }
         }
         Connections {
             target: panel.controller
             function onRevealRequestChanged(): void {
-                voiceList.positionViewAtIndex(panel.controller.revealSlotId, ListView.Contain)
+                const slot = panel.controller.revealSlotId
+                const item = voiceList.itemAtIndex(slot)
+                if (item && item.y >= voiceList.contentY
+                         && item.y + item.height <= voiceList.contentY + voiceList.height)
+                    return
+                voiceList.positionViewAtIndex(slot, ListView.Contain)
             }
         }
     }

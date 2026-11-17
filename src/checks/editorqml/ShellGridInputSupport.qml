@@ -11,8 +11,9 @@ ShellWindowSupport {
         if (!shell) {
             settings.setString("lastProjectDir", "")
             shell = shellComponent.createObject(null)
+            verify(shell !== null, "the production ShellWindow loads")
+            bootstrap.children.push(shell.shellPresenter)
         }
-        verify(shell !== null, "the production ShellWindow loads")
         shell.requestActivate()
         tryCompare(shell, "active", true, 3000)
         var session = shell.shellPresenter.session

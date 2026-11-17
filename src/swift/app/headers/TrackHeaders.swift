@@ -171,7 +171,11 @@ public final class TrackHeadersPresenter {
     @QtIgnored
     public func documentDidChange(_ change: SessionChange) {
         if change.trackRemap != nil { structuralRevision = change.revision }
-        refreshFromDocument()
+        if change.domains == [.selection] {
+            refreshSelectionPresentation()
+        } else {
+            refreshFromDocument()
+        }
     }
 
     /// Retires a header menu or voice request aimed at an older revision
@@ -182,6 +186,17 @@ public final class TrackHeadersPresenter {
         let document = session.document
         if let target = pendingMenu, !target.matches(document) { dismissHeaderMenu() }
         if let target = pendingVoice, !target.matches(document) { pendingVoice = nil }
+    }
+
+    /// Selection changes only appearance; document text, voice spans and geometry stay retained.
+    @QtIgnored
+    public func refreshSelectionPresentation() {
+        guard let session, !session.isClosed else { return }
+        for index in snapshots.indices where !snapshots[index].isAddTrack {
+            var row = snapshots[index]
+            applySelectionAppearance(to: &row, session: session)
+            publishRow(row, at: index)
+        }
     }
 
     /// Document refreshes that rebuilt header snapshots; gated edits leave it unchanged.

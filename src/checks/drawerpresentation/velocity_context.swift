@@ -132,10 +132,10 @@ func drawerVelocityProjectionRefresh(
         moved.x == stableX && moved.x != oldX && moved.x - snappedScroll == viewX
             && moved.y == oldY && moved.value == oldValue,
         cppID: drawerVelocityProjectionID, message: "camera refresh moves the handle without changing its value axis")
-    let row = page.handles[1]
+    let row = page.publishedHandlesSnapshot[1]
     report.expect(
         row.x == stableX && row.x - snappedScroll == viewX, cppID: drawerVelocityProjectionID,
-        message: "the QML model receives the moved handle")
+        message: "the retained geometry receives the moved handle")
     report.expectEqual(
         expected: oldY, actual: row.y, cppID: drawerVelocityProjectionID,
         what: "camera refresh preserves the node's marker-y value")
@@ -579,8 +579,13 @@ func drawerVelocityPlayheadDiagnostics(
     if let handle = fixture.handle(fixture.notes[0]) {
         page.pointerMove(x: handle.x, y: handle.y, buttons: 0)
     }
+    let expectedReadout =
+        fixture.handle(fixture.notes[0]).map { handle in
+            page.axisModel.mode == .intrinsic && handle.level >= 0
+                ? "Vol \(handle.level + 1)" : "\(handle.value)"
+        } ?? ""
     report.expectEqual(
-        expected: fixture.handle(fixture.notes[0])?.label ?? "", actual: page.readoutText,
+        expected: expectedReadout, actual: page.readoutText,
         cppID: drawerVelocityProjectionID,
         what: "the hovered handle publishes its displayed value as the readout")
     report.expectEqual(
@@ -591,7 +596,7 @@ func drawerVelocityPlayheadDiagnostics(
         !page.readoutVisible, cppID: drawerVelocityProjectionID,
         message: "hover leaving every handle hides the readout")
     let stableLabels = page.axisLabels.asArray
-    let stableCount = page.handles.asArray.count
+    let stableCount = page.publishedNoteCount
     page.refreshFromDocument()
     report.expectEqual(
         expected: stableLabels.count, actual: page.axisLabels.asArray.count,
@@ -608,7 +613,7 @@ func drawerVelocityPlayheadDiagnostics(
     report.expect(
         page.axisLabels.asArray.count == stableLabels.count
             && zip(stableLabels, page.axisLabels.asArray).allSatisfy { $0 === $1 }
-            && page.handles.asArray.count == stableCount,
+            && page.publishedNoteCount == stableCount,
         cppID: drawerVelocityDiagnosticsID,
         message: "horizontal scrolling leaves stable velocity text rows untouched")
 }

@@ -66,7 +66,12 @@ func checkGhostNotes(_ report: CheckReport, viewport: DocumentViewport) {
             nearTick: ghost.tick, excluding: [ghost.pitch])
     else { return }
     func projected(_ noteID: NoteID) -> GridNote? {
-        grid.notes.first { $0.noteId == noteID }
+        guard let note = grid.notes.tracks.lazy.flatMap(\.notes).first(where: { $0.noteId == noteID })
+        else { return nil }
+        return GridNote(
+            noteId: note.noteId, tick: note.tick, duration: note.duration,
+            pitch: note.pitch, track: note.track, velocity: note.velocity,
+            ghost: note.track != grid.notes.selectedTrack)
     }
     func ghostFill(_ noteID: NoteID) -> UInt32? {
         probeFill(grid, noteID)
@@ -112,7 +117,7 @@ func checkGhostNotes(_ report: CheckReport, viewport: DocumentViewport) {
     grid.refreshCamera()
     let ringed = RollContentProbe(grid)
     func gridGhost(_ id: NoteID) -> Bool? {
-        grid.notes.first(where: { $0.noteId == id })?.ghost
+        projected(id)?.ghost
     }
     report.expect(
         session.selectedNotes.contains(plain.id) && gridGhost(plain.id) == false

@@ -4,6 +4,7 @@ import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
 import Porydaw.Ui
+import "EditorDrawerVelocitySupport.js" as VelocityDrawing
 
 ShellWindowSupport {
     function test_kVelocityStemEscapeFromRollFocus() {
@@ -13,10 +14,10 @@ ShellWindowSupport {
         var grid = surface.gridModel
         selectDrawnVelocityNote(surface)
         var plot = findChild(surface, "velocityPlotInput")
-        var node = findChild(surface, "velocityNodeFill")
-        var stem = findChild(node.parent, "velocityNodeStem")
+        var node = velocityDrawing()[0]
+        var stem = node.stem
         var roll = findChild(surface, "swiftRollInput")
-        verify(plot && node && stem && roll && stem.width > node.width,
+        verify(plot && node && stem && roll && stem.w > node.fill.w,
                "the mounted shell exposes a selected velocity duration stem and roll")
         var pair = selectMountedNotePair(surface)
         compare(pair.length, 2,
@@ -26,11 +27,11 @@ ShellWindowSupport {
         var revision = grid.appliedRevisionText
         var selected = session.velocityPage().selectedCount
         compare(selected, 2, "the captured stem selection contains both notes")
-        var press = stem.mapToItem(plot, stem.width * 3 / 4, stem.height / 2)
+        var press = VelocityDrawing.rectPoint(stem, 3 / 4, 1 / 2)
         roll.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(roll, "activeFocus", true, 3000)
         mousePress(plot, press.x, press.y, Qt.LeftButton)
-        mouseMove(plot, press.x, press.y - node.height * 2, -1, Qt.LeftButton)
+        mouseMove(plot, press.x, press.y - node.fill.h * 2, -1, Qt.LeftButton)
         tryCompare(session.velocityPage(), "interactionActive", true, 3000)
         compare(JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
             return note.selected
@@ -50,7 +51,7 @@ ShellWindowSupport {
         tryCompare(session.velocityPage(), "interactionActive", false, 3000)
         compare(session.velocityPage().interactionActive, false,
                 "first Escape ends the captured stem gesture")
-        mouseRelease(plot, press.x, press.y - node.height * 2, Qt.LeftButton)
+        mouseRelease(plot, press.x, press.y - node.fill.h * 2, Qt.LeftButton)
         compare(session.velocityPage().selectedCount, selected,
                 "the first routed Escape retains the captured note selection")
         compare(grid.fetchNoteSummary(), original, "Escape and release roll back the velocity stem preview")
@@ -119,30 +120,16 @@ ShellWindowSupport {
         verify(pair.length === 2 && pair[0].velocity === pair[1].velocity,
                "the earlier stem and following node share a plotted height")
         function nodeFor(id) {
-            function walk(item) {
-                if (item.model && item.model.noteIdText === String(id))
-                    return findChild(item, "velocityNodeFill")
-                if (item.children) {
-                    for (var child of item.children) {
-                        var found = walk(child)
-                        if (found !== null)
-                            return found
-                    }
-                }
-                return null
-            }
-            return walk(velocityPlot)
+            return velocityDrawing().find(function(handle) { return handle.noteIdText === String(id) })
         }
         function overlap() {
             var earlier = nodeFor(pair[0].id)
             var following = nodeFor(pair[1].id)
-            verify(earlier && following, "both velocity nodes publish rendered delegates")
-            var stem = findChild(earlier.parent, "velocityNodeStem")
-            var point = following.mapToItem(input, following.width / 2, following.height / 2)
-            // Stems sit relative to their handle delegate; compare in content space.
-            var stemX = stem ? stem.parent.x + stem.x : 0
-            verify(stem && following.parent.model.x > stemX
-                   && following.parent.model.x < stemX + stem.width
+            verify(earlier && following, "both velocity markers decode real drawing geometry")
+            var stem = earlier.stem
+            var point = VelocityDrawing.center(following)
+            verify(stem && point.x > stem.x
+                   && point.x < stem.x + stem.w
                    && point.x > 0 && point.x < input.width && point.y > 0
                    && point.y < input.height, "the following node covers the earlier duration stem")
             return { node: following, point: point }
@@ -151,14 +138,14 @@ ShellWindowSupport {
             var hit = overlap()
             waitForRendering(shell.contentItem)
             var frame = grabImage(shell.contentItem)
-            var point = hit.node.mapToItem(shell.contentItem,
-                                           hit.node.width / 2, hit.node.height / 2)
+            var point = velocityPlot.mapToItem(shell.contentItem,
+                                              hit.point.x, hit.point.y)
             var dpr = frame.width / shell.contentItem.width
             return { actual: frame.pixel(Math.round(point.x * dpr), Math.round(point.y * dpr)),
-                     expected: hit.node.color }
+                     expected: VelocityDrawing.color(hit.node.fill) }
         }
         var earlier = nodeFor(pair[0].id)
-        var earlierPoint = earlier.mapToItem(input, earlier.width / 2, earlier.height / 2)
+        var earlierPoint = VelocityDrawing.center(earlier)
         mouseClick(input, earlierPoint.x, earlierPoint.y)
         tryVerify(function() {
             return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
@@ -189,8 +176,7 @@ ShellWindowSupport {
                   "the mounted roll restores the overlap zoom")
         mouseClick(input, overlap().point.x, overlap().point.y)
         var first = nodeFor(pair[0].id)
-        mouseClick(input, first.mapToItem(input, first.width / 2, first.height / 2).x,
-                   first.mapToItem(input, first.width / 2, first.height / 2).y)
+        mouseClick(input, VelocityDrawing.center(first).x, VelocityDrawing.center(first).y)
         var before = grid.fetchNoteSummary()
         var revision = grid.appliedRevisionText
         var undoBefore = shell.shellPresenter.session.canUndo
@@ -199,10 +185,10 @@ ShellWindowSupport {
         // so any row/scroll skew shows as a paint-capture miss.
         var dpr = grid.devicePixelRatio > 0 ? grid.devicePixelRatio : 1
         var originX = -Math.round(grid.cameraScrollX * dpr) / dpr
-        press = { x: overlapHit.node.parent.model.x + originX, y: overlapHit.node.parent.model.y }
+        press = { x: overlapHit.node.x + originX, y: overlapHit.node.y }
         tryCompare(roll, "activeFocus", true, 3000)
         mousePress(input, press.x, press.y, Qt.LeftButton)
-        mouseMove(input, press.x, press.y - nodeFor(pair[1].id).height * 2,
+        mouseMove(input, press.x, press.y - nodeFor(pair[1].id).fill.h * 2,
                   -1, Qt.LeftButton)
         tryCompare(shell.shellPresenter.session.velocityPage(), "interactionActive", true)
         verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
@@ -210,7 +196,7 @@ ShellWindowSupport {
         }), "the live overlap drag captures the painted following node")
         keyClick(Qt.Key_Escape)
         tryCompare(shell.shellPresenter.session.velocityPage(), "interactionActive", false)
-        mouseRelease(input, press.x, press.y - nodeFor(pair[1].id).height * 2, Qt.LeftButton)
+        mouseRelease(input, press.x, press.y - nodeFor(pair[1].id).fill.h * 2, Qt.LeftButton)
         compare(grid.fetchNoteSummary(), before,
                 "overlap Escape restores the earlier-note selection and exact note content")
         compare(grid.appliedRevisionText, revision, "overlap Escape preserves document revision")
@@ -261,14 +247,14 @@ ShellWindowSupport {
         var grid = surface.gridModel
         var page = session.velocityPage()
         var plot = findChild(surface, "velocityPlotInput")
-        var node = findChild(surface, "velocityNodeFill")
+        var node = velocityDrawing()[0]
         var focusPlot = findChild(surface, "velocityPlot")
         verify(plot && node && focusPlot, "the production velocity input and node exist")
         focusPlot.forceActiveFocus(Qt.OtherFocusReason)
         tryCompare(focusPlot, "activeFocus", true, 3000)
         var terminalRoute = data.route === "last-tab-close"
                 || data.route === "song-reload"
-        var hit = node.mapToItem(plot, node.width / 2, node.height / 2)
+        var hit = VelocityDrawing.center(node)
         var dragY = hit.y < plot.height / 2 ? hit.y + 30 : hit.y - 30
         if (terminalRoute) {
             var initialRevision = grid.appliedRevisionText
@@ -278,8 +264,8 @@ ShellWindowSupport {
             tryVerify(function() { return grid.appliedRevisionText !== initialRevision },
                       3000, "a committed edit makes the real close gate hold the tab")
             tryCompare(session, "documentDirty", true, 3000)
-            node = findChild(surface, "velocityNodeFill")
-            hit = node.mapToItem(plot, node.width / 2, node.height / 2)
+            node = velocityDrawing()[0]
+            hit = VelocityDrawing.center(node)
             dragY = hit.y < plot.height / 2 ? hit.y + 30 : hit.y - 30
         }
         var beforeNotes = grid.fetchNoteSummary()
@@ -287,7 +273,7 @@ ShellWindowSupport {
         mousePress(plot, hit.x, hit.y, Qt.LeftButton)
         mouseMove(plot, hit.x, dragY, -1, Qt.LeftButton)
         tryCompare(page, "interactionActive", true, 3000)
-        compare(node.parent.model.preview, true,
+        compare(velocityDrawing().find(function(handle) { return handle.noteIdText === node.noteIdText }).preview, true,
                 "the mounted node shows its held velocity preview before termination")
         if (terminalRoute) {
             compare(session.canUndo, true,
@@ -324,7 +310,7 @@ ShellWindowSupport {
         if (terminalRoute) {
             tryCompare(session.songTabs, "pendingCloseId", closingId, 3000)
             tryCompare(page, "interactionActive", false, 3000)
-            compare(node.parent.model.preview, false,
+            compare(velocityDrawing(closingId).find(function(handle) { return handle.noteIdText === node.noteIdText }).preview, false,
                     "the close gate removes the mounted node's held preview")
             mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
             compare(page.selectedCount, 1, "the close gate preserves the selected note")
@@ -361,7 +347,7 @@ ShellWindowSupport {
         tryCompare(page, "interactionActive", false, 3000)
         mouseRelease(plot, hit.x, dragY, Qt.LeftButton)
         tryCompare(plot, "pressed", false, 3000)
-        compare(node.parent.model.preview, false,
+        compare(velocityDrawing(closingId).find(function(handle) { return handle.noteIdText === node.noteIdText }).preview, false,
                 "the termination route removes the mounted node's held preview")
         compare(page.selectedCount, 1, "cancellation keeps the selected note")
         compare(grid.fetchNoteSummary(), beforeNotes, "a cancelled drag never writes note values")

@@ -8,6 +8,7 @@ import "EditorDrawerPixelSupport.js" as PixelSupport
 import "EditorDrawerVelocitySupport.js" as VelocitySupport
 import "EditorDrawerAutomationMenuSupport.js" as AutomationMenuSupport
 import "EditorDrawerVoiceSupport.js" as VoiceSupport
+import "ShellDrawerParityRasterSupport.js" as RasterSupport
 
 EditorDrawerTestSupport {
     id: testCase
@@ -39,7 +40,7 @@ EditorDrawerTestSupport {
         compare(nodes.length, trackNotes.length,
                 "every note of the primary track published a node")
         var published = nodes.map(function(node) {
-            return node.parent.model.noteIdText + ":" + node.parent.model.value
+            return node.noteIdText + ":" + node.value
         }).sort()
         var primary = trackNotes.map(function(note) {
             return String(note.id) + ":" + note.velocity
@@ -81,23 +82,23 @@ EditorDrawerTestSupport {
         tryVerify(function() {
             nodes = VelocitySupport.velocityNodes(testCase)
             var node = nodes[0]
-            var center = node.mapToItem(input, node.width / 2, node.height / 2)
+            var center = VelocitySupport.center(node)
             return center.x >= 0 && center.x < input.width
                 && center.y > 0 && center.y < input.height
         }, 3000, "the staged node is inside the mounted plot before selection")
         var first = nodes[0]
         var outsider = nodes[2]
-        var firstRow = first.parent.model
-        var outsiderRow = outsider.parent.model
-        var stem = findChild(outsider.parent, "velocityNodeStem")
-        verify(stem && stem.visible && stem.width > 0 && stem.height > 0
-               && Qt.colorEqual(stem.color, outsiderRow.stemColor)
-               && !outsiderRow.selected,
+        var firstRow = first
+        var outsiderRow = outsider
+        var stem = outsider.stem
+        var expectedFill = page.gridPalette.noteFill(gridModel.trackIndex, 127)
+        var expectedStem = RasterSupport.forkStemShade(testCase, expectedFill)
+        verify(stem && stem.w > 0 && stem.h > 0
+               && Qt.colorEqual(VelocitySupport.color(stem), expectedStem) && !outsiderRow.selected,
                "an outsider stem paints without a node highlight")
-        var outsiderRing = findChild(outsider.parent, "velocityNodeRing")
-        verify(!outsiderRow.selected && !outsiderRow.dimmed && !outsiderRing.visible
-               && outsider.border.width > 0
-               && Qt.colorEqual(outsider.color, outsiderRow.fillColor),
+        verify(!outsiderRow.selected && !outsiderRow.dimmed && !outsider.ring
+               && outsider.outline && outsider.outline.strokeWidth > 0
+               && Qt.colorEqual(VelocitySupport.color(outsider.fill), expectedFill),
                "the unselected node paints its base fill and outline")
         waitForRendering(testCase.surface)
         var outlineImage = grabImage(testCase.surface)
@@ -111,10 +112,12 @@ EditorDrawerTestSupport {
         var bottom = plot.height - inset
         var outsiderY = bottom - (outsiderNote.velocity - 1) * (bottom - inset) / 126
         var radius = Math.round(gridModel.baseFontPx * 7 / 26)
-        var probeX = Math.round(plotRegion.x0
+        var stroke = Math.round(gridModel.baseFontPx / 12) / page.Screen.devicePixelRatio
+        // Sample a physical pixel at the independently projected inward stroke midpoint.
+        var probeX = Math.floor(plotRegion.x0
                                 + (outsiderNote.tick * gridModel.beatWidth / gridModel.ticksPerBeat
-                                   - gridModel.cameraScrollX + radius * 3 / 4) * scale)
-        var probeY = Math.round(plotRegion.y0 + outsiderY * scale)
+                                   - gridModel.cameraScrollX + radius - stroke / 2) * scale)
+        var probeY = Math.floor(plotRegion.y0 + outsiderY * scale)
         var blackDistance = Math.max(outlineImage.red(probeX, probeY),
                                      outlineImage.green(probeX, probeY),
                                      outlineImage.blue(probeX, probeY))
@@ -129,30 +132,28 @@ EditorDrawerTestSupport {
         }, 3000, "the mounted node press selects its source note")
         tryVerify(function() {
             first = VelocitySupport.velocityNodes(testCase).find(function(item) {
-                return item.parent.model.noteIdText === selectedId
+                return item.noteIdText === selectedId
             })
             if (!first)
                 return false
-            firstRow = first.parent.model
-            var ring = findChild(first.parent, "velocityNodeRing")
-            return firstRow.selected && ring && ring.visible && ring.border.width > 0
-                && Qt.colorEqual(ring.border.color, firstRow.ringColor)
-                && Qt.colorEqual(ring.border.color, page.gridPalette.selectionRing)
+            firstRow = first
+            var ring = first.ring
+            return firstRow.selected && ring && ring.strokeWidth > 0
+                && Qt.colorEqual(VelocitySupport.color(ring), page.gridPalette.selectionRing)
         }, 3000, "the selected node paints the highlight ink")
         var second = VelocitySupport.velocityNodes(testCase)[1]
-        var point = second.mapToItem(input, second.width / 2, second.height / 2)
+        var point = VelocitySupport.center(second)
         mouseClick(input, point.x, point.y, Qt.LeftButton, Qt.ControlModifier)
         tryCompare(model, "selectedCount", 2)
         tryVerify(function() {
             outsider = VelocitySupport.velocityNodes(testCase).find(function(item) {
-                return item.parent.model.noteIdText === outsiderId
+                return item.noteIdText === outsiderId
             })
             if (!outsider)
                 return false
-            outsiderRow = outsider.parent.model
-            return outsiderRow.dimmed && !outsiderRow.selected && outsider.border.width === 0
-                && Qt.colorEqual(outsider.color, outsiderRow.fillColor)
-                && Qt.colorEqual(outsider.color, page.gridPalette.outline)
+            outsiderRow = outsider
+            return outsiderRow.dimmed && !outsiderRow.selected && !outsider.outline
+                && Qt.colorEqual(VelocitySupport.color(outsider.fill), page.gridPalette.outline)
         }, 3000, "the unselected node paints the dimmed ink")
         gridModel.setCameraHScroll(gridModel.cameraMaxHScroll)
         // Route 101's MIDI tracks end at tick 384; the next 4-beat bar is beyond that end.
@@ -192,11 +193,11 @@ EditorDrawerTestSupport {
         gridModel.setCameraHScroll(0)
         tryVerify(function() {
             var start = VelocitySupport.velocityNodes(testCase).find(function(item) {
-                return item.parent.model.noteIdText === selectedId
+                return item.noteIdText === selectedId
             })
             if (!start)
                 return false
-            var center = start.mapToItem(input, start.width / 2, start.height / 2)
+            var center = VelocitySupport.center(start)
             return center.x >= 0 && center.x < input.width
                 && center.y > 0 && center.y < input.height
         }, 3000, "the mounted ink journey restores its initial plotted camera")
@@ -275,6 +276,118 @@ EditorDrawerTestSupport {
                "cancellation restores the pre-gesture fill pixel")
     }
 
+    function test_productionVelocityHeldBandNodeInk() {
+        if (testCase.containerPhase) skip("production composition only")
+        var page = VelocitySupport.mountProductionVelocity(testCase, "velocity-held-band-node-ink")
+        var model = VelocitySupport.velocityModel(testCase)
+        var plot = VelocitySupport.velocityPlot(testCase)
+        var input = VelocitySupport.velocityPlotInput(testCase)
+        var margin = testCase.surface.gridModel.baseFontPx
+        testCase.surface.gridModel.setCameraHScroll(0)
+        session.handleGridEscape()
+        tryCompare(model, "selectedCount", 0)
+        var nodes = VelocitySupport.velocityNodes(testCase)
+        var target = nodes.find(function(node) {
+            var point = VelocitySupport.center(node)
+            return point.x > margin * 4 && point.x < input.width - margin * 2
+                && point.y > margin / 2 && point.y < input.height - margin / 2
+        })
+        verify(target, "the mounted plot has an interior band target")
+        var targetId = target.noteIdText
+        var point = VelocitySupport.center(target)
+        var original = nodes.find(function(node) {
+            var stem = node.stem
+            return node.noteIdText !== targetId && stem
+                && (stem.x + stem.w < point.x - margin * 3 || stem.x > point.x + margin * 3)
+        })
+        verify(original, "the band can leave a pre-existing selection outside coverage")
+        VelocitySupport.clickNode(testCase, original)
+        tryCompare(model, "selectedCount", 1)
+        var originalId = original.noteIdText
+        var startX = point.x - margin * 2
+        var startY = Math.min(input.height - 1, point.y + margin * 2)
+        var endX = point.x + margin * 2
+        var endY = Math.max(1, point.y - margin * 2)
+        waitForRendering(testCase.surface)
+        var before = grabImage(testCase.surface)
+        var ringProbe = null
+        function verifyRestoredInk(message) {
+            waitForRendering(testCase.surface)
+            var image = grabImage(testCase.surface)
+            var origin = plot.mapToItem(testCase.surface, ringProbe.x, ringProbe.y)
+            var sx = image.width / testCase.surface.width
+            var sy = image.height / testCase.surface.height
+            var difference = 0
+            for (var y = Math.floor(origin.y * sy); y < Math.ceil((origin.y + ringProbe.h) * sy); ++y) {
+                for (var x = Math.floor(origin.x * sx); x < Math.ceil((origin.x + ringProbe.w) * sx); ++x) {
+                    difference = Math.max(difference,
+                        Math.abs(image.red(x, y) - before.red(x, y)),
+                        Math.abs(image.green(x, y) - before.green(x, y)),
+                        Math.abs(image.blue(x, y) - before.blue(x, y)))
+                }
+            }
+            verify(difference <= 1, message)
+        }
+        function nodeWithId(id) {
+            return VelocitySupport.velocityNodes(testCase).find(function(node) {
+                return node.noteIdText === id
+            })
+        }
+        function verifyCovered(control) {
+            tryVerify(function() {
+                var covered = nodeWithId(targetId)
+                var retained = nodeWithId(originalId)
+                return covered && covered.selected && covered.ring
+                    && covered.ring.strokeWidth > 0
+                    && Qt.colorEqual(VelocitySupport.color(covered.ring), page.gridPalette.selectionRing)
+                    && Qt.colorEqual(VelocitySupport.color(covered.stem), page.gridPalette.selectionRing)
+                    && retained && retained.selected === control
+            }, 3000, "held coverage paints selected rings/stems and Control preserves pre-press ink")
+            compare(model.selectedNoteIdText(), originalId,
+                    "held coverage does not commit semantic selection")
+            compare(model.selectedCount, 1, "the editing context keeps the real selection")
+            waitForRendering(testCase.surface)
+            var covered = nodeWithId(targetId)
+            ringProbe = covered.ring
+            var ink = page.gridPalette.selectionRing
+            var fill = page.gridPalette.selectionFill
+            var coveredInk = Qt.rgba(fill.r * fill.a + ink.r * (1 - fill.a),
+                                     fill.g * fill.a + ink.g * (1 - fill.a),
+                                     fill.b * fill.a + ink.b * (1 - fill.a), 1)
+            verify(VelocitySupport.nearestRecordInk(testCase, grabImage(testCase.surface),
+                       testCase.surface, plot, covered.ring, coveredInk) <= 32,
+                   "the covered node's selected ring reaches the rendered image before release")
+        }
+        for (var control = 0; control < 2; ++control) {
+            var modifiers = control ? Qt.ControlModifier : Qt.NoModifier
+            mousePress(input, startX, startY, Qt.RightButton, modifiers)
+            mouseMove(input, endX, endY, -1, Qt.RightButton)
+            verifyCovered(control === 1)
+            mouseMove(input, startX - margin * 2, endY, -1, Qt.RightButton)
+            tryVerify(function() {
+                var uncovered = nodeWithId(targetId)
+                return uncovered && !uncovered.selected && !uncovered.ring
+                    && !Qt.colorEqual(VelocitySupport.color(uncovered.stem), page.gridPalette.selectionRing)
+            }, 3000, "moving coverage away removes selected node ink while still held")
+            verifyRestoredInk("moving out restores the node's pre-band pixels while held")
+            compare(model.selectedNoteIdText(), originalId, "moving coverage leaves selection unchanged")
+            mouseMove(input, endX, endY, -1, Qt.RightButton)
+            verifyCovered(control === 1)
+            verify(session.handleGridEscape(), "Escape cancels the held node band")
+            mouseRelease(input, endX, endY, Qt.RightButton, modifiers)
+            tryVerify(function() {
+                var cancelled = nodeWithId(targetId)
+                var restored = nodeWithId(originalId)
+                return cancelled && !cancelled.selected && !cancelled.ring
+                    && restored && restored.selected && restored.ring
+                    && Qt.colorEqual(VelocitySupport.color(restored.stem), page.gridPalette.selectionRing)
+            }, 3000, "cancel and stale release restore the pre-press node ink")
+            verifyRestoredInk("cancel and stale release restore the node's pre-band pixels")
+            compare(model.selectedNoteIdText(), originalId, "cancellation preserves semantic selection")
+        }
+        verify(session.handleGridEscape(), "the held-band journey clears its original selection")
+    }
+
     function test_productionVelocityDetentRepaint() {
         if (testCase.containerPhase) skip("production composition only")
         VoiceSupport.mountProductionVoice(testCase, "velocity-detent-context")
@@ -298,7 +411,7 @@ EditorDrawerTestSupport {
             VelocitySupport.mountProductionVelocity(testCase, "velocity-detent-repaint",
                 { "velocityVisible": true, "voiceChangesVisible": true, "activePage": "velocity" })
             var nodes = VelocitySupport.velocityNodes(testCase)
-            var node = nodes.find(function(item) { return item.parent.model.tick > insertedTick })
+            var node = nodes.find(function(item) { return item.tick > insertedTick })
             verify(node, "the staged song has a note after the square voice change")
             VelocitySupport.clickNode(testCase, node)
             var model = VelocitySupport.velocityModel(testCase)
@@ -350,32 +463,35 @@ EditorDrawerTestSupport {
         var input = VelocitySupport.velocityPlotInput(testCase)
         var gridModel = testCase.surface.gridModel
         gridModel.setCameraHScroll(0)
-        var nodes = VelocitySupport.velocityNodes(testCase)
-        verify(nodes.length > 0, "the staged song exposes a node before the scroll")
-        tryVerify(function() {
-            nodes = VelocitySupport.velocityNodes(testCase)
-            var node = nodes[0]
-            var center = node.mapToItem(input, node.width / 2, node.height / 2)
-            return center.x >= 0 && center.x < input.width
-                && center.y > 0 && center.y < input.height
-        }, 3000, "a staged node is inside the mounted plot before the scroll")
-        var node = nodes[0]
-        var stableX = node.parent.model.x
-        var before = node.mapToItem(input, node.width / 2, node.height / 2)
         var scroll0 = gridModel.cameraScrollX
         var dpr = model.devicePixelRatio > 0 ? model.devicePixelRatio : 1
         function snap(value) { return Math.round(value * dpr) / dpr }
         var target = Math.min(scroll0 + gridModel.beatWidth, gridModel.cameraMaxHScroll)
         if (!(target > scroll0))
             skip("the staged song fits without horizontal scroll")
+        var nodes = VelocitySupport.velocityNodes(testCase)
+        verify(nodes.length > 0, "the staged song exposes a node before the scroll")
+        tryVerify(function() {
+            nodes = VelocitySupport.velocityNodes(testCase).filter(function(node) {
+                var center = VelocitySupport.center(node)
+                return center.x >= snap(target) - snap(scroll0) && center.x < input.width
+                    && center.y > 0 && center.y < input.height
+            })
+            return nodes.length > 0
+        }, 3000, "a staged node stays inside the mounted plot across the full scroll")
+        var node = nodes[0]
+        var stableX = node.x
+        var before = VelocitySupport.center(node)
         gridModel.setCameraHScroll(target)
-        // Same-turn read: no pump, no wait. The container translates from the
-        // scene scroll row in the same sweep, so the drawn handle already moved.
-        var after = node.mapToItem(input, node.width / 2, node.height / 2)
-        verify(after.x !== before.x, "scroll moves the mounted velocity handle in the same turn")
+        // Same-turn read: the Swift drawing is already projected against the new camera.
+        var moved = VelocitySupport.velocityNodes(testCase).find(function(item) {
+            return item.noteIdText === node.noteIdText
+        })
+        var after = VelocitySupport.center(moved)
+        verify(after.x !== before.x, "scroll moves the bulk marker in the same turn")
         verify(Math.abs((before.x - after.x) - (snap(target) - snap(scroll0))) < 0.01
-               && node.parent.model.x === stableX,
-               "the moved handle tracks the snapped scroll delta with stable rows")
+               && moved.x === stableX,
+               "the moved handle tracks the snapped scroll delta with stable value geometry")
         gridModel.setCameraHScroll(0)
     }
 }

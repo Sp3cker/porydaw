@@ -157,7 +157,7 @@ struct AutomationContextPresentation: Sendable {
         editCursor: Tick?,
         playing: Bool,
         presentedTick: Tick,
-        projection: AutomationLaneProjection?,
+        snapshot: AutomationLaneSnapshot?,
         activeParameter: AutomationParameter,
         previousTick: Tick,
         previousValue: Int?
@@ -169,9 +169,11 @@ struct AutomationContextPresentation: Sendable {
                 contextChanged: false)
         }
         let tick = playing ? presentedTick : editCursor
-        let value = projection?.heldValue(at: tick)
+        let points = snapshot?.displaySeries ?? []
+        let index = automationPartitionIndex(points) { $0.tick <= tick }
+        let value = index > 0 ? points[index - 1].value : nil
         let title = AutomationCatalog.title(activeParameter)
-        let valueText = value.map { projection?.metadata.valueText($0) ?? "" }
+        let valueText = value.map { snapshot?.metadata.valueText($0) ?? "" }
         let text = valueText.map { "\(title) \($0)" } ?? ""
         let visible = value != nil
         return Self(

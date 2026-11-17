@@ -78,7 +78,9 @@ public final class SongDockController: QmlUncreatable {
     @QtIgnored
     func syncSelection() {
         let label = session?.songTabs.selectedPage?.title
-        presenter.setCurrentSong(songId: presenter.songListings.first { $0.label == label }?.id ?? -1)
+        let songId = presenter.songListings.first { (song: SongListing) in song.label == label }?.id ?? -1
+        guard presenter.currentSongId != songId else { return }
+        presenter.setCurrentSong(songId: songId)
     }
 
     @QtIgnored

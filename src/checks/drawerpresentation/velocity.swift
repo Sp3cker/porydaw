@@ -305,13 +305,13 @@ func drawerVelocityKeysplitPerNoteMapping(
         let kind: VoiceKind = note.pitch == 60 ? .square1 : .wave
         let map = VelocityMap(voiceKind: kind)
         let noteAxis = VelocityAxisModel(map: map, geometry: page.axisModel.geometry)
-        let handle = page.publishedHandlesSnapshot.first { $0.noteIdText == "\(note.id.rawValue)" }
+        let handle = page.publishedHandlesSnapshot.first { $0.noteID == note.id }
         report.expect(
             handle?.y == noteAxis.levelToY(map.level(of: Int(note.velocity))!),
             cppID: drawerVelocityKeysplitID,
             message: "mixed selection places each handle using its own level boundaries")
     }
-    if let wave = page.publishedHandlesSnapshot.first(where: { $0.noteIdText == "\(notes[1].id.rawValue)" }) {
+    if let wave = page.publishedHandlesSnapshot.first(where: { $0.noteID == notes[1].id }) {
         _ = page.pointerMove(x: wave.x, y: wave.y, buttons: 0)
         report.expect(
             page.axisModel.map == VelocityMap(voiceKind: .wave),

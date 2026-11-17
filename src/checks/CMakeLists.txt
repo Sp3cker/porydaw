@@ -590,6 +590,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editorqml/GridInputClipProbe.swift
         support/WorkspacePresenterFixture.swift
         editorqml/DisplayListProbe.swift
+        editorqml/VelocityDrawingProbe.swift
         editorqml/DrawerTestPage.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
         SWIFT_COMPILE_OPTIONS
@@ -651,6 +652,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         AUTOMOC OFF
         SWIFT_SOURCES
         editorqml/ShellQmlTests.swift
+        editorqml/VelocityDrawingProbe.swift
         editorqml/PluginFaultInjector.swift
         editorqml/ShellQmlEntries.swift
         editorqml/GridInputClipProbe.swift

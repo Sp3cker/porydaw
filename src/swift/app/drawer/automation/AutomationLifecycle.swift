@@ -1,5 +1,6 @@
 import PorydawAppPresentation
 import PorydawCore
+import PorydawDocument
 import QtBridge
 
 // Automation lifecycle and owned-state application: the document-derived
@@ -19,9 +20,24 @@ enum AutomationHintProfile {
 
 @MainActor
 extension AutomationPage {
+    private func currentContentFacts() -> ContentFacts? {
+        guard let session else { return nil }
+        return ContentFacts(
+            revision: session.document.revision, track: session.selectedTrack,
+            selection: selection, bank: ObjectIdentifier(session.voicegroup),
+            bankRevision: session.voicegroup.valueRevision)
+    }
+
     /// Rebuilds and applies the document-derived scene values before publishing
     /// primitives, preserving the page's lifecycle and publication order.
     func rebuildContent(selectionOnly: Bool = false) {
+        guard contentVisible else {
+            publishContext()
+            contentRefreshPending = true
+            return
+        }
+        contentRefreshPending = false
+        appliedContentFacts = currentContentFacts()
         let viewport = self.viewport
         let snapshot =
             viewport.map { viewport in
@@ -147,12 +163,22 @@ extension AutomationPage {
     /// Applies the plain context result in the same publication order as the
     /// cursor/playhead path that produced it.
     func publishContext() {
+        let track = activeTrack()
+        let index = min(max(activeParameterIndex, 0), AutomationCatalog.count - 1)
+        let parameter = AutomationCatalog.parameter(at: index, track: track ?? 0) ?? .tempo
+        let snapshot: AutomationLaneSnapshot?
+        if let session, parameter.isTempo || track != nil {
+            snapshot = projectionFacts.snapshot(parameter, session: session)
+        } else {
+            snapshot = nil
+        }
+        if trackAvailable != (track != nil) { trackAvailable = track != nil }
         let presentation = AutomationContextPresentation.resolve(
             editCursor: session?.editCursor,
             playing: playing,
             presentedTick: presentedTick,
-            projection: projection,
-            activeParameter: activeParameter,
+            snapshot: snapshot,
+            activeParameter: parameter,
             previousTick: contextTick,
             previousValue: contextValue)
         contextTick = presentation.tick
@@ -227,6 +253,9 @@ extension AutomationPage {
 
     func invalidateDocumentInteractionImpl() {
         guard let session else { return }
+        if let appliedContentFacts, appliedContentFacts.track != session.selectedTrack {
+            cancelSectionInteraction()
+        }
         let revision = session.document.revision
         func stale(_ facts: AutomationFrozenFacts) -> Bool {
             facts.revision != revision
@@ -250,11 +279,12 @@ extension AutomationPage {
         }
     }
 
-    func refreshFromDocumentImpl() {
+    func refreshFromDocumentImpl(selectionOnly: Bool = false) {
         refreshPromptStyles()
         guard session != nil else { return }
+        guard contentRefreshPending || appliedContentFacts != currentContentFacts() else { return }
         publishInteractionState()
-        rebuildContent()
+        rebuildContent(selectionOnly: selectionOnly)
     }
 
     /// Cursor-only publication: the stopped readout consumes the session's

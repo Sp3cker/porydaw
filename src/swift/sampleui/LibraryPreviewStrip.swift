@@ -81,7 +81,7 @@ public final class LibraryPreviewStrip: QmlUncreatable {
             let line = SharedPlayheadAppearance.lineWidth
             rect((playhead * width).rounded() - line / 2, 0, line, height, PaletteMath.argb(palette.playhead))
         }
-        list = writer.finish()
+        writer.replace(into: &list)
         displayRevision += 1
     }
 

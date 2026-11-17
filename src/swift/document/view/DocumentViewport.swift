@@ -101,8 +101,10 @@ public final class DocumentViewport {
     }
 
     private func refreshScaleProjection() {
-        let notes = session.selectedTrack.map { session.document.notes(in: $0) } ?? []
-        let rows = scale.projection(notes: notes)
+        let rows =
+            scale.fold
+            ? session.projectionCache.foldedPitchProjection(in: session.selectedTrack)
+            : PitchProjection()
         guard rows != camera.projection else { return }
         let before = camera.snapshot
         let centeredPitch = camera.projection.pitch(

@@ -5,44 +5,17 @@ import QtBridge
 
 @MainActor
 extension GridScene {
-    /// Content seam: resolves palette/colors and records once per content
-    /// key, then builds the frame.
+    /// Retains document content independently of selected-track presentation.
     @QtIgnored
     func rebuildNotes(_ input: GridSceneInput) {
-        let colors = resolvePalette(input)
+        RollDrawingContent.updatePalette(input, into: &plotPalette)
+        let colors = plotPalette
         let key = RollDrawingContent.key(input, palette: colors)
-        if noteRecordsKey != key.notesSection {
-            RollDrawingContent.resolveNotes(
-                input, notes: input.renderNotes(), into: &noteRecords,
-                blockEnds: &noteRecordBlockEnds)
-            noteRecordsKey = key.notesSection
-            builtProjection = input.camera.projection
-            contentGeneration += 1
-        }
         if key != listContentKey {
             listContentKey = key
             contentGeneration += 1
         }
         rebuildRollLists(input, colors: colors)
-    }
-
-    /// Camera-only seam: O(visible), no content-key scan. Cold start with
-    /// no resolved records falls back to the content seam.
-    @QtIgnored
-    func rebuildDisplayLists(_ input: GridSceneInput) {
-        guard noteRecordsKey != nil else {
-            rebuildNotes(input)
-            return
-        }
-        let colors = resolvePalette(input)
-        rebuildRollLists(input, colors: colors)
-    }
-
-    /// True when the cached records were resolved against this projection.
-    /// Fixed-size compare; never scans notes.
-    @QtIgnored
-    func projectionCovers(_ projection: PitchProjection) -> Bool {
-        builtProjection == projection
     }
 
     @QtIgnored
@@ -53,47 +26,34 @@ extension GridScene {
         }
         let frame = RollDisplayFrameKey(
             generation: contentGeneration, camera: snapshot,
-            dpr: input.metrics.dpr, band: band, hoverKey: input.hoverKey,
-            rulerHeight: input.rulerHeight)
-        if frame == displayFrameKey { return }
+            dpr: input.metrics.dpr, band: band)
         if displayLists.count != 3 {
             displayLists = [Data(), retainedEmptyDisplayList(), retainedEmptyDisplayList()]
         }
-        // Release the previous buffers before the retained writers reuse
-        // their own: otherwise finish()'s shared output copies on write.
-        displayLists[0] = Data()
-        displayLists[1] = Data()
-        displayLists[2] = Data()
-        let built = plotBuilder.build(
-            input, records: noteRecords, palette: colors,
-            blockEnds: noteRecordBlockEnds,
-            width: snapshot.viewportWidth, height: snapshot.rollHeight)
-        displayLists[0] = built.data
-        // The keyboard list fills the full-width band beside the headers and
-        // clips to it, so overflowing drum labels paint past the edge.
-        displayLists[1] = keyboardBuilder.build(
+        var changed = false
+        if frame != displayFrameKey {
+            let built = plotBuilder.build(
+                input, palette: colors,
+                width: snapshot.viewportWidth, height: snapshot.rollHeight,
+                into: &displayLists[0])
+            displayFrameKey = frame
+            noteRecordCount = built.count
+            changed = built.changed
+        }
+        if keyboardBuilder.build(
             input, palette: colors,
-            width: input.metrics.keyboardWidth + snapshot.viewportWidth,
-            height: snapshot.rollHeight)
-        displayLists[2] = rulerBuilder.build(
-            input, palette: colors,
-            width: snapshot.viewportWidth, height: input.rulerHeight)
-        displayFrameKey = frame
-        noteRecordCount = built.count
-        displayRevision += 1
+            width: input.metrics.keyboardWidth + snapshot.viewportWidth, height: snapshot.rollHeight,
+            into: &displayLists[1])
+        {
+            changed = true
+        }
+        if rulerBuilder.build(
+            input, palette: colors, width: snapshot.viewportWidth, height: input.rulerHeight,
+            into: &displayLists[2])
+        {
+            changed = true
+        }
+        if changed { displayRevision += 1 }
     }
 
-    /// Palette colors resolved once per palette identity + velocity; the
-    /// display lists index the same colors in slot order.
-    @QtIgnored
-    private func resolvePalette(_ input: GridSceneInput) -> [UInt32] {
-        let key = PaletteContentKey(
-            palette: ObjectIdentifier(input.palette),
-            lastVelocity: input.lastVelocity)
-        if let cached = paletteContentCache, cached.key == key { return cached.colors }
-        let colors = RollDrawingContent.paletteColors(input)
-        paletteContentCache = (key, colors)
-        plotPalette = colors
-        return colors
-    }
 }

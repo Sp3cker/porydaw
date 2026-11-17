@@ -16,18 +16,11 @@ extension PianoGrid {
 
     @QtIgnored
     func sceneInput() -> GridSceneInput {
-        let visibleNotes: [GridNote]
-        if case .velocity(let state) = gesture, state.preview != nil {
-            visibleNotes = notes.map { note in
-                guard let velocity = previewVelocity(note.noteId) else { return note }
-                return GridNote(
-                    noteId: note.noteId, tick: note.tick, duration: note.duration,
-                    pitch: note.pitch, track: note.track, velocity: velocity,
-                    ghost: note.ghost)
-            }
-        } else {
-            visibleNotes = notes
-        }
+        let snap = Int(max(1, viewport.grid.snapTicksAt(session.editCursor, camera: viewport.camera)))
+        notes.refresh(session: session, snap: snap)
+        notes.selectedTrack = trackIndex
+        recomputeContentEndTick()
+        let velocityPreview = velocityPreviewPresentation
         let showVelocityValues: Bool
         switch gesture {
         case .velocity:
@@ -54,16 +47,16 @@ extension PianoGrid {
             metrics: metrics, grid: viewport.grid, palette: palette, camera: viewport.camera,
             scale: viewport.scale,
             typography: typography, fontSpec: { self.fontSpec($0) },
-            fonts: measurementFonts, notes: visibleNotes,
+            fonts: measurementFonts, notes: notes,
             displacement: displacement, displacedNotes: displacedNotes,
             selectedNotes: selectedNotes,
+            velocityPreview: velocityPreview,
             drawPreview: drawPreview, paintPreview: paintPreview, bandSelection: selectionBand,
             lastVelocity: lastVelocity, hoverKey: hoverKey,
             noteNameMode: noteNameMode,
             showVelocityValues: showVelocityValues,
             timeSelection: session.timeSelection,
             usedTrackCount: session.document.engineTracks.usedTrackCount,
-            selectedTrack: trackIndex,
             keyboardNames: drumNames, keyboardBankIdentity: ObjectIdentifier(session.bankLease),
             keyboardProgram: program, rulerHeight: rulerHeight)
     }
@@ -71,30 +64,17 @@ extension PianoGrid {
     @QtIgnored
     func rebuildScene() {
         let input = sceneInput()
-        scene.invalidatePaletteCache()
-        staticSceneDirty = false
         scene.rebuildNotes(input)
         scene.rebuildStatic(input)
     }
 
     @QtIgnored
     func refreshNotes() {
-        recomputeContentEndTick()
-        let typographyChanged = updateTypography()
-        if typographyChanged { staticSceneDirty = true }
+        updateTypography()
         let input = sceneInput()
-        if staticSceneDirty {
-            scene.invalidatePaletteCache()
-            staticSceneDirty = false
-        }
         scene.rebuildNotes(input)
         scene.rebuildStatic(input)
-        if typographyChanged {
-            scene.rebuildHover(input)
-        } else if hoverKey >= 0 {
-            scene.refreshHoverChip(input)
-        }
-        publishVelocityPreview()
+        publishVelocityPreview(input.velocityPreview)
         publishOutputs()
     }
 
@@ -108,73 +88,36 @@ extension PianoGrid {
             refreshCameraPresentationGeometry()
             return
         }
-        let typographyChanged = updateTypography()
+        updateTypography()
         let input = sceneInput()
-        if typographyChanged || staticSceneDirty {
-            scene.invalidatePaletteCache()
-            staticSceneDirty = false
-        }
-        scene.rebuildDisplayLists(input)
+        scene.rebuildNotes(input)
         scene.rebuildStatic(input)
-        if typographyChanged {
-            scene.rebuildHover(input)
-        } else if hoverKey >= 0 {
-            scene.refreshHoverChip(input)
-        }
         publishOutputs()
     }
 
-    /// Geometry seam: refreshes axis/fonts, reuses cached records unless
-    /// the projection changed; fonts/projection/cold take the content path.
+    /// Geometry changes reuse neutral track content and invalidate each list
+    /// through its own actual camera/typography dependencies.
     @QtIgnored
     private func refreshCameraPresentationGeometry() {
         updateTimeAxis()
-        let typographyChanged = updateTypography()
+        updateTypography()
         let input = sceneInput()
-        if typographyChanged || staticSceneDirty {
-            scene.invalidatePaletteCache()
-            staticSceneDirty = false
-        }
-        guard !typographyChanged,
-            scene.projectionCovers(input.camera.projection)
-        else {
-            refreshNotes()
-            return
-        }
-        scene.rebuildDisplayLists(input)
+        scene.rebuildNotes(input)
         scene.rebuildStatic(input)
-        if hoverKey >= 0 {
-            scene.refreshHoverChip(input)
-        }
         publishOutputs()
     }
 
     @QtIgnored
     private func recomputeContentEndTick() {
-        let length = session.timeline.lengthTicks
-        let paint = paintPreview
-        if notes == lastEndTickNotes, length == lastEndTickLength,
-            drawPreview?.tick == lastEndTickPreview?.tick,
-            drawPreview?.duration == lastEndTickPreview?.duration,
-            drawPreview?.pitch == lastEndTickPreview?.pitch,
-            paint.count == lastEndTickPaintCount
-        {
-            return
-        }
-        lastEndTickNotes = notes
-        lastEndTickPreview = drawPreview
-        lastEndTickPaintCount = paint.count
-        lastEndTickLength = length
-        var end = max(Int(length), GridMetrics.songLengthTicks)
-        for note in notes { end = max(end, note.tick + note.duration) }
+        var end = max(Int(session.timeline.lengthTicks), GridMetrics.songLengthTicks)
+        end = max(end, notes.endTick)
         if let preview = drawPreview { end = max(end, preview.tick + preview.duration) }
-        for preview in paint { end = max(end, preview.tick + preview.duration) }
+        for preview in paintPreview { end = max(end, preview.tick + preview.duration) }
         contentEndTick = end
     }
 
-    @discardableResult
     @QtIgnored
-    private func updateTypography() -> Bool {
+    private func updateTypography() {
         let cameraRowHeight = viewport.camera.snapshot.keyHeight
         let key = (
             fontPx: metrics.baseFontPx, dpr: metrics.dpr,
@@ -184,7 +127,7 @@ extension PianoGrid {
             current.fontPx == key.fontPx && current.dpr == key.dpr
                 && current.rowHeight == key.rowHeight
         {
-            return false
+            return
         }
         measurementFonts = GridTypography.fonts(
             metrics: metrics, typography: roleTypography)
@@ -195,7 +138,6 @@ extension PianoGrid {
         let markerRowHeight = measured.boldHeight + 1
         publish(\.rulerMarkerRowHeight, markerRowHeight)
         publish(\.rulerHeight, markerRowHeight + measured.rulerHeight + 1)
-        return true
     }
 
     @QtIgnored
@@ -235,8 +177,12 @@ extension PianoGrid {
 
     @QtIgnored
     func defaultVerticalScroll(camera: EditorCamera) -> Double {
-        let pitches = notes.map(\.pitch)
-        let middle = pitches.isEmpty ? 60 : (pitches.min()! + pitches.max()!) / 2
+        let middle: Int
+        if let low = notes.minPitch, let high = notes.maxPitch {
+            middle = (low + high) / 2
+        } else {
+            middle = 60
+        }
         guard let pitch = camera.projection.nearestVisiblePitch(to: middle) else { return 0 }
         let centerRow = camera.projection.row(forPitch: pitch)
         return max(
@@ -289,13 +235,19 @@ extension PianoGrid {
     @QtIgnored
     func fetchNoteSummaryImpl() -> String {
         let selectedNotes = session.selectedNotes
-        let parts = notes.map { note -> String in
-            var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
-            json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
-            json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
-            json += ",\"ghost\":\(note.ghost)"
-            json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
-            return json
+        var parts: [String] = []
+        parts.reserveCapacity(notes.count)
+        for pass in 0..<2 {
+            for track in notes.tracks.indices where (track == notes.selectedTrack) == (pass == 0) {
+                for note in notes.tracks[track].notes {
+                    var json = "{\"id\":\(note.noteId.rawValue),\"tick\":\(note.tick)"
+                    json += ",\"duration\":\(note.duration),\"pitch\":\(note.pitch)"
+                    json += ",\"track\":\(note.track),\"velocity\":\(note.velocity)"
+                    json += ",\"ghost\":\(track != notes.selectedTrack)"
+                    json += ",\"selected\":\(selectedNotes.contains(note.noteId))}"
+                    parts.append(json)
+                }
+            }
         }
         return "[" + parts.joined(separator: ",") + "]"
     }

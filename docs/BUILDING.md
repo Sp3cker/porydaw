@@ -48,6 +48,10 @@ editor and Loader-release lifetimes. MIDI import distinguishes loading, wizard
 editing and registration. Tab close/reload requests carry their target together;
 save-conflict requests keep only a weak document identity.
 
+Track switches retain neutral notes per track; the roll culls them before styling.
+Velocity nodes share one display list rather than per-note QML delegates.
+Drawer pages keep semantic state current while hidden and rebuild drawing on reveal.
+
 Provision once with `uv sync --locked`, including each new worktree and after lock/project changes. Warm commands use `--no-sync`; no implicit Python dependency resolution. `--help` loads only the command front end. See [INSTALL.md](../INSTALL.md) for native host prerequisites and optional checkout-local Qt provisioning.
 
 On macOS, the runner asks Swiftly for the effective project selection and checks

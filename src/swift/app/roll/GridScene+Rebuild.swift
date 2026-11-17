@@ -14,10 +14,11 @@ struct GridSceneInput {
     var typography: GridTypography?
     var fontSpec: (GridFontKind) -> QmlFont
     var fonts: [GridFontKind: GridFontSpec] = [:]
-    var notes: [GridNote] = []
+    var notes: RollNoteContent = []
     var displacement: RollNoteDisplacement = .none
     var displacedNotes: Set<NoteID> = []
     var selectedNotes: Set<NoteID> = []
+    var velocityPreview: RollVelocityPreview?
     var drawPreview: (tick: Int, duration: Int, pitch: Int)?
     var paintPreview: [RollPreviewNote] = []
     var bandSelection: (x: Double, y: Double, w: Double, h: Double)?
@@ -27,7 +28,6 @@ struct GridSceneInput {
     var showVelocityValues = false
     var timeSelection: AutomationTimeSelection? = nil
     var usedTrackCount = 0
-    var selectedTrack = 0
     var keyboardNames: [String]?
     var keyboardBankIdentity: ObjectIdentifier?
     var keyboardProgram = 0
@@ -35,11 +35,6 @@ struct GridSceneInput {
     // published on PianoGrid. Part of the frame key like the camera box.
     var rulerHeight: Double = 0
 
-    // Only synchronous record resolution borrows source storage; cache keys retain owned values.
-    @_lifetime(borrow self)
-    func renderNotes() -> Span<GridNote> {
-        notes.span
-    }
 }
 
 /// Frame-tier key: content generation plus everything the per-frame plot
@@ -51,11 +46,6 @@ struct RollDisplayFrameKey: Equatable {
     var camera: EditorCamera.Snapshot
     var dpr: Double
     var band: RollBandSignature?
-    // The keyboard highlight is emitted list content: hover-only moves
-    // rebuild the lists and bump displayRevision once.
-    var hoverKey: Int
-    // Band-2 list height: typography moves rebuild the ruler list.
-    var rulerHeight: Double
 }
 
 struct RollBandSignature: Equatable {
@@ -73,7 +63,8 @@ extension GridScene {
     func retainedEmptyDisplayList() -> Data {
         if let cached = cachedEmptyDisplayList { return cached }
         var writer = DisplayListWriter()
-        let empty = writer.finish()
+        var empty = Data()
+        writer.replace(into: &empty)
         cachedEmptyDisplayList = empty
         return empty
     }
@@ -92,6 +83,6 @@ extension GridScene {
         syncRetained(
             cameraScroll, CollectionOfOne(value),
             make: SceneRect.init, update: { $0.update($1) })
-        rebuildHover(input)
+        rebuildHoverChip(input)
     }
 }

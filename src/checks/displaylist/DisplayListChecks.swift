@@ -239,7 +239,9 @@ private func displayListFixture() -> (
         offset += texts[index].utf8.count
         writer.label(labels[index], text: texts[index])
     }
-    return (writer.finish(), fonts, rects, labels, families, texts)
+    var data = Data()
+    writer.replace(into: &data)
+    return (data, fonts, rects, labels, families, texts)
 }
 
 private func displayListDecodes(_ data: Data) -> Bool {
@@ -406,17 +408,20 @@ private func displayListRejects(_ report: CheckReport) {
         + MemoryLayout<PdDlRect>.offset(of: \.flags)!
     unknownRectFlag.replaceSubrange(
         rectFlagsOffset..<rectFlagsOffset + 4,
-        with: [2, 0, 0, 0])
+        with: [4, 0, 0, 0])
     check.expect(!displayListDecodes(unknownRectFlag), message: "rect carries unknown flag bit")
 
-    if let reservedField = MemoryLayout<PdDlRect>.offset(of: \.reserved) {
-        var reservedRect = valid
-        let reservedOffset =
-            MemoryLayout<PdDlHeader>.stride + 2 * MemoryLayout<PdDlFont>.stride + reservedField
-        reservedRect.replaceSubrange(reservedOffset..<reservedOffset + 4, with: [1, 0, 0, 0])
-        check.expect(!displayListDecodes(reservedRect), message: "rect carries a nonzero reserved word")
+    if let strokeField = MemoryLayout<PdDlRect>.offset(of: \.strokeWidth) {
+        var strokedRect = valid
+        let strokeOffset =
+            MemoryLayout<PdDlHeader>.stride + 2 * MemoryLayout<PdDlFont>.stride + strokeField
+        var width: Float = 1
+        withUnsafeBytes(of: &width) { bytes in
+            strokedRect.replaceSubrange(strokeOffset..<strokeOffset + 4, with: bytes)
+        }
+        check.expect(!displayListDecodes(strokedRect), message: "ordinary rectangle carries a stroke")
     } else {
-        check.expect(false, message: "PdDlRect.reserved has a stored offset")
+        check.expect(false, message: "PdDlRect.strokeWidth has a stored offset")
     }
 
     var unknownLabelFlag = valid

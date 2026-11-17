@@ -22,7 +22,7 @@ func drawerVelocityFrozenGesturePolicy(
         expected: 3, actual: fixture.handles.count, cppID: drawerVelocityProjectionID,
         what: "every note of the primary track publishes one handle")
     guard let firstHandle = fixture.handle(notes[0]),
-        let thirdHandle = fixture.handle(notes[2])
+        fixture.handle(notes[2]) != nil
     else {
         report.fail(drawerVelocityProjectionID, "the fixture's notes have no published handles")
         return
@@ -40,7 +40,7 @@ func drawerVelocityFrozenGesturePolicy(
             || firstHandle.x <= 400, cppID: drawerVelocityProjectionID,
         message: "the handle's x is a plot-local camera projection")
     report.expect(
-        fixture.handle(notes[0])!.y < firstHandle.hitRadius * 2
+        firstHandle.y < fixture.geometry.hitRadius * 2
             || firstHandle.y > 0, cppID: drawerVelocityProjectionID,
         message: "the handle publishes a drawn y inside the body")
 
@@ -229,6 +229,6 @@ func drawerVelocityFrozenGesturePolicy(
         abs(velocityRampValue(at: 5, x0: 10, y0: 3, x1: 10, y1: 9) - 9) < 1e-9,
         cppID: drawerVelocityGestureID, message: "a vertical span resolves to the near endpoint")
     report.expect(
-        thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
-        message: "the published hit radius is font-relative and positive")
+        fixture.geometry.hitRadius > 0, cppID: drawerVelocityGestureID,
+        message: "the page's hit radius is font-relative and positive")
 }

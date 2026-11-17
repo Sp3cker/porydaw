@@ -20,13 +20,14 @@ public func runSelectionChecks(_ report: CheckReport, viewport: DocumentViewport
 
 @MainActor
 public func selectionRect(_ id: NoteID, grid: PianoGrid) -> SceneRect? {
-    guard let note = grid.notes.first(where: { $0.noteId == id }) else { return nil }
+    guard let note = grid.notes.tracks.lazy.flatMap(\.notes).first(where: { $0.noteId == id })
+    else { return nil }
     return rollNoteRect(note, grid: grid)
 }
 
 @MainActor
 func rollNoteRects(_ grid: PianoGrid) -> [SceneRect] {
-    grid.notes.compactMap { rollNoteRect($0, grid: grid) }
+    grid.notes.tracks.flatMap { track in track.notes.compactMap { rollNoteRect($0, grid: grid) } }
 }
 
 @MainActor

@@ -211,8 +211,7 @@ EditorDrawerTestSupport {
         const velocityNode = VelocitySupport.velocityNodes(testCase)[0]
         const velocityInput = VelocitySupport.velocityPlotInput(testCase)
         verify(velocityNode && velocityInput, "a mounted node accepts hover")
-        const hover = velocityNode.mapToItem(
-            velocityInput, velocityNode.width / 2, velocityNode.height / 2)
+        const hover = VelocitySupport.center(velocityNode)
         mouseMove(velocityInput, hover.x, hover.y)
         tryVerify(function() {
             return PageSupport.collectVisibleTexts(testCase, VelocitySupport.velocityRuler(testCase), []).some(

@@ -31,7 +31,8 @@ ShellLaneSupport {
             var r = RollNoteFaces.rect(renderer, plot, notes[i].id)
             if (r)
                 items.push({ x: r.x, y: r.y, width: r.width, height: r.height,
-                             fillColor: r.fill })
+                             fillColor: r.fill, id: notes[i].id,
+                             ghost: notes[i].ghost, selected: notes[i].selected })
         }
         return items
     }
@@ -154,6 +155,28 @@ ShellLaneSupport {
         }
         verify(noteProbe !== null, "a visible note face is covered by the reticle")
 
+        var ringProbe = null
+        for (var n = 0; n < delegates.length && ringProbe === null; ++n) {
+            var candidate = delegates[n]
+            var cx = candidate.x + candidate.width / 2
+            var edgeY = candidate.y + 0.5 / dpr
+            if (!candidate.ghost && !candidate.selected && candidate.width >= 6
+                    && candidate.height >= 6 && cx > reticle.x + 4
+                    && cx < reticle.x + reticle.w - 4
+                    && edgeY > reticle.y + 4 && edgeY < reticle.y + reticle.h - 4) {
+                ringProbe = { id: candidate.id, x: cx, y: edgeY,
+                              centerY: candidate.y + candidate.height / 2,
+                              baseline: pixelPlot(baseline, dpr, cx, edgeY) }
+            }
+        }
+        verify(ringProbe !== null, "an unselected primary note edge lies inside the held band")
+        function selectedIds() {
+            return JSON.parse(grid.fetchNoteSummary()).filter(function(note) {
+                return note.selected
+            }).map(function(note) { return note.id }).sort().join(",")
+        }
+        var selectionBefore = selectedIds()
+
         var outside = []
         for (var oy = 5; oy <= plot.height - 5 && outside.length < 3; oy += 2)
             for (var ox = 5; ox <= plot.width - 5 && outside.length < 3; ox += 2) {
@@ -187,6 +210,35 @@ ShellLaneSupport {
         verify(during.width > 0, "the roll renders a frame during the drag")
         compare(during.width, baseline.width, "the drag frame keeps its size")
         compare(during.height, baseline.height, "the drag frame keeps its pixel ratio")
+        var ring = Helpers.channels(grid.palette.selectionRing)
+        verify(Helpers.colorsNear(pixelPlot(during, dpr, ringProbe.x, ringProbe.y),
+                                  sourceOver(selectionFill, ring)),
+               "the covered primary note paints selected ring ink while right is still held")
+        compare(selectedIds(), selectionBefore, "held coverage does not commit semantic selection")
+
+        mouseMove(plot, sx + 1, sy + 1, -1, Qt.RightButton)
+        verify(waitForNative(function() {
+            return grid.bandSelectionWidth <= 2 && grid.bandSelectionHeight <= 2
+        }, 5000), "the held rectangle leaves the note")
+        var uncovered = grabImage(shell.contentItem)
+        verify(Helpers.colorsNear(pixelPlot(uncovered, dpr, ringProbe.x, ringProbe.y),
+                                  ringProbe.baseline),
+               "leaving coverage restores the unselected note edge before release")
+        compare(selectedIds(), selectionBefore, "moving coverage does not commit selection")
+        mouseMove(plot, fx, fy, -1, Qt.RightButton)
+        verify(waitForNative(function() { return grid.bandSelectionWidth > 80 }, 5000),
+               "the held rectangle covers the note again")
+        var coveredAgain = grabImage(shell.contentItem)
+        verify(Helpers.colorsNear(pixelPlot(coveredAgain, dpr, ringProbe.x, ringProbe.y),
+                                  sourceOver(selectionFill, ring)),
+               "re-entering coverage restores selected ring ink")
+        keyClick(Qt.Key_Escape)
+        tryCompare(grid, "bandSelectionActive", false, 5000)
+        var cancelled = grabImage(shell.contentItem)
+        verify(Helpers.colorsNear(pixelPlot(cancelled, dpr, ringProbe.x, ringProbe.y),
+                                  ringProbe.baseline),
+               "cancel restores the original note edge")
+        compare(selectedIds(), selectionBefore, "cancel preserves the pre-press selection")
         mouseRelease(plot, fx, fy, Qt.RightButton)
 
         for (var o = 0; o < outside.length; ++o) {
@@ -252,5 +304,32 @@ ShellLaneSupport {
                     ++verticalMatches
             }
         verify(verticalMatches >= 4, "the reticle vertical dashed edge is visible")
+
+        mouseClick(plot, ringProbe.x, ringProbe.centerY, Qt.LeftButton)
+        verify(waitForNative(function() {
+            return JSON.parse(grid.fetchNoteSummary()).some(function(note) {
+                return note.id === ringProbe.id && note.selected
+            })
+        }, 5000), "a real note click establishes pre-press selection")
+        var selectedBeforeControl = selectedIds()
+        mousePress(plot, sx, sy, Qt.RightButton, Qt.ControlModifier)
+        mouseMove(plot, sx + 24, sy + 24, -1, Qt.RightButton, Qt.ControlModifier)
+        tryCompare(grid, "bandSelectionActive", true, 5000)
+        // Shrink after crossing the drag threshold so the selected note lies outside coverage.
+        mouseMove(plot, sx + 1, sy + 1, -1, Qt.RightButton, Qt.ControlModifier)
+        verify(waitForNative(function() { return grid.bandSelectionWidth <= 2 }, 5000),
+               "the Control band leaves the pre-selected note")
+        var controlHeld = grabImage(shell.contentItem)
+        verify(Helpers.colorsNear(pixelPlot(controlHeld, dpr, ringProbe.x, ringProbe.y), ring),
+               "Control keeps pre-press selected ring ink outside live coverage")
+        compare(selectedIds(), selectedBeforeControl, "Control coverage remains presentation-only")
+        mouseMove(plot, fx, fy, -1, Qt.RightButton, Qt.ControlModifier)
+        verify(waitForNative(function() { return grid.bandSelectionWidth > 80 }, 5000),
+               "the Control band expands before release")
+        mouseRelease(plot, fx, fy, Qt.RightButton, Qt.ControlModifier)
+        tryCompare(grid, "bandSelectionActive", false, 5000)
+        verify(JSON.parse(grid.fetchNoteSummary()).some(function(note) {
+            return note.id === ringProbe.id && note.selected
+        }), "release commits covered notes and retains the pre-press selection")
     }
 }

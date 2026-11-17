@@ -9,6 +9,10 @@ extension AutomationPage {
     /// Rebuilds the three viewport-space display lists together: axis grid
     /// plus sticky chrome, ghost/curve/selection statics, preview draft.
     func publishDrawingContent() {
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
         guard let viewport else {
             previewNodes.replaceSubrange(0..<previewNodes.count, with: [])
             let empty = retainedEmptyDisplayList()
@@ -169,7 +173,8 @@ extension AutomationPage {
         DrawerStaticsContent.buildTickRects(
             into: &axisListWriter, rects: axisRects, camera: camera, dpr: dpr,
             viewport: viewportSize)
-        let axisData = axisListWriter.finish()
+        if displayLists.isEmpty { displayLists = [Data(), Data(), Data()] }
+        let axisChanged = axisListWriter.replaceIfChanged(into: &displayLists[0])
         DrawerStaticsContent.buildTickRects(
             into: &staticsListWriter, rects: ghostRuns, camera: camera, dpr: dpr,
             viewport: viewportSize)
@@ -188,14 +193,12 @@ extension AutomationPage {
         DrawerStaticsContent.buildAnchored(
             into: &staticsListWriter, rects: selectionEdges, camera: camera, dpr: dpr,
             viewport: viewportSize)
-        let staticsData = staticsListWriter.finish()
+        let staticsChanged = staticsListWriter.replaceIfChanged(into: &displayLists[1])
         DrawerStaticsContent.buildTickRects(
             into: &previewListWriter, rects: previewRuns, camera: camera, dpr: dpr,
             viewport: viewportSize)
-        let previewData = previewListWriter.finish()
-        let fresh = [axisData, staticsData, previewData]
-        guard fresh != displayLists else { return }
-        displayLists = fresh
+        let previewChanged = previewListWriter.replaceIfChanged(into: &displayLists[2])
+        guard axisChanged || staticsChanged || previewChanged else { return }
         displayRevision &+= 1
     }
 

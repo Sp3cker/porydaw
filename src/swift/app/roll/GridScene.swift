@@ -167,20 +167,8 @@ public final class GridScene {
 
     @QtIgnored var listContentKey: RollDrawingContentKey?
     @QtIgnored var noteRecordCount = 0
-    struct PaletteContentKey: Equatable {
-        let palette: ObjectIdentifier
-        let lastVelocity: Int
-    }
-    @QtIgnored var paletteContentCache: (key: PaletteContentKey, colors: [UInt32])?
-    // Content-tier note records, tick-sorted; the frame tier culls/projects
-    // these per frame — O(visible), never O(notes). Replaces packed bytes.
-    @QtIgnored var noteRecords: [RollNote] = []
-    @QtIgnored var noteRecordBlockEnds: [Int] = []
-    @QtIgnored var noteRecordsKey: RollNotesSectionKey?
+    // Neutral retained content is owned by PianoGrid; only presentation keys live here.
     @QtIgnored var plotPalette: [UInt32] = []
-    /// Projection the cached records were resolved against. Camera seams
-    /// compare this (fixed-size) instead of rebuilding the content key.
-    @QtIgnored var builtProjection: PitchProjection?
     // Retained display-list buffers: 0 plot, 1 keyboard, 2 ruler.
     @QtIgnored var displayLists: [Data] = []
     @QtIgnored var displayFrameKey: RollDisplayFrameKey?
@@ -203,14 +191,11 @@ public final class GridScene {
         let program: Int
         let baseFontPx: Double
         let keyboardWidth: Double
+        let font: QmlFont
+        let names: [String]?
     }
     @QtIgnored var keyboardWidthKey: KeyboardWidthKey?
     @QtIgnored var keyboardChipWidths: [Double]?
-
-    @QtIgnored
-    func invalidatePaletteCache() {
-        paletteContentCache = nil
-    }
 
     public var hoverChipX: Double = 0
     public var hoverChipY: Double = 0
@@ -228,7 +213,7 @@ public final class GridScene {
     }
 
     @QtIgnored
-    func rebuildHover(_ input: GridSceneInput) {
+    func rebuildHoverChip(_ input: GridSceneInput) {
         let m = input.metrics
         let p = input.palette
         let font = input.fontSpec(.chip)
@@ -245,7 +230,6 @@ public final class GridScene {
         if hoverChipFill != p.hoverChipFill { hoverChipFill = p.hoverChipFill }
         if hoverChipTextColor != p.hoverChipText { hoverChipTextColor = p.hoverChipText }
         if hoverChipRadius != m.chipRadius { hoverChipRadius = m.chipRadius }
-        rebuildDisplayLists(input)
     }
 
     @QtIgnored
@@ -265,7 +249,7 @@ public final class GridScene {
             bank: input.keyboardBankIdentity,
             program: input.keyboardProgram,
             baseFontPx: m.baseFontPx,
-            keyboardWidth: m.keyboardWidth)
+            keyboardWidth: m.keyboardWidth, font: t.font(.chip), names: input.keyboardNames)
         if keyboardWidthKey != widthKey {
             keyboardWidthKey = widthKey
             keyboardChipWidths = input.keyboardNames?.enumerated().map { key, name in

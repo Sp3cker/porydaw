@@ -60,6 +60,6 @@ public final class DisplayListProbe: QmlInstantiableStatus {
             PdDlRect(
                 x: x + 20, y: 35, w: 30, h: 12, id: 43,
                 argb: 0xFF50_7090, flags: UInt32(PD_DL_RECT_OVER)))
-        bytes = writer.finish()
+        writer.replace(into: &bytes)
     }
 }

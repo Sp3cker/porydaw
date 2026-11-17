@@ -122,20 +122,14 @@ extension VoiceChangesPage {
         let colors = DrawerStaticsContent.gridPaletteColors(palette)
         let viewportSize = CGSize(width: plotWidth, height: plotHeight)
         let camera = viewport.camera
-        // Release the previous buffer before the retained writer reuses its
-        // own: otherwise finish()'s shared output copies on write each frame.
-        var writer = listWriter
         DrawerStaticsContent.buildGrid(
-            into: &writer, axis: session.projectionCache.timeAxis, grid: viewport.grid,
+            into: &listWriter, axis: session.projectionCache.timeAxis, grid: viewport.grid,
             camera: camera, viewport: viewportSize, paletteColors: colors)
         DrawerStaticsContent.buildTickRects(
-            into: &writer, rects: rects,
+            into: &listWriter, rects: rects,
             camera: camera, dpr: devicePixelRatio, viewport: viewportSize)
-        let list0 = writer.finish()
-        listWriter = writer
-        let next = [list0]
-        guard next != displayLists else { return }
-        displayLists = next
+        if displayLists.isEmpty { displayLists.append(Data()) }
+        guard listWriter.replaceIfChanged(into: &displayLists[0]) else { return }
         displayRevision &+= 1
     }
 

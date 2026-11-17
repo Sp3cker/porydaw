@@ -40,6 +40,13 @@ func workspaceRefreshScope(
         width: 400, height: 120, rulerWidth: 56, devicePixelRatio: 1, baseFontPx: 13, dragDistance: 10)
     workspace.automationPage.configureBody(
         width: 400, height: 120, gutter: 56, devicePixelRatio: 1, baseFontPx: 13, dragDistance: 10)
+    let font = GridCameraPolicy.seedBaseFontPx
+    workspace.drawer.configureLayout(
+        hostWidth: Int(fontPx(font, 70)), hostHeight: Int(fontPx(font, 60)),
+        gutterWidth: Int(fontPx(font, 8)), fontPx: font, appFontLineSpacing: fontPx(font, 1))
+    for kind in [DrawerSectionKind.velocity, .automation] {
+        workspace.drawer.setSectionVisible(kind: kind.rawValue, visible: true, drawerOwnsFocus: false)
+    }
     let mapping = document.engineTracks.tracks[0]
     guard let chunk = mapping.midiChunk else {
         report.fail(workspaceRefreshScopeID, "track 0 has no chunk")
@@ -95,13 +102,6 @@ func workspaceRefreshScope(
         cppID: workspaceRefreshScopeID,
         message: "undo retraces each edit's refresh scope: \(undoProgram) \(undoLane) \(undoNote)")
 
-    let font = GridCameraPolicy.seedBaseFontPx
-    workspace.drawer.configureLayout(
-        hostWidth: Int(fontPx(font, 70)), hostHeight: Int(fontPx(font, 60)),
-        gutterWidth: Int(fontPx(font, 8)), fontPx: font, appFontLineSpacing: fontPx(font, 1))
-    for kind in [DrawerSectionKind.velocity, .automation] {
-        workspace.drawer.setSectionVisible(kind: kind.rawValue, visible: true, drawerOwnsFocus: false)
-    }
     let velocityLists = workspace.velocityPage.displayRevision
     let automationBuilds = workspace.automationPage.contentBuildCount
     workspace.grid.performCommand(command: EditCommand.gridNarrow.rawValue)

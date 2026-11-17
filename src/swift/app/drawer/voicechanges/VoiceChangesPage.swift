@@ -185,6 +185,17 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     @QtIgnored weak var viewport: DocumentViewport?
     @QtIgnored var session: DocumentSession? { viewport?.session }
+    @QtIgnored var contentVisible = true {
+        didSet {
+            guard contentVisible != oldValue else { return }
+            if contentVisible {
+                if contentRefreshPending { refreshFromDocument() }
+            } else {
+                cancelSectionInteraction()
+            }
+        }
+    }
+    @QtIgnored var contentRefreshPending = false
     @QtIgnored var palette = GridPalette()
     @QtIgnored var typography: Typography
     @QtIgnored var caption: VoiceCaption?
@@ -240,7 +251,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         contextTick = viewport.session.editCursor
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
-        rebuildContent()
+        refreshFromDocument()
     }
 
     /// Drops the session and everything the page owns. Called after the host
@@ -249,6 +260,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func detach() {
         cancelSectionInteraction()
         viewport = nil
+        contentRefreshPending = false
         presentedContextEndTick = TimeDefaults.noTick
         presentedContextStartTick = 0
         let scene = VoiceChangesSceneSnapshot.detached
@@ -295,7 +307,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
             refreshPromptStyle()
             publishTypography()
         }
-        if changed { rebuildContent() }
+        if changed { refreshCamera() }
     }
 
     @QtIgnored
@@ -307,18 +319,54 @@ public final class VoiceChangesPage: EditorDrawerPage {
 
     // MARK: Session refresh
 
+    private func applyContextSpan(at tick: Tick) -> Bool {
+        let effectiveTick = effectiveContextTick()
+        let points = lanePoints()
+        let next = VoiceChangesScene.contextKey(
+            tick: effectiveTick, firstProgram: firstProgram(),
+            points: points, playing: playing)
+        let changed = lastContextKey != next
+        lastContextKey = next
+        presentedContextTick = tick
+        presentedContextSlot = next.slot
+        presentedPlaying = playing
+        presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
+        presentedContextEndTick =
+            VoiceLanePolicy.endTick(after: effectiveTick, points: points)
+            ?? TimeDefaults.noTick
+        if changed { clearHover() }
+        if let session { publish(\.trackAvailable, currentTrack(session) != nil) }
+        publishReadout(forSlot: next.slot)
+        return changed
+    }
+
     /// Document, Undo/Redo, track or bank publication: a frozen gesture, picker
     /// or menu whose captured identity no longer holds cancels, then content
     /// rebuilds. Nothing here re-points a captured target at a new occurrence.
     @QtIgnored
-    public func refreshFromDocument() {
+    public func refreshFromDocument(presentation: SharedPlayheadPresentation? = nil) {
         guard let session else { return }
         invalidateDocumentInteraction()
+        var playingChanged = false
+        if let presentation {
+            let tick = velocityContextTick(presentation.tick)
+            if lastPresentedPublication?.tick != tick || lastPresentedPublication?.playing != presentation.playing {
+                playheadPresentationCount &+= 1
+            }
+            lastPresentedPublication = (tick, presentation.playing)
+            playingChanged = playing != presentation.playing
+            playing = presentation.playing
+            contextTick = tick
+        }
+        let contextChanged = applyContextSpan(at: contextTick)
+        if contextChanged || playingChanged { contextChangeCount &+= 1 }
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
         refreshPromptStyle()
-        presentedContextEndTick = TimeDefaults.noTick
-        presentedContextStartTick = 0
         pickerCache.refresh(slots: session.bankSlots)
-        rebuildContent()
+        refreshCamera()
     }
 
     /// Retires drag, pan, picker and menu frozen against an older revision
@@ -328,6 +376,7 @@ public final class VoiceChangesPage: EditorDrawerPage {
         guard let session else { return }
         let track = session.selectedTrack ?? -1
         let revision = session.document.revision
+        if entriesTrack != session.selectedTrack { cancelSectionInteraction() }
         if let live = drag, live.revision != revision || live.track != track {
             cancelDrag()
         }
@@ -361,6 +410,11 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored
     public func refreshCamera() {
         guard session != nil else { return }
+        guard contentVisible else {
+            contentRefreshPending = true
+            return
+        }
+        contentRefreshPending = false
         rebuildContent()
     }
 
@@ -394,26 +448,12 @@ public final class VoiceChangesPage: EditorDrawerPage {
             return
         }
 
-        let effectiveTick = effectiveContextTick()
-        let points = lanePoints()
-        let next = VoiceChangesScene.contextKey(
-            tick: effectiveTick, firstProgram: firstProgram(),
-            points: points, playing: playing)
-        let contextChanged = lastContextKey != next
-        lastContextKey = next
-        presentedContextTick = resolvedTick
-        presentedContextSlot = next.slot
-        presentedPlaying = playing
-        presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
-        presentedContextEndTick =
-            VoiceLanePolicy.endTick(after: effectiveTick, points: points)
-            ?? TimeDefaults.noTick
-        if contextChanged { clearHover() }
+        let contextChanged = applyContextSpan(at: resolvedTick)
         if contextChanged || playingChanged {
             contextChangeCount &+= 1
-            rebuildContent()
+            refreshCamera()
         } else {
-            publishReadout(forSlot: next.slot)
+            publishReadout(forSlot: presentedContextSlot)
         }
     }
 

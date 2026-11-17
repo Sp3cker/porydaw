@@ -1,4 +1,4 @@
-// Swift owns velocity projection and editing; QML renders rows and forwards input.
+// Swift owns velocity geometry and editing; QML hosts bulk drawing and input.
 pragma ComponentBehavior: Bound
 
 import QtQuick
@@ -18,11 +18,8 @@ DrawerLanePage {
     readonly property App.VelocityPage pageModel: page.model
     final readonly property App.GridPalette gridPalette: page.applicationSession.timeSigHost.palette
     enabled: page.pageModel !== null
-    /// The snapped surface scroll the handle container translates by, and the
-    /// zoom scale handles place ticks with; both track the scene scroll row.
+    /// The same-frame camera scroll converts plot pointers to Swift's stable geometry space.
     property real contentScrollX: 0
-    property real contentPixelsPerTick: 0
-    readonly property real contentDpr: page.Screen.devicePixelRatio
 
     function pushBodyFacts(): void {
         if (!page.pageModel || page.width <= 0 || page.height <= 0)
@@ -220,8 +217,7 @@ DrawerLanePage {
         Accessible.focusable: false
     }
 
-    // Scroll and handle rows update in one dataChanged sweep, so the container
-    // translation never lags a queued bridge NOTIFY.
+    // Pointer conversion consumes the synchronous scroll row, not a queued bridge NOTIFY.
     Repeater {
         id: scrollCarrier
 
@@ -230,14 +226,12 @@ DrawerLanePage {
             id: scrollRow
             required property var model
             readonly property real scrollX: scrollRow.model.x
-            readonly property real pixelsPerTick: scrollRow.model.width
+            readonly property real dpr: page.Screen.devicePixelRatio
             onScrollXChanged: applyScrollFrame()
-            onPixelsPerTickChanged: applyScrollFrame()
+            onDprChanged: applyScrollFrame()
             Component.onCompleted: applyScrollFrame()
             function applyScrollFrame(): void {
-                const dpr = page.Screen.devicePixelRatio
-                page.contentScrollX = Math.round(scrollRow.scrollX * dpr) / dpr
-                page.contentPixelsPerTick = scrollRow.pixelsPerTick
+                page.contentScrollX = Math.round(scrollRow.scrollX * scrollRow.dpr) / scrollRow.dpr
             }
         }
     }
@@ -267,98 +261,6 @@ DrawerLanePage {
             revision: page.pageModel ? page.pageModel.displayRevision : 0
         }
 
-        // Selected handles keep their ring; multi-selection dims unselected rows.
-        Item {
-            id: handleContent
-
-            width: plot.width
-            height: plot.height
-            // Stable rows translate once here from the surface scroll carrier,
-            // same-turn like the roll plot content.
-            x: -page.contentScrollX
-
-            Repeater {
-                model: page.pageModel ? page.pageModel.handles : null
-
-                // Retained handles stay tick-space stable; rows enter and leave
-                // only when the camera escapes the published overscan window.
-                delegate: Item {
-                    id: node
-
-                    required property var model
-                    required property real tick
-                    required property real endTick
-                    required property real stemWidth
-                    required property real nodeRadius
-                    required property real outlineRadius
-                    required property real outlineWidth
-                    required property real ringRadius
-                    required property real ringWidth
-                    required property color stemColor
-                    required property color fillColor
-                    required property color ringColor
-                    required property color outlineColor
-                    required property bool selected
-                    required property bool hovered
-                    required property bool dimmed
-                    required property string primitiveName
-                    readonly property real nodeY: node.model.y
-                    // Zoom re-evaluates only the root x and the stem end; children sit relative.
-                    x: Math.round(node.tick * page.contentPixelsPerTick * page.contentDpr)
-                       / page.contentDpr
-                    readonly property real endX: Math.round(
-                        node.endTick * page.contentPixelsPerTick * page.contentDpr) / page.contentDpr
-
-                    Rectangle {
-                        objectName: node.primitiveName + "Stem"
-                        x: Math.min(0, node.endX - node.x)
-                        y: node.nodeY - node.stemWidth / 2
-                        width: Math.max(1, Math.abs(node.endX - node.x))
-                        height: node.stemWidth
-                        color: node.stemColor
-                    }
-
-                    Rectangle {
-                        objectName: node.primitiveName + "Ring"
-                        visible: node.selected
-                        x: -node.ringRadius
-                        y: node.nodeY - node.ringRadius
-                        width: 2 * node.ringRadius
-                        height: 2 * node.ringRadius
-                        radius: node.ringRadius
-                        color: "transparent"
-                        border.color: node.ringColor
-                        border.width: node.ringWidth
-                    }
-
-                    Rectangle {
-                        objectName: node.primitiveName + "Fill"
-                        x: -node.nodeRadius
-                        y: node.nodeY - node.nodeRadius
-                        width: 2 * node.nodeRadius
-                        height: 2 * node.nodeRadius
-                        radius: node.nodeRadius
-                        color: node.fillColor
-                        border.width: node.selected || !node.dimmed
-                                      ? node.outlineWidth : 0
-                        border.color: node.outlineColor
-                    }
-
-                    Rectangle {
-                        objectName: node.primitiveName + "Hover"
-                        visible: node.hovered && !node.selected
-                        x: -node.outlineRadius
-                        y: node.nodeY - node.outlineRadius
-                        width: 2 * node.outlineRadius
-                        height: 2 * node.outlineRadius
-                        radius: node.outlineRadius
-                        color: "transparent"
-                        border.color: node.ringColor
-                        border.width: node.ringWidth
-                    }
-                }
-            }
-        }
 
         // The gesture transient: the band reticle's fill and dashed edges, plus
         // the ramp line the press-to-pointer span draws.
