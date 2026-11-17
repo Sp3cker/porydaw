@@ -806,14 +806,17 @@ public final class SongDocument {
         var mutation = mutation
         mutation.finalize()
         let cachedOrigin: GestureOrigin?
+        let previousGroupChanges: DocumentChangeSet?
         if let cached = gestureOrigin, cached.group == group,
             cached.identity == history.currentIdentity,
             cached.operation.matchesGesture(operation),
-            history.originChanges(for: group, operation: cached.operation) != nil
+            let previous = history.originChanges(for: group, operation: cached.operation)
         {
             cachedOrigin = cached
+            previousGroupChanges = previous
         } else {
             cachedOrigin = nil
+            previousGroupChanges = nil
         }
         let startingState = cachedOrigin?.state ?? state
         state = mutation.state
@@ -829,7 +832,9 @@ public final class SongDocument {
         } else {
             gestureOrigin = nil
         }
-        publish(mutation.changes, trackRemap: trackRemap, noteChannelChanges: mutation.noteChannelChanges)
+        publish(
+            mutation.changes, trackRemap: trackRemap,
+            noteChannelChanges: mutation.noteChannelChanges, previousGroupChanges: previousGroupChanges)
     }
 
     internal func origin(for group: HistoryGroup?, operation: HistoryOperation) -> SongState {
@@ -902,14 +907,23 @@ public final class SongDocument {
 
     private func publish(
         _ changes: DocumentChangeSet, trackRemap: TrackRemap? = nil,
-        noteChannelChanges: Set<Int> = []
+        noteChannelChanges: Set<Int> = [],
+        previousGroupChanges: DocumentChangeSet? = nil
     ) {
         revision = revision == .max ? 1 : revision + 1
+        var effectsOnly = changes.effectsOnly
+        if let previousGroupChanges {
+            // History shares a gesture origin; presentation changes from the last committed frame.
+            revisions.advance(for: previousGroupChanges, chunkCount: state.file.chunks.count)
+            effectsOnly =
+                (previousGroupChanges.effectsOnly && (changes.effectsOnly || changes.isEmpty))
+                || (previousGroupChanges.isEmpty && changes.effectsOnly)
+        }
         revisions.advance(for: changes, chunkCount: state.file.chunks.count)
         let channelChanges = state.file.sealNoteTables().union(noteChannelChanges)
         revisions.advanceNotes(in: channelChanges)
         trackMap = state.file.engineTracks()
-        onChange?(DocumentChange(revision: revision, trackRemap: trackRemap, effectsOnly: changes.effectsOnly))
+        onChange?(DocumentChange(revision: revision, trackRemap: trackRemap, effectsOnly: effectsOnly))
     }
 
     private func projectTimeSignatures() -> [TimeSignature] {
