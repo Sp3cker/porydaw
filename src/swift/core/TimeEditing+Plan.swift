@@ -25,7 +25,7 @@ extension SongDocument {
                 let logicalLane = xcmdLaneByChunk[chunk][index].map { Lane.controller($0) }
                 let lane = logicalLane ?? lane(of: event)
                 let covered: Bool
-                if isTempoEvent(event) {
+                if isTempoEvent(event) || MasterTuning.isMetadata(event) {
                     covered = false
                 } else if scope.wholeSong {
                     covered = !event.isChannel || engineTrack >= 0

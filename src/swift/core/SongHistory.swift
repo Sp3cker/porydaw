@@ -316,6 +316,7 @@ internal enum HistoryOperation: Hashable {
     case renameTrack
     case setChunkEnd
     case setConfig
+    case setMasterTuning
     case insertRawEvent
     case modifyRawEvent
     case deleteRawEvents
@@ -347,7 +348,7 @@ internal enum HistoryOperation: Hashable {
             false
         case .addNotes, .deleteNotes, .moveNotes, .moveNotesToPitches, .nudgeNotes,
             .resizeNotes, .resizeNoteLengths, .setVelocities, .addTrack, .duplicateTrack,
-            .deleteTrack, .moveTrack, .renameTrack, .setChunkEnd, .setConfig,
+            .deleteTrack, .moveTrack, .renameTrack, .setChunkEnd, .setConfig, .setMasterTuning,
             .insertRawEvent, .modifyRawEvent, .deleteRawEvents, .moveRawEvent,
             .editTempo, .editRawAndTempo, .setLoop, .setTimeSignature,
             .moveTimeSignature, .deleteTimeSignature, .writeLane, .moveLanePoints,

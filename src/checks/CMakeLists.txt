@@ -164,6 +164,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         editcheck/DocumentTrackChecks.swift
         editcheck/EventViewsEditsParity.swift
         editcheck/MidiImportChecks.swift
+        editcheck/MasterTuningChecks.swift
         editcheck/NoteChecks.swift
         editcheck/NoteCorpusChecks.swift
         editcheck/NoteHistoryChecks.swift

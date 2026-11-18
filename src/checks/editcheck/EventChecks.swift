@@ -4,6 +4,7 @@ import PorydawCore
 
 @MainActor
 public func runEventEditsSuite(_ report: CheckReport) {
+    runMasterTuningChecks(report)
     trackEditing(report)
     trackNameRoles(report)
     rawTempoAndSignatureEditing(report)

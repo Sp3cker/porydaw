@@ -360,6 +360,20 @@ internal struct DocumentMutation {
         return nil
     }
 
+    /// Preserves caller order before all source events at tick zero.
+    mutating func prepend(_ initial: consuming [MidiEvent], chunk: Int) {
+        guard !initial.isEmpty else { return }
+        prepareProvenance(in: chunk)
+        var events = initial
+        for index in events.indices {
+            precondition(events[index].tick == 0, "Only tick-zero events may be prepended.")
+            stamp(&events[index], chunk: chunk)
+        }
+        state.file.chunks[chunk].events.insert(contentsOf: events, at: 0)
+        state.file.chunks[chunk].noteTable.invalidate()
+        provenance[chunk, default: []].insert(contentsOf: repeatElement(-1, count: events.count), at: 0)
+    }
+
     mutating func insert(_ event: MidiEvent, chunk: Int) {
         prepareProvenance(in: chunk)
         var event = event
@@ -757,6 +771,7 @@ public final class SongDocument {
     }
 
     public func captureSave() throws -> SaveSnapshot {
+        _ = try MasterTuning.appliedUnits(in: state.file)
         var export = canonicalizedForExport()
         if export.chunks.isEmpty { export.chunks.append(MidiChunk()) }
         for point in state.tempo {
