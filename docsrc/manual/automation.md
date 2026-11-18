@@ -14,6 +14,9 @@
 
 ## Drawing and editing values
 
+- In the Automation drawer, left-click a written node to delete it, or drag it
+  to move it. This also works with the Pencil tool active. A double-click
+  deletes only the clicked node; Undo restores it.
 - Pencil and sweep gestures preview the curve and points that releasing the
   pointer will write, using the lane's ink. Existing nodes covered by the draw
   are hidden until the gesture finishes. Escape cancels the draft and restores
