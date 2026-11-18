@@ -30,7 +30,8 @@ listening volume — cross-link the disambiguation in Playing Songs). -->
 Below the song flags, use the **Master tuning (TUNE)** dial or type a nominal
 **A4 Hz** frequency, such as `450`. The dial supports pointer input and
 keyboard arrow keys; each step is one TUNE unit, or **1/64 semitone
-(1.5625 cents)**. **Reset to 440** requests the neutral, zero-unit setting.
+(1.5625 cents)**. Applying **Reset to 440** removes all TUNE commands and the
+master-setting marker; the engine's neutral default needs neither.
 
 The readout shows the quantized nominal A4 frequency, cents relative to 440 Hz,
 and integer units. The conversion rounds to the nearest unit using
@@ -39,12 +40,12 @@ The supported master range is always **−64…+63 units**, regardless of existi
 TUNE values.
 
 **Warning: applying a master-tuning edit replaces all tracks' Fine tune / TUNE
-(MIDI CC24) automation with the chosen uniform starting tune. Undo restores
-the original automation.** Notes retain their identities; pitch bends,
-programs, event order, and timing are preserved.
+(MIDI CC24) automation with the chosen uniform starting tune, or removes it
+entirely at 440 Hz. Undo restores the original automation.** Notes retain
+their identities; pitch bends, programs, event order, and timing are preserved.
 
 The overwrite warning appears only after a master-tuning edit and only when
-any track already contains TUNE commands. It clears after Apply or Cancel.
+any track already contains TUNE commands. It clears after successful Apply or Cancel.
 
 Moving the dial, typing an A4 reference, or choosing **Reset to 440** requests
 this replacement when you press **Apply** or **OK**. Typing the current
@@ -55,11 +56,15 @@ another tuning edit does not replace it again. Cancel discards pending tuning
 intent. Invalid frequencies or units outside the supported range stay visible
 as errors and apply no other settings.
 
+A failed voicegroup load leaves TUNE and the other song flags unchanged.
+The requested voicegroup itself remains an undoable edit; correct it and
+retry Apply.
+
 Undo and Redo restore the master setting and its TUNE replacement together.
 Reopening Settings or saved MIDI does not apply tuning twice.
-Normal Save writes effective MIDI CC24 values
-and master-setting metadata; an ordinary game converter exports those CC24
-values as **TUNE** commands without requiring a converter patch or flag.
+Normal Save writes effective MIDI CC24 values and non-neutral master-setting
+metadata; an ordinary game converter exports those CC24 values as **TUNE**
+commands without a converter patch or flag. Resetting to 440 Hz exports no TUNE commands.
 There is no automatic source save when you turn the dial or press Apply.
 
 The A4 reference is nominal. Fixed-rate PCM and noise/PSG voices do not

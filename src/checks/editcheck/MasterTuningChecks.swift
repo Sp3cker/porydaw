@@ -141,16 +141,18 @@ private func tuningOverwriteAndHistory(_ report: CheckReport) throws {
         expected: tuned, actual: document.state, cppID: masterTuningID,
         what: "one redo restores effective tuning and metadata")
     for units in [-4, 12, 0, 8] { try document.setMasterTuning(units: units) }
+    var retuned = tuned
+    retuned.file.chunks[3].events.removeAll()
     report.expectEqual(
-        expected: tuned, actual: document.state, cppID: masterTuningID,
-        what: "repeated tuning choices produce the identical canonical state")
+        expected: retuned, actual: document.state, cppID: masterTuningID,
+        what: "retuning does not recreate a channel whose only TUNE events were cleared")
     let canonicalRevision = document.revision
     let canonicalHistory = document.history.revision
     let canonicalIdentity = document.history.currentIdentity
     try document.setMasterTuning(units: 8)
     report.expect(
         document.revision == canonicalRevision && document.history.revision == canonicalHistory
-            && document.history.currentIdentity == canonicalIdentity && document.state == tuned,
+            && document.history.currentIdentity == canonicalIdentity && document.state == retuned,
         cppID: masterTuningID, message: "repeating an identical canonical tuning records no mutation or history")
     try tuningNativeChase(document, track: 0, values: [(1, 8), (25, 8)], report: report)
     try tuningNativeChase(document, track: 1, values: [(1, 8), (13, 8)], report: report)
@@ -214,8 +216,8 @@ private func tuningRejection(_ report: CheckReport) throws {
     _ = document.history.undoDocument()
     try document.setMasterTuning(units: 0)
     report.expectEqual(
-        expected: [64], actual: tuningValues(document.state.file, chunk: 0),
-        cppID: masterTuningID, what: "explicit neutral choice clears imported automation even at default metadata zero")
+        expected: [], actual: tuningValues(document.state.file, chunk: 0),
+        cppID: masterTuningID, what: "neutral choice removes imported TUNE without creating neutral commands")
     _ = document.history.undoDocument()
     report.expectEqual(
         expected: original, actual: document.state, cppID: masterTuningID,
@@ -250,9 +252,9 @@ private func tuningRejection(_ report: CheckReport) throws {
     let customizedAtNeutral = reset.state
     try reset.setMasterTuning(units: 0)
     report.expectEqual(
-        expected: [64], actual: tuningValues(reset.state.file, chunk: 1),
+        expected: [], actual: tuningValues(reset.state.file, chunk: 1),
         cppID: masterTuningID,
-        what: "explicit neutral choice also replaces automation when stored metadata is already zero")
+        what: "explicit neutral choice removes automation when the stored master is already zero")
     _ = reset.history.undoDocument()
     report.expectEqual(
         expected: customizedAtNeutral, actual: reset.state, cppID: masterTuningID,
@@ -426,6 +428,74 @@ private func tuningNativeChase(
 }
 
 @MainActor
+private func tuningNeutralReset(_ report: CheckReport) throws {
+    let document = SongDocument(file: tuningFixture())
+    let original = document.state
+    try document.setMasterTuning(units: 8)
+    let tuned = document.state
+    let tunedTimeline = PlaybackTimeline.build(state: tuned, sampleRate: playbackCheckSampleRate)
+    guard let engine = PlaybackCheckEngine() else {
+        report.fail(masterTuningID, "cannot allocate reset playback engine")
+        return
+    }
+    Sequencer.chase(engine: engine.pointer, timeline: tunedTimeline, position: tunedTimeline.sample(for: 1))
+    report.expectEqual(
+        expected: 8, actual: Int(playbackPairEngineTrack(engine.pointer, index: 0).tune),
+        cppID: masterTuningID, what: "reset starts with a tuned native engine")
+    var resetRemap: TrackRemap?
+    document.onChange = { (change: DocumentChange) in resetRemap = change.trackRemap }
+    try document.setMasterTuning(units: 0)
+    let neutral = document.state
+    for chunk in original.file.chunks.indices {
+        let preserved = original.file.chunks[chunk].events.filter { (event: MidiEvent) -> Bool in
+            guard case .channel(let status, let controller, _) = event.payload else { return true }
+            return status >> 4 != 0xB || controller != 24
+        }
+        report.expectEqual(
+            expected: preserved, actual: neutral.file.chunks[chunk].events,
+            cppID: masterTuningID, what: "reset removes only TUNE and its marker from chunk \(chunk)")
+    }
+    report.expectEqual(
+        expected: [Int?]?([0, 1, nil]), actual: resetRemap?.engineTrackMap,
+        cppID: masterTuningID, what: "clearing a TUNE-only track publishes the source-track remap")
+    let neutralTimeline = PlaybackTimeline.build(state: neutral, sampleRate: playbackCheckSampleRate)
+    report.expect(
+        !neutralTimeline.events.contains { (event: PlaybackEvent) in event.type == 0xB && event.data0 == 24 },
+        cppID: masterTuningID, message: "neutral playback does not synthesize TUNE commands")
+    Sequencer.chase(engine: engine.pointer, timeline: neutralTimeline, position: neutralTimeline.sample(for: 1))
+    report.expectEqual(
+        expected: 0, actual: Int(playbackPairEngineTrack(engine.pointer, index: 0).tune),
+        cppID: masterTuningID, what: "reset clears a previously tuned native engine without a TUNE command")
+    let bytes = try document.captureSave().bytes
+    let reopened = SongDocument(file: try MidiFile.decode(bytes))
+    report.expectEqual(
+        expected: 0, actual: reopened.masterTuningUnits, cppID: masterTuningID,
+        what: "reset reopens at the implicit 440 Hz reference")
+    for chunk in reopened.state.file.chunks.indices {
+        report.expectEqual(
+            expected: [], actual: tuningValues(reopened.state.file, chunk: chunk),
+            cppID: masterTuningID, what: "reset save does not recreate TUNE in chunk \(chunk)")
+    }
+    report.expectEqual(
+        expected: bytes, actual: try reopened.captureSave().bytes,
+        cppID: masterTuningID, what: "neutral save reload save remains byte stable")
+    let revision = document.revision
+    let historyRevision = document.history.revision
+    try document.setMasterTuning(units: 0)
+    report.expect(
+        document.state == neutral && document.revision == revision && document.history.revision == historyRevision,
+        cppID: masterTuningID, message: "repeating a clean 440 Hz reset is a no-op")
+    _ = document.history.undoDocument()
+    report.expectEqual(
+        expected: tuned, actual: document.state, cppID: masterTuningID,
+        what: "one Undo restores tuning commands and their master setting")
+    _ = document.history.redoDocument()
+    report.expectEqual(
+        expected: neutral, actual: document.state, cppID: masterTuningID,
+        what: "Redo removes TUNE and the marker again")
+}
+
+@MainActor
 private func tuningMetadataAndExport(_ report: CheckReport) throws {
     let document = SongDocument(file: tuningFixture())
     try document.setMasterTuning(units: 8)
@@ -488,6 +558,20 @@ private func tuningMetadataAndExport(_ report: CheckReport) throws {
         report.expect(
             assembly.contains("GOTO"), cppID: masterTuningID,
             message: "real converter retains the missing-initial-TUNE fixture's loop control flow")
+        try document.setMasterTuning(units: 0)
+        try Data(document.captureSave().bytes).write(to: midi)
+        let neutralCompiled = root.path.withCString { path in
+            "mus_route101".withCString { pdc_check_compile_saved_midi(path, $0) }
+        }
+        report.expectEqual(
+            expected: 1, actual: neutralCompiled, cppID: masterTuningID,
+            what: "real converter accepts a song reset to 440 Hz")
+        guard neutralCompiled == 1 else { return }
+        let neutralAssembly = try String(
+            contentsOf: midi.deletingPathExtension().appendingPathExtension("s"), encoding: .utf8)
+        report.expect(
+            !neutralAssembly.contains("TUNE") && neutralAssembly.contains("GOTO"),
+            cppID: masterTuningID, message: "neutral assembly keeps the loop without any TUNE commands")
     }
 }
 
@@ -544,6 +628,7 @@ private func tuningLoopPlayback(_ report: CheckReport) throws {
 public func runMasterTuningChecks(_ report: CheckReport) {
     do { try tuningOverwriteAndHistory(report) } catch { report.fail(masterTuningID, "overwrite/history: \(error)") }
     do { try tuningRejection(report) } catch { report.fail(masterTuningID, "rejection: \(error)") }
+    do { try tuningNeutralReset(report) } catch { report.fail(masterTuningID, "neutral reset: \(error)") }
     do { try tuningDefaultProjection(report) } catch { report.fail(masterTuningID, "default projection: \(error)") }
     do { try tuningLoopPlayback(report) } catch { report.fail(masterTuningID, "uniform loop playback: \(error)") }
     do { try tuningMetadataAndExport(report) } catch { report.fail(masterTuningID, "metadata/export: \(error)") }

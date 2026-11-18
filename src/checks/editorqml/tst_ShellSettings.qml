@@ -588,19 +588,12 @@ ShellLaneSupport {
         }
         return points
     }
-    function test_masterTuningExplicitReplacementIntent_data() {
-        return [{ tag: "reset", action: "reset", track: 0 },
-                { tag: "current-reference-other-track", action: "frequency", track: 1 }]
-    }
-    function test_masterTuningExplicitReplacementIntent(data) {
-        const presenter = openTuningSettings()
+    function pasteTuningAutomation(presenter, track) {
         const app = presenter.session
-        const model = presenter.settingsStore
-        compare(model.masterTuningUnits, 0)
         dialog().close()
         waitForShellScene()
         const grid = app.gridPresenter()
-        grid.setTrack(data.track)
+        grid.setTrack(track)
         grid.setEditCursorTick(0)
         verify(tuningClipProbe.writeClipJson(JSON.stringify({
             format: 1, ticksPerBeat: grid.ticksPerBeat, span: 96, wholeLane: false,
@@ -614,8 +607,63 @@ ShellLaneSupport {
         verify(waitForNative(function() {
             return tuningEvents(app).some(function(point) { return point[1] === 48 && point[3] === 127 })
         }, 5000), "normal Paste plants TUNE automation")
-        const automated = JSON.stringify(tuningEvents(app))
-        grid.setTrack(0)
+        return JSON.stringify(tuningEvents(app))
+    }
+    function test_masterTuningVoicegroupFailureKeepsAutomationAndFlags() {
+        const presenter = openTuningSettings()
+        const app = presenter.session
+        const model = presenter.settingsStore
+        const originalTuning = model.masterTuningUnits
+        const originalVolume = model.masterVolume
+        const originalVoicegroup = model.voicegroup
+        const requestedVolume = originalVolume === 110 ? 109 : 110
+        const automated = pasteTuningAutomation(presenter, 0)
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        model.changeVoicegroup("not_a_voicegroup")
+        model.changeMasterVolume(requestedVolume)
+        enterTuningFrequency("450")
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() {
+            return !model.isApplying && model.settingsError.length > 0
+        }, 10000), "missing voicegroup reports a failed Apply")
+        compare(dialog().visible, true, "failed Apply retains Settings")
+        compare(JSON.stringify(tuningEvents(app)), automated, "bank failure preserves every original TUNE point")
+        compare(model.masterTuningEdited, true, "bank failure retains tuning replacement intent")
+        compare(model.masterTuningUnits, 25, "failed Apply retains the requested tuning draft")
+        tryCompare(findChild(dialog(), "song.master-tuning-warning"), "visible", true)
+        findChild(dialog(), "settingsCancel").clicked()
+        tryCompare(dialog(), "visible", false)
+        presenter.activate("edit.song_settings")
+        tryCompare(dialog(), "visible", true)
+        compare(model.masterTuningUnits, originalTuning, "failed Apply did not change stored master tuning")
+        compare(model.masterVolume, originalVolume, "failed Apply did not commit unrelated song flags")
+        compare(JSON.stringify(tuningEvents(app)), automated, "Cancel leaves the original automation intact")
+        model.changeVoicegroup(originalVoicegroup)
+        model.changeMasterVolume(requestedVolume)
+        enterTuningFrequency("450")
+        findChild(dialog(), "settingsApply").clicked()
+        verify(waitForNative(function() { return !model.isApplying && !model.masterTuningEdited }, 10000))
+        compare(model.settingsError, "", "corrected voicegroup allows Apply to succeed")
+        const uniform = tuningEvents(app)
+        verify(uniform.length > 0 && uniform.every(function(point) {
+            return point[1] === 0 && point[3] === 89
+        }), "successful retry replaces TUNE with the selected uniform value")
+        reopenTuning(presenter)
+        compare(model.masterTuningUnits, 25, "successful retry commits master tuning")
+        compare(model.masterVolume, requestedVolume, "successful retry commits the song flags")
+    }
+    function test_masterTuningExplicitReplacementIntent_data() {
+        return [{ tag: "reset", action: "reset", track: 0 },
+                { tag: "current-reference-other-track", action: "frequency", track: 1 }]
+    }
+    function test_masterTuningExplicitReplacementIntent(data) {
+        const presenter = openTuningSettings()
+        const app = presenter.session
+        const model = presenter.settingsStore
+        compare(model.masterTuningUnits, 0)
+        const automated = pasteTuningAutomation(presenter, data.track)
+        app.gridPresenter().setTrack(0)
         presenter.activate("edit.song_settings")
         tryCompare(dialog(), "visible", true)
         compare(model.masterTuningEdited, false, "opening Settings does not request replacement")
@@ -642,11 +690,8 @@ ShellLaneSupport {
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying && !model.masterTuningEdited }, 10000))
         tryCompare(warning, "visible", false, 3000, "successful Apply clears the pending overwrite warning")
-        const uniform = tuningEvents(app)
-        verify(uniform.length > 0 && uniform.every(function(point) {
-            return point[1] === 0 && point[3] === 64
-        }), "explicit neutral tuning replaces automation with uniform tick-zero CC24")
-        verify(JSON.stringify(uniform) !== automated)
+        const cleared = tuningEvents(app)
+        compare(cleared.length, 0, "440 Hz removes every TUNE command instead of writing neutral values")
         findChild(dialog(), "settingsApply").clicked()
         verify(waitForNative(function() { return !model.isApplying }, 10000))
         dialog().close()
@@ -656,8 +701,8 @@ ShellLaneSupport {
         }, 10000), "one Undo restores every original TUNE despite repeated Apply")
         app.requestRedo()
         verify(waitForNative(function() {
-            return JSON.stringify(tuningEvents(app)) === JSON.stringify(uniform)
-        }, 10000), "Redo restores the chosen uniform tuning")
+            return JSON.stringify(tuningEvents(app)) === JSON.stringify(cleared)
+        }, 10000), "Redo removes every TUNE command again")
     }
     function test_songFlagsAndReferenceGeometry() {
         const presenter = createShell()

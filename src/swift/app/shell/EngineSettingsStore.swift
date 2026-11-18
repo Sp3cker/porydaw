@@ -1,10 +1,10 @@
 import Foundation
+import PorydawAppAudio
+import PorydawAppPresentation
 import PorydawCore
 import PorydawDocument
 import PorydawPlaybackNative
 import QtBridge
-import PorydawAppAudio
-import PorydawAppPresentation
 
 /// User-wide audio configuration, kept separate from the song's undoable flags.
 public struct EngineSettings: Equatable {
@@ -294,6 +294,16 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
                     return
                 }
                 guard self.validateMasterTuning() else { return }
+                if !arg.isEmpty && arg != target.document.state.config.voicegroupArgument {
+                    try await target.selectVoicegroup(arg)
+                }
+                guard !Task.isCancelled, self.session?.selectedDocument === target,
+                    self.target === target, !target.isClosed
+                else {
+                    self.settingsError =
+                        "The selected song changed while applying Settings. Reopen Settings for the intended song."
+                    return
+                }
                 if replaceTuning {
                     try target.document.setMasterTuning(units: tuning)
                     self.masterTuningEdited = false
@@ -308,16 +318,6 @@ public final class EngineSettingsStore: QmlInstantiableStatus, QmlUncreatable {
                 config.extendedClocks = clocks
                 config.noCompression = compression
                 if config != original { target.document.setConfig(config) }
-                if !arg.isEmpty && arg != target.document.state.config.voicegroupArgument {
-                    try await target.selectVoicegroup(arg)
-                }
-                guard !Task.isCancelled, self.session?.selectedDocument === target,
-                    self.target === target, !target.isClosed
-                else {
-                    self.settingsError =
-                        "The selected song changed while applying Settings. Reopen Settings for the intended song."
-                    return
-                }
                 self.commitEngine(engine)
                 succeeded = true
             } catch {

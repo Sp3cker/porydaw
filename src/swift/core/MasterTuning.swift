@@ -48,8 +48,9 @@ public enum MasterTuning {
         return result ?? 0
     }
 
-    /// One chosen initial value for every encountered source channel, including TUNE-only channels.
+    /// Non-neutral initial tuning for each source channel, including TUNE-only channels.
     static func uniformEvents(in chunk: borrowing MidiChunk, units: Int) -> [MidiEvent] {
+        guard units != 0 else { return [] }
         var seen: UInt16 = 0
         var result: [MidiEvent] = []
         for event in chunk.events where event.isChannel {
@@ -136,7 +137,7 @@ extension SongDocument {
     /// Highest supported master setting in signed 1/64-semitone units.
     public var masterTuningMaximumUnits: Int { 63 }
 
-    /// Replaces every track's TUNE automation with the chosen uniform initial tuning.
+    /// Replaces TUNE automation uniformly, or removes it entirely at the neutral setting.
     /// - Parameter units: Requested master setting in signed 1/64-semitone units.
     /// - Throws: `MasterTuningError` if metadata is unsupported or units are outside -64...63.
     public func setMasterTuning(units: Int) throws {
@@ -157,8 +158,12 @@ extension SongDocument {
             if !removals.isEmpty { mutation.apply(removing: removals, inserting: [], chunk: chunk) }
             mutation.prepend(initial, chunk: chunk)
         }
-        if mutation.state.file.chunks.isEmpty { mutation.appendChunk(MidiChunk()) }
-        mutation.insert(MasterTuning.metadata(units: units), chunk: 0)
-        commit(mutation, group: nil, operation: .setMasterTuning)
+        if units != 0 {
+            if mutation.state.file.chunks.isEmpty { mutation.appendChunk(MidiChunk()) }
+            mutation.insert(MasterTuning.metadata(units: units), chunk: 0)
+        }
+        let remap = rawTrackRemap(before: state.file, after: mutation.state.file)
+        if let remap { mutation.remapEffects(remap) }
+        commit(mutation, group: nil, operation: .setMasterTuning, trackRemap: remap)
     }
 }

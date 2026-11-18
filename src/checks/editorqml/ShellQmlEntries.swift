@@ -424,6 +424,7 @@ enum ShellQmlRegistry {
                     "ShellSettings::test_songFlagsAndReferenceGeometry",
                     "ShellSettings::test_masterTuningInputCancelAndQuantization",
                     "ShellSettings::test_masterTuningApplyReopenUndoRedo",
+                    "ShellSettings::test_masterTuningVoicegroupFailureKeepsAutomationAndFlags",
                     "ShellSettings::test_masterTuningRejectsInvalidDraftWithoutClosing",
                     "ShellSettings::test_masterTuningExplicitReplacementIntent",
                 ]),
