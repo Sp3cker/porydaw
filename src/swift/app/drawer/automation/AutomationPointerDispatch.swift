@@ -154,38 +154,6 @@ extension AutomationPage {
         }
     }
 
-    func dispatchPointerDoubleClick(x: Double, y: Double) -> Bool {
-        guard session != nil else { return false }
-        cancelGesture()
-        applyPreviewDraft(.empty)
-        publishPreview()
-        if let facts = frozenFacts(modifiers: .init()) {
-            let projection = makeProjection(facts: facts, camera: liveCamera())
-            if let lane = laneProjection(facts: facts, projection: projection),
-                (!isPencilMode || projection.markersVisible()),
-                let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
-                (!isPencilMode
-                    || projection.cell(atRawTick: projection.rawTick(atX: x))
-                        .contains(Double(hit.tick))),
-                let source = source(of: hit.identity, facts: facts),
-                commit(
-                    AutomationNodeResolver.deletions(
-                        revision: facts.revision,
-                        [
-                            AutomationNodeResolver.LaneDeletes(
-                                parameter: facts.parameter,
-                                snapshot: facts.snapshot,
-                                ticks: [source.tick])
-                        ]))
-            {
-                refreshFromDocument()
-                return true
-            }
-        }
-        publishInteractionState()
-        return true
-    }
-
     func dispatchPointerLeave() {
         guard hover != nil else { return }
         _ = applyHover(nil, countingPublication: true)

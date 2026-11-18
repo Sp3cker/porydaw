@@ -453,11 +453,6 @@ public final class AutomationPage: EditorDrawerPage {
         return dispatchPointerRelease(x: x, y: y, button: button, modifiers: modifiers)
     }
 
-    @discardableResult
-    public func pointerDoubleClick(x: Double, y: Double) -> Bool {
-        return dispatchPointerDoubleClick(x: x, y: y)
-    }
-
     /// The pointer left the plot: the hover clears, a live interaction keeps its
     /// frozen state.
     public func pointerLeave() {

@@ -118,6 +118,24 @@ EditorDrawerTestSupport {
         verify(bootstrap.requestAutomationUndo(), "the production undo completed (error='"
                + session.lastSaveError + "')")
         compare(bootstrap.automationLaneValues(), panBefore, "Undo restored the written Pan lane")
+        // The left edge of a grid-aligned marker lies in the preceding pencil cell.
+        var boundaryNode = AutomationGestureSupport.automationLaneNodes(testCase).find(function(node) {
+            return !node.model.projected && node.model.tick > 0 && node.model.x >= 2
+        })
+        verify(boundaryNode, "a written node has a preceding cell inside the plot")
+        var boundaryTick = String(boundaryNode.model.tick)
+        var boundaryPoint = AutomationGestureSupport.automationNodePoint(testCase, boundaryNode)
+        model.isPencilMode = true
+        mouseClick(input, Math.floor(boundaryPoint.x) - 1, Math.round(boundaryPoint.y), Qt.LeftButton)
+        compare(bootstrap.automationLaneValues(), panBefore.split(",").filter(function(entry) {
+            return entry.split(":")[0] !== boundaryTick
+        }).join(","), "a pencil click on the drawn marker deletes only that tick")
+        tryVerify(function() {
+            return AutomationGestureSupport.automationNodesAtTick(testCase, Number(boundaryTick)).length === 0
+        }, 2000, "the deleted node is no longer drawn")
+        verify(bootstrap.requestAutomationUndo(), "the node deletion can be undone")
+        compare(bootstrap.automationLaneValues(), panBefore, "Undo restores the clicked node")
+        model.isPencilMode = false
         var restored = AutomationGestureSupport.automationWrittenNodeIndex(testCase)
         panPoint = restored < 0 ? null
                                 : AutomationGestureSupport.automationNodePoint(testCase, AutomationGestureSupport.automationLaneNodes(testCase)[restored])
@@ -163,6 +181,43 @@ EditorDrawerTestSupport {
         model.isPencilMode = false
         wait(0)
         compare(session.canUndo, true, "the stroke reached the document history")
+    }
+
+    function test_productionAutomationDoubleClickDeletesOnlyOneNode() {
+        if (testCase.containerPhase) skip("production composition only")
+        AutomationTabsSupport.mountProductionAutomation(testCase, "automation-double-click")
+        var model = AutomationTabsSupport.automationModel(testCase)
+        var input = AutomationTabsSupport.automationPlotInput(testCase)
+        verify(AutomationMenuSupport.clearAutomationLane(testCase, bootstrap.automationPanIndex()),
+               "the double-click fixture starts with an empty Pan lane")
+        for (var tick of [48, 50]) {
+            verify(model.openInsertionPrompt(tick, 95) && model.acceptPrompt(31),
+                   "seed a written Pan node at tick " + tick)
+        }
+        compare(bootstrap.automationLaneValues(), "48:95,50:95")
+        tryVerify(function() {
+            return AutomationGestureSupport.automationNodesAtTick(testCase, 50).length === 1
+        }, 2000, "both nodes have been published to the mounted plot")
+        var first = AutomationGestureSupport.automationNodesAtTick(testCase, 48)[0]
+        var target = AutomationGestureSupport.automationNodesAtTick(testCase, 50)[0]
+        var point = AutomationGestureSupport.automationNodePoint(testCase, target)
+        var gap = point.x - AutomationGestureSupport.automationNodePoint(testCase, first).x
+        verify(gap >= 1 && gap + 1 < Math.round(model.baseFontPx * 7 / 12),
+               "the neighboring node is within hit range of a second click")
+        model.isPencilMode = true
+        AutomationMenuSupport.awaitAutomationModal(testCase, "automationPrompt", false)
+        mouseMove(input, Math.round(point.x), Math.round(point.y))
+        tryVerify(function() {
+            return model.hoverDisplay.hasNode && model.hoverDisplay.nodeTick === 50
+        }, 2000, "the real pointer is over the later node before double-clicking")
+        var before = bootstrap.automationDocumentRevision()
+        mouseDoubleClickSequence(input, Math.round(point.x), Math.round(point.y), Qt.LeftButton)
+        compare(bootstrap.automationLaneValues(), "48:95", "the double-click leaves the neighbor intact")
+        compare(bootstrap.automationDocumentRevision(), before + 1, "the gesture makes one edit")
+        verify(!bootstrap.automationPromptOpen(), "the gesture does not open a value prompt")
+        verify(bootstrap.requestAutomationUndo(), "the deletion is undoable")
+        compare(bootstrap.automationLaneValues(), "48:95,50:95", "one Undo restores both nodes")
+        model.isPencilMode = false
     }
 
     function test_productionAutomationBandHalfOpenPhysicalBoundaryDpr1() {

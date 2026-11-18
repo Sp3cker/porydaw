@@ -114,48 +114,6 @@ func drawerAutomationPencilOwnershipAndShift(
         shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64,
         cppID: lockID,
         message: "a vertical Shift drag locks the tick and moves the value")
-
-    let doubleID = "automation/AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt"
-    for parameter in [
-        AutomationParameter.tempo,
-        .controlChange(track: 0, controller: TimeDefaults.ccPan),
-    ] {
-        let twice = drawerAutomationAutomationFixture(
-            suite: suite, service: service,
-            pan: [(0, 80), (96, 100), (288, 64)],
-            tempo: [(0, 750_000), (96, 600_000), (288, 937_500)])
-        twice.activate(parameter)
-        let before = twice.snapshot
-        let nodeX = twice.x(96)
-        let nodeY = twice.y(parameter, 100)
-        report.expect(
-            twice.page.pointerDoubleClick(x: nodeX, y: nodeY),
-            cppID: doubleID, message: "a double-click on the node is handled")
-        report.expect(
-            !twice.page.hasPrompt, cppID: doubleID,
-            message: "a double-click never opens the value prompt")
-        report.expectEqual(
-            expected: before.revision + 1, actual: twice.document.revision, cppID: doubleID,
-            what: "the double-click publishes exactly one revision")
-        let expected = ["0:80", "288:64"]
-        let actual = parameter == .tempo ? twice.tempoValues : twice.values(twice.panLane)
-        report.expectEqual(
-            expected: expected, actual: actual, cppID: doubleID,
-            what: "only the clicked node is deleted from the active adapter")
-        report.expect(
-            twice.document.history.canUndo, cppID: doubleID,
-            message: "the deletion records an undo entry")
-        report.expect(
-            twice.undo(), cppID: doubleID,
-            message: "the double-click deletion can be undone")
-        report.expect(
-            !twice.document.history.canUndo, cppID: doubleID,
-            message: "one undo consumes the double-click's single history entry")
-        let restored = parameter == .tempo ? twice.tempoValues : twice.values(twice.panLane)
-        report.expectEqual(
-            expected: ["0:80", "96:100", "288:64"], actual: restored, cppID: doubleID,
-            what: "one undo restores the deleted node and its two neighbours")
-    }
 }
 
 @MainActor

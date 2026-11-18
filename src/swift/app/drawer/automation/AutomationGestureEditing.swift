@@ -19,7 +19,6 @@ extension AutomationPage {
         guard let lane = laneProjection(facts: facts, projection: projection) else { return false }
         if (!isPencilMode || projection.markersVisible()),
             let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
-            !isPencilMode || projection.cell(atRawTick: projection.rawTick(atX: x)).contains(Double(hit.tick)),
             let source = source(of: hit.identity, facts: facts)
         {
             let deleteOnStationary = !modifiers.shift
@@ -34,8 +33,9 @@ extension AutomationPage {
             publishInteractionState()
             return true
         }
-        if !isPencilMode, let phantom = phantomHit(lane: lane, x: x, y: y),
-            let source = source(of: phantom.point.identity, facts: facts)
+        if !isPencilMode,
+            let hit = lane.hitTestOriginPhantom(x: x, y: y, radius: geometry.pointHitRadius),
+            let source = source(of: hit.identity, facts: facts)
         {
             gesture = .phantom(
                 AutomationPhantomDragTransaction(

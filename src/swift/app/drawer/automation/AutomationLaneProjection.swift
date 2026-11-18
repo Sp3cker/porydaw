@@ -226,12 +226,11 @@ public struct AutomationLaneProjection: Equatable, Sendable {
         return index > 0 ? points[index - 1].value : nil
     }
 
-    /// The nearest display point within `radius` pixels. Ties resolve to the
-    /// later tick, and equidistant candidates never retarget an earlier one.
+    /// The nearest in-plot node within `radius` pixels; ties resolve to the later tick.
     public func hitTest(x: Double, y: Double, radius: Double) -> AutomationProjectedPoint? {
         var nearest: AutomationProjectedPoint?
         var nearestDistance = radius * radius
-        for point in points {
+        for point in points where point.x >= 0 {
             let dx = point.x - x
             let dy = point.y - y
             let distance = dx * dx + dy * dy
@@ -249,6 +248,14 @@ public struct AutomationLaneProjection: Equatable, Sendable {
         let index = automationPartitionIndex(points) { $0.x < 0 }
         guard index > 0 else { return nil }
         return AutomationOriginPhantom(parameter: parameter, point: points[index - 1])
+    }
+
+    func hitTestOriginPhantom(x: Double, y: Double, radius: Double) -> AutomationProjectedPoint? {
+        let dxSquared = x * x
+        let radiusSquared = radius * radius
+        guard dxSquared <= radiusSquared, let point = originPhantom?.point else { return nil }
+        let dy = point.y - y
+        return dxSquared + dy * dy <= radiusSquared ? point : nil
     }
 }
 

@@ -100,7 +100,15 @@ EditorDrawerTestSupport {
         tryVerify(function() { return hint.text.length > 0 && hint.text !== nodeHint },
                   2000, "the sweep hint differs from the written-node hint")
         var sweepHint = hint.text
-        grid.setCameraHScroll(grid.cameraScrollX + sourceX + 18)
+        grid.setCameraHScroll(grid.cameraScrollX + sourceX + 2)
+        tryVerify(function() {
+            return AutomationTabsSupport.automationNodeItems(testCase).some(function(node) {
+                return node.model.phantom && node.model.tick === 144
+            })
+        }, 2000, "the source just left of the plot is represented by a phantom")
+        mouseClick(input, 1, Math.round(y), Qt.LeftButton)
+        compare(bootstrap.automationLaneValues(), "144:95", "a stationary click never deletes the phantom source")
+        grid.setCameraHScroll(grid.cameraScrollX + 16)
         var phantom = null
         tryVerify(function() {
             var nodes = AutomationTabsSupport.automationNodeItems(testCase)
@@ -108,6 +116,7 @@ EditorDrawerTestSupport {
             return phantom !== undefined && phantom !== null
                 && phantom.model.tick === 144 && phantom.model.value === 95
         }, 2000, "the scrolled tick-144 value-95 Pan source draws its origin phantom")
+        mouseMove(input, free.x, free.y)
         waitForRendering(testCase.surface)
         var scrolledIdle = grabImage(testCase.surface)
         var delta = y < input.height / 2 ? 30 : -30

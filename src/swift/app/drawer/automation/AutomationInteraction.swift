@@ -68,32 +68,17 @@ public struct AutomationHover: Equatable, Sendable {
         isPencilMode: Bool
     ) -> Self {
         let markersVisible = projection.markersVisible()
-        var hintTarget = AutomationHoverHintTarget.background
         if !isPencilMode || markersVisible {
-            if let hit = lane.hitTest(x: x, y: y, radius: pointHitRadius) {
-                hintTarget = hit.x < 0 ? .originPhantom : .node
+            let node = lane.hitTest(x: x, y: y, radius: pointHitRadius)
+            if let hit = node ?? lane.hitTestOriginPhantom(x: x, y: y, radius: pointHitRadius) {
                 return Self(
                     parameter: facts.parameter,
                     tick: hit.tick,
                     value: hit.value,
                     text: facts.metadata.valueText(hit.value),
                     hasPoint: true,
-                    hintTarget: hintTarget,
+                    hintTarget: node == nil ? .originPhantom : .node,
                     nodeMarkersVisible: markersVisible)
-            }
-            if let phantom = lane.originPhantom {
-                let point = phantom.point
-                let dy = point.y - y
-                if x * x + dy * dy <= pointHitRadius * pointHitRadius {
-                    return Self(
-                        parameter: facts.parameter,
-                        tick: point.tick,
-                        value: point.value,
-                        text: facts.metadata.valueText(point.value),
-                        hasPoint: true,
-                        hintTarget: .originPhantom,
-                        nodeMarkersVisible: markersVisible)
-                }
             }
         }
         // The background tick is the fine lattice, or the insert cell while
@@ -112,7 +97,7 @@ public struct AutomationHover: Equatable, Sendable {
             value: held,
             text: held.map(facts.metadata.valueText) ?? "",
             hasPoint: false,
-            hintTarget: hintTarget,
+            hintTarget: .background,
             nodeMarkersVisible: markersVisible)
     }
 
@@ -122,14 +107,11 @@ public struct AutomationHover: Equatable, Sendable {
         lane: AutomationLaneProjection,
         pointHitRadius: Double
     ) -> AutomationHoverHintTarget {
-        if let hit = lane.hitTest(x: x, y: y, radius: pointHitRadius) {
-            return hit.x < 0 ? .originPhantom : .node
+        if lane.hitTest(x: x, y: y, radius: pointHitRadius) != nil {
+            return .node
         }
-        if let phantom = lane.originPhantom {
-            let dy = phantom.point.y - y
-            if x * x + dy * dy <= pointHitRadius * pointHitRadius {
-                return .originPhantom
-            }
+        if lane.hitTestOriginPhantom(x: x, y: y, radius: pointHitRadius) != nil {
+            return .originPhantom
         }
         return .background
     }
@@ -188,16 +170,6 @@ extension AutomationPage {
             value: facts.metadata.snappedValue(
                 projection.value(atY: y, metadata: facts.metadata), snapValue: modifiers.snapValue,
                 plotHeight: plotHeight, neutralSnapRadius: geometry.neutralSnapRadius))
-    }
-
-    func phantomHit(
-        lane: AutomationLaneProjection, x: Double,
-        y: Double
-    ) -> AutomationOriginPhantom? {
-        guard let phantom = lane.originPhantom else { return nil }
-        let dy = phantom.point.y - y
-        return x * x + dy * dy <= geometry.pointHitRadius * geometry.pointHitRadius
-            ? phantom : nil
     }
 
     func snapped(tickAtX x: Double, modifiers: Int) -> Tick {

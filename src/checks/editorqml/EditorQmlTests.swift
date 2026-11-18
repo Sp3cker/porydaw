@@ -243,7 +243,7 @@ enum EditorQmlLane {
             ),
             (
                 "AutomationTransactions",
-                "productionAutomationDomainRowsThroughInput productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"
+                "productionAutomationDomainRowsThroughInput productionAutomationDoubleClickDeletesOnlyOneNode productionAutomationPromptTransaction productionAutomationBandHalfOpenPhysicalBoundaryDpr1 productionAutomationBandHalfOpenPhysicalBoundaryDpr2"
             ),
             (
                 "AutomationPointMenu",

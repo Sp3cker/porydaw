@@ -387,11 +387,12 @@ Item {
             if (mouse.accepted)
                 plotInput.forceActiveFocus(Qt.MouseFocusReason)
         }
-        onDoubleClicked: (mouse) => {
-            plotMoves.flush()
-            if (!plot.pageModel) { mouse.accepted = false; return }
-            if (mouse.button === Qt.LeftButton)
-                plot.pageModel.pointerDoubleClick(mouse.x, mouse.y)
+        onDoubleClicked: mouse => {
+            // MouseArea can deliver the second press before this signal.
+            if (mouse.button === Qt.LeftButton && plot.pageModel !== null) {
+                plotMoves.flush()
+                plot.pageModel.cancelSectionInteraction()
+            }
             mouse.accepted = true
         }
         onPositionChanged: (mouse) => plotMoves.enqueue(
