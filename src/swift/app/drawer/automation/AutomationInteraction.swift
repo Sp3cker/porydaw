@@ -74,8 +74,8 @@ public struct AutomationHover: Equatable, Sendable {
                 return Self(
                     parameter: facts.parameter,
                     tick: hit.tick,
-                    value: hit.value,
-                    text: facts.metadata.valueText(hit.value),
+                    value: hit.displayValue,
+                    text: facts.snapshot.valueText(hit.value, at: hit.tick),
                     hasPoint: true,
                     hintTarget: node == nil ? .originPhantom : .node,
                     nodeMarkersVisible: markersVisible)
@@ -87,15 +87,16 @@ public struct AutomationHover: Equatable, Sendable {
             isPencilMode
             ? projection.cell(atRawTick: projection.rawTick(atX: x)).tickBegin
             : projection.tick(atX: x, fine: true)
-        let held =
+        let rawHeld =
             isPencilMode
             ? projection.value(atY: y, metadata: facts.metadata)
             : lane.heldValue(at: tick)
+        let held = rawHeld.map { facts.snapshot.editedValue($0, at: tick) }
         return Self(
             parameter: facts.parameter,
             tick: tick,
             value: held,
-            text: held.map(facts.metadata.valueText) ?? "",
+            text: held.map { facts.snapshot.valueText($0, at: tick) } ?? "",
             hasPoint: false,
             hintTarget: .background,
             nodeMarkersVisible: markersVisible)
@@ -165,11 +166,15 @@ extension AutomationPage {
         modifiers: AutomationModifiers,
         projection: AutomationProjection
     ) -> AutomationLanePoint {
-        AutomationLanePoint(
-            tick: projection.tick(atX: x, fine: modifiers.fine),
-            value: facts.metadata.snappedValue(
-                projection.value(atY: y, metadata: facts.metadata), snapValue: modifiers.snapValue,
-                plotHeight: plotHeight, neutralSnapRadius: geometry.neutralSnapRadius))
+        let tick = projection.tick(atX: x, fine: modifiers.fine)
+        return AutomationLanePoint(
+            tick: tick,
+            value: facts.snapshot.editedValue(
+                facts.metadata.snappedValue(
+                    projection.value(atY: y, metadata: facts.metadata),
+                    snapValue: modifiers.snapValue,
+                    plotHeight: plotHeight, neutralSnapRadius: geometry.neutralSnapRadius),
+                at: tick))
     }
 
     func snapped(tickAtX x: Double, modifiers: Int) -> Tick {

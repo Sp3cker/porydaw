@@ -246,11 +246,11 @@ extension AutomationPage {
         var points: [AutomationLanePoint] = []
         points.reserveCapacity(begin + edit.points.count + lane.points.count - end + 1)
         for point in lane.points[..<begin] where !point.projected {
-            points.append(AutomationLanePoint(tick: point.tick, value: point.value))
+            points.append(AutomationLanePoint(tick: point.tick, value: point.displayValue))
         }
         points.append(contentsOf: edit.points)
         for point in lane.points[end...] where !point.projected {
-            points.append(AutomationLanePoint(tick: point.tick, value: point.value))
+            points.append(AutomationLanePoint(tick: point.tick, value: point.displayValue))
         }
         var leadIn: Int?
         if points.first?.tick != 0, let value = metadata.defaultValue {

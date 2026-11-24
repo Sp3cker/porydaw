@@ -39,6 +39,8 @@ public struct AutomationProjectedPoint: Equatable, Sendable {
     public let identity: AutomationPointIdentity
     public let tick: Tick
     public let value: Int
+    /// The value the lane draws: the nearest Pan stop inside a discrete span.
+    public let displayValue: Int
     public let x: Double
     public let y: Double
     /// Inside the parameter's explicit selection range.
@@ -100,18 +102,22 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     /// Every written occurrence, in document order, with its stable handle.
     public let sources: [AutomationSourcePoint]
     public let songEndTick: Tick
+    /// The tick spans where a Pan lane is three-stop because the track's
+    /// voice there is a PSG voice; empty for every other parameter.
+    public let discretePanSpans: [TimeRange]
     private var occurrenceGroups: [Tick: [AutomationSourcePoint]] = [:]
     private var displayed: [AutomationLaneDisplayPoint] = []
 
     @MainActor
     public init(
         parameter: AutomationParameter, in document: SongDocument, songEndTick: Tick,
-        lanePoints: [LanePoint]? = nil
+        lanePoints: [LanePoint]? = nil, discretePanSpans: [TimeRange] = []
     ) {
         self.revision = document.revision
         self.parameter = parameter
         self.metadata = AutomationParameterMetadata(parameter: parameter)
         self.songEndTick = songEndTick
+        self.discretePanSpans = discretePanSpans
         switch parameter {
         case .tempo:
             sources = document.state.tempo.enumerated().map { index, point in
@@ -146,6 +152,37 @@ public struct AutomationLaneSnapshot: Equatable, Sendable {
     }
 
     public var occupiedTicks: Set<Tick> { Set(occurrenceGroups.keys) }
+
+    /// Whether the lane is three-stop at `tick`: inside a discrete Pan span.
+    /// A point on the song's end tick belongs to a span that ends there.
+    public func isDiscretePan(at tick: Tick) -> Bool {
+        discretePanSpans.contains {
+            $0.contains(tick) || (tick == songEndTick && $0.endTick == songEndTick && tick >= $0.startTick)
+        }
+    }
+
+    /// The value the lane draws at `tick`: the nearest Pan stop inside a
+    /// discrete span, the stored value elsewhere. Never rewrites storage.
+    public func displayValue(_ value: Int, at tick: Tick) -> Int {
+        guard isDiscretePan(at: tick), let neutral = metadata.neutral else { return value }
+        return DiscretePan.nearestStop(
+            value, minimum: metadata.minimum, neutral: neutral, maximum: metadata.maximum)
+    }
+
+    /// The value an edit at `tick` writes: edits inside a discrete span land
+    /// on the nearest Pan stop, so a moved or drawn point becomes canonical.
+    public func editedValue(_ value: Int, at tick: Tick) -> Int { displayValue(value, at: tick) }
+
+    /// The readout for a value at `tick`: the stop's name inside a discrete
+    /// span, the parameter's own text elsewhere.
+    public func valueText(_ value: Int, at tick: Tick) -> String {
+        guard isDiscretePan(at: tick), let neutral = metadata.neutral else {
+            return metadata.valueText(value)
+        }
+        let stop = DiscretePan.nearestStop(
+            value, minimum: metadata.minimum, neutral: neutral, maximum: metadata.maximum)
+        return DiscretePan.label(forStop: stop, minimum: metadata.minimum, neutral: neutral)
+    }
 
     /// The implicit pre-roll held value: a parameter with an engine default and
     /// no written point at tick zero reads as holding that default from tick 0.
@@ -223,7 +260,7 @@ public struct AutomationLaneProjection: Equatable, Sendable {
     /// exactly as the lane adapters publish it.
     public func heldValue(at tick: Tick) -> Int? {
         let index = automationPartitionIndex(points) { $0.tick <= tick }
-        return index > 0 ? points[index - 1].value : nil
+        return index > 0 ? points[index - 1].displayValue : nil
     }
 
     /// The nearest in-plot node within `radius` pixels; ties resolve to the later tick.

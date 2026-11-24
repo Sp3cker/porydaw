@@ -396,6 +396,7 @@ if(APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
         automation/automationtaptempo.swift
         automation/domain/gestureNodeContract.swift
         automation/domain/gestureNodeDrag.swift
+        automation/domain/discretePan.swift
         automation/domain/gestureNodeDragPhantom.swift
         automation/domain/gesturePencil.swift
         automation/domain/gestureSweep.swift

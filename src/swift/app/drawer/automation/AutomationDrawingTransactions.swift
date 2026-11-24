@@ -92,7 +92,10 @@ public struct AutomationSweepTransaction: Sendable {
                     previousValue
                     + Int((fraction * Double(current.value - previousValue)).rounded())
             }
-            AutomationSweepTransaction.upsert(&points, AutomationLanePoint(tick: tick, value: value))
+            AutomationSweepTransaction.upsert(
+                &points,
+                AutomationLanePoint(
+                    tick: tick, value: facts.snapshot.editedValue(value, at: tick)))
             if tick >= last { break }
             let next = projection.nextGridTick(after: tick, fine: fine)
             // A lattice that cannot advance ends the stroke instead of cycling.
@@ -118,7 +121,9 @@ public struct AutomationSweepTransaction: Sendable {
             let value = AutomationInterpolation.ramp.value(
                 at: Double(tick), from: first,
                 to: last)
-            result.append(AutomationLanePoint(tick: tick, value: value))
+            result.append(
+                AutomationLanePoint(
+                    tick: tick, value: facts.snapshot.editedValue(value, at: tick)))
             if tick >= last.tick { break }
             let next = projection.nextGridTick(after: tick, fine: fine)
             guard next > tick else { break }
@@ -228,9 +233,11 @@ public struct AutomationPencilTransaction: Sendable {
         verticalSlopOriginY = firstSample.logicalY
         initialPoint = AutomationLanePoint(
             tick: firstCell.tickBegin,
-            value: Self.rounded(
-                firstSample.continuousValue,
-                metadata: facts.metadata))
+            value: facts.snapshot.editedValue(
+                Self.rounded(
+                    firstSample.continuousValue,
+                    metadata: facts.metadata),
+                at: firstCell.tickBegin))
         preview = AutomationLaneEdit(
             parameter: facts.parameter, revision: facts.revision,
             tickBegin: tickBegin, tickEnd: tickEnd, points: [],
@@ -344,7 +351,9 @@ public struct AutomationPencilTransaction: Sendable {
                 &strokePoints,
                 AutomationLanePoint(
                     tick: cell.tickBegin,
-                    value: Self.rounded(continuous, metadata: facts.metadata)))
+                    value: facts.snapshot.editedValue(
+                        Self.rounded(continuous, metadata: facts.metadata),
+                        at: cell.tickBegin)))
             tickBegin = min(tickBegin, cell.tickBegin)
             tickEnd = max(tickEnd, cell.tickEnd)
         }
@@ -399,7 +408,10 @@ public struct AutomationPencilTransaction: Sendable {
             let integerTick = Self.clampedTick(rawTick, songEndTick: facts.songEndTick)
             let clockTick = (integerTick / clockTicks) * clockTicks
             let point = AutomationLanePoint(
-                tick: clockTick, value: Self.rounded(continuous, metadata: facts.metadata))
+                tick: clockTick,
+                value: facts.snapshot.editedValue(
+                    Self.rounded(continuous, metadata: facts.metadata),
+                    at: clockTick))
             if provisional {
                 provisionalEndpoint = point
             } else if !interior || preservedTurnTick != point.tick {

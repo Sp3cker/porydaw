@@ -8,6 +8,9 @@ final class AutomationProjectionCache {
     private var sessionID: ObjectIdentifier?
     private var revision: UInt64?
     private var songEnd: Tick?
+    /// The voicegroup whose slots the discrete Pan spans were built from.
+    private weak var bank: VoicegroupSession?
+    private var bankRevision: UInt64?
     private var lanes: [AutomationParameter: AutomationLaneSnapshot] = [:]
     private var rowFacts: AutomationRowStack?
     private var rowTrack: Int?
@@ -22,13 +25,17 @@ final class AutomationProjectionCache {
 
     private func refresh(_ session: DocumentSession) {
         let id = ObjectIdentifier(session)
+        let voicegroup = session.voicegroup
         guard
             sessionID != id || revision != session.document.revision
-                || songEnd != session.timeline.lengthTicks
+                || songEnd != session.timeline.lengthTicks || bank !== voicegroup
+                || bankRevision != voicegroup.valueRevision
         else { return }
         sessionID = id
         revision = session.document.revision
         songEnd = session.timeline.lengthTicks
+        bank = voicegroup
+        bankRevision = voicegroup.valueRevision
         lanes.removeAll(keepingCapacity: true)
         rowFacts = nil
         policies.removeAll(keepingCapacity: true)
@@ -43,9 +50,19 @@ final class AutomationProjectionCache {
         let points = parameter.lane.flatMap { lane in
             parameter.track.map { session.projectionCache.lanePoints(track: $0, lane: lane) }
         }
+        var spans: [TimeRange] = []
+        if case .controlChange(let track, TimeDefaults.ccPan) = parameter,
+            session.timeline.tracks.indices.contains(track)
+        {
+            spans = DiscretePan.spans(
+                firstProgram: session.timeline.tracks[track].firstProgram,
+                voiceChanges: session.projectionCache.lanePoints(track: track, lane: .voice),
+                slots: session.bankSlots, songEndTick: session.timeline.lengthTicks)
+        }
         let snapshot = AutomationLaneSnapshot(
             parameter: parameter, in: session.document,
-            songEndTick: session.timeline.lengthTicks, lanePoints: points)
+            songEndTick: session.timeline.lengthTicks, lanePoints: points,
+            discretePanSpans: spans)
         lanes[parameter] = snapshot
         return snapshot
     }

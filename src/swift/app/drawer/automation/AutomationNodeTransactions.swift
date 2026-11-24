@@ -43,7 +43,14 @@ public struct AutomationNodeDragFinish: Equatable, Sendable {
 /// shared delta that clamps at tick zero so the group keeps its spacing.
 public struct AutomationNodeDragTransaction: Sendable {
     public let facts: AutomationFrozenFacts
-    public private(set) var laneFacts: [AutomationFrozenFacts]
+    public private(set) var laneFacts: [AutomationFrozenFacts] {
+        didSet {
+            laneSnapshots = Dictionary(
+                laneFacts.map { ($0.parameter, $0.snapshot) }, uniquingKeysWith: { first, _ in first })
+        }
+    }
+    /// Each participating lane's snapshot, indexed once per transaction.
+    private var laneSnapshots: [AutomationParameter: AutomationLaneSnapshot]
     public private(set) var targets: [AutomationNodeDragTarget]
     public let grabbedPoint: Int
     public let selectionDrag: Bool
@@ -56,6 +63,7 @@ public struct AutomationNodeDragTransaction: Sendable {
     ) {
         self.facts = facts
         laneFacts = [facts]
+        laneSnapshots = [facts.parameter: facts.snapshot]
         self.targets = targets
         self.grabbedPoint = targets.indices.contains(grabbedPoint) ? grabbedPoint : 0
         self.selectionDrag = selectionDrag
@@ -156,11 +164,12 @@ public struct AutomationNodeDragTransaction: Sendable {
         let dTick = max(requested, -Int64(earliest))
         let dValue = grabCurrent.value - grabbedTarget.original.value
         for index in targets.indices {
+            let target = targets[index]
+            let tick = TimeDefaults.shiftTickClamped(target.original.tick, by: dTick)
+            let clamped = min(max(target.original.value + dValue, target.minimum), target.maximum)
+            let snapshot = laneSnapshots[target.parameter] ?? facts.snapshot
             targets[index].current = AutomationLanePoint(
-                tick: TimeDefaults.shiftTickClamped(targets[index].original.tick, by: dTick),
-                value: min(
-                    max(targets[index].original.value + dValue, targets[index].minimum),
-                    targets[index].maximum))
+                tick: tick, value: snapshot.editedValue(clamped, at: tick))
         }
     }
 
@@ -220,7 +229,9 @@ public struct AutomationPhantomDragTransaction: Sendable {
             update.phase == .dragging
             ? AutomationLanePoint(
                 tick: target.original.tick,
-                value: min(max(mappedValue, target.minimum), target.maximum))
+                value: facts.snapshot.editedValue(
+                    min(max(mappedValue, target.minimum), target.maximum),
+                    at: target.original.tick))
             : target.original
         return .value
     }
@@ -259,15 +270,20 @@ public struct AutomationPromptTransaction: Equatable, Sendable {
         metadata: AutomationParameterMetadata
     ) {
         guard anchor.tick <= facts.songEndTick else { return nil }
+        // The prompt opens on, and an unchanged accept compares against, the drawn value.
+        let shown = AutomationLanePoint(
+            tick: anchor.tick, value: facts.snapshot.displayValue(anchor.value, at: anchor.tick))
         self.facts = facts
-        self.anchor = anchor
+        self.anchor = shown
         self.source = source
         self.forExistingNode = forExistingNode
-        prompt = metadata.prompt(storedValue: anchor.value)
+        prompt = metadata.prompt(storedValue: shown.value)
     }
 
     public func storedValue(displayed: Int) -> Int {
-        facts.metadata.storedValue(prompted: min(max(displayed, prompt.minimum), prompt.maximum))
+        let stored = facts.metadata.storedValue(
+            prompted: min(max(displayed, prompt.minimum), prompt.maximum))
+        return facts.snapshot.editedValue(stored, at: anchor.tick)
     }
 
     /// What accepting a displayed value does: nothing, a same-tick value write

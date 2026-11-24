@@ -115,7 +115,7 @@ extension AutomationPage {
             sweepRelease = finished.last
             draft = AutomationPreviewDraft(
                 parameter: facts.parameter, points: edit?.points ?? finished,
-                text: sweepRelease.map { facts.metadata.valueText($0.value) } ?? "")
+                text: sweepRelease.map { facts.snapshot.valueText($0.value, at: $0.tick) } ?? "")
         }
         applyPreviewDraft(draft)
         applyPreviewEdit(edit)

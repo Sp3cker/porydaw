@@ -58,6 +58,14 @@ regardless of which parameter is active.
   center. MIDI stores 0–127, with 64 as the center.
 - **LFO delay (LFODL):** values range from 0–127 and take effect at the
   next note-on.
+- **Pan:** Sample voices pan continuously from left to right. Square,
+  Programmable Wave, and Noise voices render only hard-left, center, or
+  hard-right, so wherever the track's current voice is one of those, the
+  Pan lane is three-stop: the axis is labeled Left/Center/Right, points
+  draw on the nearest stop, and dragging, drawing, or typing a value
+  stores the nearest stop (0, 64, or 127). Imported in-between values keep
+  their stored value until you edit them. A program change to a sample
+  voice makes the rest of the lane continuous again.
 
 MODT, TUNE, Pan, and Pitch bend use fixed value ranges; they do not offer
 value-range zoom.

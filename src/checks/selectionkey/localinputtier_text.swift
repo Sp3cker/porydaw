@@ -294,10 +294,10 @@ public func drawerOriginalNumericPromptTransaction(
         second.page.openInsertionPrompt(tick: 5760, value: 64), cppID: lifetimeID,
         message: "the track-1 pan-lane insertion prompt opens")
     report.expect(
-        second.page.acceptPrompt(displayedValue: 32), cppID: lifetimeID,
+        second.page.acceptPrompt(displayedValue: 63), cppID: lifetimeID,
         message: "the track-1 prompt accepts the displayed value")
     report.expect(
-        second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 && $0.value == 96 },
+        second.document.lanePoints(track: 1, lane: panLane).contains { $0.tick == 5760 && $0.value == 127 },
         cppID: lifetimeID,
         message: "the accepted value lands on the track-1 lane through the pan offset")
     report.expectEqual(

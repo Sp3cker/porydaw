@@ -156,6 +156,7 @@ public func runAutomationPageChecks(
     drawerAutomationSweepFinishRestoresTrailingHeldValue(report, suite: session, service: service)
     drawerAutomationShiftRampEndpoints(report, suite: session, service: service)
     drawerAutomationPanNeutralSnap(report, suite: session, service: service)
+    drawerAutomationDiscretePanSpans(report, suite: session, service: service)
     drawerAutomationNodeDragAndPhantomOutcomes(report, suite: session, service: service)
     drawerAutomationPointRangeAndPencilReplacements(report, suite: session, service: service)
     drawerAutomationEmptyLanePencilCommit(report, suite: session, service: service)

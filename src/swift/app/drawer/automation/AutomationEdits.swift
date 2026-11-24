@@ -357,9 +357,11 @@ public enum AutomationRangeEditor {
         let written = AutomationLaneFreeze(
             parameter: facts.parameter, revision: facts.revision, metadata: facts.metadata,
             songEndTick: facts.songEndTick, original: facts.writtenPoints)
+        // Pasted points inside a discrete Pan span land on its stops, as gestures do.
         let clamped = AutomationLaneReplacement.canonical(
             points, begin: 0, end: TimeDefaults.noTick, minimum: facts.metadata.minimum,
-            maximum: facts.metadata.maximum, priorValue: nil, preserveEqualValues: true)
+            maximum: facts.metadata.maximum, priorValue: nil, preserveEqualValues: true
+        ).map { AutomationLanePoint(tick: $0.tick, value: facts.snapshot.editedValue($0.value, at: $0.tick)) }
         return AutomationLaneReplacement.pointRange(
             written, begin: 0, end: TimeDefaults.noTick,
             points: clamped)

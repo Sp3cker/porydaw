@@ -257,9 +257,10 @@ public struct AutomationProjection {
             _ tick: Tick, _ value: Int, identity: AutomationPointIdentity,
             projectedNode: Bool
         ) -> AutomationProjectedPoint {
-            AutomationProjectedPoint(
-                identity: identity, tick: tick, value: value,
-                x: x(tick), y: y(value, metadata: metadata),
+            let shown = snapshot.displayValue(value, at: tick)
+            return AutomationProjectedPoint(
+                identity: identity, tick: tick, value: value, displayValue: shown,
+                x: x(tick), y: y(shown, metadata: metadata),
                 selected: range.map { $0.contains(tick) } ?? false,
                 projected: projectedNode)
         }
@@ -282,13 +283,13 @@ public struct AutomationProjection {
         }
 
         let segments = AutomationCurveSegment.curve(
-            through: points, leadIn: leadIn?.value, selection: range,
+            through: points, leadIn: leadIn?.displayValue, selection: range,
             interpolation: metadata.interpolation)
 
         return AutomationLaneProjection(
             parameter: snapshot.parameter, metadata: metadata, revision: snapshot.revision,
             points: points, sources: snapshot.sources, leadIn: leadIn, segments: segments,
-            scaleLabels: scaleLabels(metadata: metadata), songEndTick: snapshot.songEndTick,
+            scaleLabels: scaleLabels(snapshot), songEndTick: snapshot.songEndTick,
             selectionRange: range)
     }
 
@@ -315,16 +316,37 @@ public struct AutomationProjection {
         }
         return labels
     }
+
+    /// The lane's scale labels; an unzoomed discrete Pan lane names its stops.
+    func scaleLabels(_ snapshot: AutomationLaneSnapshot) -> [AutomationScaleLabel] {
+        let metadata = snapshot.metadata
+        let labels = scaleLabels(metadata: metadata)
+        guard !snapshot.discretePanSpans.isEmpty, let neutral = metadata.neutral,
+            (displayMaximum ?? metadata.maximum) == metadata.maximum
+        else { return labels }
+        return labels.map {
+            AutomationScaleLabel(
+                role: $0.role, value: $0.value,
+                text: DiscretePan.label(
+                    forStop: $0.value, minimum: metadata.minimum, neutral: neutral),
+                y: $0.y)
+        }
+    }
 }
 
-/// A tick-ordered lane value a curve runs through.
+/// A tick-ordered lane value a curve runs through, at the height it draws.
 protocol AutomationCurvePoint {
     var tick: Tick { get }
-    var value: Int { get }
+    var curveValue: Int { get }
 }
 
-extension AutomationLanePoint: AutomationCurvePoint {}
-extension AutomationProjectedPoint: AutomationCurvePoint {}
+extension AutomationLanePoint: AutomationCurvePoint {
+    var curveValue: Int { value }
+}
+
+extension AutomationProjectedPoint: AutomationCurvePoint {
+    var curveValue: Int { displayValue }
+}
 
 extension AutomationCurveSegment {
     /// The step/ramp curve: each point holds (or ramps) into the next, the last
@@ -335,7 +357,7 @@ extension AutomationCurveSegment {
     ) -> [AutomationCurveSegment] {
         var segments: [AutomationCurveSegment] = []
         segments.reserveCapacity(points.count + 1)
-        if let leadIn, let first = points.first, leadIn != first.value {
+        if let leadIn, let first = points.first, leadIn != first.curveValue {
             segments.append(
                 AutomationCurveSegment(
                     kind: .step, tickBegin: 0, tickEnd: first.tick, fromValue: leadIn,
@@ -347,8 +369,8 @@ extension AutomationCurveSegment {
             segments.append(
                 AutomationCurveSegment(
                     kind: kind, tickBegin: point.tick, tickEnd: next?.tick,
-                    fromValue: point.value,
-                    toValue: kind == .ramp ? (next?.value ?? point.value) : point.value,
+                    fromValue: point.curveValue,
+                    toValue: kind == .ramp ? (next?.curveValue ?? point.curveValue) : point.curveValue,
                     isLeadIn: false, isSelected: selection?.contains(point.tick) ?? false))
         }
         return segments

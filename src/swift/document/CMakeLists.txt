@@ -33,6 +33,7 @@ add_library(PorydawDocument STATIC
     view/TimelineSnapPolicy.swift
     view/TimeAxis.swift
     view/AutomationParameter.swift
+    view/DiscretePan.swift
     view/AutomationTimeSelection.swift
     view/VoicegroupCatalog.swift
     view/VoiceListSemantics.swift

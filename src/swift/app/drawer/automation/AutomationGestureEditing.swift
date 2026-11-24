@@ -46,9 +46,11 @@ extension AutomationPage {
             return true
         }
         if isPencilMode {
-            let continuous = projection.value(atY: y, metadata: facts.metadata)
             let rawTick = projection.rawTick(atX: x)
             let firstCell = projection.cell(atRawTick: rawTick)
+            let continuous = facts.snapshot.editedValue(
+                projection.value(atY: y, metadata: facts.metadata),
+                at: firstCell.tickBegin)
             let first = AutomationPencilTransaction.Sample(
                 rawTick: rawTick, logicalX: x, logicalY: y,
                 point: AutomationLanePoint(tick: firstCell.tickBegin, value: continuous),

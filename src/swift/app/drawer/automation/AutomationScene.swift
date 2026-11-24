@@ -139,7 +139,7 @@ struct AutomationPreviewDraft: Sendable {
         } else {
             labelPoint = points.last
         }
-        let text = labelPoint.map { frozen?.metadata.valueText($0.value) ?? "" } ?? ""
+        let text = labelPoint.map { frozen?.snapshot.valueText($0.value, at: $0.tick) ?? "" } ?? ""
         return Self(parameter: frozen?.parameter, points: points, text: text)
     }
 }
@@ -173,7 +173,9 @@ struct AutomationContextPresentation: Sendable {
         let index = automationPartitionIndex(points) { $0.tick <= tick }
         let value = index > 0 ? points[index - 1].value : nil
         let title = AutomationCatalog.title(activeParameter)
-        let valueText = value.map { snapshot?.metadata.valueText($0) ?? "" }
+        let valueText = value.map {
+            snapshot?.valueText($0, at: points[index - 1].tick) ?? ""
+        }
         let text = valueText.map { "\(title) \($0)" } ?? ""
         let visible = value != nil
         return Self(
